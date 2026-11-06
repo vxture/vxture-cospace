@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object", "additionalProperties": false,
+  "required": ["schema_version", "format", "input", "streams", "header_time_overlap_ns", "errors", "structural_precheck_passed", "algorithm_ready", "real_release_ready", "unverified", "limits"],
+  "properties": {
+    "schema_version": {"const": "cospace.bag-preflight/0.1"},
+    "format": {"const": "ros1_bag_v2"},
+    "input": {
+      "type": "object", "additionalProperties": false,
+      "required": ["bytes", "sha256", "expected_digest_verified"],
+      "properties": {
+        "bytes": {"type": ["integer", "null"], "minimum": 0},
+        "sha256": {"type": ["string", "null"], "pattern": "^[0-9a-f]{64}$"},
+        "expected_digest_verified": {"type": "boolean"}
+      }
+    },
+    "streams": {"type": "object", "maxProperties": 2, "additionalProperties": {"$ref": "#/$defs/stream"}},
+    "header_time_overlap_ns": {"$ref": "#/$defs/time"},
+    "errors": {"type": "array", "items": {
+      "type": "object", "additionalProperties": false, "required": ["topic", "code"],
+      "properties": {"topic": {"type": ["string", "null"]}, "code": {"type": "string", "minLength": 1}}
+    }},
+    "structural_precheck_passed": {"type": "boolean"},
+    "algorithm_ready": {"const": false}, "real_release_ready": {"const": false},
+    "unverified": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string"}},
+    "limits": {"type": "object", "additionalProperties": false,
+      "required": ["file_bytes", "messages", "message_bytes", "points_per_cloud"],
+      "properties": {"file_bytes": {"type": "integer", "minimum": 1}, "messages": {"type": "integer", "minimum": 1},
+        "message_bytes": {"type": "integer", "minimum": 1}, "points_per_cloud": {"type": "integer", "minimum": 1}}}
+  },
+  "allOf": [{"if": {"properties": {"structural_precheck_passed": {"const": true}}},
+             "then": {"properties": {"errors": {"maxItems": 0}}},
+             "else": {"properties": {"errors": {"minItems": 1}}}}],
+  "$defs": {
+    "time": {"type": ["integer", "null"], "minimum": 0},
+    "stream": {
+      "type": "object", "additionalProperties": false,
+      "required": ["role", "type", "count", "points", "frame_ids", "fields", "header_start_ns", "header_end_ns", "backward_steps", "duplicate_steps"],
+      "properties": {
+        "role": {"enum": ["lidar", "imu"]}, "type": {"enum": ["sensor_msgs/msg/PointCloud2", "sensor_msgs/msg/Imu"]},
+        "count": {"type": "integer", "minimum": 0}, "points": {"type": "integer", "minimum": 0},
+        "frame_ids": {"type": "array", "uniqueItems": true, "items": {"type": "string"}},
+        "fields": {"type": "array", "items": {
+          "type": "object", "additionalProperties": false, "required": ["name", "offset", "datatype", "count"],
+          "properties": {"name": {"type": "string"}, "offset": {"type": "integer", "minimum": 0},
+            "datatype": {"type": "integer", "minimum": 1, "maximum": 8}, "count": {"type": "integer", "minimum": 1}}
+        }},
+        "header_start_ns": {"$ref": "#/$defs/time"}, "header_end_ns": {"$ref": "#/$defs/time"},
+        "backward_steps": {"type": "integer", "minimum": 0}, "duplicate_steps": {"type": "integer", "minimum": 0}
+      }
+    }
+  }
+}

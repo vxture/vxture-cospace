@@ -1,0 +1,217 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Current unverified-clock online publication query",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "space_id",
+    "publication_id",
+    "model_id",
+    "frame_id",
+    "served_at",
+    "model_manifest_sha256",
+    "source_model_sha256",
+    "profile",
+    "as_of",
+    "valid_until",
+    "grade",
+    "robot_ready",
+    "mode",
+    "lifecycle_state",
+    "policy_revision",
+    "status",
+    "refusal",
+    "result",
+    "freshness",
+    "completeness"
+  ],
+  "properties": {
+    "space_id": {
+      "type": "string"
+    },
+    "publication_id": {
+      "type": "string"
+    },
+    "model_id": {
+      "type": "string"
+    },
+    "frame_id": {
+      "type": "string"
+    },
+    "served_at": {
+      "type": "string"
+    },
+    "model_manifest_sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "source_model_sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "profile": {
+      "const": "cospace.online-consumption/0.1"
+    },
+    "as_of": {
+      "type": "null"
+    },
+    "valid_until": {
+      "type": "null"
+    },
+    "grade": {
+      "const": "unverified"
+    },
+    "robot_ready": {
+      "const": false
+    },
+    "mode": {
+      "enum": [
+        "historical",
+        "operational"
+      ]
+    },
+    "lifecycle_state": {
+      "const": "active"
+    },
+    "policy_revision": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "status": {
+      "enum": [
+        "refused",
+        "historical_result"
+      ]
+    },
+    "refusal": {
+      "enum": [
+        null,
+        "observation_time_unverified"
+      ]
+    },
+    "result": {
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "freshness": {
+      "type": "object",
+      "required": [
+        "status",
+        "max_age_s",
+        "observation_age_s"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "const": "unverified_clock"
+        },
+        "max_age_s": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 31536000
+        },
+        "observation_age_s": {
+          "type": "null"
+        }
+      }
+    },
+    "completeness": {
+      "type": "object",
+      "required": [
+        "requested",
+        "returned",
+        "unknown",
+        "scope",
+        "scene_coverage"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "requested": {
+          "const": 1
+        },
+        "returned": {
+          "enum": [
+            0,
+            1
+          ]
+        },
+        "unknown": {
+          "enum": [
+            0,
+            1
+          ]
+        },
+        "scope": {
+          "const": "requested_point_only"
+        },
+        "scene_coverage": {
+          "type": "null"
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "refused"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "refusal": {
+            "const": "observation_time_unverified"
+          },
+          "result": {
+            "type": "null"
+          },
+          "completeness": {
+            "properties": {
+              "returned": {
+                "const": 0
+              },
+              "unknown": {
+                "const": 0
+              }
+            }
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "mode": {
+            "const": "historical"
+          },
+          "refusal": {
+            "type": "null"
+          },
+          "result": {
+            "type": "object",
+            "required": [
+              "state"
+            ],
+            "properties": {
+              "state": {
+                "enum": [
+                  "surface_candidate",
+                  "unknown"
+                ]
+              }
+            }
+          },
+          "completeness": {
+            "properties": {
+              "returned": {
+                "const": 1
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,56 @@
+{
+  "profile": "cospace.synthetic-bundle/0.2",
+  "scene_id": "synthetic-equipment-corridor",
+  "data_kind": "synthetic",
+  "release": {
+    "path": "release.json",
+    "sha256": "25024150a7a8a8bb9fca4f05ff5606367cb28fd1cc630193ca801663c37e22f1"
+  },
+  "data": {
+    "files": [
+      {
+        "path": "ontology.json",
+        "bytes": 483,
+        "sha256": "7d1926c99d4d402b7802dcaca96c800da151da625c311833235a2ac848db9980",
+        "media_type": "application/json"
+      },
+      {
+        "path": "objects.json",
+        "bytes": 738,
+        "sha256": "36c57f5f8939910eca79e5ab9b0a2781221f9a50bb097ba40ffe24389e6cca3b",
+        "media_type": "application/json"
+      },
+      {
+        "path": "coverage.json",
+        "bytes": 1371,
+        "sha256": "473e85fa745cd6ef26f33d068812075ebdea694846e6b9771ed85c194012bbd3",
+        "media_type": "application/json"
+      },
+      {
+        "path": "truth.json",
+        "bytes": 1215,
+        "sha256": "4ec8a6b7a0dd9c8e27eca65af23c1643b89e52b5781130b6e55f2acaab134f89",
+        "media_type": "application/json"
+      },
+      {
+        "path": "human.json",
+        "bytes": 1086,
+        "sha256": "ae7fa5b6f301a2fe8564e2d70d501610adb9dddad774cb7d895a5e032f206c8b",
+        "media_type": "application/json"
+      },
+      {
+        "path": "agent.json",
+        "bytes": 1117,
+        "sha256": "6a54e2dcb5d053fc8e37a324afc08305ca173e05e7c05cd187fb473890581410",
+        "media_type": "application/json"
+      },
+      {
+        "path": "release.json",
+        "bytes": 804,
+        "sha256": "25024150a7a8a8bb9fca4f05ff5606367cb28fd1cc630193ca801663c37e22f1",
+        "media_type": "application/json"
+      }
+    ],
+    "source_description": "Hand-authored synthetic identities and coordinates; no acquisition"
+  }
+}

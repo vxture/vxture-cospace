@@ -1,0 +1,41 @@
+name: ${PROJECT_NAME:?set production compose project}
+services:
+  workbench:
+    image: ${COSPACE_IMAGE:?set accepted immutable image tag}
+    container_name: ${PROJECT_NAME:?set production compose project}-app
+    restart: unless-stopped
+    init: true
+    read_only: true
+    user: "10001:10001"
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    mem_limit: 768m
+    cpus: 0.75
+    pids_limit: 96
+    stop_grace_period: 40s
+    ports:
+      - "${APP_BIND_HOST:?set worker02 tailnet interface}:${APP_PUBLISH_PORT:?set port registry allocation}:8088"
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+    environment:
+      COSPACE_OIDC_ISSUER: https://accounts.vxture.com
+      COSPACE_OIDC_BACKCHANNEL: https://accounts.vxture.com
+      COSPACE_OIDC_CLIENT_ID: cospace
+      COSPACE_ORIGIN: https://cospace.ruyin.work
+      COSPACE_OIDC_LOOPBACK_HTTP: "0"
+      COSPACE_OIDC_CLIENT_SECRET_FILE: /run/secrets/client-secret
+      COSPACE_SESSION_KEY_FILE: /run/secrets/session-key
+      COSPACE_PLATFORM_API_URL: ${COSPACE_PLATFORM_API_URL:?set platform API origin}
+      COSPACE_PLATFORM_TAILNET_HTTP: ${COSPACE_PLATFORM_TAILNET_HTTP:-0}
+      COSPACE_PLATFORM_WEBHOOK_SECRET_FILE: /run/secrets/webhook-secret
+    volumes:
+      - ${STACK_ROOT:?set worker02 production stack root}/data/business:/data
+      - ${STACK_ROOT:?set worker02 production stack root}/data/state:/state
+      - ${STACK_ROOT:?set worker02 production stack root}/etc/secrets/client-secret:/run/secrets/client-secret:ro
+      - ${STACK_ROOT:?set worker02 production stack root}/etc/secrets/session-key:/run/secrets/session-key:ro
+      - ${STACK_ROOT:?set worker02 production stack root}/etc/secrets/webhook-secret:/run/secrets/webhook-secret:ro
+    logging:
+      driver: json-file
+      options:
+        max-size: 5m
+        max-file: "3"

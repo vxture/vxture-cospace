@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.vxture.com/cospace/input-upload/0.1",
+  "title": "CoSpace uploaded acquisition package manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "profile",
+    "format"
+  ],
+  "properties": {
+    "profile": {
+      "const": "cospace.input-upload/0.1"
+    },
+    "format": {
+      "enum": [
+        "nyu_rgbd_with_existing_poses",
+        "ros1_lidar_single_frame",
+        "ros1_lidar_multiframe_icp",
+        "ply_pointcloud"
+      ]
+    }
+  }
+}

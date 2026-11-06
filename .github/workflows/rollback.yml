@@ -1,0 +1,72 @@
+name: rollback
+on:
+  workflow_dispatch:
+    inputs:
+      target_sha:
+        description: Full main-branch commit SHA of a previously built production image
+        type: string
+        required: true
+permissions:
+  contents: read
+  packages: read
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+jobs:
+  rollback:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: production
+    permissions:
+      contents: read
+      packages: read
+    env:
+      DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+      DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+      DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+      STACK_ROOT: ${{ vars.STACK_ROOT }}
+      PROJECT_NAME: ${{ vars.PROJECT_NAME }}
+      DEPLOYMENT_READY: ${{ vars.DEPLOYMENT_READY }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.14'
+      - run: python scripts/guardrails/check_deploy_target.py
+      - name: Validate the existing image revision
+        id: target
+        env:
+          TARGET_SHA: ${{ inputs.target_sha }}
+        run: |
+          set -euo pipefail
+          [[ "$TARGET_SHA" =~ ^[a-f0-9]{40}$ ]]
+          git fetch origin main --no-tags
+          git fetch origin "$TARGET_SHA" --no-tags
+          git merge-base --is-ancestor "$TARGET_SHA" origin/main
+          echo "image_tag=sha-${TARGET_SHA:0:7}" >> "$GITHUB_OUTPUT"
+      - name: Join tailnet and prepare SSH
+        uses: ./.github/actions/tailnet-ssh-connect
+        with:
+          tailscale-oauth-client-id: ${{ secrets.TAILSCALE_OAUTH_CLIENT_ID }}
+          tailscale-oauth-secret: ${{ secrets.TAILSCALE_OAUTH_CLIENT_SECRET }}
+          tailscale-tag: ${{ vars.TAILSCALE_OAUTH_CLIENT_TAG }}
+          deploy-host: ${{ secrets.DEPLOY_HOST }}
+          deploy-port: ${{ secrets.DEPLOY_PORT }}
+          deploy-ssh-key: ${{ secrets.DEPLOY_SSH_KEY }}
+          deploy-ssh-passphrase: ${{ secrets.DEPLOY_SSH_KEY_PASSPHRASE }}
+          deploy-known-hosts: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+      - name: Deliver Git revision and deploy on worker02
+        env:
+          IMAGE_TAG: ${{ steps.target.outputs.image_tag }}
+          GITHUB_SHA: ${{ inputs.target_sha }}
+          GHCR_NAMESPACE: ${{ github.repository_owner }}
+          GHCR_USERNAME: ${{ github.actor }}
+          GHCR_TOKEN: ${{ github.token }}
+          ACR_REGISTRY: ${{ vars.ALIYUN_ACR_REGISTRY }}
+          ACR_NAMESPACE: ${{ vars.ALIYUN_ACR_NAMESPACE }}
+          ACR_USERNAME: ${{ secrets.ALIYUN_ACR_USERNAME }}
+          ACR_PASSWORD: ${{ secrets.ALIYUN_ACR_PASSWORD }}
+        shell: bash
+        run: bash scripts/workflows/deploy-worker02.sh

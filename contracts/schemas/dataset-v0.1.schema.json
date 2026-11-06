@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object", "additionalProperties": false,
+  "required": ["schema_version", "dataset_id", "import_id", "scene_id", "data_kind", "purpose", "source_description", "usage_conditions", "source_manifest_sha256", "members", "verified_at", "quality", "algorithm_ready"],
+  "properties": {
+    "schema_version": {"const": "cospace.dataset/0.1"},
+    "dataset_id": {"type": "string", "pattern": "^dataset-[0-9a-f]{32}$"},
+    "import_id": {"type": "string", "pattern": "^import-[0-9a-f]{32}$"},
+    "scene_id": {"type": "string", "minLength": 1},
+    "data_kind": {"const": "synthetic"}, "purpose": {"const": "synthetic_check"},
+    "source_description": {"type": "string", "minLength": 1},
+    "usage_conditions": {"enum": ["not_assessed", "internal_synthetic_only"]},
+    "source_manifest_sha256": {"$ref": "#/$defs/digest"},
+    "verified_at": {"type": "string", "minLength": 1},
+    "quality": {"const": "not_field_validated"}, "algorithm_ready": {"const": false},
+    "members": {"type": "array", "minItems": 1, "maxItems": 100, "items": {
+      "type": "object", "additionalProperties": false,
+      "required": ["path", "bytes", "sha256", "media_type", "role"],
+      "properties": {"path": {"type": "string", "minLength": 1}, "bytes": {"type": "integer", "minimum": 0, "maximum": 8388608},
+        "sha256": {"$ref": "#/$defs/digest"}, "media_type": {"const": "application/json"},
+        "role": {"enum": ["source_manifest", "ontology", "objects", "coverage", "truth", "human_view", "machine_view", "release", "unclassified"]}}
+    }}
+  },
+  "$defs": {"digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"}}
+}

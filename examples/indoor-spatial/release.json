@@ -1,0 +1,27 @@
+{
+  "scene_id": "synthetic-equipment-corridor",
+  "data_kind": "synthetic",
+  "release_id": "release-spatial-sample-001",
+  "source_truth": {
+    "path": "truth.json",
+    "sha256": "4ec8a6b7a0dd9c8e27eca65af23c1643b89e52b5781130b6e55f2acaab134f89",
+    "scene_id": "synthetic-equipment-corridor",
+    "truth_version_id": "truth-spatial-sample-001"
+  },
+  "views": [
+    {
+      "path": "human.json",
+      "sha256": "ae7fa5b6f301a2fe8564e2d70d501610adb9dddad774cb7d895a5e032f206c8b",
+      "view_version_id": "human-spatial-sample-001"
+    },
+    {
+      "path": "agent.json",
+      "sha256": "6a54e2dcb5d053fc8e37a324afc08305ca173e05e7c05cd187fb473890581410",
+      "view_version_id": "agent-spatial-sample-001"
+    }
+  ],
+  "capabilities": [
+    "reference_reading",
+    "synthetic_point_query"
+  ]
+}

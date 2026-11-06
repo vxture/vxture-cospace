@@ -1,0 +1,42 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "draft_id": {
+      "pattern": "^draft-[a-f0-9]{32}$",
+      "title": "Draft Id",
+      "type": "string"
+    },
+    "expected_revision": {
+      "minimum": 0,
+      "title": "Expected Revision",
+      "type": "integer"
+    },
+    "request_id": {
+      "pattern": "^[a-f0-9]{32}$",
+      "title": "Request Id",
+      "type": "string"
+    },
+    "definition": {
+      "additionalProperties": true,
+      "title": "Definition",
+      "type": "object"
+    },
+    "reason": {
+      "maxLength": 500,
+      "minLength": 1,
+      "title": "Reason",
+      "type": "string"
+    }
+  },
+  "required": [
+    "draft_id",
+    "expected_revision",
+    "request_id",
+    "definition",
+    "reason"
+  ],
+  "title": "DraftChange",
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cospace.local/schemas/ontology-draft-change-v0.1.schema.json"
+}

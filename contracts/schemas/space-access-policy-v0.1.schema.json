@@ -1,0 +1,105 @@
+{
+  "$defs": {
+    "Binding": {
+      "additionalProperties": false,
+      "properties": {
+        "issuer": {
+          "maxLength": 2048,
+          "minLength": 1,
+          "title": "Issuer",
+          "type": "string"
+        },
+        "space_id": {
+          "pattern": "^space-[a-f0-9]{16}$",
+          "title": "Space Id",
+          "type": "string"
+        },
+        "org_id": {
+          "maxLength": 160,
+          "minLength": 1,
+          "title": "Org Id",
+          "type": "string"
+        },
+        "workspace_id": {
+          "maxLength": 160,
+          "minLength": 1,
+          "title": "Workspace Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "issuer",
+        "space_id",
+        "org_id",
+        "workspace_id"
+      ],
+      "title": "Binding",
+      "type": "object"
+    },
+    "Grant": {
+      "additionalProperties": false,
+      "properties": {
+        "issuer": {
+          "maxLength": 2048,
+          "minLength": 1,
+          "title": "Issuer",
+          "type": "string"
+        },
+        "subject": {
+          "pattern": "^usr_[A-Za-z0-9_-]{1,150}$",
+          "title": "Subject",
+          "type": "string"
+        },
+        "space_id": {
+          "pattern": "^space-[a-f0-9]{16}$",
+          "title": "Space Id",
+          "type": "string"
+        },
+        "role": {
+          "pattern": "^(viewer|engineer|manager)$",
+          "title": "Role",
+          "type": "string"
+        }
+      },
+      "required": [
+        "issuer",
+        "subject",
+        "space_id",
+        "role"
+      ],
+      "title": "Grant",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "profile": {
+      "default": "cospace.space-access-policy/0.1",
+      "pattern": "^cospace\\.space-access-policy/0\\.1$",
+      "title": "Profile",
+      "type": "string"
+    },
+    "bindings": {
+      "items": {
+        "$ref": "#/$defs/Binding"
+      },
+      "maxItems": 10000,
+      "title": "Bindings",
+      "type": "array"
+    },
+    "grants": {
+      "items": {
+        "$ref": "#/$defs/Grant"
+      },
+      "maxItems": 100000,
+      "title": "Grants",
+      "type": "array"
+    }
+  },
+  "required": [
+    "bindings",
+    "grants"
+  ],
+  "title": "SpaceAccessPolicy",
+  "type": "object"
+}

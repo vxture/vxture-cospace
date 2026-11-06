@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object", "additionalProperties": false,
+  "required": ["schema_version", "test_only", "deployment_id", "keys"],
+  "properties": {
+    "schema_version": {"const": "cospace.test-trust/0.1"}, "test_only": {"const": true},
+    "deployment_id": {"type": "string", "minLength": 1, "maxLength": 128},
+    "keys": {"type": "array", "minItems": 1, "maxItems": 16, "items": {
+      "type": "object", "additionalProperties": false,
+      "required": ["kid", "issuer", "public_key_hex", "roles"],
+      "properties": {
+        "kid": {"type": "string", "minLength": 1, "maxLength": 128},
+        "issuer": {"type": "string", "minLength": 1, "maxLength": 128},
+        "public_key_hex": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "roles": {"type": "array", "minItems": 1, "maxItems": 2, "uniqueItems": true, "items": {"enum": ["publisher", "validity"]}}
+      }}}
+  }
+}

@@ -1,0 +1,333 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cospace.local/contracts/preview-business-v0.1.schema.json",
+  "$defs": {
+    "AssetFields": {
+      "additionalProperties": false,
+      "properties": {
+        "asset_code": {
+          "default": "",
+          "maxLength": 100,
+          "title": "Asset Code",
+          "type": "string"
+        },
+        "manufacturer": {
+          "default": "",
+          "maxLength": 100,
+          "title": "Manufacturer",
+          "type": "string"
+        },
+        "model": {
+          "default": "",
+          "maxLength": 100,
+          "title": "Model",
+          "type": "string"
+        },
+        "serial_number": {
+          "default": "",
+          "maxLength": 100,
+          "title": "Serial Number",
+          "type": "string"
+        }
+      },
+      "title": "AssetFields",
+      "type": "object"
+    },
+    "BusinessBinding": {
+      "additionalProperties": false,
+      "properties": {
+        "object_id": {
+          "maxLength": 160,
+          "minLength": 1,
+          "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_.:-]*$",
+          "title": "Object Id",
+          "type": "string"
+        },
+        "ledger_ref": {
+          "$ref": "#/$defs/LedgerRef"
+        }
+      },
+      "required": [
+        "object_id",
+        "ledger_ref"
+      ],
+      "title": "BusinessBinding",
+      "type": "object"
+    },
+    "BusinessRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "space_id": {
+          "pattern": "^space-[a-f0-9]{16}$",
+          "title": "Space Id",
+          "type": "string"
+        },
+        "base_candidate_id": {
+          "maxLength": 100,
+          "minLength": 1,
+          "title": "Base Candidate Id",
+          "type": "string"
+        },
+        "base_manifest_sha256": {
+          "pattern": "^[a-f0-9]{64}$",
+          "title": "Base Manifest Sha256",
+          "type": "string"
+        },
+        "bindings": {
+          "items": {
+            "$ref": "#/$defs/BusinessBinding"
+          },
+          "maxItems": 100,
+          "title": "Bindings",
+          "type": "array"
+        }
+      },
+      "required": [
+        "space_id",
+        "base_candidate_id",
+        "base_manifest_sha256",
+        "bindings"
+      ],
+      "title": "BusinessRequest",
+      "type": "object"
+    },
+    "BusinessSnapshot": {
+      "additionalProperties": false,
+      "properties": {
+        "profile": {
+          "const": "cospace.preview-business/0.1",
+          "title": "Profile",
+          "type": "string"
+        },
+        "model_id": {
+          "pattern": "^build-[a-f0-9]{16}$",
+          "title": "Model Id",
+          "type": "string"
+        },
+        "space_id": {
+          "pattern": "^space-[a-f0-9]{16}$",
+          "title": "Space Id",
+          "type": "string"
+        },
+        "project_id": {
+          "pattern": "^project-[a-f0-9]{16}$",
+          "title": "Project Id",
+          "type": "string"
+        },
+        "objects_sha256": {
+          "pattern": "^[a-f0-9]{64}$",
+          "title": "Objects Sha256",
+          "type": "string"
+        },
+        "bindings": {
+          "items": {
+            "$ref": "#/$defs/BusinessBinding"
+          },
+          "maxItems": 100,
+          "title": "Bindings",
+          "type": "array"
+        },
+        "records": {
+          "items": {
+            "$ref": "#/$defs/FrozenRecord"
+          },
+          "maxItems": 100,
+          "title": "Records",
+          "type": "array"
+        },
+        "confirmation": {
+          "const": "unverified",
+          "title": "Confirmation",
+          "type": "string"
+        }
+      },
+      "required": [
+        "profile",
+        "model_id",
+        "space_id",
+        "project_id",
+        "objects_sha256",
+        "bindings",
+        "records",
+        "confirmation"
+      ],
+      "title": "BusinessSnapshot",
+      "type": "object"
+    },
+    "FrozenRecord": {
+      "additionalProperties": false,
+      "properties": {
+        "ref": {
+          "$ref": "#/$defs/LedgerRef"
+        },
+        "record": {
+          "$ref": "#/$defs/LedgerRecord"
+        }
+      },
+      "required": [
+        "ref",
+        "record"
+      ],
+      "title": "FrozenRecord",
+      "type": "object"
+    },
+    "LedgerDraft": {
+      "additionalProperties": false,
+      "properties": {
+        "space_id": {
+          "pattern": "^space-[a-f0-9]{16}$",
+          "title": "Space Id",
+          "type": "string"
+        },
+        "source_system": {
+          "maxLength": 80,
+          "minLength": 1,
+          "title": "Source System",
+          "type": "string"
+        },
+        "external_id": {
+          "maxLength": 100,
+          "minLength": 1,
+          "title": "External Id",
+          "type": "string"
+        },
+        "version": {
+          "maxLength": 40,
+          "minLength": 1,
+          "title": "Version",
+          "type": "string"
+        },
+        "title": {
+          "maxLength": 100,
+          "minLength": 1,
+          "title": "Title",
+          "type": "string"
+        },
+        "fields": {
+          "$ref": "#/$defs/AssetFields"
+        }
+      },
+      "required": [
+        "space_id",
+        "source_system",
+        "external_id",
+        "version",
+        "title"
+      ],
+      "title": "LedgerDraft",
+      "type": "object"
+    },
+    "LedgerRecord": {
+      "additionalProperties": false,
+      "properties": {
+        "space_id": {
+          "pattern": "^space-[a-f0-9]{16}$",
+          "title": "Space Id",
+          "type": "string"
+        },
+        "source_system": {
+          "maxLength": 80,
+          "minLength": 1,
+          "title": "Source System",
+          "type": "string"
+        },
+        "external_id": {
+          "maxLength": 100,
+          "minLength": 1,
+          "title": "External Id",
+          "type": "string"
+        },
+        "version": {
+          "maxLength": 40,
+          "minLength": 1,
+          "title": "Version",
+          "type": "string"
+        },
+        "title": {
+          "maxLength": 100,
+          "minLength": 1,
+          "title": "Title",
+          "type": "string"
+        },
+        "fields": {
+          "$ref": "#/$defs/AssetFields"
+        },
+        "profile": {
+          "const": "cospace.preview-ledger/0.1",
+          "title": "Profile",
+          "type": "string"
+        },
+        "record_id": {
+          "pattern": "^ledger-[a-f0-9]{16}$",
+          "title": "Record Id",
+          "type": "string"
+        },
+        "project_id": {
+          "pattern": "^project-[a-f0-9]{16}$",
+          "title": "Project Id",
+          "type": "string"
+        },
+        "created_at": {
+          "maxLength": 80,
+          "minLength": 1,
+          "title": "Created At",
+          "type": "string"
+        },
+        "confirmation": {
+          "const": "unverified",
+          "title": "Confirmation",
+          "type": "string"
+        }
+      },
+      "required": [
+        "space_id",
+        "source_system",
+        "external_id",
+        "version",
+        "title",
+        "profile",
+        "record_id",
+        "project_id",
+        "created_at",
+        "confirmation"
+      ],
+      "title": "LedgerRecord",
+      "type": "object"
+    },
+    "LedgerRef": {
+      "additionalProperties": false,
+      "properties": {
+        "record_id": {
+          "pattern": "^ledger-[a-f0-9]{16}$",
+          "title": "Record Id",
+          "type": "string"
+        },
+        "sha256": {
+          "pattern": "^[a-f0-9]{64}$",
+          "title": "Sha256",
+          "type": "string"
+        }
+      },
+      "required": [
+        "record_id",
+        "sha256"
+      ],
+      "title": "LedgerRef",
+      "type": "object"
+    }
+  },
+  "anyOf": [
+    {
+      "$ref": "#/$defs/LedgerDraft"
+    },
+    {
+      "$ref": "#/$defs/LedgerRecord"
+    },
+    {
+      "$ref": "#/$defs/BusinessRequest"
+    },
+    {
+      "$ref": "#/$defs/BusinessSnapshot"
+    }
+  ]
+}

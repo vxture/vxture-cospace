@@ -1,0 +1,23 @@
+[
+  {
+    "name": "@vxture/design-system",
+    "version": "15.0.0",
+    "archive": "vxture-design-system-15.0.0.tgz",
+    "sha256": "a3cf913af3acf41c4be6db22b7c3d736623d1b37d6641714ed048cec8eddcb9e",
+    "source": "D:\\MyWebSite\\vxtureagents\\vx-agent-yucer\\portals\\app\\node_modules\\@vxture\\design-system"
+  },
+  {
+    "name": "@vxture/design-ui",
+    "version": "12.0.0",
+    "archive": "vxture-design-ui-12.0.0.tgz",
+    "sha256": "c6c3841d88afee7848acf03caee48dd14d75c58c763902472c6e2423a1e39e78",
+    "source": "D:\\MyWebSite\\vxtureagents\\vx-agent-yucer\\portals\\app\\node_modules\\@vxture\\design-ui"
+  },
+  {
+    "name": "@vxture/design-tokens",
+    "version": "4.0.0",
+    "archive": "vxture-design-tokens-4.0.0.tgz",
+    "sha256": "6d4613097d2b080aca7edfae5d6bcc4d7ae846d113c339531a93c4059bfdcad5",
+    "source": "D:\\MyWebSite\\vxtureagents\\vx-agent-yucer\\node_modules\\.pnpm\\@vxture+design-tokens@4.0.0_tailwindcss@4.3.3\\node_modules\\@vxture\\design-tokens"
+  }
+]

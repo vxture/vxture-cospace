@@ -1,0 +1,33 @@
+async page => {
+ const checks=[],errors=[];const ok=(v,n)=>{if(!v)throw Error(n);checks.push(n);};
+ page.on('pageerror',e=>errors.push(e.message));
+ await page.setViewportSize({width:1440,height:1000});
+ await page.context().route('**/workbench/**',route=>route.continue({headers:{...route.request().headers(),'Cache-Control':'no-cache'}}));
+ await page.goto('http://127.0.0.1:8766/workbench/layout.html?revision=space-screen#space');
+ await page.locator('#enter-preview, #workbench-shell').first().waitFor();
+ if(await page.locator('#enter-preview').isVisible())await page.locator('#enter-preview').click();
+ await page.getByRole('heading',{name:'我的空间'}).waitFor();
+ const original=page.url();const popup=page.waitForEvent('popup');
+ await page.getByRole('link',{name:'打开空间态势',exact:true}).first().click();
+ const screen=await popup;screen.on('pageerror',e=>errors.push(e.message));await screen.waitForLoadState();
+ await screen.locator('#spatial').waitFor();await screen.setViewportSize({width:1440,height:1000});
+ ok(page.url()===original&&await page.getByRole('heading',{name:'我的空间'}).isVisible(),'original_tab_preserved');
+ ok(await screen.locator('header').count()===0,'no_generic_header');
+ ok(await screen.locator('#spatial').evaluate(e=>{const r=e.getBoundingClientRect();return r.x===0&&r.y===0&&r.width===innerWidth&&r.height===innerHeight;}),'full_viewport');
+ await screen.evaluate(()=>document.fonts.ready);await screen.screenshot({path:'output/playwright/layout/screen-space.png',fullPage:true,animations:'disabled'});
+ await screen.getByRole('button',{name:'切换空间',exact:true}).click();await screen.screenshot({path:'output/playwright/layout/screen-switcher.png',fullPage:true,animations:'disabled'});
+ await screen.getByRole('button',{name:/水泵设备间/}).click();
+ await screen.waitForFunction(()=>location.search.includes('space=pump'));
+ ok(await screen.getByRole('button',{name:'泵组 P-01',exact:true}).isVisible(),'space_objects_updated');
+ await screen.getByRole('button',{name:'对象属性',exact:true}).click();ok((await screen.locator('div[aria-label="对象属性"]').innerText()).includes('水泵设备间'),'space_inspector_updated');
+ await screen.getByRole('button',{name:'关闭属性面板'}).click();await screen.getByRole('button',{name:'对象与图层',exact:true}).click();await screen.getByRole('textbox',{name:'搜索空间对象'}).fill('P-02');ok(await screen.getByRole('button',{name:'泵组 P-02',exact:true}).count()===2,'object_search');
+ await screen.getByRole('switch',{name:'未知区域',exact:true}).click();ok(!await screen.locator('#unknown').isVisible(),'layer_toggle');await screen.getByRole('button',{name:'关闭对象面板'}).click();
+ await screen.reload();await screen.locator('#spatial').waitFor();ok((await screen.getByRole('button',{name:'切换空间',exact:true}).innerText()).includes('水泵'),'space_persists_reload');
+ await screen.getByRole('button',{name:'沉浸展示',exact:true}).click();ok(!await screen.getByRole('toolbar').isVisible(),'immersive');await screen.keyboard.press('Escape');await screen.getByRole('toolbar').waitFor();
+ const font=await screen.locator('#labels text').first().evaluate(e=>parseFloat(getComputedStyle(e).fontSize)*e.getScreenCTM().a);ok(font<=12.5,'annotation_font_fine');
+ await screen.setViewportSize({width:919,height:902});ok(await screen.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'tablet_no_overflow');await screen.screenshot({path:'output/playwright/layout/screen-919.png',fullPage:true,animations:'disabled'});
+ await screen.setViewportSize({width:390,height:844});ok(await screen.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'mobile_no_overflow');await screen.screenshot({path:'output/playwright/layout/screen-mobile.png',fullPage:true,animations:'disabled'});
+ await screen.setViewportSize({width:1440,height:1000});await screen.getByRole('button',{name:'切换空间',exact:true}).click();await screen.getByRole('button',{name:/巡检设备区/}).click();await screen.waitForFunction(()=>location.search.includes('space=inspection'));ok(await screen.getByRole('button',{name:'检测柜 C-01',exact:true}).isVisible(),'third_space');
+ await page.getByRole('button',{name:'功能 Launcher',exact:true}).click();const launch=page.getByRole('link',{name:/^空间态势/});ok(await launch.getAttribute('target')==='_blank','launcher_new_tab');await page.keyboard.press('Escape');
+ ok(errors.length===0,'no_javascript_errors');return {checks,font,errors,screenUrl:screen.url()};
+}

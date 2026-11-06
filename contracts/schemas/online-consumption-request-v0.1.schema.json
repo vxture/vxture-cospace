@@ -1,0 +1,51 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "model_manifest_sha256": {
+      "pattern": "^[a-f0-9]{64}$",
+      "title": "Model Manifest Sha256",
+      "type": "string"
+    },
+    "frame_id": {
+      "maxLength": 160,
+      "minLength": 1,
+      "title": "Frame Id",
+      "type": "string"
+    },
+    "point_m": {
+      "items": {
+        "type": "number"
+      },
+      "maxItems": 3,
+      "minItems": 3,
+      "title": "Point M",
+      "type": "array"
+    },
+    "mode": {
+      "pattern": "^(historical|operational)$",
+      "title": "Mode",
+      "type": "string"
+    },
+    "max_age_s": {
+      "maximum": 31536000,
+      "minimum": 0,
+      "title": "Max Age S",
+      "type": "integer"
+    },
+    "accept_unverified_time": {
+      "default": false,
+      "title": "Accept Unverified Time",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "model_manifest_sha256",
+    "frame_id",
+    "point_m",
+    "mode",
+    "max_age_s"
+  ],
+  "title": "Query",
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

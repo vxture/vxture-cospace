@@ -1,0 +1,241 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Laser Persisted build process index 0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "profile": {
+      "const": "cospace.lidar-build-process/0.1"
+    },
+    "space_id": {
+      "type": "string"
+    },
+    "job_id": {
+      "type": "string"
+    },
+    "input_id": {
+      "type": "string"
+    },
+    "snapshot_sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "revision": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "state": {
+      "enum": [
+        "recording",
+        "completed",
+        "failed",
+        "interrupted"
+      ]
+    },
+    "frame_id": {
+      "const": "first_lidar_anchor"
+    },
+    "axes": {
+      "const": [
+        "sensor_x",
+        "sensor_y",
+        "sensor_z"
+      ]
+    },
+    "unit": {
+      "const": "m"
+    },
+    "input_frames": {
+      "type": "integer",
+      "minimum": 2,
+      "maximum": 20
+    },
+    "available_frames": {
+      "type": "integer",
+      "minimum": 2,
+      "maximum": 20
+    },
+    "processed_frames": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "excluded_frames": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "excluded_reason": {
+      "type": "null"
+    },
+    "source_clock": {
+      "const": "ros_header_unverified_utc"
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "source_model_sha256": {
+      "anyOf": [
+        {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "project_id": {
+      "type": "string"
+    },
+    "input_binding": {
+      "type": "object"
+    },
+    "origin_time_us": {
+      "type": "integer"
+    },
+    "point_count": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 2500000
+    },
+    "frames": {
+      "type": "array",
+      "maxItems": 20,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "index": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "relative_time_us": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "source_time_us": {
+            "type": "integer"
+          },
+          "pose": {
+            "type": "array",
+            "minItems": 4,
+            "maxItems": 4,
+            "items": {
+              "type": "array",
+              "minItems": 4,
+              "maxItems": 4,
+              "items": {
+                "type": "number"
+              }
+            }
+          },
+          "input_points": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "added_points": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "point_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "processed_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "chunk": {
+            "type": "string",
+            "pattern": "^frame-[0-9]{4}\\.npz$"
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "bytes": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 16777216
+          },
+          "message_sha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "header_ns": {
+            "type": "string",
+            "pattern": "^[0-9]{1,19}$"
+          },
+          "recorded_ns": {
+            "type": "string",
+            "pattern": "^[0-9]{1,19}$"
+          },
+          "registration": {
+            "type": "object",
+            "required": [
+              "accepted"
+            ],
+            "properties": {
+              "accepted": {
+                "const": true
+              }
+            }
+          }
+        },
+        "required": [
+          "index",
+          "relative_time_us",
+          "source_time_us",
+          "pose",
+          "input_points",
+          "added_points",
+          "point_count",
+          "processed_at",
+          "chunk",
+          "sha256",
+          "bytes",
+          "message_sha256",
+          "header_ns",
+          "recorded_ns",
+          "registration"
+        ]
+      }
+    },
+    "bag_sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "rejection": {
+      "type": [
+        "object",
+        "null"
+      ]
+    }
+  },
+  "required": [
+    "profile",
+    "space_id",
+    "job_id",
+    "input_id",
+    "snapshot_sha256",
+    "bag_sha256",
+    "revision",
+    "state",
+    "frame_id",
+    "axes",
+    "unit",
+    "input_frames",
+    "available_frames",
+    "processed_frames",
+    "excluded_frames",
+    "excluded_reason",
+    "source_clock",
+    "updated_at",
+    "source_model_sha256",
+    "project_id",
+    "input_binding",
+    "origin_time_us",
+    "point_count",
+    "frames"
+  ]
+}

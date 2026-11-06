@@ -1,0 +1,128 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "Cloud": {
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "const": "cloud.ply",
+          "title": "Path",
+          "type": "string"
+        },
+        "sha256": {
+          "pattern": "^[a-f0-9]{64}$",
+          "title": "Sha256",
+          "type": "string"
+        },
+        "bytes": {
+          "exclusiveMinimum": 0,
+          "maximum": 33554432,
+          "title": "Bytes",
+          "type": "integer"
+        },
+        "points": {
+          "exclusiveMinimum": 0,
+          "maximum": 1000000,
+          "title": "Points",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "path",
+        "sha256",
+        "bytes",
+        "points"
+      ],
+      "title": "Cloud",
+      "type": "object"
+    },
+    "Coordinates": {
+      "additionalProperties": false,
+      "properties": {
+        "unit": {
+          "const": "m",
+          "title": "Unit",
+          "type": "string"
+        },
+        "frame_id": {
+          "pattern": "^[A-Za-z0-9_/-]{1,100}$",
+          "title": "Frame Id",
+          "type": "string"
+        },
+        "axes": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 3,
+          "minItems": 3,
+          "title": "Axes",
+          "type": "array"
+        },
+        "scope": {
+          "enum": [
+            "sensor_local",
+            "scene_local"
+          ],
+          "title": "Scope",
+          "type": "string"
+        },
+        "scene_alignment": {
+          "const": "unverified",
+          "title": "Scene Alignment",
+          "type": "string"
+        }
+      },
+      "required": [
+        "unit",
+        "frame_id",
+        "axes",
+        "scope",
+        "scene_alignment"
+      ],
+      "title": "Coordinates",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "User declaration about the selected file, never an upstream acquisition log.",
+  "properties": {
+    "profile": {
+      "const": "cospace.pointcloud-source/0.1",
+      "title": "Profile",
+      "type": "string"
+    },
+    "basis": {
+      "const": "user_declared_file",
+      "title": "Basis",
+      "type": "string"
+    },
+    "original_name": {
+      "maxLength": 160,
+      "minLength": 1,
+      "title": "Original Name",
+      "type": "string"
+    },
+    "cloud": {
+      "$ref": "#/$defs/Cloud"
+    },
+    "coordinates": {
+      "$ref": "#/$defs/Coordinates"
+    },
+    "description": {
+      "maxLength": 500,
+      "minLength": 1,
+      "title": "Description",
+      "type": "string"
+    }
+  },
+  "required": [
+    "profile",
+    "basis",
+    "original_name",
+    "cloud",
+    "coordinates",
+    "description"
+  ],
+  "title": "SourceReceipt",
+  "type": "object"
+}

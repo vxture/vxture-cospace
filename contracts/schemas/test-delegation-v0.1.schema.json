@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object", "additionalProperties": false,
+  "required": ["schema_version", "test_only", "deployment_id", "version", "keys"],
+  "properties": {
+    "schema_version": {"const": "cospace.test-delegation/0.1"}, "test_only": {"const": true},
+    "deployment_id": {"type": "string", "minLength": 1, "maxLength": 128},
+    "version": {"type": "integer", "minimum": 1, "maximum": 2147483647},
+    "keys": {"type": "array", "minItems": 1, "maxItems": 16, "items": {
+      "type": "object", "additionalProperties": false,
+      "required": ["kid", "issuer", "public_key_hex", "roles", "scenes", "not_before", "expires_at", "revoked"],
+      "properties": {
+        "kid": {"type": "string", "minLength": 1, "maxLength": 128},
+        "issuer": {"type": "string", "minLength": 1, "maxLength": 128},
+        "public_key_hex": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "roles": {"type": "array", "minItems": 1, "maxItems": 2, "uniqueItems": true, "items": {"enum": ["publisher", "validity"]}},
+        "scenes": {"type": "array", "minItems": 1, "maxItems": 16, "uniqueItems": true, "items": {"type": "string", "minLength": 1, "maxLength": 128}},
+        "not_before": {"type": "integer", "minimum": 0, "maximum": 253402300799},
+        "expires_at": {"type": "integer", "minimum": 1, "maximum": 253402300799},
+        "revoked": {"type": "boolean"}
+      }}}
+  }
+}

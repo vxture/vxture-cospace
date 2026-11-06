@@ -1,0 +1,20 @@
+{
+  "profile": "cospace.preview-sources/0.1",
+  "sources": [
+    {
+      "id": "nyu-office-short",
+      "label": "NYU办公室 · 2秒封存资料与匹配轨迹",
+      "enabled": true,
+      "format": "nyu_rgbd_with_existing_poses",
+      "snapshot": "var/nyu/office-0001a-short-001",
+      "tracking": "var/nyu/office-0001a-interior-0-002/comparison.json"
+    },
+    {
+      "id": "os1-single-frame",
+      "label": "OS1-16 · 1秒采集样本（单帧候选）",
+      "enabled": true,
+      "format": "ros1_lidar_single_frame",
+      "snapshot": "var/samples/multi-1-os1-lidar-1s-001"
+    }
+  ]
+}

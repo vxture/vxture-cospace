@@ -1,0 +1,43 @@
+{
+  "objects": [
+    {
+      "object_id": "room-a",
+      "type_id": "room",
+      "properties": {
+        "name": "设备间A（合成）"
+      },
+      "anchor_xyz": [
+        4,
+        3,
+        0
+      ],
+      "confirmation": "synthetic"
+    },
+    {
+      "object_id": "corridor-a",
+      "type_id": "corridor",
+      "properties": {
+        "name": "走廊A（合成）"
+      },
+      "anchor_xyz": [
+        2,
+        0,
+        0
+      ],
+      "confirmation": "synthetic"
+    },
+    {
+      "object_id": "cabinet-a",
+      "type_id": "cabinet",
+      "properties": {
+        "name": "柜体A（合成）"
+      },
+      "anchor_xyz": [
+        5,
+        3,
+        1
+      ],
+      "confirmation": "synthetic"
+    }
+  ]
+}

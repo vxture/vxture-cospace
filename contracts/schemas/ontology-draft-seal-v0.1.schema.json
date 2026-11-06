@@ -1,0 +1,29 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "draft_id": {
+      "pattern": "^draft-[a-f0-9]{32}$",
+      "title": "Draft Id",
+      "type": "string"
+    },
+    "expected_revision": {
+      "minimum": 1,
+      "title": "Expected Revision",
+      "type": "integer"
+    },
+    "expected_sha256": {
+      "pattern": "^[a-f0-9]{64}$",
+      "title": "Expected Sha256",
+      "type": "string"
+    }
+  },
+  "required": [
+    "draft_id",
+    "expected_revision",
+    "expected_sha256"
+  ],
+  "title": "SealDraft",
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cospace.local/schemas/ontology-draft-seal-v0.1.schema.json"
+}

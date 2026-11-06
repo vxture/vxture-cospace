@@ -1,0 +1,41 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "space_id": {
+      "pattern": "^space-[a-f0-9]{16}$",
+      "title": "Space Id",
+      "type": "string"
+    },
+    "expected_revision": {
+      "minimum": 0,
+      "title": "Expected Revision",
+      "type": "integer"
+    },
+    "name": {
+      "maxLength": 100,
+      "minLength": 1,
+      "title": "Name",
+      "type": "string"
+    },
+    "description": {
+      "maxLength": 500,
+      "title": "Description",
+      "type": "string"
+    },
+    "reason": {
+      "maxLength": 500,
+      "minLength": 1,
+      "title": "Reason",
+      "type": "string"
+    }
+  },
+  "required": [
+    "space_id",
+    "expected_revision",
+    "name",
+    "description",
+    "reason"
+  ],
+  "title": "SpaceSettingsChange",
+  "type": "object"
+}

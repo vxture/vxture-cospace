@@ -1,0 +1,40 @@
+async (page) => {
+ const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ const checks=[];const assert=(v,n)=>{if(!v)throw Error(n);checks.push(n);};
+ const go=async(selector,title)=>{await page.locator(selector).click();await page.waitForFunction(t=>document.querySelector('#breadcrumb').textContent===t,title);};
+ await page.setViewportSize({width:1600,height:1000});
+ await page.goto('http://127.0.0.1:8766/workbench/layout.html#space');
+ await page.evaluate(()=>{sessionStorage.removeItem('cospace.ui.preview');localStorage.removeItem('cospace.ui.v02.config');});
+ await page.reload();
+ assert(await page.locator('#login-screen').isVisible(),'login_gate');
+ await page.screenshot({path:'output/playwright/layout/login-v02.png',fullPage:true});
+ await page.locator('#third-party-login').click();assert(await page.locator('#dialog').isVisible(),'third_party_explanation');await page.locator('#dialog-close').click();
+ await page.locator('#enter-preview').click();
+ assert(await page.locator('#spatial').isVisible(),'preview_entry');
+ const box=await page.locator('.view').boundingBox();assert(box.width===1600&&box.height>=900,'full_viewport_map');
+ assert(!await page.locator('.tree').isVisible()&&!await page.locator('.inspector').isVisible(),'panels_initially_folded');
+ await page.screenshot({path:'output/playwright/layout/space-v02.png',fullPage:true});
+ await page.locator('#objects-toggle').click();await page.locator('.object[data-object="1"]').click();
+ await page.locator('#properties-toggle').click();assert(await page.locator('#object-name').innerText()==='设备柜 A-02','object_selection');
+ await page.screenshot({path:'output/playwright/layout/space-panels-v02.png',fullPage:true});
+ await page.locator('#objects-toggle').click();await page.locator('#properties-toggle').click();
+ await page.locator('#immersive').click();assert(!await page.locator('.topbar').isVisible(),'immersive_hides_shell');await page.keyboard.press('Escape');assert(await page.locator('.topbar').isVisible(),'escape_exits_immersive');
+ await page.locator('#launcher-toggle').click();await page.screenshot({path:'output/playwright/layout/launcher-v02.png',fullPage:true});
+ await go('#launcher-panel a[href="#data"]','数据管理');assert(await page.locator('.data-table').isVisible(),'business_data_view');
+ for(const [name,title] of [['ontology','语义本体'],['build','构建中心'],['delivery','服务与交付']]){await page.locator('#launcher-toggle').click();await go(`#launcher-panel a[href="#${name}"]`,title);assert(await page.locator('.data-table').isVisible(),'business_'+name);}
+ await page.locator('#admin-toggle').click();await go('#admin-panel a[href="#settings"]','业务配置');
+ await page.locator('#config-scene').fill('设备间与相连走廊 · 预览');await page.locator('#config-form button[type="submit"]').click();
+ assert(await page.evaluate(()=>JSON.parse(localStorage.getItem('cospace.ui.v02.config')).scene.endsWith('预览')),'config_draft_saved');
+ await page.screenshot({path:'output/playwright/layout/settings-v02.png',fullPage:true});
+ await go('.manage-nav a[href="#members"]','成员与角色');await page.locator('#add-member').click();await page.locator('#member-form input').fill('示例查看者');await page.locator('#member-form button[type="submit"]').click();assert((await page.locator('.data-table').innerText()).includes('示例查看者'),'member_draft');
+ await go('.manage-nav a[href="#identity"]','登录集成');assert((await page.locator('.manage-main').innerText()).includes('待接入'),'identity_not_connected');
+ await page.locator('#user-toggle').click();await go('#user-panel a[href="#account"]','个人账户');assert(await page.locator('#account-sign-out').isVisible(),'account_page');
+ await page.reload();assert(await page.locator('#account-sign-out').isVisible(),'preview_route_survives_reload');
+ await go('.manage-nav a[href="#space"]','空间态势');assert(await page.locator('#spatial').isVisible(),'return_from_management');
+ await page.setViewportSize({width:390,height:844});assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'mobile_no_overflow');await page.screenshot({path:'output/playwright/layout/mobile-v02.png',fullPage:true});
+ await page.locator('#launcher-toggle').click();assert(await page.locator('#launcher-panel').isVisible(),'mobile_launcher');await go('#launcher-panel a[href="#data"]','数据管理');assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'mobile_business_no_overflow');
+ await page.setViewportSize({width:1600,height:1000});await page.locator('#user-toggle').click();await page.locator('#sign-out').click();assert(await page.locator('#login-screen').isVisible(),'sign_out_preview');
+ await page.locator('#enter-preview').click();await page.locator('#launcher-toggle').click();await go('#launcher-panel a[href="#space"]','空间态势');
+ await page.evaluate(()=>localStorage.removeItem('cospace.ui.v02.config'));
+ assert(errors.length===0,'no_javascript_errors');return {checks,errors,prototype_only:true};
+}

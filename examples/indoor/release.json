@@ -1,0 +1,26 @@
+{
+  "scene_id": "synthetic-equipment-corridor",
+  "data_kind": "synthetic",
+  "release_id": "release-sample-001",
+  "source_truth": {
+    "path": "truth.json",
+    "sha256": "7b3c71d9c661b31c5632e0f4352fa10a16f021b1a0557fe531c6cdd7ed5ac3cf",
+    "scene_id": "synthetic-equipment-corridor",
+    "truth_version_id": "truth-sample-001"
+  },
+  "views": [
+    {
+      "path": "human.json",
+      "sha256": "8e22d2466da46af0d3c740f6945154e8e5875d48a4e8b8049a0adc5f201fdd11",
+      "view_version_id": "human-sample-001"
+    },
+    {
+      "path": "agent.json",
+      "sha256": "2a71bde85fa2de57c96a240d6aa0412d7e3536634ec24163fa7feb91c1f14025",
+      "view_version_id": "agent-sample-001"
+    }
+  ],
+  "capabilities": [
+    "reference_reading"
+  ]
+}

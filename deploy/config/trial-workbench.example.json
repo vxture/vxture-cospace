@@ -1,0 +1,8 @@
+{
+  "profile": "cospace.windows-trial/0.1",
+  "mode": "mock",
+  "port": 8790,
+  "accounts_port": 19127,
+  "business_root": "D:\\MyWebSite\\vxturestudio\\vxture-cospace\\var\\trial",
+  "state_root": "D:\\MyWebSite\\vxturestudio\\vxture-cospace\\var\\trial-state"
+}

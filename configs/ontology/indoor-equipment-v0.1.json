@@ -1,0 +1,32 @@
+{
+  "profile": "cospace.preview-ontology/0.1",
+  "ontology_id": "indoor-equipment",
+  "version": "0.1.0",
+  "title": "设备间与走廊基础词表",
+  "description": "人工维护的首版类型与字符串约束。定义可校验规则，不代表现场已识别或确认这些对象；尚未实现行业标准映射、关系和单位约束。",
+  "types": {
+    "room": {
+      "title": "设备间",
+      "description": "用于容纳设备的空间单元；本批不定义空间边界或建筑标准映射。",
+      "properties": {"name": {"title": "名称", "type": "string", "required": true, "min_length": 1, "max_length": 160}}
+    },
+    "corridor": {
+      "title": "走廊",
+      "description": "连接空间的通道类型；类型声明不表示可通行性已验证。",
+      "properties": {"name": {"title": "名称", "type": "string", "required": true, "min_length": 1, "max_length": 160}}
+    },
+    "cabinet": {
+      "title": "设备柜",
+      "description": "通用柜体类型；具体电气功能与台账关系需后续人工确认。",
+      "properties": {
+        "name": {"title": "名称", "type": "string", "required": true, "min_length": 1, "max_length": 160},
+        "asset_code": {"title": "资产编号", "type": "string", "required": false, "min_length": 1, "max_length": 160}
+      }
+    },
+    "inspection_point": {
+      "title": "巡检点",
+      "description": "人工指定的巡检对象类型；本批不包含任务、路径或到达性。",
+      "properties": {"name": {"title": "名称", "type": "string", "required": true, "min_length": 1, "max_length": 160}}
+    }
+  }
+}

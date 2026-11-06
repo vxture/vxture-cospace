@@ -1,0 +1,86 @@
+{
+  "scene_id": "synthetic-equipment-corridor",
+  "data_kind": "synthetic",
+  "frame_id": "sample-local",
+  "bounds": [
+    [
+      0,
+      -1,
+      0
+    ],
+    [
+      10,
+      6,
+      3
+    ]
+  ],
+  "evidence": [
+    {
+      "evidence_id": "synthetic-rays",
+      "kind": "synthetic_observation",
+      "description": "Hand-authored fixture, no sensor acquisition"
+    }
+  ],
+  "regions": [
+    {
+      "region_id": "corridor-free",
+      "bounds": [
+        [
+          0,
+          -1,
+          0
+        ],
+        [
+          4,
+          1,
+          2
+        ]
+      ],
+      "state": "observed_free",
+      "reason": "synthetic_observation",
+      "evidence_ids": [
+        "synthetic-rays"
+      ]
+    },
+    {
+      "region_id": "cabinet-occupied",
+      "bounds": [
+        [
+          4,
+          2,
+          0
+        ],
+        [
+          6,
+          4,
+          2
+        ]
+      ],
+      "state": "occupied",
+      "reason": "synthetic_observation",
+      "evidence_ids": [
+        "synthetic-rays"
+      ]
+    },
+    {
+      "region_id": "conflicting-return",
+      "bounds": [
+        [
+          3,
+          0,
+          0
+        ],
+        [
+          4,
+          1,
+          1
+        ]
+      ],
+      "state": "occupied",
+      "reason": "synthetic_observation",
+      "evidence_ids": [
+        "synthetic-rays"
+      ]
+    }
+  ]
+}

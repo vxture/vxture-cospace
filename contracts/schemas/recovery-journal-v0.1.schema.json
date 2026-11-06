@@ -1,0 +1,82 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$comment": "Design-only synthetic exchange records; structure never proves a commit or authorizes recovery.",
+  "allOf": [{"$ref": "#/$defs/base"}],
+  "oneOf": [
+    {"$ref": "#/$defs/intent"},
+    {"$ref": "#/$defs/receipt"},
+    {"$ref": "#/$defs/plan"},
+    {"$ref": "#/$defs/result"}
+  ],
+  "unevaluatedProperties": false,
+  "$defs": {
+    "sha": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "uuid": {"type": "string", "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"},
+    "counter": {"type": "integer", "minimum": 0, "maximum": 9007199254740991},
+    "generation": {"type": "integer", "minimum": 1, "maximum": 9007199254740991},
+    "kind": {"enum": ["content_statement", "status_snapshot", "capability_grant"]},
+    "reason": {"type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-z][a-z0-9_]*$"},
+    "base": {
+      "type": "object",
+      "required": ["schema_version", "test_only", "store_id", "context_sha256", "generation", "authorized", "robot_ready"],
+      "properties": {
+        "schema_version": {"const": "cospace.test-recovery-journal/0.1"},
+        "test_only": {"const": true},
+        "store_id": {"$ref": "#/$defs/uuid"},
+        "context_sha256": {"$ref": "#/$defs/sha"},
+        "generation": {"$ref": "#/$defs/generation"},
+        "authorized": {"const": false}, "robot_ready": {"const": false}
+      }
+    },
+    "intent": {
+      "required": ["record_kind", "intent_id", "message_kind", "identity", "binding_sha256", "token_sha256", "token", "prepared_revision"],
+      "properties": {
+        "record_kind": {"const": "intent"},
+        "intent_id": {"$ref": "#/$defs/uuid"}, "message_kind": {"$ref": "#/$defs/kind"},
+        "identity": {"$ref": "#/$defs/sha"}, "binding_sha256": {"$ref": "#/$defs/sha"},
+        "token_sha256": {"$ref": "#/$defs/sha"},
+        "token": {"type": "string", "maxLength": 49152, "pattern": "^[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+$"},
+        "prepared_revision": {"$ref": "#/$defs/counter"}
+      }
+    },
+    "receipt": {
+      "required": ["record_kind", "intent_id", "token_sha256", "outcome", "reason", "before_revision", "after_revision", "before_state_sha256", "after_state_sha256"],
+      "properties": {
+        "record_kind": {"const": "commit_receipt"}, "intent_id": {"$ref": "#/$defs/uuid"},
+        "token_sha256": {"$ref": "#/$defs/sha"}, "outcome": {"enum": ["applied", "idempotent", "rejected"]},
+        "reason": {"$ref": "#/$defs/reason"},
+        "before_revision": {"$ref": "#/$defs/counter"}, "after_revision": {"$ref": "#/$defs/counter"},
+        "before_state_sha256": {"$ref": "#/$defs/sha"}, "after_state_sha256": {"$ref": "#/$defs/sha"}
+      }
+    },
+    "item": {
+      "type": "object", "additionalProperties": false,
+      "required": ["intent_id", "message_kind", "identity", "token_sha256", "action", "reason"],
+      "properties": {
+        "intent_id": {"$ref": "#/$defs/uuid"}, "message_kind": {"$ref": "#/$defs/kind"},
+        "identity": {"$ref": "#/$defs/sha"}, "token_sha256": {"$ref": "#/$defs/sha"},
+        "action": {"enum": ["apply", "record_idempotent", "record_rejection", "retain_blocked"]},
+        "reason": {"$ref": "#/$defs/reason"}
+      }
+    },
+    "plan": {
+      "required": ["record_kind", "recovery_id", "expected_state_revision", "before_state_sha256", "pending_set_sha256", "target_state_sha256", "items"],
+      "properties": {
+        "record_kind": {"const": "recovery_plan"}, "recovery_id": {"$ref": "#/$defs/uuid"},
+        "expected_state_revision": {"$ref": "#/$defs/counter"},
+        "before_state_sha256": {"$ref": "#/$defs/sha"}, "pending_set_sha256": {"$ref": "#/$defs/sha"},
+        "target_state_sha256": {"$ref": "#/$defs/sha"},
+        "items": {"type": "array", "minItems": 1, "maxItems": 200, "items": {"$ref": "#/$defs/item"}}
+      }
+    },
+    "result": {
+      "required": ["record_kind", "recovery_id", "plan_sha256", "phase", "state_revision", "state_sha256", "reason"],
+      "properties": {
+        "record_kind": {"const": "recovery_result"}, "recovery_id": {"$ref": "#/$defs/uuid"},
+        "plan_sha256": {"anyOf": [{"$ref": "#/$defs/sha"}, {"type": "null"}]},
+        "phase": {"enum": ["blocked", "reconciled"]}, "state_revision": {"$ref": "#/$defs/counter"},
+        "state_sha256": {"$ref": "#/$defs/sha"}, "reason": {"$ref": "#/$defs/reason"}
+      }
+    }
+  }
+}

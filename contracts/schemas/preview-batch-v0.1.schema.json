@@ -1,0 +1,185 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CoSpace preview acquisition batch 0.1",
+  "type": "object",
+  "properties": {
+    "profile": {
+      "const": "cospace.preview-batch/0.1"
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^batch-[a-f0-9]{16}$"
+    },
+    "space_id": {
+      "type": "string",
+      "pattern": "^space-[a-f0-9]{16}$"
+    },
+    "project_id": {
+      "type": "string",
+      "pattern": "^project-[a-f0-9]{16}$"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+    },
+    "origin": {
+      "enum": [
+        "imported_sample",
+        "field_collection"
+      ]
+    },
+    "note": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 500
+    },
+    "state": {
+      "enum": [
+        "draft",
+        "sealed",
+        "disabled"
+      ]
+    },
+    "revision": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "members": {
+      "type": "array",
+      "maxItems": 100,
+      "items": {
+        "type": "object",
+        "properties": {
+          "input_id": {
+            "type": "string",
+            "pattern": "^input-[a-f0-9]{16}$"
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "input_record_sha256": {
+            "$ref": "#/$defs/digest"
+          }
+        },
+        "required": [
+          "input_id",
+          "label",
+          "input_record_sha256"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "sealed_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "sealed_members_sha256": {
+      "$ref": "#/$defs/digest"
+    },
+    "resume_state": {
+      "enum": [
+        "draft",
+        "sealed"
+      ]
+    },
+    "operation": {
+      "enum": [
+        "create",
+        "replace_members",
+        "seal",
+        "disable",
+        "restore"
+      ]
+    },
+    "reason": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 500
+    },
+    "quality": {
+      "const": "unverified"
+    },
+    "robot_ready": {
+      "const": false
+    }
+  },
+  "required": [
+    "profile",
+    "id",
+    "space_id",
+    "project_id",
+    "name",
+    "origin",
+    "note",
+    "state",
+    "revision",
+    "members",
+    "created_at",
+    "updated_at",
+    "operation",
+    "reason",
+    "quality",
+    "robot_ready"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "state": {
+            "const": "sealed"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "sealed_at",
+          "sealed_members_sha256"
+        ],
+        "properties": {
+          "members": {
+            "minItems": 1
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "state": {
+            "const": "disabled"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "resume_state"
+        ]
+      },
+      "else": {
+        "not": {
+          "required": [
+            "resume_state"
+          ]
+        }
+      }
+    }
+  ]
+}

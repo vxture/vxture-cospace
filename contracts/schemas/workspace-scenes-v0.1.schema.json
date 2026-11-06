@@ -1,0 +1,84 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "Allocation": {
+      "additionalProperties": false,
+      "properties": {
+        "issuer": {
+          "maxLength": 2048,
+          "minLength": 1,
+          "title": "Issuer",
+          "type": "string"
+        },
+        "org_id": {
+          "maxLength": 160,
+          "minLength": 1,
+          "title": "Org Id",
+          "type": "string"
+        },
+        "workspace_id": {
+          "maxLength": 160,
+          "minLength": 1,
+          "title": "Workspace Id",
+          "type": "string"
+        },
+        "allow_create": {
+          "default": false,
+          "title": "Allow Create",
+          "type": "boolean"
+        },
+        "creator_subjects": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 100,
+          "title": "Creator Subjects",
+          "type": "array"
+        },
+        "source_bindings": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "maxProperties": 100,
+          "title": "Source Bindings",
+          "type": "object"
+        }
+      },
+      "required": [
+        "issuer",
+        "org_id",
+        "workspace_id"
+      ],
+      "title": "Allocation",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "profile": {
+      "pattern": "^cospace.workspace-scenes/0\\.1$",
+      "title": "Profile",
+      "type": "string"
+    },
+    "revision": {
+      "minimum": 1,
+      "title": "Revision",
+      "type": "integer"
+    },
+    "workspaces": {
+      "items": {
+        "$ref": "#/$defs/Allocation"
+      },
+      "maxItems": 10000,
+      "title": "Workspaces",
+      "type": "array"
+    }
+  },
+  "required": [
+    "profile",
+    "revision",
+    "workspaces"
+  ],
+  "title": "WorkspaceSceneConfig",
+  "type": "object"
+}

@@ -1,0 +1,37 @@
+{
+  "schema_version": "cospace.observation-input/0.1",
+  "scene_id": "synthetic-equipment-corridor",
+  "data_kind": "synthetic",
+  "frames": [
+    {"frame_id": "scene", "kind": "local_cartesian", "unit": "m", "handedness": "right", "axes": ["along corridor", "left", "up"], "origin": "synthetic corridor entrance"},
+    {"frame_id": "lidar", "kind": "local_cartesian", "unit": "m", "handedness": "right", "axes": ["forward", "left", "up"], "origin": "synthetic lidar origin"}
+  ],
+  "transforms": [{
+    "source_frame_id": "lidar", "target_frame_id": "scene",
+    "convention": "p_target=T_target_source*p_source",
+    "matrix": [[1,0,0,1],[0,1,0,0],[0,0,1,1],[0,0,0,1]],
+    "assessment": "unverified",
+    "evidence": {"id": "synthetic-transform-placeholder", "sha256": "0000000000000000000000000000000000000000000000000000000000000000"}
+  }],
+  "members": [{
+    "member_id": "raw-001", "path": "raw/synthetic.mcap", "bytes": 1,
+    "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+    "media_type": "application/octet-stream", "encoding": "mcap"
+  }],
+  "streams": [{
+    "stream_id": "lidar-001", "member_id": "raw-001", "channel": "/lidar/points",
+    "sensor_id": "synthetic-lidar", "kind": "lidar", "role": "construction", "frame_id": "lidar",
+    "clock": {"clock_id": "sensor-clock", "time_scale": "device", "timestamp_unit": "ns", "timestamp_meaning": "scan start, synthetic declaration", "sync_status": "unverified", "sync_source": "not established"},
+    "fields": [
+      {"name": "x", "unit": "m", "meaning": "sensor x"},
+      {"name": "y", "unit": "m", "meaning": "sensor y"},
+      {"name": "z", "unit": "m", "meaning": "sensor z"}
+    ]
+  }],
+  "reference_points": [{
+    "point_id": "check-001", "frame_id": "scene", "role": "independent_check",
+    "position": [2,1,0], "used_for_fit": false, "used_for_tuning": false,
+    "measured_at": "2026-10-28T00:00:00Z", "method": "synthetic reference, not a survey", "uncertainty_m": 0.01,
+    "evidence": {"id": "synthetic-check-placeholder", "sha256": "0000000000000000000000000000000000000000000000000000000000000000"}
+  }]
+}

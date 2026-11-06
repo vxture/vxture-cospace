@@ -1,0 +1,78 @@
+{
+  "schema_version": "cospace.consumption/0.1",
+  "kind": "response",
+  "request_id": "synthetic-request-1",
+  "source": {
+    "scene_id": "synthetic-equipment-corridor",
+    "release_id": "release-v1",
+    "release_sha256": "71d2dbd218ffde0478e2c51ac449881322133379406070b5c736c44435aac347",
+    "truth_id": "truth-v1",
+    "truth_sha256": "b2c37b091f6e137b1ca5a3083f3b76e60cb24b4fa68a50489fb4b0a4f4f10b79",
+    "view_id": "machine-v1",
+    "view_sha256": "9008c7d21af5e6fbc7ef141d6d8e6128ce91bf21932dec869eaf58e6b5e30e73"
+  },
+  "package_sha256": "f4e42aeab786588f4743ffd5cb7def7786e8026e26cb25c95c7d43c785145bb0",
+  "profile_ref": {
+    "id": "synthetic-spatial-query",
+    "sha256": "281d6a60a8685010267d576dd69747e5ee094fcaafc2c509324621f6ae8d61a4"
+  },
+  "served_at": "2026-10-28T00:30:00Z",
+  "frame_id": "scene",
+  "mode": "historical",
+  "purpose": "spatial_query",
+  "usage": "historical_inspection_only",
+  "observed_from": "2026-10-28T00:00:00Z",
+  "observed_until": "2026-10-28T00:10:00Z",
+  "valid_until": null,
+  "max_age_s": null,
+  "oldest_observation_age_s": 1800.0,
+  "quality": {
+    "grade_label": null,
+    "declared_limits_met": true,
+    "evidence_verified": false,
+    "reasons": []
+  },
+  "status": "partial",
+  "refusal": null,
+  "completeness": {
+    "requested": 5,
+    "returned": 4,
+    "failed": 1,
+    "unknown": 2,
+    "out_of_scope": 1,
+    "status": "partial"
+  },
+  "items": [
+    {
+      "item_id": "free",
+      "status": "result",
+      "state": "observed_free",
+      "reason": "synthetic_observation"
+    },
+    {
+      "item_id": "conflict",
+      "status": "result",
+      "state": "unknown",
+      "reason": "conflict"
+    },
+    {
+      "item_id": "missing",
+      "status": "result",
+      "state": "unknown",
+      "reason": "missing_chunk"
+    },
+    {
+      "item_id": "outside",
+      "status": "result",
+      "state": "out_of_scope",
+      "reason": "outside_target_scope"
+    },
+    {
+      "item_id": "bad-point",
+      "status": "error",
+      "error_code": "invalid_point"
+    }
+  ],
+  "authorized": false,
+  "robot_ready": false
+}

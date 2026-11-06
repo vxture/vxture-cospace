@@ -1,0 +1,111 @@
+{
+  "profile": "cospace.platform-registration-draft/0.1",
+  "status": "registered_product_draft",
+  "registrationReceipt": {
+    "productUrl": "https://opera.vxture.com/product/catalog/cospace",
+    "createdAtLocal": "2026-11-06 10:50:18 Asia/Shanghai",
+    "productState": "draft",
+    "clientState": "active",
+    "secretIncluded": false
+  },
+  "issuer": "https://accounts.vxture.com",
+  "productDraft": {
+    "productCode": "cospace",
+    "productName": "空间态势服务",
+    "productNick": "CoSpace",
+    "productType": "general_platform",
+    "layer": "L2",
+    "integrationMode": "platform_managed",
+    "subscribable": true,
+    "origin": "self",
+    "surfaces": [
+      "web",
+      "desktop"
+    ],
+    "description": "空间底图建一次，具身智能体共用。围绕Workspace内的场景空间管理资料、构建、双视图与固定发布。"
+  },
+  "registrationChoicesPendingConfirmation": [
+    "real platform webhook delivery after signing-key registration",
+    "subscription plans and a controlled real subscribed Workspace for positive acceptance",
+    "real business Workspace permissions and independent service caller coverage"
+  ],
+  "clientDrafts": [
+    {
+      "purpose": "stable_with_temporary_same_machine_integration_callback",
+      "origin": "https://cospace.ruyin.work",
+      "realm": "customer",
+      "client": {
+        "clientId": "cospace",
+        "releaseChannel": "stable",
+        "displayName": "空间态势服务 · CoSpace",
+        "logoUrl": null,
+        "redirectUris": [
+          "https://cospace.ruyin.work/auth/callback",
+          "http://127.0.0.1:8791/auth/callback"
+        ],
+        "postLogoutRedirectUris": [
+          "https://cospace.ruyin.work/workbench/layout.html",
+          "http://127.0.0.1:8791/workbench/layout.html"
+        ],
+        "allowedScopes": [
+          "openid",
+          "profile",
+          "email"
+        ],
+        "pkceRequired": true,
+        "tokenEndpointAuthMethod": "client_secret_basic",
+        "backChannelLogoutUri": null,
+        "sloParticipation": "none",
+        "state": "active"
+      }
+    }
+  ],
+  "edgeDraft": {
+    "edgeDomain": "cospace.ruyin.work",
+    "edgeUpstream": "100.100.197.42:8793",
+    "homeUrl": "https://cospace.ruyin.work",
+    "webhookUrl": "https://cospace.ruyin.work/api/webhooks/vxture"
+  },
+  "temporaryLocalIntegration": {
+    "origin": "http://127.0.0.1:8791",
+    "clientId": "cospace",
+    "removeLoopbackCallbacksAfterProductionAcceptance": true
+  },
+  "authenticationBoundary": {
+    "issuer": "https://accounts.vxture.com",
+    "consoleBase": "https://console.vxture.com",
+    "productDomainChangeDoesNotChangeIssuer": true,
+    "desktopNativeClientImplemented": false,
+    "desktopSurfaceDoesNotEmbedConfidentialClientSecret": true
+  },
+  "currentIntegration": {
+    "browserLogin": "authorization_code_with_PKCE_S256",
+    "centralSession": "POST /oidc/session/status; server-side Basic credentials",
+    "globalLogout": "RP initiated /oidc/end_session plus central status detection",
+    "backchannelLogoutReceiverImplemented": false,
+    "provisioningWebhookImplemented": true,
+    "meteringImplemented": false,
+    "subscriptionEntitlementGateImplemented": true,
+    "serviceConsumer": "separate calling product client; target audience cospace, explicit Workspace and scene grant",
+    "realEntitlementReadVerified": true,
+    "realWebhookDeliveryVerified": false,
+    "realSubscribedBusinessAccessVerified": false,
+    "realProductionLoginVerified": true,
+    "productionHttpsVerified": true,
+    "webhookSigningKeyRegistered": true
+  },
+  "secretsToProvisionOutsideRepository": [
+    "COSPACE_OIDC_CLIENT_SECRET",
+    "COSPACE_SESSION_KEY",
+    "COSPACE_PLATFORM_WEBHOOK_SECRET"
+  ],
+  "productionDeployment": {
+    "origin": "https://cospace.ruyin.work",
+    "host": "vx-worker-01",
+    "release": "20261106-p27-002",
+    "upstream": "100.100.197.42:8793",
+    "productState": "draft",
+    "businessRootInitiallyEmpty": true,
+    "mockBusinessDataCopied": false
+  }
+}

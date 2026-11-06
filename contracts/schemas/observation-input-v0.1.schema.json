@@ -1,0 +1,94 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CoSpace observation input experimental contract 0.1",
+  "type": "object", "additionalProperties": false,
+  "required": ["schema_version", "scene_id", "data_kind", "frames", "transforms", "members", "streams", "reference_points"],
+  "properties": {
+    "schema_version": {"const": "cospace.observation-input/0.1"},
+    "scene_id": {"$ref": "#/$defs/id"},
+    "data_kind": {"enum": ["synthetic", "real"]},
+    "frames": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/frame"}},
+    "transforms": {"type": "array", "items": {"$ref": "#/$defs/transform"}},
+    "members": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/member"}},
+    "streams": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/stream"}},
+    "reference_points": {"type": "array", "items": {"$ref": "#/$defs/point"}}
+  },
+  "$defs": {
+    "id": {"type": "string", "minLength": 1, "maxLength": 256},
+    "utc": {"type": "string", "format": "date-time", "pattern": "Z$"},
+    "vector": {"type": "array", "minItems": 3, "maxItems": 3, "items": {"type": "number"}},
+    "ref": {
+      "type": "object", "additionalProperties": false, "required": ["id", "sha256"],
+      "properties": {"id": {"$ref": "#/$defs/id"}, "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}}
+    },
+    "frame": {
+      "type": "object", "additionalProperties": false,
+      "required": ["frame_id", "kind", "unit", "handedness", "axes", "origin"],
+      "properties": {
+        "frame_id": {"$ref": "#/$defs/id"}, "kind": {"const": "local_cartesian"},
+        "unit": {"const": "m"}, "handedness": {"const": "right"},
+        "axes": {"type": "array", "minItems": 3, "maxItems": 3, "items": {"$ref": "#/$defs/id"}},
+        "origin": {"$ref": "#/$defs/id"}
+      }
+    },
+    "transform": {
+      "type": "object", "additionalProperties": false,
+      "required": ["source_frame_id", "target_frame_id", "convention", "matrix", "assessment", "evidence"],
+      "properties": {
+        "source_frame_id": {"$ref": "#/$defs/id"}, "target_frame_id": {"$ref": "#/$defs/id"},
+        "convention": {"const": "p_target=T_target_source*p_source"},
+        "matrix": {"type": "array", "minItems": 4, "maxItems": 4, "items": {"type": "array", "minItems": 4, "maxItems": 4, "items": {"type": "number"}}},
+        "assessment": {"enum": ["unverified", "verified"]}, "evidence": {"$ref": "#/$defs/ref"}
+      }
+    },
+    "member": {
+      "type": "object", "additionalProperties": false,
+      "required": ["member_id", "path", "bytes", "sha256", "media_type", "encoding"],
+      "properties": {
+        "member_id": {"$ref": "#/$defs/id"}, "path": {"$ref": "#/$defs/id"},
+        "bytes": {"type": "integer", "minimum": 1}, "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "media_type": {"$ref": "#/$defs/id"}, "encoding": {"$ref": "#/$defs/id"}
+      }
+    },
+    "stream": {
+      "type": "object", "additionalProperties": false,
+      "required": ["stream_id", "member_id", "channel", "sensor_id", "kind", "role", "frame_id", "clock", "fields"],
+      "properties": {
+        "stream_id": {"$ref": "#/$defs/id"}, "member_id": {"$ref": "#/$defs/id"},
+        "channel": {"$ref": "#/$defs/id"}, "sensor_id": {"$ref": "#/$defs/id"},
+        "kind": {"enum": ["lidar", "imu", "camera", "radar", "other"]},
+        "role": {"enum": ["construction", "independent_check", "independent_consumption", "change"]},
+        "frame_id": {"$ref": "#/$defs/id"},
+        "fields": {"type": "array", "minItems": 1, "items": {"type": "object", "additionalProperties": false, "required": ["name", "unit", "meaning"], "properties": {"name": {"$ref": "#/$defs/id"}, "unit": {"$ref": "#/$defs/id"}, "meaning": {"$ref": "#/$defs/id"}}}},
+        "clock": {
+          "type": "object", "additionalProperties": false,
+          "required": ["clock_id", "time_scale", "timestamp_unit", "timestamp_meaning", "sync_status", "sync_source"],
+          "properties": {
+            "clock_id": {"$ref": "#/$defs/id"}, "time_scale": {"enum": ["UTC", "GPS", "TAI", "device", "unknown"]},
+            "timestamp_unit": {"enum": ["s", "ms", "us", "ns", "ticks"]},
+            "timestamp_meaning": {"$ref": "#/$defs/id"}, "sync_source": {"$ref": "#/$defs/id"},
+            "sync_status": {"enum": ["unverified", "verified"]},
+            "utc_start": {"$ref": "#/$defs/utc"}, "utc_end": {"$ref": "#/$defs/utc"},
+            "uncertainty_ms": {"type": "number", "minimum": 0}, "mapping_ref": {"$ref": "#/$defs/ref"}
+          },
+          "dependentRequired": {"utc_start": ["utc_end"], "utc_end": ["utc_start"]},
+          "if": {"properties": {"sync_status": {"const": "verified"}}},
+          "then": {"required": ["utc_start", "utc_end", "uncertainty_ms", "mapping_ref"]}
+        }
+      }
+    },
+    "point": {
+      "type": "object", "additionalProperties": false,
+      "required": ["point_id", "frame_id", "role", "position", "used_for_fit", "used_for_tuning", "measured_at", "method", "uncertainty_m", "evidence"],
+      "properties": {
+        "point_id": {"$ref": "#/$defs/id"}, "frame_id": {"$ref": "#/$defs/id"},
+        "role": {"enum": ["control", "independent_check"]}, "position": {"$ref": "#/$defs/vector"},
+        "used_for_fit": {"type": "boolean"}, "used_for_tuning": {"type": "boolean"},
+        "measured_at": {"$ref": "#/$defs/utc"}, "method": {"$ref": "#/$defs/id"},
+        "uncertainty_m": {"type": "number", "minimum": 0}, "evidence": {"$ref": "#/$defs/ref"}
+      },
+      "if": {"properties": {"role": {"const": "independent_check"}}},
+      "then": {"properties": {"used_for_fit": {"const": false}, "used_for_tuning": {"const": false}}}
+    }
+  }
+}

@@ -1,0 +1,250 @@
+{
+  "$defs": {
+    "FileSource": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "file-packages",
+          "title": "Kind",
+          "type": "string"
+        },
+        "locator_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Locator Sha256",
+          "type": "string"
+        },
+        "component_report_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Component Report Sha256",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "locator_sha256",
+        "component_report_sha256"
+      ],
+      "title": "FileSource",
+      "type": "object"
+    },
+    "Interval": {
+      "additionalProperties": false,
+      "properties": {
+        "started_at": {
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{6}Z$",
+          "title": "Started At",
+          "type": "string"
+        },
+        "finished_at": {
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{6}Z$",
+          "title": "Finished At",
+          "type": "string"
+        },
+        "elapsed_ms": {
+          "maximum": 9007199254740991,
+          "minimum": 0,
+          "title": "Elapsed Ms",
+          "type": "integer"
+        },
+        "clock": {
+          "const": "system_utc_untrusted",
+          "title": "Clock",
+          "type": "string"
+        },
+        "wall_end_before_start": {
+          "title": "Wall End Before Start",
+          "type": "boolean"
+        },
+        "consistency": {
+          "const": "independent_readonly_snapshots",
+          "title": "Consistency",
+          "type": "string"
+        }
+      },
+      "required": [
+        "started_at",
+        "finished_at",
+        "elapsed_ms",
+        "clock",
+        "wall_end_before_start",
+        "consistency"
+      ],
+      "title": "Interval",
+      "type": "object"
+    },
+    "JournalControl": {
+      "additionalProperties": false,
+      "properties": {
+        "store_id": {
+          "title": "Store Id",
+          "type": "string"
+        },
+        "context": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Context",
+          "type": "string"
+        },
+        "generation": {
+          "maximum": 9007199254740991,
+          "minimum": 1,
+          "title": "Generation",
+          "type": "integer"
+        },
+        "mode": {
+          "enum": [
+            "normal",
+            "recovering"
+          ],
+          "title": "Mode",
+          "type": "string"
+        },
+        "revision": {
+          "maximum": 9007199254740991,
+          "minimum": 0,
+          "title": "Revision",
+          "type": "integer"
+        },
+        "state_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "State Sha256",
+          "type": "string"
+        }
+      },
+      "required": [
+        "store_id",
+        "context",
+        "generation",
+        "mode",
+        "revision",
+        "state_sha256"
+      ],
+      "title": "JournalControl",
+      "type": "object"
+    },
+    "JournalSource": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "recovery-journal",
+          "title": "Kind",
+          "type": "string"
+        },
+        "locator_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Locator Sha256",
+          "type": "string"
+        },
+        "component_report_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Component Report Sha256",
+          "type": "string"
+        },
+        "control": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/JournalControl"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "kind",
+        "locator_sha256",
+        "component_report_sha256",
+        "control"
+      ],
+      "title": "JournalSource",
+      "type": "object"
+    },
+    "Producer": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "const": "cospace.delivery-audit",
+          "title": "Name",
+          "type": "string"
+        },
+        "version": {
+          "const": "0.2",
+          "title": "Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "version"
+      ],
+      "title": "Producer",
+      "type": "object"
+    },
+    "Sources": {
+      "additionalProperties": false,
+      "properties": {
+        "files": {
+          "$ref": "#/$defs/FileSource"
+        },
+        "journal": {
+          "$ref": "#/$defs/JournalSource"
+        }
+      },
+      "required": [
+        "files",
+        "journal"
+      ],
+      "title": "Sources",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "cospace.delivery-generation/0.1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "report_id": {
+      "title": "Report Id",
+      "type": "string"
+    },
+    "producer": {
+      "$ref": "#/$defs/Producer"
+    },
+    "interval": {
+      "$ref": "#/$defs/Interval"
+    },
+    "limit": {
+      "maximum": 200,
+      "minimum": 1,
+      "title": "Limit",
+      "type": "integer"
+    },
+    "binding_sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "title": "Binding Sha256",
+      "type": "string"
+    },
+    "payload_sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "title": "Payload Sha256",
+      "type": "string"
+    },
+    "sources": {
+      "$ref": "#/$defs/Sources"
+    }
+  },
+  "required": [
+    "schema_version",
+    "report_id",
+    "producer",
+    "interval",
+    "limit",
+    "binding_sha256",
+    "payload_sha256",
+    "sources"
+  ],
+  "title": "ReportGeneration",
+  "type": "object"
+}

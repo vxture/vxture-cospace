@@ -1,0 +1,153 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cospace.local/schemas/input-preview-v0.1.schema.json",
+  "title": "CoSpace input preview 0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "profile",
+    "space_id",
+    "input_id",
+    "source_sha256",
+    "unit",
+    "frame_id",
+    "axes",
+    "appearance",
+    "quality",
+    "robot_ready",
+    "limitations",
+    "point_count",
+    "bounds",
+    "sampling",
+    "points",
+    "colors",
+    "format",
+    "snapshot_sha256"
+  ],
+  "properties": {
+    "profile": {
+      "const": "cospace.input-preview/0.1"
+    },
+    "space_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "input_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source_sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "unit": {
+      "const": "m"
+    },
+    "frame_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "axes": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "items": {
+        "type": "string"
+      }
+    },
+    "appearance": {
+      "type": "string"
+    },
+    "quality": {
+      "const": "unverified"
+    },
+    "robot_ready": {
+      "const": false
+    },
+    "limitations": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "point_count": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "bounds": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "items": {
+        "$ref": "#/$defs/xyz"
+      }
+    },
+    "sampling": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "method",
+        "stride",
+        "limit",
+        "count"
+      ],
+      "properties": {
+        "method": {
+          "const": "file_index_stride"
+        },
+        "stride": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "limit": {
+          "const": 10000
+        },
+        "count": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10000
+        }
+      }
+    },
+    "points": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 10000,
+      "items": {
+        "$ref": "#/$defs/xyz"
+      }
+    },
+    "colors": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 10000,
+      "items": {
+        "type": "array",
+        "minItems": 3,
+        "maxItems": 3,
+        "items": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 255
+        }
+      }
+    },
+    "format": {
+      "const": "ply_pointcloud"
+    },
+    "snapshot_sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    }
+  },
+  "$defs": {
+    "xyz": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "items": {
+        "type": "number"
+      }
+    }
+  }
+}

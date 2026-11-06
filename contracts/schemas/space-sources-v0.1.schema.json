@@ -1,0 +1,43 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "space_id": {
+      "pattern": "^space-[a-f0-9]{16}$",
+      "title": "Space Id",
+      "type": "string"
+    },
+    "expected_revision": {
+      "minimum": 0,
+      "title": "Expected Revision",
+      "type": "integer"
+    },
+    "catalog_sha256": {
+      "pattern": "^[a-f0-9]{64}$",
+      "title": "Catalog Sha256",
+      "type": "string"
+    },
+    "enabled_source_ids": {
+      "items": {
+        "type": "string"
+      },
+      "maxItems": 100,
+      "title": "Enabled Source Ids",
+      "type": "array"
+    },
+    "reason": {
+      "maxLength": 500,
+      "minLength": 1,
+      "title": "Reason",
+      "type": "string"
+    }
+  },
+  "required": [
+    "space_id",
+    "expected_revision",
+    "catalog_sha256",
+    "enabled_source_ids",
+    "reason"
+  ],
+  "title": "SourceChange",
+  "type": "object"
+}

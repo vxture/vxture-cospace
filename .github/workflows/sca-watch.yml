@@ -1,0 +1,156 @@
+name: sca-watch
+
+# The SCA scan, run against an IDLE trunk - the half `ci.yml` structurally cannot do.
+#
+# `audit` in ci.yml is the hard gate, and it triggers on `pull_request` and
+# `push: main`. That is correct for what it is: it answers "does this CHANGE
+# bring a new hole in". It is not, and cannot be made into, an answer to "is
+# there a hole in what is already sitting there" - an advisory published against
+# an unchanged lockfile is invisible to it until somebody happens to push.
+#
+# That gap is not hypothetical. In a repo built from this template,
+# GHSA-ggr8-5vv4-36mx (high, deepmerge-ts) was published 98 minutes after the
+# last ci run on a then-idle main, and sat unseen for ten days. osv-scanner had
+# not missed it; osv-scanner had simply never run again.
+#
+# WHY THIS FILES AN ISSUE INSTEAD OF JUST FAILING. A red X in the Actions tab is
+# not a thing anyone reads on a quiet day, and the defect being repaired here is
+# precisely a signal nobody was looking at. Worse, the same repo had four
+# Dependabot PRs sitting red for five days on this exact advisory: the gate DID
+# fire, and it read as "those PRs are broken" rather than "the trunk has a high
+# advisory". A finding has to be filed under the trunk, in the place where trunk
+# problems are tracked, or it is not a report - it is a log line.
+#
+# IT ALSO CLOSES THE ISSUE when the trunk comes back clean. A watcher that can
+# raise an alarm but not retire one produces a list with false entries on it,
+# and a list with false entries teaches people to stop reading the list.
+#
+# THIS WORKFLOW MUST NOT PRODUCE ANY OF THE FIVE REQUIRED CHECK CONTEXTS.
+# `quality-gate` / `build` / `test-coverage` / `audit` / `gitleaks` are a branch
+# protection contract; a second job named `audit` would create a second context
+# with the same name. `check-sca-consistency.mjs` asserts this, and asserts that
+# the scanner pinned here has not drifted from the one ci.yml pins.
+
+on:
+  schedule:
+    # Daily, off the hour: GitHub's cron peak is at :00 and jobs there get
+    # queued or dropped. Daily rather than hourly because advisories are
+    # published in business hours and a ten-day miss is the failure being
+    # fixed - the difference between 1h and 24h detection is not what went
+    # wrong here.
+    - cron: "17 6 * * *"
+  # A scheduled workflow is disabled automatically after 60 days without repo
+  # activity, and manual dispatch is how you confirm it still works.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: sca-watch
+  cancel-in-progress: false
+
+jobs:
+  # NOT named `audit` - see the header.
+  sca-watch:
+    name: sca-watch
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      # Kept in lockstep with ci.yml's audit job by check-sca-consistency.mjs.
+      # A watcher scanning with an older scanner than the gate would report
+      # "clean" on findings the gate would block, which is the worst of the
+      # three possible states.
+      OSV_SCANNER_VERSION: "2.4.0"
+      ISSUE_TITLE: "sca-watch: main is carrying a known vulnerability"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Download osv-scanner
+        shell: bash
+        run: |
+          set -euo pipefail
+          sha256=15314940c10d26af9c6649f150b8a47c1262e8fc7e17b1d1029b0e479e8ed8a0
+          url="https://github.com/google/osv-scanner/releases/download/v${OSV_SCANNER_VERSION}/osv-scanner_linux_amd64"
+          mkdir -p /tmp/osv-bin
+          # --proto/--proto-redir: -L follows redirects, and without these a
+          # redirect to http:// would be followed silently. The sha256 below
+          # catches a swapped artifact; this stops the plaintext hop.
+          curl -fsSL --proto "=https" --proto-redir "=https" --tlsv1.2 "$url" -o /tmp/osv-bin/osv-scanner
+          echo "${sha256}  /tmp/osv-bin/osv-scanner" | sha256sum -c -
+          chmod +x /tmp/osv-bin/osv-scanner
+
+      - name: OSV dependency scan
+        id: scan
+        shell: bash
+        run: |
+          # Deliberately NOT `set -e` on the scanner: a non-zero exit is the
+          # finding, not an infrastructure failure, and it has to reach the
+          # reporting step below rather than end the job here.
+          set -uo pipefail
+          rc=0
+          /tmp/osv-bin/osv-scanner scan -L apps/workbench/pnpm-lock.yaml -L uv.lock --config .osv-scanner.toml  \
+            > /tmp/osv-report.txt 2>&1 || rc=$?
+          cat /tmp/osv-report.txt
+          echo "rc=${rc}" >> "$GITHUB_OUTPUT"
+
+      - name: File, update or close the trunk's SCA issue
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RC: ${{ steps.scan.outputs.rc }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+
+          existing="$(gh issue list --state open --limit 100 --json number,title \
+            --jq "[.[] | select(.title == env.ISSUE_TITLE)][0].number // empty")"
+
+          if [ "${RC}" = "0" ]; then
+            if [ -n "${existing}" ]; then
+              gh issue comment "${existing}" --body "$(printf '%s\n' \
+                "The trunk scans clean as of [this run](${RUN_URL}). Closing." \
+                "" \
+                "A watcher that can raise an alarm but not retire one produces a list with" \
+                "false entries on it, so this closes itself rather than waiting for someone" \
+                "to notice the fix landed.")"
+              gh issue close "${existing}"
+              echo "closed #${existing} - trunk is clean"
+            else
+              echo "trunk is clean, no open issue"
+            fi
+            exit 0
+          fi
+
+          # Truncated: the issue is a pointer to the run, not a copy of it.
+          report="$(head -c 4000 /tmp/osv-report.txt)"
+          body="$(printf '%s\n' \
+            "\`osv-scanner\` found a known vulnerability in \`pnpm-lock.yaml\` on \`main\`." \
+            "" \
+            "This is **not** a failing PR check. It is the scheduled scan of the trunk as it" \
+            "currently stands, which is the case \`ci.yml\`'s \`audit\` job cannot see: \`audit\`" \
+            "runs on change, and an advisory published against an unchanged lockfile is" \
+            "invisible to it until somebody happens to push." \
+            "" \
+            "Run: ${RUN_URL}" \
+            "" \
+            '```' \
+            "${report}" \
+            '```' \
+            "" \
+            "Fix by upgrading, adding a \`pnpm.overrides\` entry, or recording a named" \
+            "exception with a reason in \`.osv-scanner.toml\`. Never by widening the gate." \
+            "" \
+            "This issue closes itself on the next run where the trunk scans clean.")"
+
+          if [ -n "${existing}" ]; then
+            gh issue comment "${existing}" --body "${body}"
+            echo "updated #${existing}"
+          else
+            gh issue create --title "${ISSUE_TITLE}" --body "${body}"
+          fi
+
+          # Fail the run too, so the Actions tab agrees with the issue.
+          exit 1

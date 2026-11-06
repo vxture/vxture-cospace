@@ -1,0 +1,261 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cospace.local/contracts/preview-artifacts-v0.1.schema.json",
+  "title": "CoSpace read-only artifact catalog",
+  "type": "object",
+  "properties": {
+    "profile": {
+      "enum": [
+        "cospace.preview-artifact-catalog/0.1"
+      ]
+    },
+    "space_id": {
+      "type": "string"
+    },
+    "project_id": {
+      "type": "string"
+    },
+    "observed_at": {
+      "type": "string"
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "input",
+              "candidate",
+              "publication",
+              "offline_package"
+            ]
+          },
+          "record_id": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "classification": {
+            "enum": [
+              "registered_source",
+              "geometry_candidate",
+              "semantic_candidate",
+              "candidate_unknown",
+              "fixed_publication",
+              "offline_export"
+            ]
+          },
+          "state": {
+            "enum": [
+              "registered",
+              "candidate",
+              "preview_published",
+              "export_on_request"
+            ]
+          },
+          "created_at": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "integrity": {
+            "enum": [
+              "not_checked",
+              "record_only",
+              "snapshot_verified",
+              "unavailable",
+              "not_generated"
+            ]
+          },
+          "problems": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "resources": {
+            "type": "object",
+            "properties": {
+              "details_url": {
+                "type": "string"
+              },
+              "manifest_url": {
+                "type": "string"
+              },
+              "preview_url": {
+                "type": "string"
+              },
+              "info_url": {
+                "type": "string"
+              },
+              "download_url": {
+                "type": "string"
+              }
+            },
+            "required": [],
+            "additionalProperties": false
+          },
+          "selected": {
+            "type": "boolean"
+          },
+          "format": {
+            "type": "string"
+          },
+          "model_manifest_sha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "lifecycle_state": {
+            "enum": [
+              "active",
+              "disabled",
+              "archived",
+              "paused"
+            ]
+          },
+          "lifecycle_revision": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "key",
+          "kind",
+          "record_id",
+          "label",
+          "classification",
+          "state",
+          "created_at",
+          "integrity",
+          "problems",
+          "resources",
+          "selected"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "relations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": "string"
+          },
+          "to": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "relation": {
+            "enum": [
+              "built_from",
+              "annotated_from",
+              "published_from",
+              "exported_from",
+              "sourced_from"
+            ]
+          },
+          "status": {
+            "enum": [
+              "matched",
+              "missing",
+              "mismatch",
+              "unrecorded"
+            ]
+          }
+        },
+        "required": [
+          "from",
+          "to",
+          "relation",
+          "status"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "counts": {
+      "type": "object",
+      "properties": {
+        "input": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "candidate": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "publication": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "offline_package": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "input",
+        "candidate",
+        "publication",
+        "offline_package"
+      ],
+      "additionalProperties": false
+    },
+    "job_counts": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "integer",
+        "minimum": 0
+      }
+    },
+    "selection_status": {
+      "enum": [
+        "not_selected",
+        "matched",
+        "missing_or_mismatch"
+      ]
+    },
+    "consistency": {
+      "enum": [
+        "request_time_file_reads_not_transactional"
+      ]
+    },
+    "source_files_rechecked": {
+      "const": false
+    },
+    "consumer_state_checked": {
+      "const": false
+    },
+    "quality": {
+      "enum": [
+        "unverified"
+      ]
+    },
+    "robot_ready": {
+      "const": false
+    }
+  },
+  "required": [
+    "profile",
+    "observed_at",
+    "items",
+    "relations",
+    "counts",
+    "job_counts",
+    "selection_status",
+    "consistency",
+    "source_files_rechecked",
+    "consumer_state_checked",
+    "quality",
+    "robot_ready"
+  ],
+  "additionalProperties": false
+}

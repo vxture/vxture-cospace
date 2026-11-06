@@ -1,0 +1,42 @@
+{
+  "name": "@cospace/workbench",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "packageManager": "pnpm@10.32.1",
+  "engines": {
+    "node": ">=24 <25"
+  },
+  "scripts": {
+    "build": "tsc --noEmit && vite build",
+    "dev": "vite --host 127.0.0.1"
+  },
+  "dependencies": {
+    "@phosphor-icons/react": "2.1.10",
+    "@tanstack/react-query": "5.104.5",
+    "@vxture/design-system": "file:vendor/vxture-design-system-15.0.0.tgz",
+    "@vxture/design-tokens": "file:vendor/vxture-design-tokens-4.0.0.tgz",
+    "@vxture/design-ui": "file:vendor/vxture-design-ui-12.0.0.tgz",
+    "next-themes": "0.4.6",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "tailwindcss": "4.3.3",
+    "tailwindcss-animate": "1.0.7",
+    "three": "0.186.1"
+  },
+  "pnpm": {
+    "overrides": {
+      "@vxture/design-ui": "file:vendor/vxture-design-ui-12.0.0.tgz",
+      "@vxture/design-tokens": "file:vendor/vxture-design-tokens-4.0.0.tgz"
+    }
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "4.3.3",
+    "@types/node": "24.10.1",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@types/three": "0.186.0",
+    "typescript": "7.0.2",
+    "vite": "8.3.5"
+  }
+}

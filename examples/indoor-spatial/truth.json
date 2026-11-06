@@ -1,0 +1,53 @@
+{
+  "scene_id": "synthetic-equipment-corridor",
+  "data_kind": "synthetic",
+  "truth_version_id": "truth-spatial-sample-001",
+  "parent_truth_version_id": null,
+  "frame": {
+    "frame_id": "sample-local",
+    "unit": "m",
+    "handedness": "right",
+    "axes": [
+      "along_corridor",
+      "left",
+      "up"
+    ],
+    "origin_description": "synthetic corridor entrance floor center"
+  },
+  "target_scope": [
+    [
+      0,
+      -1,
+      0
+    ],
+    [
+      10,
+      6,
+      3
+    ]
+  ],
+  "objects": {
+    "path": "objects.json",
+    "sha256": "36c57f5f8939910eca79e5ab9b0a2781221f9a50bb097ba40ffe24389e6cca3b"
+  },
+  "ontology_ref": {
+    "path": "ontology.json",
+    "sha256": "7d1926c99d4d402b7802dcaca96c800da151da625c311833235a2ac848db9980",
+    "ontology_id": "sample-indoor",
+    "version": "0.1"
+  },
+  "adoption": "sample_only",
+  "coverage": {
+    "path": "coverage.json",
+    "sha256": "473e85fa745cd6ef26f33d068812075ebdea694846e6b9771ed85c194012bbd3"
+  },
+  "quality": {
+    "status": "not_field_validated",
+    "limitations": [
+      "synthetic only; no measured geometry or coverage"
+    ]
+  },
+  "provenance": {
+    "method": "scripts/build_sample.py; manual synthetic definitions"
+  }
+}

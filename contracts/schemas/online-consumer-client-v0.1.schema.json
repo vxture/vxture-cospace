@@ -1,0 +1,93 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "profile": {
+      "pattern": "^cospace.online-consumer-client/0\\.1$",
+      "title": "Profile",
+      "type": "string"
+    },
+    "issuer": {
+      "title": "Issuer",
+      "type": "string"
+    },
+    "api_origin": {
+      "title": "Api Origin",
+      "type": "string"
+    },
+    "audience": {
+      "pattern": "^[a-z][a-z0-9-]{0,99}$",
+      "title": "Audience",
+      "type": "string"
+    },
+    "caller": {
+      "pattern": "^[a-z][a-z0-9-]{0,99}$",
+      "title": "Caller",
+      "type": "string"
+    },
+    "org_id": {
+      "pattern": "^[A-Za-z0-9_-]{1,160}$",
+      "title": "Org Id",
+      "type": "string"
+    },
+    "workspace_id": {
+      "pattern": "^[A-Za-z0-9_-]{1,160}$",
+      "title": "Workspace Id",
+      "type": "string"
+    },
+    "space_id": {
+      "pattern": "^space-[a-f0-9]{16}$",
+      "title": "Space Id",
+      "type": "string"
+    },
+    "publication_id": {
+      "pattern": "^preview-[a-f0-9]{16}$",
+      "title": "Publication Id",
+      "type": "string"
+    },
+    "model_id": {
+      "maxLength": 160,
+      "minLength": 1,
+      "title": "Model Id",
+      "type": "string"
+    },
+    "model_manifest_sha256": {
+      "pattern": "^[a-f0-9]{64}$",
+      "title": "Model Manifest Sha256",
+      "type": "string"
+    },
+    "source_model_sha256": {
+      "pattern": "^[a-f0-9]{64}$",
+      "title": "Source Model Sha256",
+      "type": "string"
+    },
+    "frame_id": {
+      "maxLength": 160,
+      "minLength": 1,
+      "title": "Frame Id",
+      "type": "string"
+    },
+    "allow_loopback_http": {
+      "default": false,
+      "title": "Allow Loopback Http",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "profile",
+    "issuer",
+    "api_origin",
+    "audience",
+    "caller",
+    "org_id",
+    "workspace_id",
+    "space_id",
+    "publication_id",
+    "model_id",
+    "model_manifest_sha256",
+    "source_model_sha256",
+    "frame_id"
+  ],
+  "title": "ClientConfig",
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

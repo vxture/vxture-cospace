@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vxture.local/schemas/preview-ontology-v0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["profile", "ontology_id", "version", "title", "description", "types"],
+  "properties": {
+    "profile": {"const": "cospace.preview-ontology/0.1"},
+    "ontology_id": {"type": "string", "pattern": "^[a-z][a-z0-9-]{0,63}$"},
+    "version": {"type": "string", "pattern": "^[0-9]{1,4}\\.[0-9]{1,4}\\.[0-9]{1,4}$"},
+    "title": {"type": "string", "minLength": 1, "maxLength": 100},
+    "description": {"type": "string", "maxLength": 1000},
+    "types": {
+      "type": "object", "minProperties": 1, "maxProperties": 32,
+      "propertyNames": {"pattern": "^[a-z][a-z0-9_]{0,63}$"},
+      "additionalProperties": {
+        "type": "object", "additionalProperties": false,
+        "required": ["title", "description", "properties"],
+        "properties": {
+          "title": {"type": "string", "minLength": 1, "maxLength": 100},
+          "description": {"type": "string", "maxLength": 1000},
+          "properties": {
+            "type": "object", "maxProperties": 32,
+            "propertyNames": {"pattern": "^[a-z][a-z0-9_]{0,63}$"},
+            "additionalProperties": {
+              "type": "object", "additionalProperties": false,
+              "required": ["title", "type", "required", "min_length", "max_length"],
+              "properties": {
+                "title": {"type": "string", "minLength": 1, "maxLength": 100},
+                "type": {"const": "string"},
+                "required": {"type": "boolean"},
+                "min_length": {"type": "integer", "minimum": 0, "maximum": 4096},
+                "max_length": {"type": "integer", "minimum": 1, "maximum": 4096}
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

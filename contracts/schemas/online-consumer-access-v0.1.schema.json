@@ -1,0 +1,54 @@
+{
+  "$defs": {
+    "ConsumerGrant": {
+      "additionalProperties": false,
+      "properties": {
+        "caller": {
+          "pattern": "^[a-z][a-z0-9-]{0,99}$",
+          "title": "Caller",
+          "type": "string"
+        },
+        "space_id": {
+          "pattern": "^space-[a-f0-9]{16}$",
+          "title": "Space Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "caller",
+        "space_id"
+      ],
+      "title": "ConsumerGrant",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "profile": {
+      "pattern": "^cospace\\.online-consumer-access/0\\.1$",
+      "title": "Profile",
+      "type": "string"
+    },
+    "audience": {
+      "pattern": "^[a-z][a-z0-9-]{0,99}$",
+      "title": "Audience",
+      "type": "string"
+    },
+    "grants": {
+      "items": {
+        "$ref": "#/$defs/ConsumerGrant"
+      },
+      "maxItems": 10000,
+      "title": "Grants",
+      "type": "array"
+    }
+  },
+  "required": [
+    "profile",
+    "audience",
+    "grants"
+  ],
+  "title": "ConsumerConfig",
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

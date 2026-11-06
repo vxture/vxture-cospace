@@ -1,0 +1,34 @@
+{
+  "scene_id": "synthetic-equipment-corridor",
+  "data_kind": "synthetic",
+  "view_version_id": "human-sample-001",
+  "view_kind": "human",
+  "source_truth": {
+    "path": "truth.json",
+    "sha256": "7b3c71d9c661b31c5632e0f4352fa10a16f021b1a0557fe531c6cdd7ed5ac3cf",
+    "scene_id": "synthetic-equipment-corridor",
+    "truth_version_id": "truth-sample-001"
+  },
+  "frame": {
+    "frame_id": "sample-local",
+    "unit": "m",
+    "handedness": "right",
+    "axes": [
+      "along_corridor",
+      "left",
+      "up"
+    ],
+    "origin_description": "synthetic corridor entrance floor center"
+  },
+  "objects": {
+    "path": "objects.json",
+    "sha256": "36c57f5f8939910eca79e5ab9b0a2781221f9a50bb097ba40ffe24389e6cca3b"
+  },
+  "preparation": "manual_sample",
+  "capabilities": [
+    "reference_reading"
+  ],
+  "limitations": [
+    "no rendering, measurement, spatial query or localization validation"
+  ]
+}

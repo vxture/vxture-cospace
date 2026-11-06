@@ -1,0 +1,279 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cospace.local/contracts/preview-publication-changes-v0.1.schema.json",
+  "title": "CoSpace fixed publication comparison request or response",
+  "oneOf": [
+    {
+      "$ref": "#/$defs/Request"
+    },
+    {
+      "$ref": "#/$defs/Response"
+    }
+  ],
+  "$defs": {
+    "Request": {
+      "additionalProperties": false,
+      "properties": {
+        "space_id": {
+          "anyOf": [
+            {
+              "maxLength": 100,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Space Id"
+        },
+        "base_publication_id": {
+          "pattern": "^preview-[a-f0-9]{16}$",
+          "title": "Base Publication Id",
+          "type": "string"
+        },
+        "target_publication_id": {
+          "pattern": "^preview-[a-f0-9]{16}$",
+          "title": "Target Publication Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "base_publication_id",
+        "target_publication_id"
+      ],
+      "title": "PublicationCompareRequest",
+      "type": "object"
+    },
+    "Response": {
+      "type": "object",
+      "properties": {
+        "profile": {
+          "const": "cospace.preview-publication-comparison/0.1"
+        },
+        "space_id": {
+          "type": "string"
+        },
+        "project_id": {
+          "type": "string"
+        },
+        "base_publication": {
+          "type": "object",
+          "properties": {
+            "publication_id": {
+              "type": "string",
+              "pattern": "^preview-[a-f0-9]{16}$"
+            },
+            "candidate_id": {
+              "type": "string"
+            },
+            "model_manifest_sha256": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            },
+            "publication_record_sha256": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            },
+            "created_at": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "publication_id",
+            "candidate_id",
+            "model_manifest_sha256",
+            "publication_record_sha256",
+            "created_at"
+          ],
+          "additionalProperties": false
+        },
+        "target_publication": {
+          "type": "object",
+          "properties": {
+            "publication_id": {
+              "type": "string",
+              "pattern": "^preview-[a-f0-9]{16}$"
+            },
+            "candidate_id": {
+              "type": "string"
+            },
+            "model_manifest_sha256": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            },
+            "publication_record_sha256": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            },
+            "created_at": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "publication_id",
+            "candidate_id",
+            "model_manifest_sha256",
+            "publication_record_sha256",
+            "created_at"
+          ],
+          "additionalProperties": false
+        },
+        "direction": {
+          "enum": [
+            "explicit_base_to_target_not_automatic_chronology"
+          ]
+        },
+        "geometry_comparable": {
+          "type": "boolean"
+        },
+        "changes": {
+          "type": "object",
+          "properties": {
+            "coordinate": {
+              "type": "object"
+            },
+            "geometry": {
+              "type": "object"
+            },
+            "ontology": {
+              "type": "object"
+            },
+            "objects": {
+              "type": "object"
+            },
+            "dual_view_impact": {
+              "type": "object"
+            },
+            "comparison_scope": {
+              "enum": [
+                "declared_coordinates_not_independent_registration_or_field_change_detection"
+              ]
+            },
+            "business": {
+              "type": "object"
+            },
+            "relations": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "coordinate",
+            "geometry",
+            "ontology",
+            "objects",
+            "dual_view_impact",
+            "comparison_scope"
+          ],
+          "additionalProperties": false
+        },
+        "provenance": {
+          "type": "object",
+          "properties": {
+            "base": {
+              "type": "object",
+              "properties": {
+                "status": {
+                  "enum": [
+                    "not_recorded",
+                    "internally_consistent",
+                    "binding_mismatch"
+                  ]
+                },
+                "matches_requested_base_model": {
+                  "type": [
+                    "boolean",
+                    "null"
+                  ]
+                },
+                "saved_review": {
+                  "type": [
+                    "object",
+                    "null"
+                  ]
+                },
+                "trust": {
+                  "enum": [
+                    "saved_local_record_not_authenticated_approval"
+                  ]
+                }
+              },
+              "required": [
+                "status",
+                "matches_requested_base_model",
+                "saved_review"
+              ],
+              "additionalProperties": false
+            },
+            "target": {
+              "type": "object",
+              "properties": {
+                "status": {
+                  "enum": [
+                    "not_recorded",
+                    "internally_consistent",
+                    "binding_mismatch"
+                  ]
+                },
+                "matches_requested_base_model": {
+                  "type": [
+                    "boolean",
+                    "null"
+                  ]
+                },
+                "saved_review": {
+                  "type": [
+                    "object",
+                    "null"
+                  ]
+                },
+                "trust": {
+                  "enum": [
+                    "saved_local_record_not_authenticated_approval"
+                  ]
+                }
+              },
+              "required": [
+                "status",
+                "matches_requested_base_model",
+                "saved_review"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "base",
+            "target"
+          ],
+          "additionalProperties": false
+        },
+        "quality": {
+          "enum": [
+            "unverified"
+          ]
+        },
+        "robot_ready": {
+          "const": false
+        },
+        "comparison_sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      },
+      "required": [
+        "profile",
+        "base_publication",
+        "target_publication",
+        "direction",
+        "geometry_comparable",
+        "changes",
+        "provenance",
+        "quality",
+        "robot_ready",
+        "comparison_sha256"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

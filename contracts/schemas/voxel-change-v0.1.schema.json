@@ -1,0 +1,19 @@
+{
+ "$schema":"https://json-schema.org/draft/2020-12/schema",
+ "type":"object","additionalProperties":false,
+ "required":["schema_version","change_id","data_kind","base_package_id","base_package_sha256","candidate_package_id","evidence","operations"],
+ "properties":{
+  "schema_version":{"const":"cospace.voxel-change/0.1"},"change_id":{"$ref":"#/$defs/id"},"data_kind":{"const":"synthetic"},
+  "base_package_id":{"$ref":"#/$defs/id"},"base_package_sha256":{"$ref":"#/$defs/sha"},"candidate_package_id":{"$ref":"#/$defs/id"},
+  "evidence":{"type":"array","minItems":1,"maxItems":16,"items":{"$ref":"#/$defs/member"}},
+  "operations":{"type":"array","minItems":1,"maxItems":256,"items":{"oneOf":[{"$ref":"#/$defs/add"},{"$ref":"#/$defs/replace"},{"$ref":"#/$defs/remove"}]}}
+ },
+ "$defs":{
+  "id":{"type":"string","minLength":1,"maxLength":256},"sha":{"type":"string","pattern":"^[0-9a-f]{64}$"},
+  "index":{"type":"array","minItems":3,"maxItems":3,"items":{"type":"integer","minimum":0,"maximum":4095}},
+  "member":{"type":"object","additionalProperties":false,"required":["path","bytes","sha256"],"properties":{"path":{"$ref":"#/$defs/id"},"bytes":{"type":"integer","minimum":1,"maximum":8388608},"sha256":{"$ref":"#/$defs/sha"}}},
+  "add":{"type":"object","additionalProperties":false,"required":["op","index","expected_absent","replacement"],"properties":{"op":{"const":"chunk.add"},"index":{"$ref":"#/$defs/index"},"expected_absent":{"const":true},"replacement":{"$ref":"#/$defs/member"}}},
+  "replace":{"type":"object","additionalProperties":false,"required":["op","index","expected_sha256","replacement"],"properties":{"op":{"const":"chunk.replace"},"index":{"$ref":"#/$defs/index"},"expected_sha256":{"$ref":"#/$defs/sha"},"replacement":{"$ref":"#/$defs/member"}}},
+  "remove":{"type":"object","additionalProperties":false,"required":["op","index","expected_sha256"],"properties":{"op":{"const":"chunk.remove"},"index":{"$ref":"#/$defs/index"},"expected_sha256":{"$ref":"#/$defs/sha"}}}
+ }
+}

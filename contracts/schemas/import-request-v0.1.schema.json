@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object", "additionalProperties": false,
+  "required": ["schema_version", "scene_id", "data_kind", "source_description", "purpose", "usage_conditions", "idempotency_key", "expected_manifest_sha256"],
+  "properties": {
+    "schema_version": {"const": "cospace.import/0.1"},
+    "scene_id": {"type": "string", "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$"},
+    "data_kind": {"const": "synthetic"},
+    "source_description": {"type": "string", "minLength": 1, "maxLength": 2048},
+    "purpose": {"const": "synthetic_check"},
+    "usage_conditions": {"enum": ["not_assessed", "internal_synthetic_only"]},
+    "idempotency_key": {"type": "string", "minLength": 1, "maxLength": 128},
+    "expected_manifest_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+  }
+}

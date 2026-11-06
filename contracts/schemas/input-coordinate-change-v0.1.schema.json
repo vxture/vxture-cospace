@@ -1,0 +1,86 @@
+{
+  "$defs": {
+    "Coordinates": {
+      "additionalProperties": false,
+      "properties": {
+        "unit": {
+          "const": "m",
+          "title": "Unit",
+          "type": "string"
+        },
+        "frame_id": {
+          "pattern": "^[A-Za-z0-9_/-]{1,100}$",
+          "title": "Frame Id",
+          "type": "string"
+        },
+        "axes": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 3,
+          "minItems": 3,
+          "title": "Axes",
+          "type": "array"
+        },
+        "scope": {
+          "enum": [
+            "sensor_local",
+            "scene_local"
+          ],
+          "title": "Scope",
+          "type": "string"
+        },
+        "scene_alignment": {
+          "const": "unverified",
+          "title": "Scene Alignment",
+          "type": "string"
+        }
+      },
+      "required": [
+        "unit",
+        "frame_id",
+        "axes",
+        "scope",
+        "scene_alignment"
+      ],
+      "title": "Coordinates",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "space_id": {
+      "pattern": "^space-[a-f0-9]{16}$",
+      "title": "Space Id",
+      "type": "string"
+    },
+    "expected_revision": {
+      "minimum": 0,
+      "title": "Expected Revision",
+      "type": "integer"
+    },
+    "request_id": {
+      "pattern": "^[a-f0-9]{32}$",
+      "title": "Request Id",
+      "type": "string"
+    },
+    "coordinates": {
+      "$ref": "#/$defs/Coordinates"
+    },
+    "reason": {
+      "maxLength": 500,
+      "minLength": 1,
+      "title": "Reason",
+      "type": "string"
+    }
+  },
+  "required": [
+    "space_id",
+    "expected_revision",
+    "request_id",
+    "coordinates",
+    "reason"
+  ],
+  "title": "CoordinateChange",
+  "type": "object"
+}

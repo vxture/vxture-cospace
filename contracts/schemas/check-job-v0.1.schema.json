@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object", "additionalProperties": false,
+  "required": ["schema_version", "kind", "executor", "dataset_id", "dataset_sha256", "scene_id", "config", "environment"],
+  "properties": {
+    "schema_version": {"const": "cospace.job/0.1"},
+    "kind": {"const": "synthetic_check"}, "executor": {"const": "synthetic_check/0.1"},
+    "dataset_id": {"type": "string", "pattern": "^dataset-[0-9a-f]{32}$"},
+    "dataset_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "scene_id": {"type": "string", "minLength": 1},
+    "config": {"type": "object", "additionalProperties": false,
+      "required": ["timeout_seconds", "log_limit_bytes"], "properties": {
+        "timeout_seconds": {"type": "integer", "minimum": 1, "maximum": 120},
+        "log_limit_bytes": {"type": "integer", "minimum": 1024, "maximum": 8388608}
+      }},
+    "environment": {"type": "object", "additionalProperties": false,
+      "required": ["python", "platform", "implementation_sha256", "dependencies"], "properties": {
+        "python": {"type": "string"}, "platform": {"type": "string"},
+        "implementation_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "dependencies": {"type": "object", "additionalProperties": {"type": "string"}}
+      }}
+  }
+}

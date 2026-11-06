@@ -1,0 +1,91 @@
+name: deploy
+on:
+  push:
+    tags: ['v*.*.*']
+permissions:
+  contents: read
+  packages: write
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+jobs:
+  detect:
+    permissions:
+      contents: read
+      checks: read
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Require a release tag on main with green required checks
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          [[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          git merge-base --is-ancestor HEAD origin/main
+          gh api --paginate "repos/$GITHUB_REPOSITORY/commits/$(git rev-parse HEAD)/check-runs?per_page=100" \
+            --jq '.check_runs[] | [.name,.conclusion] | @tsv' > /tmp/release-checks.tsv
+          for check in quality-gate build test-coverage audit gitleaks; do
+            grep -Fxq "$(printf '%s\tsuccess' "$check")" /tmp/release-checks.tsv
+          done
+  call-build:
+    name: docker-build
+    needs: detect
+    uses: ./.github/workflows/build.yml
+    permissions:
+      contents: read
+      packages: write
+      security-events: write
+    with:
+      pass_sha: ${{ github.sha }}
+    secrets:
+      ALIYUN_ACR_USERNAME: ${{ secrets.ALIYUN_ACR_USERNAME }}
+      ALIYUN_ACR_PASSWORD: ${{ secrets.ALIYUN_ACR_PASSWORD }}
+  deploy:
+    needs: [detect, call-build]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: production
+    permissions:
+      contents: read
+      packages: read
+    env:
+      DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+      DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+      DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+      STACK_ROOT: ${{ vars.STACK_ROOT }}
+      PROJECT_NAME: ${{ vars.PROJECT_NAME }}
+      DEPLOYMENT_READY: ${{ vars.DEPLOYMENT_READY }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.14'
+      - run: python scripts/guardrails/check_deploy_target.py
+      - name: Join tailnet and prepare SSH
+        uses: ./.github/actions/tailnet-ssh-connect
+        with:
+          tailscale-oauth-client-id: ${{ secrets.TAILSCALE_OAUTH_CLIENT_ID }}
+          tailscale-oauth-secret: ${{ secrets.TAILSCALE_OAUTH_CLIENT_SECRET }}
+          tailscale-tag: ${{ vars.TAILSCALE_OAUTH_CLIENT_TAG }}
+          deploy-host: ${{ secrets.DEPLOY_HOST }}
+          deploy-port: ${{ secrets.DEPLOY_PORT }}
+          deploy-ssh-key: ${{ secrets.DEPLOY_SSH_KEY }}
+          deploy-ssh-passphrase: ${{ secrets.DEPLOY_SSH_KEY_PASSPHRASE }}
+          deploy-known-hosts: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+      - name: Deliver Git revision and deploy on worker02
+        env:
+          IMAGE_TAG: ${{ needs.call-build.outputs.image_tag }}
+          GHCR_NAMESPACE: ${{ github.repository_owner }}
+          GHCR_USERNAME: ${{ github.actor }}
+          GHCR_TOKEN: ${{ github.token }}
+          ACR_REGISTRY: ${{ vars.ALIYUN_ACR_REGISTRY }}
+          ACR_NAMESPACE: ${{ vars.ALIYUN_ACR_NAMESPACE }}
+          ACR_USERNAME: ${{ secrets.ALIYUN_ACR_USERNAME }}
+          ACR_PASSWORD: ${{ secrets.ALIYUN_ACR_PASSWORD }}
+        shell: bash
+        run: bash scripts/workflows/deploy-worker02.sh

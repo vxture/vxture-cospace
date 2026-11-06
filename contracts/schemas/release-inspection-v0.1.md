@@ -1,0 +1,17 @@
+# 固定发布核对投影 v0.1
+
+实验性只读HTTP契约，应用于cospace.synthetic-bundle/0.2；不改变源包Schema或授权真实发布。
+
+GET /scenes/{scene_id}/releases/{release_id}/data返回representation=data_inventory_v0.1；/ontology返回representation=ontology_inspection_v0.1。公共字段继承固定发布描述，包括scene_id、release_id、truth_version_id、frame_id、package_sha256、data_kind=synthetic和real_release_ready=false。前端必须逐项核对固定标识与摘要后才显示内容。
+
+data投影含source_description、items及verification。items为原始已校验清单，含逻辑path、bytes、media_type、sha256、role、integrity=verified_at_registration。role来自注册时已检查的引用类型，不从文件名猜测；无类型引用则unclassified。该列表不含package.json自身，package_sha256绑定其原始字节。
+
+verification.status=verified_at_registration，verified_at=null、time_status=not_recorded明确没有持久化校验时点；source_files_rechecked=false表明本次读取不访问原目录。usage_conditions=not_assessed、field_quality=not_field_validated、acquisition=none_synthetic分别表达许可、现场质量及采集状态，不能从完整性校验推导三者已通过。
+
+ontology投影含definition（ontology_id、version及types定义）、ontology_sha256、validation和objects。validation以固定规则重新校验，method=synthetic_string_rules_v0.1，仅覆盖类型引用、属性声明、必填存在及字符串类型。objects保留object_id、type_id、properties、anchor_xyz、confirmation，并增加validation=passed、evidence_ids=null及evidence_status=object_links_not_recorded。覆盖证据不能被冒充为对象级证据关联。
+
+内部持久快照新增inspection.version=1，保存manifest_raw、ontology_raw的原始UTF-8文本和引用角色。读取时验证manifest原始字节摘要、本体原始字节的大小/摘要/版本，重新运行实例规则。数据库整包摘要仍覆盖完整快照；不是签名或抗数据库篡改安全机制。快照不保存宿主绝对路径、凭据或任意文件读取入口。
+
+旧快照缺少inspection时返回409/inspection_unavailable；已有同ID快照不得覆盖，使用新release_id登记扩展快照。登记相同当前内容仍幂等。无新增数据库表及迁移，原查询与元数据追溯兼容保留。
+
+404表示场景或发布不存在；410/capability_revoked表示当前合成发布撤回；503/content_corrupt表示固定内容摘要或规则不一致；存储不可用为503/storage_error。失败不得转换为空资料、空间unknown或规则通过。数据、本体与预览使用相同场景事务门禁；已下载内容为读取时快照，不提供实时客户端撤回。历史元数据追溯仍可访问。

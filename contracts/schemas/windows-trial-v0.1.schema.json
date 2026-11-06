@@ -1,0 +1,46 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "profile": {
+      "pattern": "^cospace.windows-trial/0\\.1$",
+      "title": "Profile",
+      "type": "string"
+    },
+    "mode": {
+      "pattern": "^(mock|platform)$",
+      "title": "Mode",
+      "type": "string"
+    },
+    "port": {
+      "maximum": 65535,
+      "minimum": 1024,
+      "title": "Port",
+      "type": "integer"
+    },
+    "accounts_port": {
+      "maximum": 65535,
+      "minimum": 1024,
+      "title": "Accounts Port",
+      "type": "integer"
+    },
+    "business_root": {
+      "title": "Business Root",
+      "type": "string"
+    },
+    "state_root": {
+      "title": "State Root",
+      "type": "string"
+    }
+  },
+  "required": [
+    "profile",
+    "mode",
+    "port",
+    "accounts_port",
+    "business_root",
+    "state_root"
+  ],
+  "title": "TrialConfig",
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

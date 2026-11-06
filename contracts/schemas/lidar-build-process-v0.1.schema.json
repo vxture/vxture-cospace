@@ -1,0 +1,379 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Laser Build process display response 0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "profile": {
+      "const": "cospace.lidar-build-process/0.1"
+    },
+    "supported": {
+      "type": "boolean"
+    },
+    "ready": {
+      "type": "boolean"
+    },
+    "space_id": {
+      "type": "string"
+    },
+    "job_id": {
+      "type": "string"
+    },
+    "input_id": {
+      "type": "string"
+    },
+    "reason": {
+      "const": "process_not_recorded"
+    },
+    "job_state": {
+      "type": "string"
+    },
+    "snapshot_sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "revision": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "frame_id": {
+      "const": "first_lidar_anchor"
+    },
+    "axes": {
+      "const": [
+        "sensor_x",
+        "sensor_y",
+        "sensor_z"
+      ]
+    },
+    "unit": {
+      "const": "m"
+    },
+    "input_frames": {
+      "type": "integer",
+      "minimum": 2,
+      "maximum": 20
+    },
+    "available_frames": {
+      "type": "integer",
+      "minimum": 2,
+      "maximum": 20
+    },
+    "processed_frames": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "excluded_frames": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "excluded_reason": {
+      "type": "null"
+    },
+    "source_clock": {
+      "const": "ros_header_unverified_utc"
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "source_model_sha256": {
+      "anyOf": [
+        {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "state": {
+      "enum": [
+        "recording",
+        "completed",
+        "failed",
+        "interrupted"
+      ]
+    },
+    "quality": {
+      "const": "unverified"
+    },
+    "robot_ready": {
+      "const": false
+    },
+    "appearance": {
+      "const": "intensity_grayscale_not_rgb"
+    },
+    "limitations": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "frames": {
+      "type": "array",
+      "maxItems": 20,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "index": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "relative_time_us": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "source_time_us": {
+            "type": "integer"
+          },
+          "pose": {
+            "type": "array",
+            "minItems": 4,
+            "maxItems": 4,
+            "items": {
+              "type": "array",
+              "minItems": 4,
+              "maxItems": 4,
+              "items": {
+                "type": "number"
+              }
+            }
+          },
+          "input_points": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "added_points": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "point_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "processed_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "message_sha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "header_ns": {
+            "type": "string",
+            "pattern": "^[0-9]{1,19}$"
+          },
+          "recorded_ns": {
+            "type": "string",
+            "pattern": "^[0-9]{1,19}$"
+          },
+          "registration": {
+            "type": "object",
+            "required": [
+              "accepted"
+            ],
+            "properties": {
+              "accepted": {
+                "const": true
+              }
+            }
+          }
+        },
+        "required": [
+          "index",
+          "relative_time_us",
+          "source_time_us",
+          "pose",
+          "input_points",
+          "added_points",
+          "point_count",
+          "processed_at",
+          "message_sha256",
+          "header_ns",
+          "recorded_ns",
+          "registration"
+        ]
+      }
+    },
+    "point_count": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 2500000
+    },
+    "bounds": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "items": {
+        "type": "array",
+        "items": {
+          "type": "number"
+        },
+        "minItems": 3,
+        "maxItems": 3
+      }
+    },
+    "sampling": {
+      "type": "object",
+      "required": [
+        "method",
+        "stride",
+        "limit",
+        "count"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "method": {
+          "const": "file_index_stride"
+        },
+        "stride": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "limit": {
+          "const": 10000
+        },
+        "count": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10000
+        }
+      }
+    },
+    "points": {
+      "type": "array",
+      "maxItems": 10000,
+      "items": {
+        "type": "array",
+        "items": {
+          "type": "number"
+        },
+        "minItems": 3,
+        "maxItems": 3
+      }
+    },
+    "colors": {
+      "type": "array",
+      "maxItems": 10000,
+      "items": {
+        "type": "array",
+        "minItems": 3,
+        "maxItems": 3,
+        "items": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 255
+        }
+      }
+    },
+    "first_seen_frames": {
+      "type": "array",
+      "maxItems": 10000,
+      "items": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 499
+      }
+    },
+    "bag_sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "rejection": {
+      "type": [
+        "object",
+        "null"
+      ]
+    }
+  },
+  "required": [
+    "profile",
+    "space_id",
+    "job_id",
+    "input_id",
+    "supported"
+  ],
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "supported": {
+            "const": false
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "reason"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "supported": {
+            "const": true
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "ready",
+          "job_state"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "ready": {
+            "const": true
+          }
+        },
+        "required": [
+          "ready"
+        ]
+      },
+      "then": {
+        "required": [
+          "profile",
+          "supported",
+          "ready",
+          "space_id",
+          "job_id",
+          "input_id",
+          "job_state",
+          "snapshot_sha256",
+          "bag_sha256",
+          "revision",
+          "frame_id",
+          "axes",
+          "unit",
+          "input_frames",
+          "available_frames",
+          "processed_frames",
+          "excluded_frames",
+          "excluded_reason",
+          "source_clock",
+          "updated_at",
+          "source_model_sha256",
+          "state",
+          "quality",
+          "robot_ready",
+          "appearance",
+          "limitations",
+          "frames",
+          "point_count",
+          "bounds",
+          "sampling",
+          "points",
+          "colors",
+          "first_seen_frames"
+        ]
+      }
+    }
+  ]
+}

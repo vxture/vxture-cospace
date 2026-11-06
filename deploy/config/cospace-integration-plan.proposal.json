@@ -1,0 +1,37 @@
+{
+  "profile": "cospace.integration-plan-proposal/0.1",
+  "status": "superseded_not_submitted",
+  "supersededBy": "deploy/config/cospace-subscription-plans.proposal.json",
+  "supersededReason": "用户选择正式收费套餐，本免费联调方案仅保留历史，不得用于登记或发布。",
+  "productCode": "cospace",
+  "purpose": "真实订阅开通、权益读取、Webhook投递及撤销验收",
+  "operatorDecisionRequired": true,
+  "platformMutationExecuted": false,
+  "proposedCreatePlan": {
+    "productCode": "cospace",
+    "planCode": "cospace-integration",
+    "planName": "CoSpace 联调测试",
+    "description": "用于指定Workspace的受控流程验收；精度与正式商用服务承诺不在本次验收范围。",
+    "tier": "free"
+  },
+  "proposedDraftVersion": {
+    "prices": [{"cycleUnit": "month", "price": "0.00"}],
+    "quota": {}
+  },
+  "proposedSubscriptionMode": {"isPublic": false},
+  "invitation": {
+    "kind": "invite",
+    "assignedWorkspaceId": null,
+    "workspaceMustBeVerifiedBeforeIssue": true,
+    "expiryMustBeChosenBeforeIssue": true
+  },
+  "constraints": [
+    "This is a local proposal, not a platform API request or a published plan.",
+    "Set invitation-only mode before publishing; do not publish the default public skeleton.",
+    "A zero monthly price is not a time-limited trial; schedule and perform cancellation separately after acceptance.",
+    "An empty quota adds no platform metering allowance and does not promise unlimited product capacity.",
+    "Invitations unlock subscription only; real C2 entitlement and explicit scene permissions remain required.",
+    "Do not create unused model or capability grants to satisfy a generic checklist.",
+    "Do not set product active or mark realWebhookDeliveryVerified until actual evidence exists."
+  ]
+}

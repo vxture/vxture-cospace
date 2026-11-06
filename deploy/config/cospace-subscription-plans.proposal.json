@@ -1,0 +1,77 @@
+{
+  "$schema": "../../contracts/schemas/subscription-plan-proposal.schema.json",
+  "profile": "cospace.subscription-plan-proposal/0.1",
+  "status": "local_proposal_not_submitted",
+  "productCode": "cospace",
+  "billingScope": "workspace",
+  "currency": "CNY",
+  "commercialValuesApproved": false,
+  "platformMutationExecuted": false,
+  "serviceBoundary": {
+    "groundAcquisitionEngineeringIncluded": false,
+    "commissionedProcessingEngineeringIncluded": false,
+    "supportedAutomatedSoftwareIncluded": true,
+    "publicText": "本套餐包含 CoSpace 平台全部软件功能及约定资源额度，不包含地面采集处理工程。现场采集、委托数据预处理、人工建模、测绘校核及成果工程交付，须另行报价并签订服务合同。"
+  },
+  "allSoftwareModules": ["空间预览", "态势服务", "数据管理", "构建中心", "语义本体", "空间关联"],
+  "metricMapping": {
+    "member.max": {"owner": "product", "kind": "max", "registration": "verify_in_live_catalog"},
+    "scene.max": {"owner": "product", "kind": "max", "registration": "proposed_key_not_registered"},
+    "storage.bytes": {"owner": "platform", "kind": "gauge", "registration": "reuse_platform_metric"},
+    "ai.credit": {"owner": "platform", "kind": "counter", "registration": "reuse_platform_metric"}
+  },
+  "resourceRules": {
+    "storageUnitBytes": 1073741824,
+    "storageContributionIsHardCap": false,
+    "storageAddons": "platform_available_catalog_only",
+    "aiReset": "monthly_subscription_anchor",
+    "annualAiGrant": "monthly_not_upfront",
+    "aiCarryover": "proposed_no_monthly_carryover",
+    "modelUsageReporter": "atlas",
+    "ordinaryGeometryBuildConsumesAiCredits": false,
+    "historicalVersionsConsumeSceneSlots": false,
+    "productSeatsAreWorkspaceMemberCount": false
+  },
+  "plans": [
+    {
+      "planCode": "cospace-pro",
+      "name": "Pro",
+      "tier": "pro",
+      "componentRole": "primary",
+      "fulfillment": "paid_subscription",
+      "selfService": true,
+      "prices": [{"cycle": "month", "amountFen": 39900}, {"cycle": "year", "amountFen": 399000}],
+      "componentQuotaProposal": {"member.max": 1, "scene.max": 3, "storage.bytes": 21474836480, "ai.credit": 500}
+    },
+    {
+      "planCode": "cospace-business",
+      "name": "Business",
+      "tier": "business",
+      "componentRole": "primary",
+      "fulfillment": "paid_subscription",
+      "selfService": true,
+      "prices": [{"cycle": "month", "amountFen": 149900}, {"cycle": "year", "amountFen": 1499000}],
+      "componentQuotaProposal": {"member.max": 5, "scene.max": 10, "storage.bytes": 107374182400, "ai.credit": 2500}
+    },
+    {
+      "planCode": "cospace-enterprise",
+      "name": "Enterprise",
+      "tier": "enterprise",
+      "componentRole": "primary",
+      "fulfillment": "operator_grant_after_contract",
+      "selfService": false,
+      "prices": [],
+      "componentQuotaProposal": null
+    }
+  ],
+  "releaseBlockers": [
+    "confirm_prices_storage_and_ai_allowance",
+    "verify_live_catalog_metrics_credit_policy_and_addon_availability",
+    "confirm_platform_side_members_scenes_and_storage_entitlements",
+    "accept_platform_authorization_without_local_commercial_quantity_gates",
+    "accept_pricing_deeplink_webhook_and_provisioning_reconciliation",
+    "integrate_storage_facts_reporting_without_local_commerce_ledger",
+    "publish_supported_build_size_and_resource_limits",
+    "verify_real_paid_provisioning_webhook_and_revocation"
+  ]
+}

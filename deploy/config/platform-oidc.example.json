@@ -1,0 +1,10 @@
+{
+  "purpose": "Environment variable names only; never put live credentials in this file",
+  "COSPACE_OIDC_ISSUER": "https://accounts.vxture.com",
+  "COSPACE_OIDC_BACKCHANNEL": "https://accounts.vxture.com",
+  "COSPACE_OIDC_CLIENT_ID": "<register a separate CoSpace client>",
+  "COSPACE_OIDC_CLIENT_SECRET": "<server-side secret manager/environment only>",
+  "COSPACE_ORIGIN": "https://<CoSpace public origin, no trailing slash>",
+  "COSPACE_SESSION_KEY": "<stable Fernet key, server-side secret manager/environment only>",
+  "COSPACE_OIDC_LOOPBACK_HTTP": "0"
+}

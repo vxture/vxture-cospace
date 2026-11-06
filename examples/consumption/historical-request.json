@@ -1,0 +1,65 @@
+{
+  "schema_version": "cospace.consumption/0.1",
+  "kind": "request",
+  "request_id": "synthetic-request-1",
+  "source": {
+    "scene_id": "synthetic-equipment-corridor",
+    "release_id": "release-v1",
+    "release_sha256": "71d2dbd218ffde0478e2c51ac449881322133379406070b5c736c44435aac347",
+    "truth_id": "truth-v1",
+    "truth_sha256": "b2c37b091f6e137b1ca5a3083f3b76e60cb24b4fa68a50489fb4b0a4f4f10b79",
+    "view_id": "machine-v1",
+    "view_sha256": "9008c7d21af5e6fbc7ef141d6d8e6128ce91bf21932dec869eaf58e6b5e30e73"
+  },
+  "package_sha256": "f4e42aeab786588f4743ffd5cb7def7786e8026e26cb25c95c7d43c785145bb0",
+  "profile_ref": {
+    "id": "synthetic-spatial-query",
+    "sha256": "281d6a60a8685010267d576dd69747e5ee094fcaafc2c509324621f6ae8d61a4"
+  },
+  "frame_id": "scene",
+  "purpose": "spatial_query",
+  "mode": "historical",
+  "max_age_s": null,
+  "items": [
+    {
+      "item_id": "free",
+      "point": [
+        1.5,
+        0.5,
+        0.5
+      ]
+    },
+    {
+      "item_id": "conflict",
+      "point": [
+        4.5,
+        0.5,
+        0.5
+      ]
+    },
+    {
+      "item_id": "missing",
+      "point": [
+        5.5,
+        5.5,
+        0.5
+      ]
+    },
+    {
+      "item_id": "outside",
+      "point": [
+        10,
+        0,
+        0
+      ]
+    },
+    {
+      "item_id": "bad-point",
+      "point": [
+        "bad",
+        0,
+        0
+      ]
+    }
+  ]
+}

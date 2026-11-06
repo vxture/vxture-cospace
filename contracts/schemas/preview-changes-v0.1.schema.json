@@ -1,0 +1,105 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cospace.local/contracts/preview-changes-v0.1.schema.json",
+  "title": "CoSpace candidate comparison and manual review requests",
+  "oneOf": [
+    {
+      "$ref": "#/$defs/CompareRequest"
+    },
+    {
+      "$ref": "#/$defs/ReviewRequest"
+    }
+  ],
+  "$defs": {
+    "CompareRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "space_id": {
+          "anyOf": [
+            {
+              "maxLength": 100,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Space Id"
+        },
+        "candidate_id": {
+          "maxLength": 100,
+          "minLength": 1,
+          "title": "Candidate Id",
+          "type": "string"
+        },
+        "expected_revision": {
+          "minimum": 0,
+          "title": "Expected Revision",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "candidate_id",
+        "expected_revision"
+      ],
+      "title": "CompareRequest",
+      "type": "object"
+    },
+    "ReviewRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "space_id": {
+          "anyOf": [
+            {
+              "maxLength": 100,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Space Id"
+        },
+        "candidate_id": {
+          "maxLength": 100,
+          "minLength": 1,
+          "title": "Candidate Id",
+          "type": "string"
+        },
+        "expected_revision": {
+          "minimum": 0,
+          "title": "Expected Revision",
+          "type": "integer"
+        },
+        "comparison_sha256": {
+          "pattern": "^[a-f0-9]{64}$",
+          "title": "Comparison Sha256",
+          "type": "string"
+        },
+        "acknowledge_unverified": {
+          "title": "Acknowledge Unverified",
+          "type": "boolean"
+        },
+        "note": {
+          "maxLength": 500,
+          "minLength": 1,
+          "title": "Note",
+          "type": "string"
+        }
+      },
+      "required": [
+        "candidate_id",
+        "expected_revision",
+        "comparison_sha256",
+        "acknowledge_unverified",
+        "note"
+      ],
+      "title": "ReviewRequest",
+      "type": "object"
+    }
+  }
+}

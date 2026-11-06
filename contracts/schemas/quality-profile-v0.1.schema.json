@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "oneOf": [{"$ref":"#/$defs/profile"},{"$ref":"#/$defs/assessment"},{"$ref":"#/$defs/observation"}],
+  "$defs": {
+    "id":{"type":"string","minLength":1,"maxLength":256},
+    "ref":{"type":"object","additionalProperties":false,"required":["id","sha256"],"properties":{"id":{"$ref":"#/$defs/id"},"sha256":{"type":"string","pattern":"^[0-9a-f]{64}$"}}},
+    "ratio":{"type":"number","minimum":0,"maximum":1},
+    "count":{"type":"integer","minimum":0,"maximum":10000000},
+    "vec":{"type":"array","minItems":3,"maxItems":3,"items":{"type":"number"}},
+    "scope":{"type":"object","additionalProperties":false,"required":["scope_ref","frame_id","bounds","cell_size_m"],"properties":{
+      "scope_ref":{"$ref":"#/$defs/ref"},"frame_id":{"$ref":"#/$defs/id"},
+      "bounds":{"type":"array","minItems":2,"maxItems":2,"items":{"$ref":"#/$defs/vec"}},
+      "cell_size_m":{"type":"number","exclusiveMinimum":0}
+    }},
+    "profile":{"type":"object","additionalProperties":false,"required":["schema_version","kind","profile_id","scene_id","purpose","mode","scope","rule","freshness"],"properties":{
+      "schema_version":{"const":"cospace.quality-profile/0.1"},"kind":{"const":"profile"},
+      "profile_id":{"$ref":"#/$defs/id"},"scene_id":{"$ref":"#/$defs/id"},
+      "purpose":{"enum":["browse","measure","spatial_query","localize"]},"mode":{"enum":["historical","operational"]},
+      "scope":{"$ref":"#/$defs/scope"},
+      "rule":{"type":"object","additionalProperties":false,"required":["procedure_ref","target_objects_ref","expected_object_count","grade_label","metric","max_error_m","min_observed_ratio","min_confirmed_semantic_ratio"],"properties":{
+        "target_objects_ref":{"$ref":"#/$defs/ref"},"expected_object_count":{"$ref":"#/$defs/count"},
+        "procedure_ref":{"$ref":"#/$defs/ref"},"grade_label":{"type":["string","null"],"minLength":1},
+        "metric":{"const":"independent_point_rmse_3d_m"},
+        "max_error_m":{"type":["number","null"],"exclusiveMinimum":0},
+        "min_observed_ratio":{"$ref":"#/$defs/ratio"},"min_confirmed_semantic_ratio":{"$ref":"#/$defs/ratio"}
+      }},
+      "freshness":{"type":"object","additionalProperties":false,"required":["max_age_s"],"properties":{"max_age_s":{"type":["integer","null"],"minimum":0,"maximum":9007199254740991}}}
+    }},
+    "assessment":{"type":"object","additionalProperties":false,"required":["schema_version","kind","assessment_id","scene_id","truth_ref","scope","procedure_ref","observed_from","observed_until","coverage","semantics","geometry"],"properties":{
+      "schema_version":{"const":"cospace.quality-profile/0.1"},"kind":{"const":"assessment"},
+      "assessment_id":{"$ref":"#/$defs/id"},"scene_id":{"$ref":"#/$defs/id"},"truth_ref":{"$ref":"#/$defs/ref"},
+      "scope":{"$ref":"#/$defs/scope"},"procedure_ref":{"$ref":"#/$defs/ref"},
+      "observed_from":{"type":"string"},"observed_until":{"type":"string"},
+      "coverage":{"type":"object","additionalProperties":false,"required":["denominator","partition_ref","total_cells","observed_free","occupied","unobserved","degraded","conflict"],"properties":{
+        "denominator":{"const":"frozen_target_grid_cells"},"partition_ref":{"$ref":"#/$defs/ref"},
+        "total_cells":{"$ref":"#/$defs/count"},"observed_free":{"$ref":"#/$defs/count"},"occupied":{"$ref":"#/$defs/count"},
+        "unobserved":{"$ref":"#/$defs/count"},"degraded":{"$ref":"#/$defs/count"},"conflict":{"$ref":"#/$defs/count"}
+      }},
+      "semantics":{"type":"object","additionalProperties":false,"required":["target_objects_ref","required_count","confirmed_count"],"properties":{
+        "target_objects_ref":{"$ref":"#/$defs/ref"},"required_count":{"$ref":"#/$defs/count"},"confirmed_count":{"$ref":"#/$defs/count"}
+      }},
+      "geometry":{"type":"object","additionalProperties":false,"required":["metric","value_m","check_points_ref","basis"],"properties":{
+        "metric":{"const":"independent_point_rmse_3d_m"},"value_m":{"type":["number","null"],"minimum":0},
+        "check_points_ref":{"$ref":"#/$defs/ref"},"basis":{"enum":["synthetic","independent_declared","not_assessed"]}
+      }}
+    }},
+    "observation":{"type":"object","additionalProperties":false,"required":["schema_version","kind","scene_id","truth_ref","scope_ref","frame_id","cell_index","state","reasons","evidence"],"properties":{
+      "cell_index":{"type":"array","minItems":3,"maxItems":3,"items":{"$ref":"#/$defs/count"}},
+      "schema_version":{"const":"cospace.quality-profile/0.1"},"kind":{"const":"observation"},"scene_id":{"$ref":"#/$defs/id"},
+      "truth_ref":{"$ref":"#/$defs/ref"},"scope_ref":{"$ref":"#/$defs/ref"},"frame_id":{"$ref":"#/$defs/id"},
+      "state":{"enum":["occupied","observed_free","unknown"]},
+      "reasons":{"type":"array","uniqueItems":true,"items":{"enum":["unobserved","degraded","conflict"]}},
+      "evidence":{"type":"array","items":{"$ref":"#/$defs/ref"}}
+    }}
+  }
+}

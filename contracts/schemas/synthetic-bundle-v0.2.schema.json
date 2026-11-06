@@ -1,0 +1,670 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:cospace:synthetic-bundle:0.2",
+  "$comment": "Synthetic point-query profile. No real acquisition or release approval.",
+  "$ref": "#/$defs/package",
+  "$defs": {
+    "artifact": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      },
+      "required": [
+        "path",
+        "sha256"
+      ],
+      "additionalProperties": false
+    },
+    "frame": {
+      "type": "object",
+      "properties": {
+        "frame_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "unit": {
+          "type": "string",
+          "minLength": 1
+        },
+        "handedness": {
+          "type": "string",
+          "minLength": 1
+        },
+        "axes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 3,
+          "maxItems": 3
+        },
+        "origin_description": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "frame_id",
+        "unit",
+        "handedness",
+        "axes",
+        "origin_description"
+      ],
+      "additionalProperties": false
+    },
+    "truth_ref": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "scene_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "truth_version_id": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "path",
+        "sha256",
+        "scene_id",
+        "truth_version_id"
+      ],
+      "additionalProperties": false
+    },
+    "view_ref": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "view_version_id": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "path",
+        "sha256",
+        "view_version_id"
+      ],
+      "additionalProperties": false
+    },
+    "ontology_ref": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "ontology_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "path",
+        "sha256",
+        "ontology_id",
+        "version"
+      ],
+      "additionalProperties": false
+    },
+    "file": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "bytes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "media_type": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "path",
+        "sha256",
+        "bytes",
+        "media_type"
+      ],
+      "additionalProperties": false
+    },
+    "package": {
+      "type": "object",
+      "properties": {
+        "profile": {
+          "type": "string",
+          "minLength": 1
+        },
+        "scene_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "data_kind": {
+          "type": "string",
+          "minLength": 1
+        },
+        "release": {
+          "$ref": "#/$defs/artifact"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "files": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/file"
+              },
+              "minItems": 1
+            },
+            "source_description": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "files",
+            "source_description"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "profile",
+        "scene_id",
+        "data_kind",
+        "release",
+        "data"
+      ],
+      "additionalProperties": false
+    },
+    "release": {
+      "type": "object",
+      "properties": {
+        "scene_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "data_kind": {
+          "type": "string",
+          "minLength": 1
+        },
+        "release_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source_truth": {
+          "$ref": "#/$defs/truth_ref"
+        },
+        "views": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/view_ref"
+          },
+          "minItems": 2
+        },
+        "capabilities": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 1
+        }
+      },
+      "required": [
+        "scene_id",
+        "data_kind",
+        "release_id",
+        "source_truth",
+        "views",
+        "capabilities"
+      ],
+      "additionalProperties": false
+    },
+    "truth": {
+      "type": "object",
+      "properties": {
+        "scene_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "data_kind": {
+          "type": "string",
+          "minLength": 1
+        },
+        "truth_version_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "parent_truth_version_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1
+        },
+        "frame": {
+          "$ref": "#/$defs/frame"
+        },
+        "target_scope": {
+          "type": "array",
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 3,
+            "maxItems": 3
+          },
+          "minItems": 2,
+          "maxItems": 2
+        },
+        "objects": {
+          "$ref": "#/$defs/artifact"
+        },
+        "ontology_ref": {
+          "$ref": "#/$defs/ontology_ref"
+        },
+        "adoption": {
+          "type": "string",
+          "minLength": 1
+        },
+        "quality": {
+          "type": "object",
+          "properties": {
+            "status": {
+              "type": "string",
+              "minLength": 1
+            },
+            "limitations": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "minItems": 1
+            }
+          },
+          "required": [
+            "status",
+            "limitations"
+          ],
+          "additionalProperties": false
+        },
+        "provenance": {
+          "type": "object",
+          "properties": {
+            "method": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "method"
+          ],
+          "additionalProperties": false
+        },
+        "coverage": {
+          "$ref": "#/$defs/artifact"
+        }
+      },
+      "required": [
+        "scene_id",
+        "data_kind",
+        "truth_version_id",
+        "parent_truth_version_id",
+        "frame",
+        "target_scope",
+        "objects",
+        "ontology_ref",
+        "adoption",
+        "quality",
+        "provenance",
+        "coverage"
+      ],
+      "additionalProperties": false
+    },
+    "view": {
+      "type": "object",
+      "properties": {
+        "scene_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "data_kind": {
+          "type": "string",
+          "minLength": 1
+        },
+        "view_version_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "view_kind": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source_truth": {
+          "$ref": "#/$defs/truth_ref"
+        },
+        "frame": {
+          "$ref": "#/$defs/frame"
+        },
+        "objects": {
+          "$ref": "#/$defs/artifact"
+        },
+        "preparation": {
+          "type": "string",
+          "minLength": 1
+        },
+        "capabilities": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 1
+        },
+        "limitations": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 1
+        },
+        "coverage": {
+          "$ref": "#/$defs/artifact"
+        }
+      },
+      "required": [
+        "scene_id",
+        "data_kind",
+        "view_version_id",
+        "view_kind",
+        "source_truth",
+        "frame",
+        "objects",
+        "preparation",
+        "capabilities",
+        "limitations",
+        "coverage"
+      ],
+      "additionalProperties": false
+    },
+    "objects": {
+      "type": "object",
+      "properties": {
+        "objects": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/instance"
+          },
+          "minItems": 1
+        }
+      },
+      "required": [
+        "objects"
+      ],
+      "additionalProperties": false
+    },
+    "instance": {
+      "type": "object",
+      "properties": {
+        "object_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "type_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "properties": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "anchor_xyz": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "minItems": 3,
+          "maxItems": 3
+        },
+        "confirmation": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "object_id",
+        "type_id",
+        "properties",
+        "anchor_xyz",
+        "confirmation"
+      ],
+      "additionalProperties": false
+    },
+    "ontology": {
+      "type": "object",
+      "properties": {
+        "ontology_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "types": {
+          "type": "object",
+          "minProperties": 1,
+          "propertyNames": {
+            "type": "string",
+            "minLength": 1
+          },
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "properties": {
+                "type": "object",
+                "propertyNames": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "additionalProperties": {
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "required": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "required"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "required": [
+              "properties"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": [
+        "ontology_id",
+        "version",
+        "types"
+      ],
+      "additionalProperties": false
+    },
+    "coverage": {
+      "type": "object",
+      "properties": {
+        "scene_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "data_kind": {
+          "const": "synthetic"
+        },
+        "frame_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "bounds": {
+          "type": "array",
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 3,
+            "maxItems": 3
+          },
+          "minItems": 2,
+          "maxItems": 2
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "evidence_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "kind": {
+                "const": "synthetic_observation"
+              },
+              "description": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": [
+              "evidence_id",
+              "kind",
+              "description"
+            ],
+            "additionalProperties": false
+          },
+          "minItems": 1
+        },
+        "regions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "region_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "bounds": {
+                "type": "array",
+                "items": {
+                  "type": "array",
+                  "items": {
+                    "type": "number"
+                  },
+                  "minItems": 3,
+                  "maxItems": 3
+                },
+                "minItems": 2,
+                "maxItems": 2
+              },
+              "state": {
+                "enum": [
+                  "occupied",
+                  "observed_free",
+                  "unknown"
+                ]
+              },
+              "reason": {
+                "enum": [
+                  "synthetic_observation",
+                  "unobserved",
+                  "conflict",
+                  "degraded"
+                ]
+              },
+              "evidence_ids": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "minItems": 0
+              }
+            },
+            "required": [
+              "region_id",
+              "bounds",
+              "state",
+              "reason",
+              "evidence_ids"
+            ],
+            "additionalProperties": false
+          },
+          "minItems": 0
+        }
+      },
+      "required": [
+        "scene_id",
+        "data_kind",
+        "frame_id",
+        "bounds",
+        "evidence",
+        "regions"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

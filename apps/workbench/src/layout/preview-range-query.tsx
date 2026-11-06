@@ -1,0 +1,26 @@
+import React,{useEffect,useRef,useState} from 'react';
+import {Button,Input,StatusBadge} from '@vxture/design-system';
+import {getJSON,previewEndpoint} from './real-space-data';
+
+type Model={id:string;frame_id:string;bounds_m:[number[],number[]];members:Record<string,{sha256:string}>;publication:{id:string;model_manifest_sha256:string}};
+type Result={profile:string;status:'complete'|'limit_exceeded';result_complete:boolean;matched_cells:number;returned_cells:number;cell_indices:number[][];unlisted_state:'unknown'|null;publication_id:string;publication_model_manifest_sha256:string;source_model_sha256:string;frame_id:string};
+export function PreviewRangeQuery({publication}:{publication:string}){
+ const [model,setModel]=useState<Model|null>(null),[bounds,setBounds]=useState<string[]>(Array(6).fill('')),[limit,setLimit]=useState('1024'),[error,setError]=useState(''),[busy,setBusy]=useState(false),[result,setResult]=useState<Result|null>(null);
+ const request=useRef<AbortController|null>(null);
+ useEffect(()=>{const controller=new AbortController();getJSON<Model>(`/publications/${publication}/api/preview`,controller.signal).then(value=>{
+  if(controller.signal.aborted)return;if(value.publication.id!==publication)throw Error('发布绑定不一致。');
+  setModel(value);const r=.1;setBounds([...value.bounds_m[0].map(v=>String(Math.floor((v-r)*100)/100)),...value.bounds_m[1].map(v=>String(Math.ceil((v+r)*100)/100))]);
+ }).catch(e=>{if(!controller.signal.aborted)setError(e.message);});return()=>{controller.abort();request.current?.abort();};},[publication]);
+ function clear(){request.current?.abort();setResult(null);setError('');setBusy(false);}
+ async function submit(event:React.FormEvent){event.preventDefault();if(!model)return;clear();
+  const coordinates=bounds.map(v=>Number(v));const count=Number(limit);
+  if(bounds.some(v=>!v.trim())||!coordinates.every(Number.isFinite)||!limit.trim()||!Number.isInteger(count)||count<1||count>4096){setError('请填写六个有限坐标和 1～4096 的整数上限。');return;}
+  const controller=new AbortController();request.current=controller;setBusy(true);
+  try{const response=await fetch(`${previewEndpoint}/publications/${publication}/api/query-range`,{method:'POST',headers:{'Content-Type':'application/json'},signal:controller.signal,body:JSON.stringify({bounds_m:[coordinates.slice(0,3),coordinates.slice(3)],frame_id:model.frame_id,limit:count})});
+   const value=await response.json();if(!response.ok)throw Error(response.status===422?'范围参数无效：最小值须小于最大值，坐标绝对值不超过 1,000,000 米。':`范围查询失败（${response.status}），请核对固定发布。`);
+   if(value.publication_id!==publication||value.publication_model_manifest_sha256!==model.publication.model_manifest_sha256||value.source_model_sha256!==model.members['spatial.npz'].sha256||value.frame_id!==model.frame_id)throw Error('查询结果与所选固定发布不一致。');
+   if(!controller.signal.aborted)setResult(value);
+  }catch(e){if(!controller.signal.aborted)setError(e instanceof Error?e.message:'查询失败。');}finally{if(!controller.signal.aborted)setBusy(false);}
+ }
+ return <section aria-label={`范围查询 ${publication}`} className="rounded-md border border-border p-lg"><form onSubmit={submit} className="flex flex-col gap-md"><div className="flex flex-wrap justify-between gap-sm"><h3 className="text-body-small font-medium">智能体范围查询</h3><span className="text-label-small text-muted-foreground">{model?.frame_id||'读取坐标系…'} · 米</span></div><p className="text-body-small text-muted-foreground">按单元中心选择最小值包含、最大值不包含的范围。仅返回表面证据，结果枚举完成不代表空间观测完整。</p>{['最小','最大'].map((label,row)=><fieldset key={label} className="grid grid-cols-3 gap-sm"><legend className="mb-sm text-label-small text-muted-foreground">{label}坐标</legend>{['X','Y','Z'].map((axis,col)=>{const i=row*3+col;return <label key={axis} className="flex min-w-0 flex-col gap-xs text-label-small">{axis}<Input aria-label={`${label}${axis}`} type="number" step="any" required value={bounds[i]} disabled={!model} onChange={e=>{clear();setBounds(old=>old.map((v,n)=>n===i?e.target.value:v));}}/></label>;})}</fieldset>)}<div className="flex flex-wrap items-end gap-md"><label className="flex flex-col gap-xs text-label-small">最多返回单元<Input aria-label="范围返回上限" type="number" min={1} max={4096} step={1} required value={limit} onChange={e=>{clear();setLimit(e.target.value);}}/></label><Button type="submit" disabled={!model||busy}>{busy?'查询中…':'查询范围'}</Button></div>{error&&<p role="alert" className="text-body-small">{error}</p>}{result&&<div className="flex flex-col gap-md" role="status"><div className="flex flex-wrap items-center gap-sm"><StatusBadge tone={result.result_complete?'info':'warning'}>{result.result_complete?'枚举完成':'超过返回上限'}</StatusBadge><span className="text-body-small">匹配 {result.matched_cells.toLocaleString()} 个 · 返回 {result.returned_cells.toLocaleString()} 个</span></div><p className="text-body-small text-muted-foreground">{result.result_complete?(result.returned_cells?'未列出的单元为未知，不表示可通行。':'范围内没有表面证据，保持未知。'):'本次不返回部分单元；请缩小范围或在 4096 以内提高上限。不能从空列表判断空间状态。'}</p><details><summary className="cursor-pointer text-label-small">查看固定版本响应</summary><pre className="mt-sm max-h-80 overflow-auto whitespace-pre-wrap break-all text-label-small">{JSON.stringify(result,null,2)}</pre></details></div>}</form></section>;
+}

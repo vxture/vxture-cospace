@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$comment": "R2a synthetic test objects only; not an authorization protocol implementation.",
+  "type": "object", "additionalProperties": false,
+  "required": ["schema_version", "kind", "issuer", "deployment_id", "data_kind", "binding", "issued_at", "body"],
+  "properties": {
+    "schema_version": {"const": "cospace.trust-proof/0.1"},
+    "kind": {"enum": ["content_statement", "capability_grant", "status_snapshot"]},
+    "issuer": {"$ref": "#/$defs/id"}, "deployment_id": {"$ref": "#/$defs/id"},
+    "data_kind": {"const": "synthetic"},
+    "binding": {"type": "object", "additionalProperties": false,
+      "required": ["scene_id", "release_id", "truth_version_id", "view_version_id", "package_sha256", "release_sha256", "truth_sha256", "view_sha256", "profile", "scope_sha256"],
+      "properties": {
+        "scene_id": {"$ref": "#/$defs/id"}, "release_id": {"$ref": "#/$defs/id"},
+        "truth_version_id": {"$ref": "#/$defs/id"}, "view_version_id": {"$ref": "#/$defs/id"},
+        "package_sha256": {"$ref": "#/$defs/sha"}, "release_sha256": {"$ref": "#/$defs/sha"},
+        "truth_sha256": {"$ref": "#/$defs/sha"}, "view_sha256": {"$ref": "#/$defs/sha"},
+        "profile": {"$ref": "#/$defs/id"}, "scope_sha256": {"$ref": "#/$defs/sha"}
+      }},
+    "issued_at": {"$ref": "#/$defs/time"}, "body": {"type": "object"}
+  },
+  "allOf": [
+    {"if": {"properties": {"kind": {"const": "content_statement"}}},
+     "then": {"properties": {"body": {"type": "object", "additionalProperties": false,
+       "required": ["package_schema"], "properties": {"package_schema": {"const": "cospace.agent-package/0.1"}}}}}},
+    {"if": {"properties": {"kind": {"const": "capability_grant"}}},
+     "then": {"properties": {"body": {"type": "object", "additionalProperties": false,
+       "required": ["audience", "capabilities", "policy_sha256", "status", "not_before", "expires_at", "max_offline_seconds"],
+       "properties": {
+         "audience": {"$ref": "#/$defs/id"},
+         "capabilities": {"type": "array", "minItems": 1, "maxItems": 16, "uniqueItems": true, "items": {"$ref": "#/$defs/id"}},
+         "policy_sha256": {"$ref": "#/$defs/sha"}, "status": {"$ref": "#/$defs/status_ref"},
+         "not_before": {"$ref": "#/$defs/time"}, "expires_at": {"$ref": "#/$defs/time"},
+         "max_offline_seconds": {"type": "integer", "minimum": 1, "maximum": 2147483647}
+       }}}}},
+    {"if": {"properties": {"kind": {"const": "status_snapshot"}}},
+     "then": {"properties": {"body": {"type": "object", "additionalProperties": false,
+       "required": ["epoch", "sequence", "audience", "expires_at", "capabilities"],
+       "properties": {
+         "epoch": {"type": "integer", "minimum": 1, "maximum": 2147483647},
+         "sequence": {"type": "integer", "minimum": 1, "maximum": 9007199254740991},
+         "audience": {"$ref": "#/$defs/id"}, "expires_at": {"$ref": "#/$defs/time"},
+         "challenge": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+         "capabilities": {"type": "array", "minItems": 1, "maxItems": 16,
+           "items": {"type": "object", "additionalProperties": false,
+             "required": ["name", "state", "reason"],
+             "properties": {"name": {"$ref": "#/$defs/id"}, "state": {"enum": ["allowed", "restricted", "revoked"]}, "reason": {"type": "string", "minLength": 1, "maxLength": 512}}}}
+       }}}}}
+  ],
+  "$defs": {
+    "id": {"type": "string", "minLength": 1, "maxLength": 128},
+    "sha": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "time": {"type": "integer", "minimum": 0, "maximum": 253402300799},
+    "status_ref": {"type": "object", "additionalProperties": false,
+      "required": ["epoch", "sequence", "payload_sha256"],
+      "properties": {"epoch": {"type": "integer", "minimum": 1, "maximum": 2147483647},
+        "sequence": {"type": "integer", "minimum": 1, "maximum": 9007199254740991}, "payload_sha256": {"$ref": "#/$defs/sha"}}}
+  }
+}

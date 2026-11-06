@@ -1,0 +1,34 @@
+async (page) => {
+ const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ const checks=[];const assert=(v,n)=>{if(!v)throw Error(n);checks.push(n);};
+ const shot=async name=>{await page.screenshot({path:`output/playwright/layout/${name}.png`,fullPage:true,animations:'disabled'});};
+ await page.setViewportSize({width:1440,height:1000});
+ await page.goto('http://127.0.0.1:8766/workbench/layout.html#space');
+ await page.evaluate(()=>sessionStorage.removeItem('cospace.ui.ds.preview'));
+ await page.reload();await page.getByRole('heading',{name:'进入你的空间'}).waitFor();
+ await page.evaluate(()=>document.fonts.ready);await shot('ds-login');
+ const loginMetrics=await page.evaluate(()=>({header:document.querySelector('header').getBoundingClientRect().height,button:document.querySelector('#third-party-login').getBoundingClientRect().height,background:getComputedStyle(document.querySelector('#login-screen')).backgroundColor,expected:getComputedStyle(document.documentElement).getPropertyValue('--background'),font:getComputedStyle(document.body).fontFamily}));
+ assert(loginMetrics.header===64,'ds_login_header_64');assert(loginMetrics.button===32,'ds_button_xl_32');
+ assert(await page.evaluate(()=>{const reference=document.createElement('div');reference.style.backgroundColor='var(--background)';document.body.append(reference);const expected=getComputedStyle(reference).backgroundColor;reference.remove();return expected===getComputedStyle(document.querySelector('#login-screen')).backgroundColor;}),'ds_background_matches_token');
+ await page.getByRole('button',{name:'切换主题',exact:true}).click();await page.waitForFunction(()=>document.documentElement.classList.contains('dark'));checks.push('ds_theme_toggle');await page.getByRole('button',{name:'切换主题',exact:true}).click();await page.waitForFunction(()=>!document.documentElement.classList.contains('dark'));
+ await page.locator('#third-party-login').click();await page.getByRole('dialog').waitFor();await page.getByRole('button',{name:'知道了'}).click();
+ await page.locator('#enter-preview').click();await page.locator('#spatial').waitFor();
+ const screenMetrics=await page.evaluate(()=>({header:document.querySelector('header').getBoundingClientRect().height,map:document.querySelector('#spatial').getBoundingClientRect().toJSON(),width:innerWidth,height:innerHeight}));
+ assert(screenMetrics.header===48,'ds_workbench_header_48');assert(screenMetrics.map.width===screenMetrics.width&&screenMetrics.map.height===screenMetrics.height-48,'full_map_preserved');
+ await shot('ds-space');
+ await page.getByRole('button',{name:'对象与图层',exact:true}).click();await page.getByRole('button',{name:'设备柜 A-02',exact:true}).last().click();
+ await page.getByRole('button',{name:'对象属性',exact:true}).click();await page.getByLabel('对象属性',{exact:true}).waitFor();
+ await shot('ds-panels');
+ await page.getByRole('button',{name:'关闭对象面板'}).click();await page.getByRole('button',{name:'关闭属性面板'}).click();
+ await page.getByRole('button',{name:'功能 Launcher',exact:true}).click();await shot('ds-launcher');
+ await page.getByRole('link',{name:/数据管理/}).click();await page.getByRole('heading',{name:'数据管理',exact:true}).waitFor();assert(await page.getByRole('table').count()===1,'ds_business_table');
+ await page.getByRole('button',{name:'配置与管理',exact:true}).click();await page.getByRole('link',{name:'业务配置',exact:true}).click();await page.locator('#config-scene').fill('设备间与相连走廊');await page.getByRole('button',{name:'保存配置草稿'}).click();assert(await page.evaluate(()=>Boolean(localStorage.getItem('cospace.ui.ds.config'))),'draft_save');
+ await shot('ds-settings');
+ await page.getByRole('navigation',{name:'管理导航'}).getByRole('link',{name:'成员与角色',exact:true}).click();await page.getByRole('button',{name:'添加成员草稿'}).click();await page.locator('#member-name').fill('界面评审成员');await page.getByRole('button',{name:'添加临时草稿'}).click();await page.getByRole('cell',{name:'界面评审成员'}).waitFor();checks.push('ds_member_dialog');
+ await page.getByRole('link',{name:'返回空间态势',exact:true}).click();await page.locator('#spatial').waitFor();
+ await page.getByRole('button',{name:'沉浸展示'}).click();assert(!await page.locator('header').isVisible(),'immersive_hides_header');await page.keyboard.press('Escape');assert(await page.locator('header').isVisible(),'escape_restores_header');
+ await page.setViewportSize({width:919,height:902});await page.getByRole('button',{name:'账户菜单',exact:true}).click();await page.getByText('退出 UI 预览',{exact:true}).click();await page.getByRole('heading',{name:'进入你的空间'}).waitFor();await page.screenshot({path:'output/playwright/layout/ds-login-919.png',fullPage:true});assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'login_919_no_overflow');
+ await page.setViewportSize({width:390,height:844});await page.screenshot({path:'output/playwright/layout/ds-mobile.png',fullPage:true});assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'mobile_no_overflow');
+ assert(errors.length===0,'no_javascript_errors');await page.setViewportSize({width:1440,height:1000});
+ return {checks,loginMetrics,screenMetrics,errors};
+}

@@ -1,0 +1,78 @@
+{
+  "intent": {
+    "schema_version": "cospace.test-recovery-journal/0.1",
+    "test_only": true,
+    "store_id": "11111111-1111-4111-8111-111111111111",
+    "context_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "generation": 1,
+    "authorized": false,
+    "robot_ready": false,
+    "record_kind": "intent",
+    "intent_id": "22222222-2222-4222-8222-222222222222",
+    "message_kind": "status_snapshot",
+    "identity": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "binding_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    "token_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+    "token": "e30.e30.AA",
+    "prepared_revision": 0
+  },
+  "receipt": {
+    "schema_version": "cospace.test-recovery-journal/0.1",
+    "test_only": true,
+    "store_id": "11111111-1111-4111-8111-111111111111",
+    "context_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "generation": 1,
+    "authorized": false,
+    "robot_ready": false,
+    "record_kind": "commit_receipt",
+    "intent_id": "22222222-2222-4222-8222-222222222222",
+    "token_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+    "outcome": "applied",
+    "reason": "synthetic_example",
+    "before_revision": 0,
+    "after_revision": 1,
+    "before_state_sha256": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+    "after_state_sha256": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+  },
+  "plan": {
+    "schema_version": "cospace.test-recovery-journal/0.1",
+    "test_only": true,
+    "store_id": "11111111-1111-4111-8111-111111111111",
+    "context_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "generation": 1,
+    "authorized": false,
+    "robot_ready": false,
+    "record_kind": "recovery_plan",
+    "recovery_id": "33333333-3333-4333-8333-333333333333",
+    "expected_state_revision": 0,
+    "before_state_sha256": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+    "pending_set_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "target_state_sha256": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+    "items": [
+      {
+        "intent_id": "22222222-2222-4222-8222-222222222222",
+        "message_kind": "status_snapshot",
+        "identity": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "token_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "action": "apply",
+        "reason": "synthetic_example"
+      }
+    ]
+  },
+  "result": {
+    "schema_version": "cospace.test-recovery-journal/0.1",
+    "test_only": true,
+    "store_id": "11111111-1111-4111-8111-111111111111",
+    "context_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "generation": 1,
+    "authorized": false,
+    "robot_ready": false,
+    "record_kind": "recovery_result",
+    "recovery_id": "33333333-3333-4333-8333-333333333333",
+    "plan_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "phase": "reconciled",
+    "state_revision": 1,
+    "state_sha256": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+    "reason": "synthetic_example"
+  }
+}

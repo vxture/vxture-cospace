@@ -1,0 +1,39 @@
+{
+  "scene_id": "synthetic-equipment-corridor",
+  "data_kind": "synthetic",
+  "view_version_id": "agent-spatial-sample-001",
+  "view_kind": "machine",
+  "source_truth": {
+    "path": "truth.json",
+    "sha256": "4ec8a6b7a0dd9c8e27eca65af23c1643b89e52b5781130b6e55f2acaab134f89",
+    "scene_id": "synthetic-equipment-corridor",
+    "truth_version_id": "truth-spatial-sample-001"
+  },
+  "frame": {
+    "frame_id": "sample-local",
+    "unit": "m",
+    "handedness": "right",
+    "axes": [
+      "along_corridor",
+      "left",
+      "up"
+    ],
+    "origin_description": "synthetic corridor entrance floor center"
+  },
+  "objects": {
+    "path": "objects.json",
+    "sha256": "36c57f5f8939910eca79e5ab9b0a2781221f9a50bb097ba40ffe24389e6cca3b"
+  },
+  "preparation": "manual_sample",
+  "coverage": {
+    "path": "coverage.json",
+    "sha256": "473e85fa745cd6ef26f33d068812075ebdea694846e6b9771ed85c194012bbd3"
+  },
+  "capabilities": [
+    "reference_reading",
+    "synthetic_point_query"
+  ],
+  "limitations": [
+    "synthetic point queries only; no field quality, rendering, measurement or localization validation"
+  ]
+}

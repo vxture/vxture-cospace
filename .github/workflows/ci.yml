@@ -1,0 +1,83 @@
+name: ci
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+permissions:
+  contents: read
+concurrency:
+  group: ci-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  quality-gate:
+    name: quality-gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.14'
+      - run: git diff-tree --root --check HEAD
+      - run: python scripts/guardrails/check_repository.py
+      - run: node scripts/guardrails/check-ruleset.mjs --strict
+  build:
+    name: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - run: npm install --global pnpm@10.32.1
+      - run: pnpm --dir apps/workbench install --frozen-lockfile
+      - run: pnpm --dir apps/workbench build
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.14'
+      - run: python -m pip install uv==0.12.17
+      - run: uv sync --frozen --all-extras
+      - run: uv run --frozen python -m compileall -q apps packages experiments/scripts
+      - name: Build production container from source (no publish or deploy)
+        run: docker build --file deploy/linux/Dockerfile --build-arg GIT_SHA="$GITHUB_SHA" --tag cospace:ci .
+  test-coverage:
+    name: test-coverage
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      OMP_NUM_THREADS: '1'
+      OPENBLAS_NUM_THREADS: '1'
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.14'
+      - run: python -m pip install uv==0.12.17
+      - run: uv sync --frozen --all-extras
+      - run: uv run --frozen pytest -q --junitxml=test-results.xml
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: pytest-results
+          path: test-results.xml
+  audit:
+    name: audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      OSV_SCANNER_VERSION: '2.4.0'
+    steps:
+      - uses: actions/checkout@v7
+      - name: Download verified OSV scanner
+        shell: bash
+        run: |
+          set -euo pipefail
+          sha256=15314940c10d26af9c6649f150b8a47c1262e8fc7e17b1d1029b0e479e8ed8a0
+          url="https://github.com/google/osv-scanner/releases/download/v${OSV_SCANNER_VERSION}/osv-scanner_linux_amd64"
+          mkdir -p /tmp/osv-bin
+          curl -fsSL --proto '=https' --proto-redir '=https' --tlsv1.2 "$url" -o /tmp/osv-bin/osv-scanner
+          echo "$sha256  /tmp/osv-bin/osv-scanner" | sha256sum -c -
+          chmod +x /tmp/osv-bin/osv-scanner
+      - run: /tmp/osv-bin/osv-scanner scan -L apps/workbench/pnpm-lock.yaml -L uv.lock --config .osv-scanner.toml

@@ -1,0 +1,240 @@
+name: build
+
+# Reusable image build, called by deploy.yml after it routes the tag to an
+# environment. Publishes both an immutable sha-<short> tag (what deploy pulls by,
+# and the build-dedup key) and the exact pushed ref tag. Dual registry: GHCR
+# (primary for the non-VPC deploy host) + Aliyun ACR (fallback).
+on:
+  workflow_call:
+    inputs:
+      pass_sha:
+        description: Commit SHA to build and tag
+        required: true
+        type: string
+    secrets:
+      ALIYUN_ACR_USERNAME:
+        required: true
+      ALIYUN_ACR_PASSWORD:
+        required: true
+    outputs:
+      image_tag:
+        description: Immutable sha-<short> tag the deploy job should pull by
+        value: ${{ jobs.docker-build.outputs.image_tag }}
+  workflow_dispatch:
+    inputs:
+      pass_sha:
+        description: Commit SHA to build (defaults to branch HEAD)
+        required: false
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+  packages: write
+  security-events: write
+
+jobs:
+  docker-build:
+    name: docker-build
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    outputs:
+      image_tag: ${{ steps.meta.outputs.image_tag }}
+    env:
+      # The repository owner, never a literal.
+      GHCR_NAMESPACE: ${{ github.repository_owner }}
+      ACR_REGISTRY: ${{ vars.ALIYUN_ACR_REGISTRY }}
+      ACR_NAMESPACE: ${{ vars.ALIYUN_ACR_NAMESPACE }}
+      # cospace's owned image. The product code is baked into the source tree, so
+      # there is no build-time substitution and no repo-variable indirection.
+      IMAGE: cospace-app
+      IMAGE_CONTEXT: .
+      IMAGE_DOCKERFILE: ./deploy/linux/Dockerfile
+    steps:
+      - name: Resolve build SHA
+        id: sha
+        shell: bash
+        env:
+          CALLER_SHA: ${{ inputs.pass_sha }}
+          DEFAULT_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          resolved="${CALLER_SHA:-$DEFAULT_SHA}"
+          test -n "$resolved"
+          echo "sha=$resolved" >> "$GITHUB_OUTPUT"
+
+      - name: Validate registry secrets
+        shell: bash
+        env:
+          ALIYUN_ACR_USERNAME: ${{ secrets.ALIYUN_ACR_USERNAME }}
+          ALIYUN_ACR_PASSWORD: ${{ secrets.ALIYUN_ACR_PASSWORD }}
+        run: |
+          set -euo pipefail
+          test -n "$ACR_REGISTRY"
+          test -n "$ACR_NAMESPACE"
+          test -n "$ALIYUN_ACR_USERNAME"
+          test -n "$ALIYUN_ACR_PASSWORD"
+
+      - name: Checkout passed revision
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ steps.sha.outputs.sha }}
+
+      - name: Compute image metadata
+        id: meta
+        shell: bash
+        env:
+          PASSED_SHA: ${{ steps.sha.outputs.sha }}
+          REF_NAME: ${{ github.ref_name }}
+          REF_TYPE: ${{ github.ref_type }}
+        run: |
+          set -euo pipefail
+          # cospace ships prod-only (ADR-002); a non-v tag never reaches deploy.yml,
+          # so anything but a v*.*.* tag is a local/manual build and stages as dev.
+          case "$REF_TYPE:$REF_NAME" in
+            tag:v*)    stage="production" ;;
+            tag:beta-*) stage="beta" ;;
+            *)      stage="dev" ;;
+          esac
+          # The immutable tag carries the STAGE as well as the commit, because
+          # DEPLOY_STAGE is baked into the image and the retag-by-digest path
+          # below keys on this tag alone. Without the suffix, a manual dispatch
+          # build of some commit (stage=dev) would be retagged and shipped when
+          # that same commit is later released - putting an image whose
+          # DEPLOY_STAGE says "dev" into production, where it would silently
+          # disable the guard that refuses mock resolvers.
+          short_sha="${PASSED_SHA::7}"
+          if [ "$stage" = "production" ]; then
+            echo "image_tag=sha-$short_sha" >> "$GITHUB_OUTPUT"
+          else
+            echo "image_tag=sha-$short_sha-$stage" >> "$GITHUB_OUTPUT"
+          fi
+          echo "ref_tag=$REF_NAME" >> "$GITHUB_OUTPUT"
+          echo "stage=$stage" >> "$GITHUB_OUTPUT"
+
+      # Health provenance (025 section 4.2): derive the four build-injected values
+      # from git tag / sha / date, with honest fallbacks. gitSha is BARE (no
+      # `sha-` prefix - that prefix is the image-tag form, not the data).
+      - name: Compute health provenance
+        id: prov
+        shell: bash
+        env:
+          PASSED_SHA: ${{ steps.sha.outputs.sha }}
+          REF_NAME: ${{ github.ref_name }}
+          REF_TYPE: ${{ github.ref_type }}
+          STAGE: ${{ steps.meta.outputs.stage }}
+        run: |
+          set -euo pipefail
+          if [ "$REF_TYPE" = "tag" ]; then app_version="$REF_NAME"; else app_version="dev"; fi
+          stage="$STAGE"
+          {
+            echo "app_version=$app_version"
+            echo "git_sha=$PASSED_SHA"
+            echo "build_time=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            echo "deploy_stage=$stage"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Set up Docker Buildx
+        id: buildx
+        uses: docker/setup-buildx-action@v4
+        continue-on-error: true
+
+      - name: Set up Docker Buildx (retry)
+        if: ${{ steps.buildx.outcome == 'failure' }}
+        uses: docker/setup-buildx-action@v4
+
+      - name: Login to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Login to Aliyun ACR
+        uses: docker/login-action@v4
+        with:
+          registry: ${{ env.ACR_REGISTRY }}
+          username: ${{ secrets.ALIYUN_ACR_USERNAME }}
+          password: ${{ secrets.ALIYUN_ACR_PASSWORD }}
+
+      - name: Decide build vs retag
+        id: decide
+        shell: bash
+        env:
+          IMAGE_TAG: ${{ steps.meta.outputs.image_tag }}
+        run: |
+          set -euo pipefail
+          ghcr_repo="ghcr.io/${GHCR_NAMESPACE}/${IMAGE}"
+          acr_repo="${ACR_REGISTRY}/${ACR_NAMESPACE}/${IMAGE}"
+          # Retag by digest if this exact commit was already built under a prior
+          # tag (check BOTH registries). Otherwise build.
+          if docker buildx imagetools inspect "${ghcr_repo}:${IMAGE_TAG}" >/dev/null 2>&1 \
+            && docker buildx imagetools inspect "${acr_repo}:${IMAGE_TAG}" >/dev/null 2>&1; then
+            echo "build=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "build=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build and push image
+        if: ${{ steps.decide.outputs.build == 'true' }}
+        uses: docker/build-push-action@v7
+        with:
+          context: ${{ env.IMAGE_CONTEXT }}
+          file: ${{ env.IMAGE_DOCKERFILE }}
+          push: true
+          # Buildx defaults to emitting a provenance attestation manifest
+          # (media type application/vnd.oci.empty.v1+json for its placeholder
+          # layer). Aliyun ACR rejects that media type with "unknown manifest
+          # class", failing the push - GHCR tolerates it fine. Disabling both
+          # attestation types keeps the image itself unchanged.
+          provenance: false
+          sbom: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          # CoSpace currently builds the scanned, hash-checked first-party DS
+          # archives; no package registry credential is baked into the image.
+          build-args: |
+            APP_VERSION=${{ steps.prov.outputs.app_version }}
+            GIT_SHA=${{ steps.prov.outputs.git_sha }}
+            BUILD_TIME=${{ steps.prov.outputs.build_time }}
+            DEPLOY_STAGE=${{ steps.prov.outputs.deploy_stage }}
+          tags: |
+            ghcr.io/${{ env.GHCR_NAMESPACE }}/${{ env.IMAGE }}:${{ steps.meta.outputs.image_tag }}
+            ghcr.io/${{ env.GHCR_NAMESPACE }}/${{ env.IMAGE }}:${{ steps.meta.outputs.ref_tag }}
+            ${{ env.ACR_REGISTRY }}/${{ env.ACR_NAMESPACE }}/${{ env.IMAGE }}:${{ steps.meta.outputs.image_tag }}
+            ${{ env.ACR_REGISTRY }}/${{ env.ACR_NAMESPACE }}/${{ env.IMAGE }}:${{ steps.meta.outputs.ref_tag }}
+
+      - name: Scan image (trivy, report-only)
+        if: ${{ steps.decide.outputs.build == 'true' }}
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: ghcr.io/${{ env.GHCR_NAMESPACE }}/${{ env.IMAGE }}:${{ steps.meta.outputs.image_tag }}
+          format: sarif
+          output: trivy-results.sarif
+          severity: CRITICAL,HIGH
+          exit-code: '0'
+
+      - name: Upload trivy results
+        if: ${{ steps.decide.outputs.build == 'true' }}
+        uses: github/codeql-action/upload-sarif@v4
+        continue-on-error: true
+        with:
+          sarif_file: trivy-results.sarif
+
+      - name: Retag unchanged image by digest
+        if: ${{ steps.decide.outputs.build == 'false' }}
+        shell: bash
+        env:
+          IMAGE: ${{ env.IMAGE }}
+          IMAGE_TAG: ${{ steps.meta.outputs.image_tag }}
+          REF_TAG: ${{ steps.meta.outputs.ref_tag }}
+        run: |
+          set -euo pipefail
+          for repo in \
+            "ghcr.io/${GHCR_NAMESPACE}/${IMAGE}" \
+            "${ACR_REGISTRY}/${ACR_NAMESPACE}/${IMAGE}"; do
+            docker buildx imagetools create \
+              -t "${repo}:${IMAGE_TAG}" \
+              -t "${repo}:${REF_TAG}" \
+              "${repo}:${IMAGE_TAG}"
+          done

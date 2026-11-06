@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+set -euo pipefail
+python scripts/guardrails/check_deploy_target.py
+[[ "$DEPLOY_USER" =~ ^[a-z_][a-z0-9_-]*$ ]]
+port="${DEPLOY_PORT:-22}"
+[[ "$port" =~ ^[0-9]+$ ]]
+[[ "$IMAGE_TAG" =~ ^sha-[a-f0-9]{7,40}$ ]]
+[[ "$GITHUB_RUN_ID" =~ ^[0-9]+$ ]]
+[[ "$GITHUB_SHA" =~ ^[a-f0-9]{40}$ ]]
+remote="$DEPLOY_USER@$DEPLOY_HOST"
+ssh_opts=(-i ~/.ssh/deploy_key -p "$port" -o StrictHostKeyChecking=yes -o ConnectTimeout=30)
+# Validate the physical host and existing state before creating any directories.
+ssh "${ssh_opts[@]}" "$remote" "test \"\$(hostname -s)\" = vx-worker-02 && test \"\$(realpath /srv/md0/cospace)\" = /srv/md0/cospace && test ! -L /srv/md0/cospace/deploy && test -f /srv/md0/cospace/etc/.env && test -d /srv/md0/cospace/data/business && mkdir -p /srv/md0/cospace/deploy"
+rsync -az --delete --exclude=VERSION --exclude=IMAGE_ID \
+  -e "ssh -i $HOME/.ssh/deploy_key -p $port -o StrictHostKeyChecking=yes -o ConnectTimeout=30" \
+  deploy/ "$remote:/srv/md0/cospace/deploy/"
+# Unique remote helper per run. Secrets travel on SSH stdin, never in argv.
+helper="/tmp/cospace-deploy-$GITHUB_RUN_ID.sh"
+cat > "$RUNNER_TEMP/cospace-deploy.sh" <<'REMOTE'
+set -euo pipefail
+test "$(hostname -s)" = vx-worker-02
+printf '%s' "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin
+printf '%s' "$ACR_PASSWORD" | docker login "$ACR_REGISTRY" -u "$ACR_USERNAME" --password-stdin
+bash /srv/md0/cospace/deploy/deploy.sh
+rm -- "$0"
+REMOTE
+scp -i ~/.ssh/deploy_key -P "$port" -o StrictHostKeyChecking=yes "$RUNNER_TEMP/cospace-deploy.sh" "$remote:$helper"
+cmd=''
+for name in STACK_ROOT PROJECT_NAME IMAGE_TAG GHCR_NAMESPACE GHCR_USERNAME GHCR_TOKEN ACR_REGISTRY ACR_NAMESPACE ACR_USERNAME ACR_PASSWORD GITHUB_SHA; do
+  printf -v pair '%s=%q ' "$name" "${!name}"
+  cmd+="$pair"
+done
+printf '%s bash %q\n' "$cmd" "$helper" | ssh "${ssh_opts[@]}" "$remote" bash -s

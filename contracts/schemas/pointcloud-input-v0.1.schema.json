@@ -1,0 +1,161 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "Cloud": {
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "const": "cloud.ply",
+          "title": "Path",
+          "type": "string"
+        },
+        "sha256": {
+          "pattern": "^[a-f0-9]{64}$",
+          "title": "Sha256",
+          "type": "string"
+        },
+        "bytes": {
+          "exclusiveMinimum": 0,
+          "maximum": 33554432,
+          "title": "Bytes",
+          "type": "integer"
+        },
+        "points": {
+          "exclusiveMinimum": 0,
+          "maximum": 1000000,
+          "title": "Points",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "path",
+        "sha256",
+        "bytes",
+        "points"
+      ],
+      "title": "Cloud",
+      "type": "object"
+    },
+    "Coordinates": {
+      "additionalProperties": false,
+      "properties": {
+        "unit": {
+          "const": "m",
+          "title": "Unit",
+          "type": "string"
+        },
+        "frame_id": {
+          "pattern": "^[A-Za-z0-9_/-]{1,100}$",
+          "title": "Frame Id",
+          "type": "string"
+        },
+        "axes": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 3,
+          "minItems": 3,
+          "title": "Axes",
+          "type": "array"
+        },
+        "scope": {
+          "enum": [
+            "sensor_local",
+            "scene_local"
+          ],
+          "title": "Scope",
+          "type": "string"
+        },
+        "scene_alignment": {
+          "const": "unverified",
+          "title": "Scene Alignment",
+          "type": "string"
+        }
+      },
+      "required": [
+        "unit",
+        "frame_id",
+        "axes",
+        "scope",
+        "scene_alignment"
+      ],
+      "title": "Coordinates",
+      "type": "object"
+    },
+    "Provenance": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "enum": [
+            "derived_single_frame",
+            "existing_pointcloud"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "source_manifest_sha256": {
+          "pattern": "^[a-f0-9]{64}$",
+          "title": "Source Manifest Sha256",
+          "type": "string"
+        },
+        "source_member_sha256": {
+          "pattern": "^[a-f0-9]{64}$",
+          "title": "Source Member Sha256",
+          "type": "string"
+        },
+        "description": {
+          "maxLength": 500,
+          "minLength": 1,
+          "title": "Description",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "source_manifest_sha256",
+        "source_member_sha256",
+        "description"
+      ],
+      "title": "Provenance",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "profile": {
+      "const": "cospace.pointcloud-input/0.1",
+      "title": "Profile",
+      "type": "string"
+    },
+    "cloud": {
+      "$ref": "#/$defs/Cloud"
+    },
+    "coordinates": {
+      "$ref": "#/$defs/Coordinates"
+    },
+    "provenance": {
+      "$ref": "#/$defs/Provenance"
+    },
+    "source_receipt_path": {
+      "anyOf": [
+        {
+          "const": "source.json",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Source Receipt Path"
+    }
+  },
+  "required": [
+    "profile",
+    "cloud",
+    "coordinates",
+    "provenance"
+  ],
+  "title": "Manifest",
+  "type": "object"
+}

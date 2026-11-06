@@ -1,0 +1,142 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cospace.local/schemas/anchor-preview-v0.1.schema.json",
+  "title": "CoSpace model anchor preview 0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "profile",
+    "space_id",
+    "source_sha256",
+    "unit",
+    "frame_id",
+    "axes",
+    "appearance",
+    "quality",
+    "robot_ready",
+    "point_count",
+    "bounds",
+    "sampling",
+    "points",
+    "colors",
+    "candidate_id",
+    "manifest_sha256"
+  ],
+  "properties": {
+    "profile": {
+      "const": "cospace.anchor-preview/0.1"
+    },
+    "space_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source_sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "unit": {
+      "const": "m"
+    },
+    "frame_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "axes": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "items": {
+        "type": "string"
+      }
+    },
+    "appearance": {
+      "type": "string"
+    },
+    "quality": {
+      "const": "unverified"
+    },
+    "robot_ready": {
+      "const": false
+    },
+    "point_count": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "bounds": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "items": {
+        "$ref": "#/$defs/xyz"
+      }
+    },
+    "sampling": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "method",
+        "stride",
+        "limit",
+        "count"
+      ],
+      "properties": {
+        "method": {
+          "const": "file_index_stride"
+        },
+        "stride": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "limit": {
+          "const": 10000
+        },
+        "count": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10000
+        }
+      }
+    },
+    "points": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 10000,
+      "items": {
+        "$ref": "#/$defs/xyz"
+      }
+    },
+    "colors": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 10000,
+      "items": {
+        "type": "array",
+        "minItems": 3,
+        "maxItems": 3,
+        "items": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 255
+        }
+      }
+    },
+    "candidate_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "manifest_sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    }
+  },
+  "$defs": {
+    "xyz": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "items": {
+        "type": "number"
+      }
+    }
+  }
+}

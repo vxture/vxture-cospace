@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vxture.local/schemas/preview-range-v0.1",
+  "oneOf": [{"$ref": "#/$defs/request"}, {"$ref": "#/$defs/response"}],
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "xyz": {"type": "array", "minItems": 3, "maxItems": 3, "items": {"type": "number", "minimum": -1000000, "maximum": 1000000}},
+    "bounds": {"type": "array", "minItems": 2, "maxItems": 2, "items": {"$ref": "#/$defs/xyz"}},
+    "request": {
+      "type": "object", "additionalProperties": false, "required": ["bounds_m", "frame_id"],
+      "properties": {
+        "bounds_m": {"$ref": "#/$defs/bounds"},
+        "frame_id": {"type": "string", "minLength": 1, "maxLength": 256},
+        "limit": {"type": "integer", "minimum": 1, "maximum": 4096, "default": 1024}
+      }
+    },
+    "response": {
+      "type": "object", "additionalProperties": false,
+      "required": ["profile", "model_id", "source_model_sha256", "bounds_m", "frame_id", "unit", "selection_rule", "resolution_m", "limit", "max_limit", "status", "result_complete", "matched_cells", "returned_cells", "cell_indices", "cell_state", "unlisted_state", "coverage", "action", "quality", "robot_ready", "publication_id", "publication_model_manifest_sha256"],
+      "dependentRequired": {"space_id": ["project_id"], "project_id": ["space_id"]},
+      "properties": {
+        "profile": {"const": "cospace.preview-range/0.1"},
+        "model_id": {"type": "string", "minLength": 1},
+        "source_model_sha256": {"$ref": "#/$defs/sha256"},
+        "bounds_m": {"$ref": "#/$defs/bounds"},
+        "frame_id": {"type": "string", "minLength": 1, "maxLength": 256},
+        "unit": {"const": "m"},
+        "selection_rule": {"const": "cell_center_in_half_open_aabb"},
+        "resolution_m": {"type": "number", "exclusiveMinimum": 0},
+        "limit": {"type": "integer", "minimum": 1, "maximum": 4096},
+        "max_limit": {"const": 4096},
+        "status": {"enum": ["complete", "limit_exceeded"]},
+        "result_complete": {"type": "boolean"},
+        "matched_cells": {"type": "integer", "minimum": 0},
+        "returned_cells": {"type": "integer", "minimum": 0, "maximum": 4096},
+        "cell_indices": {"type": "array", "maxItems": 4096, "uniqueItems": true, "items": {"type": "array", "minItems": 3, "maxItems": 3, "items": {"type": "integer"}}},
+        "cell_state": {"const": "surface_candidate"},
+        "unlisted_state": {"enum": ["unknown", null]},
+        "coverage": {"const": "surface_evidence_only"},
+        "action": {"enum": ["none", "shrink_bounds_or_increase_limit_within_max"]},
+        "quality": {"const": "unverified"},
+        "robot_ready": {"const": false},
+        "publication_id": {"type": "string", "minLength": 1},
+        "publication_model_manifest_sha256": {"$ref": "#/$defs/sha256"},
+        "space_id": {"type": "string", "pattern": "^space-[a-f0-9]{16}$"},
+        "project_id": {"type": "string", "pattern": "^project-[a-f0-9]{16}$"}
+      },
+      "allOf": [
+        {"if": {"properties": {"status": {"const": "complete"}}}, "then": {"properties": {"result_complete": {"const": true}, "unlisted_state": {"const": "unknown"}, "action": {"const": "none"}}}},
+        {"if": {"properties": {"status": {"const": "limit_exceeded"}}}, "then": {"properties": {"result_complete": {"const": false}, "returned_cells": {"const": 0}, "cell_indices": {"maxItems": 0}, "matched_cells": {"minimum": 2}, "unlisted_state": {"const": null}, "action": {"const": "shrink_bounds_or_increase_limit_within_max"}}}}
+      ]
+    }
+  }
+}

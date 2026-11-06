@@ -1,0 +1,53 @@
+{
+  "notice": "Synthetic metadata only. All thresholds are test values, not accepted engineering limits; evidence hashes are placeholders.",
+  "profile": {
+    "schema_version":"cospace.quality-profile/0.1", "kind":"profile",
+    "profile_id":"synthetic-spatial-query", "scene_id":"synthetic-equipment-corridor",
+    "purpose":"spatial_query", "mode":"operational",
+    "scope":{
+      "scope_ref":{"id":"synthetic-target-v1","sha256":"0000000000000000000000000000000000000000000000000000000000000000"},
+      "frame_id":"scene", "bounds":[[0,0,0],[10,10,1]], "cell_size_m":1
+    },
+    "rule":{
+      "procedure_ref":{"id":"synthetic-test-rule","sha256":"0000000000000000000000000000000000000000000000000000000000000000"},
+      "target_objects_ref":{"id":"synthetic-object-target","sha256":"0000000000000000000000000000000000000000000000000000000000000000"},
+      "expected_object_count":10, "grade_label":null,
+      "metric":"independent_point_rmse_3d_m", "max_error_m":0.1,
+      "min_observed_ratio":0.8, "min_confirmed_semantic_ratio":0.9
+    },
+    "freshness":{"max_age_s":3600}
+  },
+  "assessment":{
+    "schema_version":"cospace.quality-profile/0.1", "kind":"assessment",
+    "assessment_id":"synthetic-assessment-1", "scene_id":"synthetic-equipment-corridor",
+    "truth_ref":{"id":"synthetic-truth-1","sha256":"0000000000000000000000000000000000000000000000000000000000000000"},
+    "scope":{
+      "scope_ref":{"id":"synthetic-target-v1","sha256":"0000000000000000000000000000000000000000000000000000000000000000"},
+      "frame_id":"scene", "bounds":[[0,0,0],[10,10,1]], "cell_size_m":1
+    },
+    "procedure_ref":{"id":"synthetic-test-rule","sha256":"0000000000000000000000000000000000000000000000000000000000000000"},
+    "observed_from":"2026-10-28T00:00:00Z", "observed_until":"2026-10-28T00:10:00Z",
+    "coverage":{
+      "denominator":"frozen_target_grid_cells",
+      "partition_ref":{"id":"synthetic-partition","sha256":"0000000000000000000000000000000000000000000000000000000000000000"},
+      "total_cells":100, "observed_free":60, "occupied":20,
+      "unobserved":10, "degraded":5, "conflict":5
+    },
+    "semantics":{
+      "target_objects_ref":{"id":"synthetic-object-target","sha256":"0000000000000000000000000000000000000000000000000000000000000000"},
+      "required_count":10, "confirmed_count":9
+    },
+    "geometry":{
+      "metric":"independent_point_rmse_3d_m", "value_m":0.05, "basis":"synthetic",
+      "check_points_ref":{"id":"synthetic-check-set","sha256":"0000000000000000000000000000000000000000000000000000000000000000"}
+    }
+  },
+  "observation":{
+    "schema_version":"cospace.quality-profile/0.1", "kind":"observation",
+    "scene_id":"synthetic-equipment-corridor",
+    "truth_ref":{"id":"synthetic-truth-1","sha256":"0000000000000000000000000000000000000000000000000000000000000000"},
+    "scope_ref":{"id":"synthetic-target-v1","sha256":"0000000000000000000000000000000000000000000000000000000000000000"},
+    "frame_id":"scene", "cell_index":[0,0,0], "state":"observed_free", "reasons":[],
+    "evidence":[{"id":"synthetic-ray-evidence","sha256":"0000000000000000000000000000000000000000000000000000000000000000"}]
+  }
+}

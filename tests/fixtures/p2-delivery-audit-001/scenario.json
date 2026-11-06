@@ -1,0 +1,587 @@
+{
+  "test_only": true,
+  "scenarios": {
+    "clean": {
+      "schema_version": "cospace.test-delivery-audit/0.1",
+      "test_only": true,
+      "requested_binding": {
+        "package_sha256": "8952de7beeb14a03652213505213b28ba86e3c48be9edaaa9bc711b0e601128a",
+        "profile": "synthetic-region-reading/0.1",
+        "release_id": "release-spatial-sample-001",
+        "release_sha256": "25024150a7a8a8bb9fca4f05ff5606367cb28fd1cc630193ca801663c37e22f1",
+        "scene_id": "synthetic-equipment-corridor",
+        "scope_sha256": "d4a138166e6f2d1a75939f7fdf0059d683025a8a6f62e4cdf8bc66b05cd4d00c",
+        "truth_sha256": "4ec8a6b7a0dd9c8e27eca65af23c1643b89e52b5781130b6e55f2acaab134f89",
+        "truth_version_id": "truth-spatial-sample-001",
+        "view_sha256": "6a54e2dcb5d053fc8e37a324afc08305ca173e05e7c05cd187fb473890581410",
+        "view_version_id": "agent-spatial-sample-001"
+      },
+      "observed": {
+        "file_binding": {
+          "release_sha256": "25024150a7a8a8bb9fca4f05ff5606367cb28fd1cc630193ca801663c37e22f1",
+          "view_version_id": "agent-spatial-sample-001",
+          "truth_version_id": "truth-spatial-sample-001",
+          "scene_id": "synthetic-equipment-corridor",
+          "release_id": "release-spatial-sample-001",
+          "truth_sha256": "4ec8a6b7a0dd9c8e27eca65af23c1643b89e52b5781130b6e55f2acaab134f89",
+          "view_sha256": "6a54e2dcb5d053fc8e37a324afc08305ca173e05e7c05cd187fb473890581410",
+          "package_sha256": "8952de7beeb14a03652213505213b28ba86e3c48be9edaaa9bc711b0e601128a",
+          "profile": "synthetic-region-reading/0.1",
+          "scope_sha256": "d4a138166e6f2d1a75939f7fdf0059d683025a8a6f62e4cdf8bc66b05cd4d00c"
+        },
+        "journal_binding": {
+          "package_sha256": "8952de7beeb14a03652213505213b28ba86e3c48be9edaaa9bc711b0e601128a",
+          "profile": "synthetic-region-reading/0.1",
+          "release_id": "release-spatial-sample-001",
+          "release_sha256": "25024150a7a8a8bb9fca4f05ff5606367cb28fd1cc630193ca801663c37e22f1",
+          "scene_id": "synthetic-equipment-corridor",
+          "scope_sha256": "d4a138166e6f2d1a75939f7fdf0059d683025a8a6f62e4cdf8bc66b05cd4d00c",
+          "truth_sha256": "4ec8a6b7a0dd9c8e27eca65af23c1643b89e52b5781130b6e55f2acaab134f89",
+          "truth_version_id": "truth-spatial-sample-001",
+          "view_sha256": "6a54e2dcb5d053fc8e37a324afc08305ca173e05e7c05cd187fb473890581410",
+          "view_version_id": "agent-spatial-sample-001"
+        },
+        "active_revision": 1,
+        "binding_match": true,
+        "journal_status": "proof_fields_present_unverified"
+      },
+      "complete": true,
+      "needs_attention": false,
+      "findings": [],
+      "components": {
+        "files": {
+          "passed": true,
+          "complete": true,
+          "integrity_healthy": true,
+          "needs_attention": false,
+          "robot_ready": false,
+          "validity": "unverified_sample_only",
+          "observation": "metadata snapshot; filesystem may change concurrently; no cleanup authorization",
+          "packages": [
+            {
+              "package_sha256": "8952de7beeb14a03652213505213b28ba86e3c48be9edaaa9bc711b0e601128a",
+              "package_id": "agent-9e479ee994fa41f0a95cc877a651a380",
+              "scene_id": "synthetic-equipment-corridor",
+              "integrity": "verified"
+            }
+          ],
+          "active": [
+            {
+              "scene_id": "synthetic-equipment-corridor",
+              "package_sha256": "8952de7beeb14a03652213505213b28ba86e3c48be9edaaa9bc711b0e601128a",
+              "revision": 1,
+              "integrity": "verified"
+            }
+          ],
+          "installations": [
+            {
+              "install_id": "install-8a2ca69df6d04c07b75a87d9f11b3d78",
+              "package_sha256": "8952de7beeb14a03652213505213b28ba86e3c48be9edaaa9bc711b0e601128a",
+              "state": "ready",
+              "revision": 3,
+              "owner_status": "not_probed"
+            }
+          ],
+          "entries": [
+            {
+              "path": "locks/install-8a2ca69df6d04c07b75a87d9f11b3d78.lock",
+              "classification": "lock_evidence"
+            },
+            {
+              "path": "packages/8952de7beeb14a03652213505213b28ba86e3c48be9edaaa9bc711b0e601128a",
+              "classification": "registered"
+            }
+          ],
+          "findings": []
+        },
+        "journal": {
+          "schema_version": "cospace.test-recovery-audit/0.1",
+          "test_only": true,
+          "complete": true,
+          "needs_attention": false,
+          "control": {
+            "store_id": "0b9f8177-f380-4c75-8d6a-a8b533b2be3f",
+            "context": "6921326e7963cef3d64feab24851df8f1c25fb77733b32e40f8685a8a74134a2",
+            "generation": 1,
+            "mode": "normal",
+            "revision": 3,
+            "state_sha256": "d1a86e8c4998b7c3c11fd2d9778eb9c0baef72d05a95d605a3cfae2b13af5634"
+          },
+          "pending": [],
+          "runs": [],
+          "counts": {
+            "messages": 3,
+            "intents": 3,
+            "receipts": 3,
+            "states": 1,
+            "recovery_runs": 0,
+            "recovery_plans": 0
+          },
+          "findings": [],
+          "proofs_verified": false,
+          "history_verified": false,
+          "recovery_authorized": false,
+          "authorized": false,
+          "robot_ready": false,
+          "observation": "single read-only metadata snapshot; no lock ownership or validity decision"
+        }
+      },
+      "validity": "not_evaluated",
+      "proofs_verified": false,
+      "history_verified": false,
+      "authorized": false,
+      "robot_ready": false,
+      "repair_authorized": false,
+      "observation": "independent read-only snapshots; filesystem and stores may change; no delivery acceptance or runtime permission"
+    },
+    "pending": {
+      "schema_version": "cospace.test-delivery-audit/0.1",
+      "test_only": true,
+      "requested_binding": {
+        "package_sha256": "8952de7beeb14a03652213505213b28ba86e3c48be9edaaa9bc711b0e601128a",
+        "profile": "synthetic-region-reading/0.1",
+        "release_id": "release-spatial-sample-001",
+        "release_sha256": "25024150a7a8a8bb9fca4f05ff5606367cb28fd1cc630193ca801663c37e22f1",
+        "scene_id": "synthetic-equipment-corridor",
+        "scope_sha256": "d4a138166e6f2d1a75939f7fdf0059d683025a8a6f62e4cdf8bc66b05cd4d00c",
+        "truth_sha256": "4ec8a6b7a0dd9c8e27eca65af23c1643b89e52b5781130b6e55f2acaab134f89",
+        "truth_version_id": "truth-spatial-sample-001",
+        "view_sha256": "6a54e2dcb5d053fc8e37a324afc08305ca173e05e7c05cd187fb473890581410",
+        "view_version_id": "agent-spatial-sample-001"
+      },
+      "observed": {
+        "file_binding": {
+          "release_sha256": "25024150a7a8a8bb9fca4f05ff5606367cb28fd1cc630193ca801663c37e22f1",
+          "view_version_id": "agent-spatial-sample-001",
+          "truth_version_id": "truth-spatial-sample-001",
+          "scene_id": "synthetic-equipment-corridor",
+          "release_id": "release-spatial-sample-001",
+          "truth_sha256": "4ec8a6b7a0dd9c8e27eca65af23c1643b89e52b5781130b6e55f2acaab134f89",
+          "view_sha256": "6a54e2dcb5d053fc8e37a324afc08305ca173e05e7c05cd187fb473890581410",
+          "package_sha256": "8952de7beeb14a03652213505213b28ba86e3c48be9edaaa9bc711b0e601128a",
+          "profile": "synthetic-region-reading/0.1",
+          "scope_sha256": "d4a138166e6f2d1a75939f7fdf0059d683025a8a6f62e4cdf8bc66b05cd4d00c"
+        },
+        "journal_binding": {
+          "package_sha256": "8952de7beeb14a03652213505213b28ba86e3c48be9edaaa9bc711b0e601128a",
+          "profile": "synthetic-region-reading/0.1",
+          "release_id": "release-spatial-sample-001",
+          "release_sha256": "25024150a7a8a8bb9fca4f05ff5606367cb28fd1cc630193ca801663c37e22f1",
+          "scene_id": "synthetic-equipment-corridor",
+          "scope_sha256": "d4a138166e6f2d1a75939f7fdf0059d683025a8a6f62e4cdf8bc66b05cd4d00c",
+          "truth_sha256": "4ec8a6b7a0dd9c8e27eca65af23c1643b89e52b5781130b6e55f2acaab134f89",
+          "truth_version_id": "truth-spatial-sample-001",
+          "view_sha256": "6a54e2dcb5d053fc8e37a324afc08305ca173e05e7c05cd187fb473890581410",
+          "view_version_id": "agent-spatial-sample-001"
+        },
+        "active_revision": 1,
+        "binding_match": true,
+        "journal_status": "proof_fields_present_unverified"
+      },
+      "complete": true,
+      "needs_attention": true,
+      "findings": [
+        {
+          "code": "component_needs_attention",
+          "component": "journal",
+          "next_action": "核对组件诊断；恢复或安装处理须走独立受控流程，不自动清理"
+        }
+      ],
+      "components": {
+        "files": {
+          "passed": true,
+          "complete": true,
+          "integrity_healthy": true,
+          "needs_attention": false,
+          "robot_ready": false,
+          "validity": "unverified_sample_only",
+          "observation": "metadata snapshot; filesystem may change concurrently; no cleanup authorization",
+          "packages": [
+            {
+              "package_sha256": "8952de7beeb14a03652213505213b28ba86e3c48be9edaaa9bc711b0e601128a",
+              "package_id": "agent-9e479ee994fa41f0a95cc877a651a380",
+              "scene_id": "synthetic-equipment-corridor",
+              "integrity": "verified"
+            }
+          ],
+          "active": [
+            {
+              "scene_id": "synthetic-equipment-corridor",
+              "package_sha256": "8952de7beeb14a03652213505213b28ba86e3c48be9edaaa9bc711b0e601128a",
+              "revision": 1,
+              "integrity": "verified"
+            }
+          ],
+          "installations": [
+            {
+              "install_id": "install-8a2ca69df6d04c07b75a87d9f11b3d78",
+              "package_sha256": "8952de7beeb14a03652213505213b28ba86e3c48be9edaaa9bc711b0e601128a",
+              "state": "ready",
+              "revision": 3,
+              "owner_status": "not_probed"
+            }
+          ],
+          "entries": [
+            {
+              "path": "locks/install-8a2ca69df6d04c07b75a87d9f11b3d78.lock",
+              "classification": "lock_evidence"
+            },
+            {
+              "path": "packages/8952de7beeb14a03652213505213b28ba86e3c48be9edaaa9bc711b0e601128a",
+              "classification": "registered"
+            }
+          ],
+          "findings": []
+        },
+        "journal": {
+          "schema_version": "cospace.test-recovery-audit/0.1",
+          "test_only": true,
+          "complete": true,
+          "needs_attention": true,
+          "control": {
+            "store_id": "0b9f8177-f380-4c75-8d6a-a8b533b2be3f",
+            "context": "6921326e7963cef3d64feab24851df8f1c25fb77733b32e40f8685a8a74134a2",
+            "generation": 1,
+            "mode": "normal",
+            "revision": 3,
+            "state_sha256": "d1a86e8c4998b7c3c11fd2d9778eb9c0baef72d05a95d605a3cfae2b13af5634"
+          },
+          "pending": [
+            {
+              "intent_id": "97ced4ae-6dbe-447d-8842-e203354924b0",
+              "message_sha256": "5c5c8fca667be050530954cd7a37c5647c3a875ff87c5ad85ff0c174bca8b5bf",
+              "generation": 1,
+              "prepared_revision": 3,
+              "kind": "status_snapshot",
+              "identity": "918c036bd945963541e6079d1dceff3192c7be7eda3a4b333e14863ced214b5e"
+            }
+          ],
+          "runs": [],
+          "counts": {
+            "messages": 4,
+            "intents": 4,
+            "receipts": 3,
+            "states": 1,
+            "recovery_runs": 0,
+            "recovery_plans": 0
+          },
+          "findings": [],
+          "proofs_verified": false,
+          "history_verified": false,
+          "recovery_authorized": false,
+          "authorized": false,
+          "robot_ready": false,
+          "observation": "single read-only metadata snapshot; no lock ownership or validity decision"
+        }
+      },
+      "validity": "not_evaluated",
+      "proofs_verified": false,
+      "history_verified": false,
+      "authorized": false,
+      "robot_ready": false,
+      "repair_authorized": false,
+      "observation": "independent read-only snapshots; filesystem and stores may change; no delivery acceptance or runtime permission"
+    },
+    "planned": {
+      "schema_version": "cospace.test-delivery-audit/0.1",
+      "test_only": true,
+      "requested_binding": {
+        "package_sha256": "8952de7beeb14a03652213505213b28ba86e3c48be9edaaa9bc711b0e601128a",
+        "profile": "synthetic-region-reading/0.1",
+        "release_id": "release-spatial-sample-001",
+        "release_sha256": "25024150a7a8a8bb9fca4f05ff5606367cb28fd1cc630193ca801663c37e22f1",
+        "scene_id": "synthetic-equipment-corridor",
+        "scope_sha256": "d4a138166e6f2d1a75939f7fdf0059d683025a8a6f62e4cdf8bc66b05cd4d00c",
+        "truth_sha256": "4ec8a6b7a0dd9c8e27eca65af23c1643b89e52b5781130b6e55f2acaab134f89",
+        "truth_version_id": "truth-spatial-sample-001",
+        "view_sha256": "6a54e2dcb5d053fc8e37a324afc08305ca173e05e7c05cd187fb473890581410",
+        "view_version_id": "agent-spatial-sample-001"
+      },
+      "observed": {
+        "file_binding": {
+          "release_sha256": "25024150a7a8a8bb9fca4f05ff5606367cb28fd1cc630193ca801663c37e22f1",
+          "view_version_id": "agent-spatial-sample-001",
+          "truth_version_id": "truth-spatial-sample-001",
+          "scene_id": "synthetic-equipment-corridor",
+          "release_id": "release-spatial-sample-001",
+          "truth_sha256": "4ec8a6b7a0dd9c8e27eca65af23c1643b89e52b5781130b6e55f2acaab134f89",
+          "view_sha256": "6a54e2dcb5d053fc8e37a324afc08305ca173e05e7c05cd187fb473890581410",
+          "package_sha256": "8952de7beeb14a03652213505213b28ba86e3c48be9edaaa9bc711b0e601128a",
+          "profile": "synthetic-region-reading/0.1",
+          "scope_sha256": "d4a138166e6f2d1a75939f7fdf0059d683025a8a6f62e4cdf8bc66b05cd4d00c"
+        },
+        "journal_binding": {
+          "package_sha256": "8952de7beeb14a03652213505213b28ba86e3c48be9edaaa9bc711b0e601128a",
+          "profile": "synthetic-region-reading/0.1",
+          "release_id": "release-spatial-sample-001",
+          "release_sha256": "25024150a7a8a8bb9fca4f05ff5606367cb28fd1cc630193ca801663c37e22f1",
+          "scene_id": "synthetic-equipment-corridor",
+          "scope_sha256": "d4a138166e6f2d1a75939f7fdf0059d683025a8a6f62e4cdf8bc66b05cd4d00c",
+          "truth_sha256": "4ec8a6b7a0dd9c8e27eca65af23c1643b89e52b5781130b6e55f2acaab134f89",
+          "truth_version_id": "truth-spatial-sample-001",
+          "view_sha256": "6a54e2dcb5d053fc8e37a324afc08305ca173e05e7c05cd187fb473890581410",
+          "view_version_id": "agent-spatial-sample-001"
+        },
+        "active_revision": 1,
+        "binding_match": true,
+        "journal_status": "proof_fields_present_unverified"
+      },
+      "complete": true,
+      "needs_attention": true,
+      "findings": [
+        {
+          "code": "component_needs_attention",
+          "component": "journal",
+          "next_action": "核对组件诊断；恢复或安装处理须走独立受控流程，不自动清理"
+        }
+      ],
+      "components": {
+        "files": {
+          "passed": true,
+          "complete": true,
+          "integrity_healthy": true,
+          "needs_attention": false,
+          "robot_ready": false,
+          "validity": "unverified_sample_only",
+          "observation": "metadata snapshot; filesystem may change concurrently; no cleanup authorization",
+          "packages": [
+            {
+              "package_sha256": "8952de7beeb14a03652213505213b28ba86e3c48be9edaaa9bc711b0e601128a",
+              "package_id": "agent-9e479ee994fa41f0a95cc877a651a380",
+              "scene_id": "synthetic-equipment-corridor",
+              "integrity": "verified"
+            }
+          ],
+          "active": [
+            {
+              "scene_id": "synthetic-equipment-corridor",
+              "package_sha256": "8952de7beeb14a03652213505213b28ba86e3c48be9edaaa9bc711b0e601128a",
+              "revision": 1,
+              "integrity": "verified"
+            }
+          ],
+          "installations": [
+            {
+              "install_id": "install-8a2ca69df6d04c07b75a87d9f11b3d78",
+              "package_sha256": "8952de7beeb14a03652213505213b28ba86e3c48be9edaaa9bc711b0e601128a",
+              "state": "ready",
+              "revision": 3,
+              "owner_status": "not_probed"
+            }
+          ],
+          "entries": [
+            {
+              "path": "locks/install-8a2ca69df6d04c07b75a87d9f11b3d78.lock",
+              "classification": "lock_evidence"
+            },
+            {
+              "path": "packages/8952de7beeb14a03652213505213b28ba86e3c48be9edaaa9bc711b0e601128a",
+              "classification": "registered"
+            }
+          ],
+          "findings": []
+        },
+        "journal": {
+          "schema_version": "cospace.test-recovery-audit/0.1",
+          "test_only": true,
+          "complete": true,
+          "needs_attention": true,
+          "control": {
+            "store_id": "0b9f8177-f380-4c75-8d6a-a8b533b2be3f",
+            "context": "6921326e7963cef3d64feab24851df8f1c25fb77733b32e40f8685a8a74134a2",
+            "generation": 2,
+            "mode": "recovering",
+            "revision": 3,
+            "state_sha256": "d1a86e8c4998b7c3c11fd2d9778eb9c0baef72d05a95d605a3cfae2b13af5634"
+          },
+          "pending": [
+            {
+              "intent_id": "97ced4ae-6dbe-447d-8842-e203354924b0",
+              "message_sha256": "5c5c8fca667be050530954cd7a37c5647c3a875ff87c5ad85ff0c174bca8b5bf",
+              "generation": 1,
+              "prepared_revision": 3,
+              "kind": "status_snapshot",
+              "identity": "918c036bd945963541e6079d1dceff3192c7be7eda3a4b333e14863ced214b5e"
+            }
+          ],
+          "runs": [
+            {
+              "recovery_id": "586765f6-a06c-412a-a574-1a7c2b13121b",
+              "generation": 2,
+              "phase": "planned"
+            }
+          ],
+          "counts": {
+            "messages": 4,
+            "intents": 4,
+            "receipts": 3,
+            "states": 1,
+            "recovery_runs": 1,
+            "recovery_plans": 1
+          },
+          "findings": [],
+          "proofs_verified": false,
+          "history_verified": false,
+          "recovery_authorized": false,
+          "authorized": false,
+          "robot_ready": false,
+          "observation": "single read-only metadata snapshot; no lock ownership or validity decision"
+        }
+      },
+      "validity": "not_evaluated",
+      "proofs_verified": false,
+      "history_verified": false,
+      "authorized": false,
+      "robot_ready": false,
+      "repair_authorized": false,
+      "observation": "independent read-only snapshots; filesystem and stores may change; no delivery acceptance or runtime permission"
+    },
+    "reconciled_missing_grant": {
+      "schema_version": "cospace.test-delivery-audit/0.1",
+      "test_only": true,
+      "requested_binding": {
+        "package_sha256": "8952de7beeb14a03652213505213b28ba86e3c48be9edaaa9bc711b0e601128a",
+        "profile": "synthetic-region-reading/0.1",
+        "release_id": "release-spatial-sample-001",
+        "release_sha256": "25024150a7a8a8bb9fca4f05ff5606367cb28fd1cc630193ca801663c37e22f1",
+        "scene_id": "synthetic-equipment-corridor",
+        "scope_sha256": "d4a138166e6f2d1a75939f7fdf0059d683025a8a6f62e4cdf8bc66b05cd4d00c",
+        "truth_sha256": "4ec8a6b7a0dd9c8e27eca65af23c1643b89e52b5781130b6e55f2acaab134f89",
+        "truth_version_id": "truth-spatial-sample-001",
+        "view_sha256": "6a54e2dcb5d053fc8e37a324afc08305ca173e05e7c05cd187fb473890581410",
+        "view_version_id": "agent-spatial-sample-001"
+      },
+      "observed": {
+        "file_binding": {
+          "release_sha256": "25024150a7a8a8bb9fca4f05ff5606367cb28fd1cc630193ca801663c37e22f1",
+          "view_version_id": "agent-spatial-sample-001",
+          "truth_version_id": "truth-spatial-sample-001",
+          "scene_id": "synthetic-equipment-corridor",
+          "release_id": "release-spatial-sample-001",
+          "truth_sha256": "4ec8a6b7a0dd9c8e27eca65af23c1643b89e52b5781130b6e55f2acaab134f89",
+          "view_sha256": "6a54e2dcb5d053fc8e37a324afc08305ca173e05e7c05cd187fb473890581410",
+          "package_sha256": "8952de7beeb14a03652213505213b28ba86e3c48be9edaaa9bc711b0e601128a",
+          "profile": "synthetic-region-reading/0.1",
+          "scope_sha256": "d4a138166e6f2d1a75939f7fdf0059d683025a8a6f62e4cdf8bc66b05cd4d00c"
+        },
+        "journal_binding": {
+          "package_sha256": "8952de7beeb14a03652213505213b28ba86e3c48be9edaaa9bc711b0e601128a",
+          "profile": "synthetic-region-reading/0.1",
+          "release_id": "release-spatial-sample-001",
+          "release_sha256": "25024150a7a8a8bb9fca4f05ff5606367cb28fd1cc630193ca801663c37e22f1",
+          "scene_id": "synthetic-equipment-corridor",
+          "scope_sha256": "d4a138166e6f2d1a75939f7fdf0059d683025a8a6f62e4cdf8bc66b05cd4d00c",
+          "truth_sha256": "4ec8a6b7a0dd9c8e27eca65af23c1643b89e52b5781130b6e55f2acaab134f89",
+          "truth_version_id": "truth-spatial-sample-001",
+          "view_sha256": "6a54e2dcb5d053fc8e37a324afc08305ca173e05e7c05cd187fb473890581410",
+          "view_version_id": "agent-spatial-sample-001"
+        },
+        "active_revision": 1,
+        "binding_match": true,
+        "journal_status": "proof_fields_missing"
+      },
+      "complete": true,
+      "needs_attention": true,
+      "findings": [
+        {
+          "code": "proof_fields_missing",
+          "component": "journal",
+          "next_action": "核对内容、状态和grant是否齐备；不得据字段存在推定有效"
+        }
+      ],
+      "components": {
+        "files": {
+          "passed": true,
+          "complete": true,
+          "integrity_healthy": true,
+          "needs_attention": false,
+          "robot_ready": false,
+          "validity": "unverified_sample_only",
+          "observation": "metadata snapshot; filesystem may change concurrently; no cleanup authorization",
+          "packages": [
+            {
+              "package_sha256": "8952de7beeb14a03652213505213b28ba86e3c48be9edaaa9bc711b0e601128a",
+              "package_id": "agent-9e479ee994fa41f0a95cc877a651a380",
+              "scene_id": "synthetic-equipment-corridor",
+              "integrity": "verified"
+            }
+          ],
+          "active": [
+            {
+              "scene_id": "synthetic-equipment-corridor",
+              "package_sha256": "8952de7beeb14a03652213505213b28ba86e3c48be9edaaa9bc711b0e601128a",
+              "revision": 1,
+              "integrity": "verified"
+            }
+          ],
+          "installations": [
+            {
+              "install_id": "install-8a2ca69df6d04c07b75a87d9f11b3d78",
+              "package_sha256": "8952de7beeb14a03652213505213b28ba86e3c48be9edaaa9bc711b0e601128a",
+              "state": "ready",
+              "revision": 3,
+              "owner_status": "not_probed"
+            }
+          ],
+          "entries": [
+            {
+              "path": "locks/install-8a2ca69df6d04c07b75a87d9f11b3d78.lock",
+              "classification": "lock_evidence"
+            },
+            {
+              "path": "packages/8952de7beeb14a03652213505213b28ba86e3c48be9edaaa9bc711b0e601128a",
+              "classification": "registered"
+            }
+          ],
+          "findings": []
+        },
+        "journal": {
+          "schema_version": "cospace.test-recovery-audit/0.1",
+          "test_only": true,
+          "complete": true,
+          "needs_attention": false,
+          "control": {
+            "store_id": "0b9f8177-f380-4c75-8d6a-a8b533b2be3f",
+            "context": "6921326e7963cef3d64feab24851df8f1c25fb77733b32e40f8685a8a74134a2",
+            "generation": 3,
+            "mode": "normal",
+            "revision": 4,
+            "state_sha256": "4e2717c7e74c371b8d17a8814c9b6336ef0eff872f01d1101b323b4233f3541a"
+          },
+          "pending": [],
+          "runs": [
+            {
+              "recovery_id": "586765f6-a06c-412a-a574-1a7c2b13121b",
+              "generation": 2,
+              "phase": "reconciled"
+            }
+          ],
+          "counts": {
+            "messages": 4,
+            "intents": 4,
+            "receipts": 4,
+            "states": 1,
+            "recovery_runs": 1,
+            "recovery_plans": 1
+          },
+          "findings": [],
+          "proofs_verified": false,
+          "history_verified": false,
+          "recovery_authorized": false,
+          "authorized": false,
+          "robot_ready": false,
+          "observation": "single read-only metadata snapshot; no lock ownership or validity decision"
+        }
+      },
+      "validity": "not_evaluated",
+      "proofs_verified": false,
+      "history_verified": false,
+      "authorized": false,
+      "robot_ready": false,
+      "repair_authorized": false,
+      "observation": "independent read-only snapshots; filesystem and stores may change; no delivery acceptance or runtime permission"
+    }
+  },
+  "authorized": false,
+  "robot_ready": false
+}

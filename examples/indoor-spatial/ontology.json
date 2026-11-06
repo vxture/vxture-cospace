@@ -1,0 +1,30 @@
+{
+  "ontology_id": "sample-indoor",
+  "version": "0.1",
+  "types": {
+    "room": {
+      "properties": {
+        "name": {
+          "type": "string",
+          "required": true
+        }
+      }
+    },
+    "corridor": {
+      "properties": {
+        "name": {
+          "type": "string",
+          "required": true
+        }
+      }
+    },
+    "cabinet": {
+      "properties": {
+        "name": {
+          "type": "string",
+          "required": true
+        }
+      }
+    }
+  }
+}

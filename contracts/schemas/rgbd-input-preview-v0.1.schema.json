@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "cospace:rgbd-input-preview:0.1",
+  "title": "Bounded NYU RGB-D source display",
+  "type": "object",
+  "required": ["profile", "space_id", "input_id", "snapshot_sha256", "tracking_sha256", "quality", "robot_ready"],
+  "properties": {
+    "profile": {"const": "cospace.rgbd-input-preview/0.1"},
+    "space_id": {"type": "string", "pattern": "^space-[a-f0-9]{16}$"},
+    "input_id": {"type": "string", "pattern": "^input-[a-f0-9]{16}$"},
+    "snapshot_sha256": {"$ref": "#/$defs/sha"},
+    "tracking_sha256": {"$ref": "#/$defs/sha"},
+    "quality": {"const": "unverified"}, "robot_ready": {"const": false}
+  },
+  "oneOf": [
+    {
+      "required": ["input_frames", "pose_frames", "frames", "source_clock", "frame_id", "axes", "unit", "payload_checked", "limitations"],
+      "properties": {
+        "input_frames": {"type": "integer", "minimum": 1, "maximum": 500},
+        "pose_frames": {"type": "integer", "minimum": 1, "maximum": 500},
+        "frames": {"type": "array", "minItems": 1, "maxItems": 500, "items": {"$ref": "#/$defs/frame"}},
+        "source_clock": {"enum": ["filename_time_unverified_utc", "unverified"]},
+        "frame_id": {"const": "first_depth_camera_anchor"}, "axes": {"const": ["right", "down", "forward"]},
+        "unit": {"const": "m"}, "payload_checked": {"const": false},
+        "limitations": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    {
+      "required": ["kind", "frame", "source_size", "display_size", "display_rule", "depth_range_m", "invalid_depth", "valid_depth_pixels", "rgb_png", "depth_png", "payload_checked"],
+      "properties": {
+        "kind": {"const": "frame"}, "frame": {"$ref": "#/$defs/frame"},
+        "source_size": {"const": [640, 480]}, "display_size": {"const": [320, 240]},
+        "display_rule": {"const": "nyu-depth-metres-nearest-rgba/0.1"},
+        "depth_range_m": {"const": [0, 10]}, "invalid_depth": {"const": "transparent"},
+        "valid_depth_pixels": {"type": "integer", "minimum": 0, "maximum": 307200},
+        "rgb_png": {"$ref": "#/$defs/png"}, "depth_png": {"$ref": "#/$defs/png"},
+        "payload_checked": {"const": "selected_pair_only"}
+      }
+    }
+  ],
+  "$defs": {
+    "sha": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "time": {"type": ["integer", "null"], "minimum": 0, "maximum": 9007199254740991},
+    "png": {"type": "string", "maxLength": 1048576, "pattern": "^data:image/png;base64,[A-Za-z0-9+/]+={0,2}$"},
+    "frame": {
+      "type": "object", "additionalProperties": false,
+      "required": ["index", "source_index", "pose", "depth", "rgb", "depth_sha256", "rgb_sha256", "source_time_us", "relative_time_us", "pair_delta_us"],
+      "properties": {
+        "index": {"type": "integer", "minimum": 0, "maximum": 499},
+        "source_index": {"type": "integer", "minimum": 0, "maximum": 499},
+        "pose": {"oneOf": [{"type": "null"}, {"type": "array", "minItems": 4, "maxItems": 4, "items": {"type": "array", "minItems": 4, "maxItems": 4, "items": {"type": "number"}}}]},
+        "depth": {"type": "string", "maxLength": 200, "pattern": "^[A-Za-z0-9_.-]+\\.pgm$"},
+        "rgb": {"type": "string", "maxLength": 200, "pattern": "^[A-Za-z0-9_.-]+\\.ppm$"},
+        "depth_sha256": {"$ref": "#/$defs/sha"}, "rgb_sha256": {"$ref": "#/$defs/sha"},
+        "source_time_us": {"$ref": "#/$defs/time"}, "relative_time_us": {"$ref": "#/$defs/time"},
+        "pair_delta_us": {"type": ["integer", "null"], "minimum": -9007199254740991, "maximum": 9007199254740991}
+      }
+    }
+  }
+}

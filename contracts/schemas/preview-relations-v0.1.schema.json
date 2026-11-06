@@ -1,0 +1,243 @@
+{
+  "$defs": {
+    "OntologyRef": {
+      "additionalProperties": false,
+      "properties": {
+        "ontology_id": {
+          "maxLength": 64,
+          "minLength": 1,
+          "title": "Ontology Id",
+          "type": "string"
+        },
+        "version": {
+          "maxLength": 20,
+          "minLength": 1,
+          "title": "Version",
+          "type": "string"
+        },
+        "sha256": {
+          "pattern": "^[a-f0-9]{64}$",
+          "title": "Sha256",
+          "type": "string"
+        }
+      },
+      "required": [
+        "ontology_id",
+        "version",
+        "sha256"
+      ],
+      "title": "OntologyRef",
+      "type": "object"
+    },
+    "RelationDraft": {
+      "additionalProperties": false,
+      "properties": {
+        "relation_id": {
+          "maxLength": 160,
+          "minLength": 1,
+          "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_.:-]*$",
+          "title": "Relation Id",
+          "type": "string"
+        },
+        "type_id": {
+          "maxLength": 64,
+          "minLength": 1,
+          "title": "Type Id",
+          "type": "string"
+        },
+        "source_id": {
+          "maxLength": 160,
+          "minLength": 1,
+          "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_.:-]*$",
+          "title": "Source Id",
+          "type": "string"
+        },
+        "target_id": {
+          "maxLength": 160,
+          "minLength": 1,
+          "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_.:-]*$",
+          "title": "Target Id",
+          "type": "string"
+        },
+        "note": {
+          "maxLength": 500,
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Note",
+          "type": "string"
+        }
+      },
+      "required": [
+        "relation_id",
+        "type_id",
+        "source_id",
+        "target_id",
+        "note"
+      ],
+      "title": "RelationDraft",
+      "type": "object"
+    },
+    "RelationRecord": {
+      "additionalProperties": false,
+      "properties": {
+        "relation_id": {
+          "maxLength": 160,
+          "minLength": 1,
+          "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_.:-]*$",
+          "title": "Relation Id",
+          "type": "string"
+        },
+        "type_id": {
+          "maxLength": 64,
+          "minLength": 1,
+          "title": "Type Id",
+          "type": "string"
+        },
+        "source_id": {
+          "maxLength": 160,
+          "minLength": 1,
+          "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_.:-]*$",
+          "title": "Source Id",
+          "type": "string"
+        },
+        "target_id": {
+          "maxLength": 160,
+          "minLength": 1,
+          "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_.:-]*$",
+          "title": "Target Id",
+          "type": "string"
+        },
+        "note": {
+          "maxLength": 500,
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Note",
+          "type": "string"
+        },
+        "confirmation": {
+          "const": "unverified",
+          "title": "Confirmation",
+          "type": "string"
+        }
+      },
+      "required": [
+        "relation_id",
+        "type_id",
+        "source_id",
+        "target_id",
+        "note",
+        "confirmation"
+      ],
+      "title": "RelationRecord",
+      "type": "object"
+    },
+    "RelationRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "space_id": {
+          "pattern": "^space-[a-f0-9]{16}$",
+          "title": "Space Id",
+          "type": "string"
+        },
+        "base_candidate_id": {
+          "maxLength": 100,
+          "minLength": 1,
+          "title": "Base Candidate Id",
+          "type": "string"
+        },
+        "base_manifest_sha256": {
+          "pattern": "^[a-f0-9]{64}$",
+          "title": "Base Manifest Sha256",
+          "type": "string"
+        },
+        "ontology_ref": {
+          "$ref": "#/$defs/OntologyRef"
+        },
+        "relations": {
+          "items": {
+            "$ref": "#/$defs/RelationDraft"
+          },
+          "maxItems": 200,
+          "title": "Relations",
+          "type": "array"
+        }
+      },
+      "required": [
+        "space_id",
+        "base_candidate_id",
+        "base_manifest_sha256",
+        "ontology_ref",
+        "relations"
+      ],
+      "title": "RelationRequest",
+      "type": "object"
+    },
+    "RelationSnapshot": {
+      "additionalProperties": false,
+      "properties": {
+        "profile": {
+          "const": "cospace.preview-relations/0.1",
+          "title": "Profile",
+          "type": "string"
+        },
+        "model_id": {
+          "pattern": "^build-[a-f0-9]{16}$",
+          "title": "Model Id",
+          "type": "string"
+        },
+        "space_id": {
+          "pattern": "^space-[a-f0-9]{16}$",
+          "title": "Space Id",
+          "type": "string"
+        },
+        "project_id": {
+          "pattern": "^project-[a-f0-9]{16}$",
+          "title": "Project Id",
+          "type": "string"
+        },
+        "objects_sha256": {
+          "pattern": "^[a-f0-9]{64}$",
+          "title": "Objects Sha256",
+          "type": "string"
+        },
+        "ontology_ref": {
+          "$ref": "#/$defs/OntologyRef"
+        },
+        "relations": {
+          "items": {
+            "$ref": "#/$defs/RelationRecord"
+          },
+          "maxItems": 200,
+          "title": "Relations",
+          "type": "array"
+        },
+        "confirmation": {
+          "const": "unverified",
+          "title": "Confirmation",
+          "type": "string"
+        }
+      },
+      "required": [
+        "profile",
+        "model_id",
+        "space_id",
+        "project_id",
+        "objects_sha256",
+        "ontology_ref",
+        "relations",
+        "confirmation"
+      ],
+      "title": "RelationSnapshot",
+      "type": "object"
+    }
+  },
+  "anyOf": [
+    {
+      "$ref": "#/$defs/RelationRequest"
+    },
+    {
+      "$ref": "#/$defs/RelationSnapshot"
+    }
+  ],
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

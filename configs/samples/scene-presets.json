@@ -1,0 +1,19 @@
+{
+  "profile": "cospace.scene-presets/0.1",
+  "presets": [
+    {
+      "id": "nyu-office-0001a",
+      "scene_key": "sample-nyu-office-0001a",
+      "name": "NYU 办公室 · office_0001a",
+      "description": "单一办公室的2秒 RGB-D 短序列，复用已有估计轨迹；仅供流程验证，精度未验收。",
+      "source_ids": ["nyu-office-short"]
+    },
+    {
+      "id": "os1-multi-1",
+      "scene_key": "sample-os1-multi-1",
+      "name": "OS1-16 · multi/1",
+      "description": "与NYU办公室独立的激光采集场景，1秒封存片段；当前构建仅用首帧，未执行多帧融合。",
+      "source_ids": ["os1-single-frame"]
+    }
+  ]
+}

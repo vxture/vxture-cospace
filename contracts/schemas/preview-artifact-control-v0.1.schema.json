@@ -1,0 +1,603 @@
+{
+  "type": "object",
+  "properties": {
+    "profile": {
+      "const": "cospace.preview-artifact-control-report/0.1"
+    },
+    "space_id": {
+      "type": "string"
+    },
+    "artifact": {
+      "type": "string",
+      "pattern": "^(input:input-[a-f0-9]{16}|candidate:build-[A-Za-z0-9-]+|publication:preview-[a-f0-9]{16})$"
+    },
+    "snapshot_sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "record": {
+      "type": "object",
+      "properties": {
+        "profile": {
+          "const": "cospace.preview-artifact-control/0.1"
+        },
+        "space_id": {
+          "type": "string"
+        },
+        "project_id": {
+          "type": "string"
+        },
+        "artifact": {
+          "type": "string",
+          "pattern": "^(input:input-[a-f0-9]{16}|candidate:build-[A-Za-z0-9-]+|publication:preview-[a-f0-9]{16})$"
+        },
+        "lifecycle_state": {
+          "enum": [
+            "active",
+            "disabled",
+            "archived",
+            "paused",
+            "retired"
+          ]
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "resume_state": {
+          "enum": [
+            null,
+            "active",
+            "disabled"
+          ]
+        },
+        "previous_state": {
+          "enum": [
+            "active",
+            "disabled",
+            "archived",
+            "paused",
+            "retired"
+          ]
+        },
+        "operation": {
+          "enum": [
+            "disable_input",
+            "archive_input",
+            "archive_candidate",
+            "pause_distribution",
+            "restore",
+            "retire_publication"
+          ]
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500
+        },
+        "updated_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "actor": {
+          "const": "local_engineer_unverified_identity"
+        },
+        "checked_snapshot_sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "history": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "profile": {
+                "const": "cospace.preview-artifact-control/0.1"
+              },
+              "space_id": {
+                "type": "string"
+              },
+              "project_id": {
+                "type": "string"
+              },
+              "artifact": {
+                "type": "string",
+                "pattern": "^(input:input-[a-f0-9]{16}|candidate:build-[A-Za-z0-9-]+|publication:preview-[a-f0-9]{16})$"
+              },
+              "lifecycle_state": {
+                "enum": [
+                  "active",
+                  "disabled",
+                  "archived",
+                  "paused",
+                  "retired"
+                ]
+              },
+              "revision": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "resume_state": {
+                "enum": [
+                  null,
+                  "active",
+                  "disabled"
+                ]
+              },
+              "previous_state": {
+                "enum": [
+                  "active",
+                  "disabled",
+                  "archived",
+                  "paused",
+                  "retired"
+                ]
+              },
+              "operation": {
+                "enum": [
+                  "disable_input",
+                  "archive_input",
+                  "archive_candidate",
+                  "pause_distribution",
+                  "restore",
+                  "retire_publication"
+                ]
+              },
+              "reason": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 500
+              },
+              "updated_at": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "actor": {
+                "const": "local_engineer_unverified_identity"
+              },
+              "checked_snapshot_sha256": {
+                "type": "string",
+                "pattern": "^[a-f0-9]{64}$"
+              },
+              "retirement_kind": {
+                "enum": [
+                  "superseded",
+                  "erroneous"
+                ]
+              },
+              "replacement_publication_id": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "pattern": "^preview-[a-f0-9]{16}$"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "profile",
+              "space_id",
+              "project_id",
+              "artifact",
+              "lifecycle_state",
+              "revision",
+              "resume_state",
+              "previous_state",
+              "operation",
+              "reason",
+              "updated_at",
+              "actor",
+              "checked_snapshot_sha256"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "retirement_kind": {
+          "enum": [
+            "superseded",
+            "erroneous"
+          ]
+        },
+        "replacement_publication_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^preview-[a-f0-9]{16}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "profile",
+        "space_id",
+        "project_id",
+        "artifact",
+        "lifecycle_state",
+        "revision",
+        "resume_state",
+        "history"
+      ],
+      "additionalProperties": false
+    },
+    "impact": {
+      "type": "object",
+      "properties": {
+        "profile": {
+          "const": "cospace.preview-artifact-impact/0.1"
+        },
+        "policy_version": {
+          "const": "cospace.preview-lifecycle-policy/0.1"
+        },
+        "space_id": {
+          "type": "string"
+        },
+        "project_id": {
+          "type": "string"
+        },
+        "checked_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "target": {
+          "type": "object",
+          "properties": {
+            "key": {
+              "type": "string"
+            },
+            "kind": {
+              "enum": [
+                "input",
+                "candidate",
+                "publication"
+              ]
+            },
+            "record_id": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "state": {
+              "type": "string"
+            },
+            "integrity": {
+              "type": "string"
+            },
+            "selected": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "key",
+            "kind",
+            "record_id",
+            "label",
+            "state",
+            "integrity",
+            "selected"
+          ],
+          "additionalProperties": false
+        },
+        "snapshot_sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "references": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "key": {
+                "type": "string"
+              },
+              "kind": {
+                "enum": [
+                  "batch",
+                  "job",
+                  "candidate",
+                  "publication",
+                  "offline_package"
+                ]
+              },
+              "record_id": {
+                "type": "string"
+              },
+              "label": {
+                "type": "string"
+              },
+              "state": {
+                "type": "string"
+              },
+              "relation": {
+                "enum": [
+                  "saved_artifact_reference",
+                  "saved_build_attempt",
+                  "batch_membership"
+                ]
+              },
+              "distance": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "selected": {
+                "type": "boolean"
+              },
+              "revision": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "key",
+              "kind",
+              "record_id",
+              "label",
+              "state",
+              "relation",
+              "distance"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "reference_counts": {
+          "type": "object",
+          "properties": {
+            "batch": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "job": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "candidate": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "publication": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "offline_package": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "batch",
+            "job",
+            "candidate",
+            "publication",
+            "offline_package"
+          ],
+          "additionalProperties": false
+        },
+        "selected_dependencies": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "issues": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string"
+              },
+              "key": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "code",
+              "key"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "plans": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 2,
+          "items": {
+            "type": "object",
+            "properties": {
+              "operation": {
+                "enum": [
+                  "disable_input",
+                  "archive_input",
+                  "archive_candidate",
+                  "pause_distribution"
+                ]
+              },
+              "title": {
+                "type": "string"
+              },
+              "decision": {
+                "enum": [
+                  "blocked",
+                  "eligible_by_saved_records"
+                ]
+              },
+              "blockers": {
+                "type": "array",
+                "items": {
+                  "enum": [
+                    "dependency_records_incomplete",
+                    "active_batch_membership",
+                    "saved_active_build_attempt",
+                    "current_selection_depends_on_input",
+                    "candidate_is_current_selection"
+                  ]
+                }
+              },
+              "effect_if_implemented": {
+                "type": "string"
+              },
+              "retained": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "next_steps": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "executable": {
+                "const": false
+              }
+            },
+            "required": [
+              "operation",
+              "title",
+              "decision",
+              "blockers",
+              "effect_if_implemented",
+              "retained",
+              "next_steps",
+              "executable"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "mode": {
+          "const": "impact_preview_only"
+        },
+        "mutation_supported": {
+          "const": false
+        },
+        "jobs_polled": {
+          "const": false
+        },
+        "source_files_rechecked": {
+          "const": false
+        },
+        "consumer_state_checked": {
+          "const": false
+        },
+        "consistency": {
+          "const": "request_time_reads_not_transactional"
+        },
+        "quality": {
+          "const": "unverified"
+        },
+        "robot_ready": {
+          "const": false
+        }
+      },
+      "required": [
+        "profile",
+        "policy_version",
+        "space_id",
+        "project_id",
+        "checked_at",
+        "target",
+        "snapshot_sha256",
+        "references",
+        "reference_counts",
+        "selected_dependencies",
+        "issues",
+        "plans",
+        "mode",
+        "mutation_supported",
+        "jobs_polled",
+        "source_files_rechecked",
+        "consumer_state_checked",
+        "consistency",
+        "quality",
+        "robot_ready"
+      ],
+      "additionalProperties": false,
+      "title": "CoSpace artifact lifecycle impact preview 0.1"
+    },
+    "actions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "operation": {
+            "enum": [
+              "disable_input",
+              "archive_input",
+              "archive_candidate",
+              "pause_distribution",
+              "restore",
+              "retire_publication"
+            ]
+          },
+          "title": {
+            "type": "string"
+          },
+          "target_state": {
+            "enum": [
+              "active",
+              "disabled",
+              "archived",
+              "paused",
+              "retired"
+            ]
+          },
+          "blockers": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "allowed": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "operation",
+          "title",
+          "target_state",
+          "blockers",
+          "allowed"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "identity": {
+      "const": "local_engineer_unverified_identity"
+    },
+    "publication_control_supported": {
+      "type": "boolean"
+    },
+    "quality": {
+      "const": "unverified"
+    },
+    "robot_ready": {
+      "const": false
+    }
+  },
+  "required": [
+    "profile",
+    "space_id",
+    "artifact",
+    "snapshot_sha256",
+    "record",
+    "impact",
+    "actions",
+    "identity",
+    "publication_control_supported",
+    "quality",
+    "robot_ready"
+  ],
+  "additionalProperties": false,
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CoSpace controlled artifact lifecycle 0.1"
+}

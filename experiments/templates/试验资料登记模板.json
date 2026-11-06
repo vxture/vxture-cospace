@@ -1,0 +1,52 @@
+{
+  "template_version": "0.1",
+  "record_status": "template_not_ready_for_test",
+  "dataset_id": null,
+  "purpose_groups": [],
+  "supported_acceptance_ids": [],
+  "unsupported_claims": [],
+  "source": {
+    "name": null,
+    "official_url": null,
+    "version": null,
+    "license_evidence": null,
+    "commercial_use_review": "unreviewed",
+    "redistribution_review": "unreviewed"
+  },
+  "scene": {
+    "description": null,
+    "target_scope_reference": null,
+    "excluded_scope_reference": null,
+    "object_list_reference": null
+  },
+  "collection": {
+    "session_id": null,
+    "date": null,
+    "sensors": [],
+    "raw_files": [],
+    "format_description": null,
+    "coordinate_and_units_reference": null,
+    "point_time_and_required_fields_reference": null,
+    "clock_and_synchronization_reference": null,
+    "calibration_reference": null,
+    "motion_and_initialization_reference": null
+  },
+  "evaluation": {
+    "split_role": null,
+    "used_for_tuning": null,
+    "control_reference": null,
+    "independent_check_reference": null,
+    "independent_pose_reference": null,
+    "reference_accuracy_description": null,
+    "frozen_conditions_reference": null
+  },
+  "readiness": {
+    "integrity_checked": false,
+    "decoded": false,
+    "input_compatibility_checked": false,
+    "license_reviewed": false,
+    "missing_items": [],
+    "limitations": [],
+    "review_record_reference": null
+  }
+}
