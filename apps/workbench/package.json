@@ -13,7 +13,7 @@
   },
   "dependencies": {
     "@phosphor-icons/react": "2.1.10",
-    "@tanstack/react-query": "5.104.5",
+    "@tanstack/react-query": "5.105.3",
     "@vxture/design-system": "file:vendor/vxture-design-system-15.0.0.tgz",
     "@vxture/design-tokens": "file:vendor/vxture-design-tokens-4.0.0.tgz",
     "@vxture/design-ui": "file:vendor/vxture-design-ui-12.0.0.tgz",
