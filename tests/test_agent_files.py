@@ -1,5 +1,6 @@
 """R1b real process interruption, immutable files and conservative recovery."""
 import json
+import errno
 from pathlib import Path
 import shutil
 import sqlite3
@@ -206,3 +207,32 @@ s.activate(sys.argv[2],sys.argv[3],2)
     result = subprocess.run([sys.executable, '-c', crash, str(store.root), scene, digest], timeout=20)
     assert result.returncode == 73
     assert FilePackages(store.root).status(scene)['revision'] == 2
+
+
+@pytest.mark.parametrize('error_number', [errno.EEXIST, errno.ENOTEMPTY])
+def test_existing_sealed_directory_reverified_for_both_os_errors(installed, monkeypatch, error_number):
+    store, source, package, first = installed
+    rename = Path.rename
+    def collision(path, target):
+        if path.parent == store.root / 'staging':
+            raise OSError(error_number, 'synthetic destination collision')
+        return rename(path, target)
+    monkeypatch.setattr(Path, 'rename', collision)
+    result = store.install(package, source)
+    assert result['package_sha256'] == first['package_sha256']
+    assert result['installation_state'] == 'ready'
+
+
+@pytest.mark.parametrize('error_number', [errno.EACCES, errno.EIO])
+def test_other_seal_errors_still_propagate(installed, monkeypatch, error_number):
+    store, source, package, first = installed
+    rename = Path.rename
+    def failure(path, target):
+        if path.parent == store.root / 'staging':
+            raise OSError(error_number, 'synthetic filesystem failure')
+        return rename(path, target)
+    monkeypatch.setattr(Path, 'rename', failure)
+    with pytest.raises(OSError) as caught:
+        store.install(package, source)
+    assert caught.value.errno == error_number
+    assert store.status(first['source']['scene_id'])['package_sha256'] == first['package_sha256']
