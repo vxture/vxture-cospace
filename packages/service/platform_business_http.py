@@ -26,6 +26,7 @@ from packages.construction.build_process import read_process
 from packages.service.space_preparation import preparation
 from packages.data.input_uploads import InputUploads,UploadRejected,MAX_UPLOAD,capabilities as upload_capabilities,metadata as upload_metadata
 from packages.ontology.workspace_authoring import WorkspaceOntologies,DraftChange,SealDraft
+from packages.service.public_errors import public_error
 
 
 class BusinessAccess:
@@ -294,7 +295,13 @@ class BusinessAccess:
                         result=await run_in_threadpool(rules.seal,SealDraft.model_validate(body),context['principal'].subject)
                     else:return deny(404,'ontology_authoring_route_not_found')
                 except ValidationError:return deny(422,'ontology_authoring_invalid_request')
-                except (ValueError,TypeError) as exc:return deny(409,str(exc))
+                except (ValueError,TypeError) as exc:
+                    return deny(409,public_error(exc,(
+                        'ontology_definition_too_large','ontology_draft_already_sealed','ontology_draft_integrity',
+                        'ontology_draft_not_found','ontology_draft_revision_changed','ontology_not_found',
+                        'ontology_reason_required','ontology_request_conflict','shared_template_read_only',
+                        'ontology_definition_invalid','ontology_version_already_sealed',
+                    ),'ontology_authoring_failed'))
                 return JSONResponse(result,headers={'Cache-Control':'no-store'})
             rgbd_path=re.fullmatch(r'/api/inputs/([^/]+)/rgbd-preview(/frame)?',path)
             if rgbd_path:
@@ -323,7 +330,15 @@ class BusinessAccess:
                 try:change=ControlChange.model_validate(body)
                 except ValidationError:return deny(422,'invalid_control_request')
                 try:result=await run_in_threadpool(self.jobs.controls.change,PreviewPublications(self.jobs),change,context['principal'].subject)
-                except ValueError as exc:return deny(409,str(exc))
+                except ValueError as exc:
+                    return deny(409,public_error(exc,(
+                        'explicit_space_required','lifecycle_artifact_invalid','lifecycle_changed_refresh_required',
+                        'lifecycle_history_mismatch','lifecycle_operation_blocked','lifecycle_reason_required',
+                        'lifecycle_records_unavailable','lifecycle_references_changed_refresh_required','lifecycle_transition_invalid',
+                        'replacement_cannot_be_self','replacement_publication_required','retired_version_only_accepts_replacement',
+                        'retirement_fields_invalid','publication_retired','publication_distribution_paused','publication_not_found',
+                        'impact_artifact_invalid','impact_artifact_not_found','impact_kind_not_supported','impact_selection_changed_refresh_required',
+                    ),'lifecycle_transition_unavailable'))
                 return JSONResponse(result,headers={'Cache-Control':'no-store'})
             metadata_path=re.fullmatch(r'/api/inputs/([^/]+)/(description|facts|preview|coordinates)',path)
             if metadata_path:
@@ -337,7 +352,12 @@ class BusinessAccess:
                         try:change=CoordinateChange.model_validate(body)
                         except ValidationError:return deny(422,'invalid_coordinate_change')
                         try:result=await run_in_threadpool(coords.change,identity,change,context['principal'].subject)
-                        except ValueError as exc:return deny(409,str(exc))
+                        except ValueError as exc:
+                            return deny(409,public_error(exc,(
+                                'coordinate_edit_unsupported','coordinate_history_invalid','coordinate_request_conflict',
+                                'coordinate_revision_binding_invalid','coordinate_revision_changed','coordinate_revision_integrity',
+                                'input_not_in_space','pointcloud_axes_invalid','registered_input_changed',
+                            ),'input_coordinates_unavailable'))
                     else:
                         if set(request.query_params)!={'space_id'}:return deny(422,'invalid_coordinate_request')
                         result=await run_in_threadpool(coords.read,identity,wanted)
@@ -494,18 +514,38 @@ class BusinessAccess:
                     result={'spaces':values,'legacy_records':'unassigned','access_scope':'authorized_spaces','policy_revision':revision}
                 return JSONResponse(result,headers={'Cache-Control':'no-store'})
             return await call_next(request)
-        except PreviewUnavailable as exc:return deny(409,str(exc))
-        except UploadRejected as exc:return deny(422,str(exc))
-        except CoordinatesConflict as exc:return deny(409,str(exc))
+        except PreviewUnavailable as exc:
+            return deny(409,public_error(exc,(
+                'input_preview_evidence_unavailable','input_preview_format_unsupported','preview_geometry_invalid','preview_response_budget',
+                'rgbd_preview_evidence_unavailable','rgbd_preview_frame_unavailable',
+                'build_preview_evidence_unavailable','build_preview_invalid_request','build_preview_stage_not_ready',
+                'build_process_evidence_unavailable','build_process_invalid_request',
+            ),'preview_unavailable'))
+        except UploadRejected as exc:
+            return deny(422,public_error(exc,(
+                'invalid_input_label','upload_compression_unsupported','upload_content_validation_failed','upload_duplicate_json_key',
+                'upload_existing_evidence_invalid','upload_existing_records_ambiguous','upload_expanded_budget',
+                'upload_explicit_scene_required','upload_format_unsupported','upload_manifest_budget','upload_member_budget',
+                'upload_member_integrity','upload_members_mismatch','upload_package_invalid','upload_scene_storage_budget',
+                'upload_size_budget','upload_unexpected_member','upload_unsafe_member',
+            ),'upload_package_invalid'))
+        except CoordinatesConflict as exc:
+            return deny(409,public_error(exc,('coordinate_request_conflict','coordinate_revision_changed'),'input_coordinates_unavailable'))
         except CoordinatesUnavailable:return deny(503,'input_coordinates_unavailable')
         except DescriptionConflict:return deny(409,'input_description_revision_changed')
         except DescriptionUnavailable:return deny(503,'input_descriptions_unavailable')
-        except FactsUnavailable as exc:return deny(409,str(exc))
-        except WorkspaceScenesConflict as exc:return deny(409,str(exc))
+        except FactsUnavailable as exc:
+            return deny(409,public_error(exc,('input_evidence_unreadable','input_evidence_budget','input_evidence_changed',
+                'input_facts_format_not_supported','input_evidence_invalid'),'input_evidence_invalid'))
+        except WorkspaceScenesConflict as exc:
+            return deny(409,public_error(exc,('scene_directory_collision','workspace_scene_context_changed','scene_request_id_reused',
+                'created_scene_access_changed_no_repair','scene_binding_collision','scene_project_collision',
+                'created_scene_directory_changed_no_repair'),'workspace_scene_creation_unavailable'))
         except WorkspaceScenesUnavailable:return deny(503,'workspace_scene_configuration_unavailable')
         except SettingsConflict:return deny(409,'space_settings_revision_changed')
         except SettingsUnavailable:return deny(503,'space_settings_unavailable')
-        except SourcesConflict as exc:return deny(409,str(exc))
+        except SourcesConflict as exc:
+            return deny(409,public_error(exc,('source_catalog_changed','source_settings_revision_changed'),'source_settings_unavailable'))
         except SourcesUnavailable:return deny(503,'source_settings_unavailable')
         except PreflightUnavailable:return deny(503,'preflight_records_unavailable')
         except SubscriptionDenied:return deny(403,'subscription_required')

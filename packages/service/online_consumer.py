@@ -13,6 +13,7 @@ from packages.infrastructure.platform_identity import PlatformPrincipal
 from packages.infrastructure.platform_subscription import SubscriptionDenied,SubscriptionUnavailable
 from packages.lifecycle.preview_scope import match
 from packages.service.preview_publications import PreviewPublications
+from packages.service.public_errors import public_error
 
 
 class ConsumerGrant(BaseModel):
@@ -146,6 +147,6 @@ class OnlineConsumer:
         except FileNotFoundError:return deny(404,'consumer_publication_not_found')
         except (IdentityUnavailable,OSError,sqlite3.Error):return deny(503,'consumer_dependency_unavailable')
         except (ValidationError,ValueError,KeyError,TypeError,OverflowError) as exc:
-            code=str(exc)
             allowed=('publication_retired','publication_distribution_paused','consumer_version_mismatch','consumer_frame_mismatch')
-            return deny(409,code) if code in allowed else deny(422,'consumer_request_or_publication_invalid')
+            code=public_error(exc,allowed,'consumer_request_or_publication_invalid')
+            return deny(422 if code=='consumer_request_or_publication_invalid' else 409,code)

@@ -138,13 +138,14 @@ def create_app(root,jobs=None,update_evidence=None,registration_sources=None,sou
                 if publications is None:raise ValueError('publication_not_found')
                 await run_in_threadpool(publications.require_distributing,parts[1])
             except (ValueError,OSError,KeyError,TypeError,sqlite3.Error) as exc:
-                code=str(exc)
+                from packages.service.public_errors import public_error
+                code=public_error(exc,('publication_retired','publication_distribution_paused','publication_not_found'),
+                                  'publication_distribution_unavailable')
                 if code=='publication_retired':
                     state=await run_in_threadpool(publications.distribution,parts[1])
                     return JSONResponse({'detail':'publication_retired','replacement_publication_id':state.get('replacement_publication_id'),
                         'reason':state.get('retirement_reason')},status_code=409,headers={'Cache-Control':'no-store'})
-                detail=code if code in ('publication_distribution_paused','publication_not_found') else 'publication_distribution_unavailable'
-                return JSONResponse({'detail':detail},status_code=404 if code=='publication_not_found' else 409,headers={'Cache-Control':'no-store'})
+                return JSONResponse({'detail':code},status_code=404 if code=='publication_not_found' else 409,headers={'Cache-Control':'no-store'})
         response=await call_next(request)
         if release_path or request.url.path.startswith('/api/'):
             response.headers['Cache-Control']='no-store'
