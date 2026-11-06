@@ -4,3 +4,5 @@
 *.docx binary
 *.tgz binary
 *.u8 binary
+# Frozen example packages contain byte-level SHA-256 references, including CRLF.
+examples/** -text whitespace=cr-at-eol

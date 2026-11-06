@@ -152,6 +152,11 @@ def _exercise(output, checks):
             record(checks, 'http.corrupt_list_no_partial_success', request(base, path)[0] == 503)
 
 
+def _require_windows():
+    if os.name != 'nt':
+        raise AcceptanceFailure('windows_required')
+
+
 def run(output):
     output = safe_path(output)
     output.mkdir(parents=True, exist_ok=False)  # Never overwrite an earlier run.
@@ -159,8 +164,7 @@ def run(output):
     started = time.monotonic()
     failure = None
     try:
-        if os.name != 'nt':
-            raise AcceptanceFailure('windows_required')
+        _require_windows()
         _exercise(output, checks)
         identities = [item['id'] for item in checks]
         if len(identities) != len(REQUIRED_CHECKS) or set(identities) != set(REQUIRED_CHECKS):
