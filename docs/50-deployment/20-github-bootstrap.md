@@ -20,6 +20,12 @@ the existing CoSpace runtime and are not copied as dummy jobs.
   the CI gate can also traverse archives. Run
   `python scripts/security/scan_candidate.py` locally after staging changes;
   it scans the actual Git index with redacted findings under ignored output/.
+- DOCX is skipped by the scanner's built-in archive traversal. The local and CI
+  gates therefore explicitly expose archive members as inert flat files, then
+  scan those contents. Nested archives have depth and size limits; no original
+  paths, permissions or links are restored. A synthetic canary verified direct
+  DOCX and DOCX inside TGZ detection. The only added rule exception is the
+  reviewed `LinkedinLogoIcon` / `ChatCircleIcon` source-map identifier sequence.
 
 For the initially empty remote only: first push main, observe CI contexts, then
 apply `rebuild/main-ruleset.json`. All later changes use PRs and squash merges.
