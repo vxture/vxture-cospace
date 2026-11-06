@@ -602,7 +602,9 @@ def create_app(root,jobs=None,update_evidence=None,registration_sources=None,sou
         with np.load(current.root/'spatial.npz',allow_pickle=False) as arrays:
             points=arrays['points']; colors=arrays['colors']
         image=np.full((360,640,3),[11,16,25],dtype=np.uint8)
-        if current.manifest.get('data_kind')=='real_lidar_sensor_local_candidate':
+        # Existing scene coordinates have no RGB-D camera origin or forward axis.
+        # Fit their whole extent for display without changing the model geometry.
+        if current.manifest.get('data_kind') in ('real_lidar_sensor_local_candidate','existing_pointcloud_candidate'):
             projected=np.column_stack((.7*points[:,0]-.7*points[:,1],.35*points[:,0]+.35*points[:,1]-.9*points[:,2]))
             lo=projected.min(axis=0);hi=projected.max(axis=0);scale=min(600/max(hi[0]-lo[0],.001),320/max(hi[1]-lo[1],.001))
             pixels=np.rint((projected-(lo+hi)/2)*scale+[320,180]).astype(int)

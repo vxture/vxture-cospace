@@ -44,8 +44,25 @@
 
 ## 上线与验收边界
 
-本次代码变更尚须通过 PR、测试、安全扫描和正式发布，才可确认生产端实现就绪。此前线上版本 v0.1.3 不包含此用量上报实现。
+用量上报实现已随 v0.1.4 正式部署：PR [#14](https://github.com/vxture/vxture-cospace/pull/14) 已合并，提交 `b0e55b46596dc02a90e631d5a8275de863dc58b5`。main 检查通过，JUnit 记录 2,038 项，失败／错误为 0，跳过 116 项；CodeQL、SonarCloud 检查通过。用户批准 production Environment 后，[部署运行 42217913743](https://github.com/vxture/vxture-cospace/actions/runs/42217913743) 成功。
+
+只读核验 worker02 `/srv/md0/cospace`：`cospace-app` 健康，3260 端口，VERSION 与 OCI revision 均对应上述提交。镜像摘要为 `sha256:8810eb27c157b29a9bd23c8b7df33faf2ed2f0dc71b55036be11f1f55d2be2df`。本机核验记录为 `output/worker02-v014-release-acceptance.json`，不提交运行证据或私有配置。
+
+2026-11-06 15:52 UTC，使用无 Cookie、无认证、禁止跟随重定向的客户端检查正式域名，8 项通过：
+
+| 路径 | HTTP | 核验内容 |
+| --- | --- | --- |
+| `/` | 302 | 首页跳转响应 |
+| `/workbench/layout.html` | 200 | 工作台静态页面可读 |
+| `/api/auth/config` | 200 | 认证、业务授权、订阅授权均启用 |
+| `/api/auth/session` | 200 | 未认证，`authority_state=signed_out` |
+| `/api/subscription` | 401 | 需要认证 |
+| `/api/spaces` | 401 | 需要认证 |
+| `/api/workspace-scenes` | 401 | 需要认证 |
+| `/auth/callback`，无参数 | 400 | 拒绝无效认证回调 |
+
+所有响应均有 `Cache-Control: no-store` 与 `X-Content-Type-Options: nosniff`。本机记录为 `output/v014-public-boundary-acceptance.json`。这些检查只确认公开入口及未登录边界，不代表已完成正向登录、订阅或所有安全项验收。
 
 Opera 环节 2 是实现准备的人工确认；环节 4 是真实租户观测。不能把代码测试、套餐发布或存储 gauge 等同于已产生真实 consume 事件。平台当前环节 4 只识别 consume 事件，对仅存储 gauge 和委托服务计量的产品可能存在检查适用性问题，应如实记录，不能伪造上报补齐。
 
-待执行：发布本次版本；完成产品上线；核对官网两档付费与 Enterprise 联系销售；用户经平台订阅后，执行真实 Workspace 登录、C2、开通回调和场景数据流程验收。付款、TOTP、生产 Environment 审核由相应授权人完成。尚未发生订单、付款或正向订阅业务验收。
+待执行：恢复 Opera 登录后完成产品上线；核对官网两档付费与 Enterprise 联系销售；用户经平台订阅后，执行真实 Workspace 登录、C2、开通回调和场景数据流程验收。付款、TOTP 由相应授权人完成。当前产品仍为草稿，尚未发生订单、付款或正向订阅业务验收。Opera 当前无法登录，独立推进的 Anoeta 本机样本验收见 `docs/validation/Anoeta-HL2流程验收-2026-11-06.md`。

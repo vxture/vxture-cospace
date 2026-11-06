@@ -1,4 +1,6 @@
 import json
+import struct
+import zlib
 import numpy as np
 import pytest
 from fastapi.testclient import TestClient
@@ -69,3 +71,47 @@ def test_workbench_thumbnail_and_local_origin_access(tmp_path):
         assert allowed.headers['access-control-allow-origin']=='http://127.0.0.1:8766'
         denied=client.get('/api/preview',headers={'Origin':'https://example.com'})
         assert 'access-control-allow-origin' not in denied.headers
+
+
+def thumbnail_pixels(data):
+    width,height=struct.unpack('>II',data[16:24]);chunks=[];offset=8
+    while offset<len(data):
+        size=struct.unpack('>I',data[offset:offset+4])[0]
+        if data[offset+4:offset+8]==b'IDAT':chunks.append(data[offset+8:offset+8+size])
+        offset+=size+12
+    rows=np.frombuffer(zlib.decompress(b''.join(chunks)),dtype=np.uint8).reshape(height,1+width*3)
+    assert not rows[:,0].any()
+    return rows[:,1:].reshape(height,width,3)
+
+
+@pytest.mark.parametrize('offset',[[0,0,0],[500000,600000,-100000]])
+def test_existing_pointcloud_thumbnail_frames_all_points_without_camera_clipping(tmp_path,offset):
+    root=make_preview(tmp_path)
+    # Scene-local XYZ need not lie in front of an RGB-D camera or near its origin.
+    points=np.array([[0,0,-3],[80,0,-3],[0,50,-3],[80,50,10]],dtype=float)+offset
+    colors=np.array([[255,0,0],[0,255,0],[0,0,255],[255,255,0]],dtype=np.uint8)
+    np.savez_compressed(root/'spatial.npz',points=points,colors=colors)
+    manifest=json.loads((root/'model.json').read_bytes())
+    manifest.update(data_kind='existing_pointcloud_candidate')
+    manifest['members']['spatial.npz']['sha256']=digest(root/'spatial.npz')
+    (root/'model.json').write_text(json.dumps(manifest))
+    before={p.name:p.read_bytes() for p in root.iterdir()}
+    with TestClient(create_app(root)) as client:
+        response=client.get('/api/thumbnail');assert response.status_code==200
+    image=thumbnail_pixels(response.content)
+    assert image.shape==(360,640,3)
+    for color in colors:
+        y,x=np.where((image==color).all(axis=2))
+        assert len(x)==1 and 19<=x[0]<=621 and 19<=y[0]<=341
+    assert all((root/name).read_bytes()==value for name,value in before.items())
+
+
+def test_single_existing_point_thumbnail_has_finite_centered_projection(tmp_path):
+    root=make_preview(tmp_path)
+    manifest=json.loads((root/'model.json').read_bytes())
+    manifest['data_kind']='existing_pointcloud_candidate'
+    (root/'model.json').write_text(json.dumps(manifest))
+    with TestClient(create_app(root)) as client:
+        response=client.get('/api/thumbnail');assert response.status_code==200
+    image=thumbnail_pixels(response.content)
+    np.testing.assert_array_equal(image[180,320],[40,80,120])
