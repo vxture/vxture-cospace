@@ -18,6 +18,7 @@ from experiments.scripts.serve_nyu_flow_preview import create_app
 from packages.infrastructure.preview_service_lock import service_guard
 from packages.infrastructure.platform_subscription import SubscriptionConfig,PlatformSubscriptions
 from packages.infrastructure.platform_provisioning import ProvisioningReconciler
+from packages.infrastructure.platform_usage import StorageInventory, StorageReporter, UsageTransport
 
 
 def assemble(rp,policies,sample,initial=None,sources_config=Path('deploy/config/preview-sources.json'),workspace_config=None,consumer_config=None):
@@ -31,6 +32,7 @@ def assemble(rp,policies,sample,initial=None,sources_config=Path('deploy/config/
     subscriptions=PlatformSubscriptions(rp,SubscriptionConfig.from_env(),policies.path.parent) if rp.config.issuer.startswith('https://') else None
     return create_auth_app(rp,business=business,subscriptions=subscriptions,
         reconciler=ProvisioningReconciler(subscriptions) if subscriptions is not None else None,
+        usage_reporter=StorageReporter(StorageInventory(policies,inputs,jobs),UsageTransport(rp,subscriptions.config)) if subscriptions is not None else None,
         access=BusinessAccess(rp,policies,directory,jobs,sources,workspace_config,consumer_config,subscriptions))
 
 

@@ -168,7 +168,7 @@ class EntitlementTransport:
         self.rp,self.config=rp,config
         self.verifier=PlatformTokenVerifier(rp.config.verifier_config.model_copy(update={'audience':'vxture'}))
 
-    def fetch(self,principal,user_token=None):
+    def token(self,principal,user_token=None):
         request={'grant_type':'urn:ietf:params:oauth:grant-type:token-exchange','audience':'vxture',
             'requested_token_type':'urn:ietf:params:oauth:token-type:access_token'}
         if user_token:
@@ -185,6 +185,13 @@ class EntitlementTransport:
                     or claims.get('exp',0)<=time.time() or claims['exp']-claims['iat']>300
                     or user_token and claims.get('sub')!=principal.subject or not user_token and 'sub' in claims):
                 raise ValueError('subscription_token_binding')
+            return bearer
+        except (IdentityRejected,IdentityUnavailable,OSError,ValueError,TypeError,KeyError):
+            raise SubscriptionUnavailable('platform_subscription_unavailable') from None
+
+    def fetch(self,principal,user_token=None):
+        try:
+            bearer=self.token(principal,user_token)
             url=self.config.api_base+'/platform/entitlements?'+urlencode({'workspace_id':principal.workspace_id,'product':PRODUCT})
             opener=build_opener(ProxyHandler({}),NoRedirect())
             with opener.open(Request(url,headers={'Authorization':'Bearer '+bearer,'Accept':'application/json'}),timeout=5) as response:

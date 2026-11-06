@@ -200,6 +200,41 @@ def test_https_business_cannot_omit_gate(runtime):
     with pytest.raises(ValueError,match='subscription_gate_required'):
         create_auth_app(rp,business=object(),access=SimpleNamespace(subscriptions=None))
 
+
+def test_subscribed_workspace_owner_can_create_first_scene_without_local_allocation(secured,tmp_path):
+    rp,_,accounts,clock,jobs,directory,spaces,policies,*_=secured
+    production_client(rp,accounts)
+    settings=tmp_path/'workspace-scenes.json'
+    settings.write_text(json.dumps(dict(profile='cospace.workspace-scenes/0.1',revision=1,workspaces=[])))
+    values=[facts(status=None,tier=None)]
+    obj=PlatformSubscriptions(rp,config(),tmp_path/'policy',fetch=lambda *_:values[0],now=lambda:clock[0],wall=lambda:NOW)
+    access=BusinessAccess(rp,policies,directory,jobs,workspace_config=settings,subscriptions=obj)
+    app=create_auth_app(rp,business=create_app(None,jobs,space_directory=directory,platform_origin=rp.config.origin),access=access,subscriptions=obj)
+    with TestClient(app,base_url=rp.config.origin,follow_redirects=False) as client:
+        accounts.roles=['workspace:owner']
+        login(rp,client,accounts)
+        assert client.get('/api/workspace-scenes').status_code==403  # Login alone does not grant use.
+        values[0]=facts();obj.webhook(*signed_event())
+        context=client.get('/api/workspace-scenes').json()
+        assert context['can_create'] and context['enabled']
+        csrf=client.get('/api/auth/session').json()['csrf']
+        headers={'Origin':rp.config.origin,'X-CoSpace-CSRF':csrf}
+        body=dict(name='First subscribed scene',description='',request_id='f'*32,context_sha256=context['context_sha256'])
+        assert client.post('/api/workspace-scenes',json=body).status_code==403
+        response=client.post('/api/workspace-scenes',json=body,headers=headers)
+        assert response.status_code==201,response.text
+        scene=response.json()['space_id']
+        assert response.json()['workspace_id']=='ws_mock'
+        assert client.get('/api/spaces/'+scene).status_code==200
+        assert access.workspace_scenes.scoped_sources(rp.verifier.verify(rp.resolve(client.cookies.get(rp.config.cookie_name))[0]['access_token'])).sources=={}
+        # A different subscribed Workspace owner can create its own scene, but cannot see this one.
+        accounts.workspace='ws_foreign';values[0]=facts(workspace_id='ws_foreign')
+        login(rp,client,accounts)
+        assert client.get('/api/spaces/'+scene).status_code==403
+        assert client.get('/api/workspace-scenes').json()['can_create']
+        accounts.roles=['workspace:member'];login(rp,client,accounts)
+        assert not client.get('/api/workspace-scenes').json()['can_create']
+
 def test_backup_restores_only_receipts_and_generation(tmp_path):
     from test_workbench_backup import runtime as fixture,save
     from packages.infrastructure.preview_backup import restore,tree
