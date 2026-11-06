@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "space_id": {
+      "pattern": "^space-[a-f0-9]{16}$",
+      "title": "Space Id",
+      "type": "string"
+    },
+    "request_id": {
+      "pattern": "^[a-f0-9]{32}$",
+      "title": "Request Id",
+      "type": "string"
+    },
+    "index_sha256": {
+      "pattern": "^[a-f0-9]{64}$",
+      "title": "Index Sha256",
+      "type": "string"
+    },
+    "sources": {
+      "items": {
+        "type": "string"
+      },
+      "maxItems": 32,
+      "minItems": 1,
+      "title": "Sources",
+      "type": "array"
+    },
+    "bounds": {
+      "items": {
+        "items": {
+          "type": "number"
+        },
+        "type": "array"
+      },
+      "maxItems": 2,
+      "minItems": 2,
+      "title": "Bounds",
+      "type": "array"
+    },
+    "voxel_size": {
+      "maximum": 100,
+      "minimum": 0,
+      "title": "Voxel Size",
+      "type": "number"
+    },
+    "label": {
+      "maxLength": 100,
+      "minLength": 1,
+      "title": "Label",
+      "type": "string"
+    }
+  },
+  "required": [
+    "space_id",
+    "request_id",
+    "index_sha256",
+    "sources",
+    "bounds",
+    "voxel_size",
+    "label"
+  ],
+  "title": "ComposeRegion",
+  "type": "object"
+}

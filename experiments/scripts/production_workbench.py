@@ -54,6 +54,7 @@ def initialize(business):
         'sources.json':{'profile':'cospace.preview-sources/0.1','sources':[]},
         'workspace-scenes.json':{'profile':'cospace.workspace-scenes/0.1','revision':1,'workspaces':[]},
         'consumer-access.json':{'profile':'cospace.online-consumer-access/0.1','audience':'cospace','grants':[]},
+        'scene-pointclouds.json':{'profile':'cospace.scene-pointcloud-bindings/0.1','bindings':[]},
     }
     for name,value in documents.items():
         (business/'setup'/name).write_text(json.dumps(value,indent=2)+'\n',encoding='utf-8')
@@ -82,7 +83,8 @@ def main():
         rp=PlatformLogin(config,LocalRpStore(state/'sessions',config.encryption_key.get_secret_value()))
         with service_guard(business/'runtime'):
             app=assemble(rp,policies,business/'runtime',sources_config=business/'setup/sources.json',
-                workspace_config=business/'setup/workspace-scenes.json',consumer_config=business/'setup/consumer-access.json')
+                workspace_config=business/'setup/workspace-scenes.json',consumer_config=business/'setup/consumer-access.json',
+                scene_pointcloud_config=business/'setup/scene-pointclouds.json' if (business/'setup/scene-pointclouds.json').exists() else None)
             # Docker publishes only the explicit tailnet interface. No proxy trust
             # is needed: public origin and callback URLs come from trusted config.
             uvicorn.run(app,host='0.0.0.0',port=a.port,access_log=False,proxy_headers=False,
