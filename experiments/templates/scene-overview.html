@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Anoeta · 全部来源工程概览</title>
+<link rel="icon" href="data:,">
+<style>
+*{box-sizing:border-box}body{margin:0;background:#0b1320;color:#e5edf8;font:14px system-ui}canvas{display:block;width:100vw;height:100vh;touch-action:none}
+header{position:absolute;top:24px;left:28px;pointer-events:none}h1{font-size:24px;margin:0 0 8px}p{margin:6px 0;color:#adbed6;line-height:1.6}
+aside{position:absolute;right:24px;top:24px;width:270px;background:#132238e8;padding:20px;border:1px solid #33465e;border-radius:12px}h2{font-size:15px;margin:0 0 14px}label{display:flex;gap:8px;padding:9px 0;font-size:12px}button{margin-top:12px;background:#356ce8;color:white;border:0;border-radius:6px;padding:9px 14px;cursor:pointer}small{color:#a7bad3;display:block;line-height:1.7}footer{position:absolute;bottom:22px;left:28px;color:#a7bad3;font-size:12px;max-width:calc(100vw - 56px)}
+@media(max-width:800px){header{top:16px;left:16px}h1{font-size:18px}header p{max-width:55vw;font-size:12px}aside{right:12px;top:16px;width:210px;padding:12px}footer{left:16px}}
+</style>
+<canvas id="scene" aria-label="Anoeta五份点云的工程抽样概览"></canvas>
+<header><h1>Anoeta 车站</h1><p>全部来源工程概览 · __TOTAL_POINTS__ 个原始点已分块保留</p><p>当前仅显示确定性抽样；不同设备的对齐关系尚未核验</p></header>
+<aside><h2>来源图层</h2><div id="layers"></div><button id="reset">复位视角</button><p id="count"></p><small>颜色直接保留源 RGB 编码。可关闭图层对比设备，叠加显示不代表配准通过。</small></aside>
+<footer>拖动旋转 · 滚轮缩放 · 双击复位<br>单位依据：__UNIT_BASIS__；CRS、设备对齐与 IFC 对齐待核验。此页是本机工程概览，不是全量产品构建或机器人扫描回放。</footer>
+<script>
+const sources=__SCENE_DATA__;
+const canvas=document.querySelector('#scene'),ctx=canvas.getContext('2d'),active=sources.map(()=>true);
+const lo=[Infinity,Infinity,Infinity],hi=[-Infinity,-Infinity,-Infinity];
+for(const source of sources)for(const p of source.points)for(let i=0;i<3;i++){lo[i]=Math.min(lo[i],p[i]);hi[i]=Math.max(hi[i],p[i]);}
+const center=lo.map((v,i)=>(v+hi[i])/2),extent=Math.max(1,...hi.map((v,i)=>v-lo[i]));
+let yaw=.72,pitch=.85,zoom=1,drag=null,scheduled=false;
+function render(){scheduled=false;const w=innerWidth,h=innerHeight,dpr=Math.min(devicePixelRatio,2);canvas.width=w*dpr;canvas.height=h*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);ctx.fillStyle='#0b1320';ctx.fillRect(0,0,w,h);
+ const scale=Math.min(w,h)*.9/extent*zoom,cy=Math.cos(yaw),sy=Math.sin(yaw),cp=Math.cos(pitch),sp=Math.sin(pitch),projected=[];
+ let count=0;for(let s=0;s<sources.length;s++){if(!active[s])continue;const source=sources[s];count+=source.points.length;for(let i=0;i<source.points.length;i++){const p=source.points[i],x=p[0]-center[0],y=p[1]-center[1],z=p[2]-center[2],rx=cy*x-sy*y,ry=sy*x+cy*y;projected.push([w*.45+rx*scale,h*.56+(cp*ry-sp*z)*scale,sp*ry+cp*z,s,i]);}}
+ projected.sort((a,b)=>a[2]-b[2]);for(const [x,y,depth,s,i]of projected){if(x<0||y<0||x>w||y>h)continue;const c=sources[s].colors[i];ctx.fillStyle=`rgb(${c[0]},${c[1]},${c[2]})`;ctx.fillRect(x,y,1.5,1.5);}document.querySelector('#count').textContent=`概览显示 ${count.toLocaleString()} 个抽样点`;}
+function request(){if(!scheduled){scheduled=true;requestAnimationFrame(render);}}
+sources.forEach((source,i)=>{const label=document.createElement('label'),input=document.createElement('input'),text=document.createElement('span');input.type='checkbox';input.checked=true;text.textContent=source.name;input.onchange=()=>{active[i]=input.checked;request();};label.append(input,text);document.querySelector('#layers').append(label);});
+function reset(){yaw=.72;pitch=.85;zoom=1;request();}document.querySelector('#reset').onclick=reset;canvas.ondblclick=reset;
+canvas.onpointerdown=e=>{drag=[e.clientX,e.clientY];canvas.setPointerCapture(e.pointerId);};canvas.onpointermove=e=>{if(!drag)return;yaw+=(e.clientX-drag[0])*.006;pitch=Math.max(.05,Math.min(1.55,pitch+(e.clientY-drag[1])*.006));drag=[e.clientX,e.clientY];request();};canvas.onpointerup=canvas.onpointercancel=()=>drag=null;canvas.onwheel=e=>{e.preventDefault();zoom=Math.min(8,Math.max(.2,zoom*Math.exp(-e.deltaY*.001)));request();};window.onresize=request;request();
+</script>
+</html>
