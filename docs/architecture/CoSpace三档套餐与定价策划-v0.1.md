@@ -1,5 +1,7 @@
 # CoSpace 三档套餐与定价策划 v0.1
 
+> 历史策划快照。当前批准值、平台已发布版本和接入进度见 [平台上线与用量接入](../50-deployment/40-platform-launch-status.md)。以下“未发布”等描述仅代表策划时状态。
+
 日期：2026-11-06，Asia/Shanghai。状态：套餐策划建议，尚未登记、发布或形成客户承诺；产品和登录客户端此前已登记。
 
 当前实施以 [平台授权接入职责与实施记录](CoSpace平台接入职责纠偏-2026-11-06.md) 为准；[原实施清单](CoSpace套餐登记与额度实施清单-2026-11-06.md) 保留为历史。本地结构化资料为 `deploy/config/cospace-subscription-plans.proposal.json`，不是平台请求体或运行时授权配置。
