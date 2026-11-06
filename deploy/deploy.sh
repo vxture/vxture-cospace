@@ -8,11 +8,13 @@ test "${IMAGE_TAG:-}" != latest
 [[ "$IMAGE_TAG" =~ ^sha-[a-f0-9]{7,40}$ ]]
 cd "$STACK_ROOT/deploy"
 test -f "$STACK_ROOT/etc/.env"
-for dir in data/business data/state etc/secrets; do test -d "$STACK_ROOT/$dir"; done
+# Inspect UID 10001's private directories without weakening their permissions.
+sudo -n true
+for dir in data/business data/state etc/secrets; do sudo -n test -d "$STACK_ROOT/$dir"; done
 for key in client-secret session-key webhook-secret; do
-  test -f "$STACK_ROOT/etc/secrets/$key"
+  sudo -n test -f "$STACK_ROOT/etc/secrets/$key"
 done
-test -f "$STACK_ROOT/data/business/setup/workspace-scenes.json"
+sudo -n test -f "$STACK_ROOT/data/business/setup/workspace-scenes.json"
 primary="ghcr.io/$GHCR_NAMESPACE/cospace-app:$IMAGE_TAG"
 if ! docker pull "$primary"; then
   fallback="$ACR_REGISTRY/$ACR_NAMESPACE/cospace-app:$IMAGE_TAG"

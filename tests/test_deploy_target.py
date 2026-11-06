@@ -1,4 +1,5 @@
 import pytest
+from pathlib import Path
 from scripts.guardrails.check_deploy_target import validate
 
 
@@ -19,3 +20,10 @@ def test_worker02_target():
 def test_reject_wrong_host_scope_or_unaccepted_migration(key, value):
     with pytest.raises(ValueError):
         validate({**GOOD, key: value})
+
+
+def test_deploy_checks_private_state_without_relaxing_permissions():
+    script = (Path(__file__).resolve().parents[1] / 'deploy/deploy.sh').read_text()
+    assert 'sudo -n test -f "$STACK_ROOT/etc/secrets/$key"' in script
+    assert 'sudo -n test -f "$STACK_ROOT/data/business/setup/workspace-scenes.json"' in script
+    assert 'chmod' not in script
