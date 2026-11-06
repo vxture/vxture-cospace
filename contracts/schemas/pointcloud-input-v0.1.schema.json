@@ -148,6 +148,19 @@
       ],
       "default": null,
       "title": "Source Receipt Path"
+    },
+    "composition_path": {
+      "anyOf": [
+        {
+          "const": "composition.json",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Composition Path"
     }
   },
   "required": [

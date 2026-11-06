@@ -1,0 +1,233 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "Cloud": {
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "const": "cloud.ply",
+          "title": "Path",
+          "type": "string"
+        },
+        "sha256": {
+          "pattern": "^[a-f0-9]{64}$",
+          "title": "Sha256",
+          "type": "string"
+        },
+        "bytes": {
+          "exclusiveMinimum": 0,
+          "maximum": 33554432,
+          "title": "Bytes",
+          "type": "integer"
+        },
+        "points": {
+          "exclusiveMinimum": 0,
+          "maximum": 1000000,
+          "title": "Points",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "path",
+        "sha256",
+        "bytes",
+        "points"
+      ],
+      "title": "Cloud",
+      "type": "object"
+    },
+    "CompositionSource": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "maxLength": 160,
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "sha256": {
+          "pattern": "^[a-f0-9]{64}$",
+          "title": "Sha256",
+          "type": "string"
+        },
+        "source_points": {
+          "exclusiveMinimum": 0,
+          "maximum": 200000000,
+          "title": "Source Points",
+          "type": "integer"
+        },
+        "matched_points": {
+          "maximum": 200000000,
+          "minimum": 0,
+          "title": "Matched Points",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "name",
+        "sha256",
+        "source_points",
+        "matched_points"
+      ],
+      "title": "CompositionSource",
+      "type": "object"
+    },
+    "Coordinates": {
+      "additionalProperties": false,
+      "properties": {
+        "unit": {
+          "const": "m",
+          "title": "Unit",
+          "type": "string"
+        },
+        "frame_id": {
+          "pattern": "^[A-Za-z0-9_/-]{1,100}$",
+          "title": "Frame Id",
+          "type": "string"
+        },
+        "axes": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 3,
+          "minItems": 3,
+          "title": "Axes",
+          "type": "array"
+        },
+        "scope": {
+          "enum": [
+            "sensor_local",
+            "scene_local"
+          ],
+          "title": "Scope",
+          "type": "string"
+        },
+        "scene_alignment": {
+          "const": "unverified",
+          "title": "Scene Alignment",
+          "type": "string"
+        }
+      },
+      "required": [
+        "unit",
+        "frame_id",
+        "axes",
+        "scope",
+        "scene_alignment"
+      ],
+      "title": "Coordinates",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "profile": {
+      "const": "cospace.pointcloud-composition/0.1",
+      "title": "Profile",
+      "type": "string"
+    },
+    "scene_manifest_sha256": {
+      "pattern": "^[a-f0-9]{64}$",
+      "title": "Scene Manifest Sha256",
+      "type": "string"
+    },
+    "sources": {
+      "items": {
+        "$ref": "#/$defs/CompositionSource"
+      },
+      "maxItems": 32,
+      "minItems": 1,
+      "title": "Sources",
+      "type": "array"
+    },
+    "origin": {
+      "items": {
+        "type": "number"
+      },
+      "maxItems": 3,
+      "minItems": 3,
+      "title": "Origin",
+      "type": "array"
+    },
+    "bounds_local": {
+      "items": {
+        "items": {
+          "type": "number"
+        },
+        "type": "array"
+      },
+      "maxItems": 2,
+      "minItems": 2,
+      "title": "Bounds Local",
+      "type": "array"
+    },
+    "unit_basis": {
+      "enum": [
+        "assumed_metre_for_flow_validation",
+        "verified_metre"
+      ],
+      "title": "Unit Basis",
+      "type": "string"
+    },
+    "voxel_size": {
+      "maximum": 100,
+      "minimum": 0,
+      "title": "Voxel Size",
+      "type": "number"
+    },
+    "selection_method": {
+      "enum": [
+        "all_points",
+        "first_source_then_lowest_ordinal_per_voxel"
+      ],
+      "title": "Selection Method",
+      "type": "string"
+    },
+    "matched_points": {
+      "exclusiveMinimum": 0,
+      "title": "Matched Points",
+      "type": "integer"
+    },
+    "retained_points": {
+      "exclusiveMinimum": 0,
+      "maximum": 1000000,
+      "title": "Retained Points",
+      "type": "integer"
+    },
+    "alignment_verified": {
+      "const": false,
+      "title": "Alignment Verified",
+      "type": "boolean"
+    },
+    "cloud": {
+      "$ref": "#/$defs/Cloud"
+    },
+    "coordinates": {
+      "$ref": "#/$defs/Coordinates"
+    },
+    "description": {
+      "maxLength": 500,
+      "minLength": 1,
+      "title": "Description",
+      "type": "string"
+    }
+  },
+  "required": [
+    "profile",
+    "scene_manifest_sha256",
+    "sources",
+    "origin",
+    "bounds_local",
+    "unit_basis",
+    "voxel_size",
+    "selection_method",
+    "matched_points",
+    "retained_points",
+    "alignment_verified",
+    "cloud",
+    "coordinates",
+    "description"
+  ],
+  "title": "Composition",
+  "type": "object"
+}

@@ -52,6 +52,16 @@ def facts(catalog, identity, space_id):
                 field('source_basis',receipt['basis'],'source.json','basis')
                 field('original_name',receipt['original_name'],'source.json','original_name')
                 field('source_description',receipt['description'],'source.json','description')
+            if doc.get('composition_path')=='composition.json':
+                from packages.data.pointcloud_composition import read_composition
+                load(Path(record['snapshot'])/'composition.json',doc['provenance']['source_manifest_sha256'],'composition.json',64_000)
+                receipt=read_composition(Path(record['snapshot']),doc)
+                field('composition_sources',[s['name'] for s in receipt['sources']],'composition.json','sources[].name')
+                for key in ('matched_points','retained_points','bounds_local','voxel_size'):
+                    field(key,receipt[key],'composition.json',key)
+                field('composition_unit_basis','仅流程验证假定米制，未核验' if receipt['unit_basis']=='assumed_metre_for_flow_validation' else '提供者声明已核验米制',
+                      'composition.json','unit_basis')
+                field('source_description',receipt['description'],'composition.json','description')
             result['roles'] = [{'role':'已有点云成果','use':'保留声明坐标，规范化为固定模型后派生双视图'}]
             result['limitations'] = ['来源与坐标由提供者声明，未独立复核', '未执行配准、SLAM或空闲推断']
         elif record['format'] in ('ros1_lidar_single_frame','ros1_lidar_multiframe_icp'):
@@ -99,5 +109,5 @@ def facts(catalog, identity, space_id):
         return result
     except FactsUnavailable:
         raise
-    except (ValueError, KeyError, TypeError, IndexError) as exc:
+    except (ValueError, KeyError, TypeError, IndexError, OSError) as exc:
         raise FactsUnavailable('input_evidence_invalid') from exc

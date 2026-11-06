@@ -71,7 +71,7 @@ def unpack(bundle,destination):
                         or stat.S_ISLNK(member.external_attr>>16)
                         or stat.S_IFMT(member.external_attr>>16) not in (0,stat.S_IFREG)):
                     raise UploadRejected('upload_unsafe_member')
-                if name not in ('input.json','tracking.json','snapshot/report.json','snapshot/sample.json','snapshot/sample.bag','snapshot/pointcloud.json','snapshot/cloud.ply','snapshot/source.json') and not re.fullmatch(r'snapshot/raw/[A-Za-z0-9_.-]+\.(pgm|ppm)',name):
+                if name not in ('input.json','tracking.json','snapshot/report.json','snapshot/sample.json','snapshot/sample.bag','snapshot/pointcloud.json','snapshot/cloud.ply','snapshot/source.json','snapshot/composition.json') and not re.fullmatch(r'snapshot/raw/[A-Za-z0-9_.-]+\.(pgm|ppm)',name):
                     raise UploadRejected('upload_unexpected_member')
                 if member.compress_type not in (zipfile.ZIP_STORED,zipfile.ZIP_DEFLATED):raise UploadRejected('upload_compression_unsupported')
                 seen.add(name.casefold());total+=member.file_size
@@ -96,6 +96,7 @@ def unpack(bundle,destination):
             expected={'input.json','snapshot/pointcloud.json','snapshot/cloud.ply'}
             pointcloud=json_file(destination/'snapshot/pointcloud.json')
             if pointcloud.get('source_receipt_path')=='source.json':expected.add('snapshot/source.json')
+            if pointcloud.get('composition_path')=='composition.json':expected.add('snapshot/composition.json')
         else:expected={'input.json','snapshot/sample.json','snapshot/sample.bag'}
         if {m.filename for m in infos}!=expected:raise UploadRejected('upload_members_mismatch')
         return format,total
