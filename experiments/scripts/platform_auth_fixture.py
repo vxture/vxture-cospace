@@ -6,7 +6,7 @@ import json
 import secrets
 import threading
 import time
-from urllib.parse import parse_qs, urlencode, urlsplit
+from urllib.parse import parse_qs, quote, urlencode, urlsplit
 from joserfc import jwt
 from joserfc.jwk import RSAKey
 
@@ -28,9 +28,11 @@ class MockAccounts:
         class Handler(BaseHTTPRequestHandler):
             def log_message(self, *args): pass  # Access logs must not retain callback/token material.
             def send(self, status, value=None, location=None):
+                if location and any(ord(char)<32 or ord(char)==127 for char in location):
+                    return self.send(400, {'error':'invalid_redirect'})
                 self.send_response(status)
                 self.send_header('Cache-Control', 'no-store')
-                if location: self.send_header('Location', location)
+                if location: self.send_header('Location', quote(location, safe=":/?#[]@!$&'()*+,;=%"))
                 self.send_header('Content-Type', 'application/json' if isinstance(value, dict) else 'text/html; charset=utf-8')
                 self.end_headers()
                 if value is not None: self.wfile.write((json.dumps(value) if isinstance(value, dict) else value).encode())
