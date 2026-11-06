@@ -1,0 +1,4 @@
+# Isolated offline tools only; not product/server dependencies.
+laspy==2.6.1
+lazrs==0.7.0
+numpy==2.2.6
