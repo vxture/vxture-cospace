@@ -34,7 +34,8 @@ class BusinessAccess:
         self.rp,self.policies,self.directory,self.jobs=rp,policies,directory,jobs
         self.subscriptions=subscriptions
         self.sources=SpaceSources(directory.root,registration_sources or {})
-        self.workspace_scenes=WorkspaceScenes(directory,policies,self.sources,workspace_config)
+        self.workspace_scenes=WorkspaceScenes(directory,policies,self.sources,workspace_config,
+            platform_access=subscriptions is not None)
         self.registration=PreviewRegistration(jobs.inputs,{}) if jobs.inputs else None
         self.consumer=None
         if consumer_config is not None:

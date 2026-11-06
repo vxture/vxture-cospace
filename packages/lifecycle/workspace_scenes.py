@@ -68,8 +68,10 @@ class CreateScene(BaseModel):
 
 
 class WorkspaceScenes:
-    def __init__(self, directory, policies, sources, config=None):
+    def __init__(self, directory, policies, sources, config=None, *, platform_access=False):
         self.directory, self.policies, self.sources = directory, policies, sources
+        # Set only by the authenticated business assembly, behind its C2 gate.
+        self.platform_access=platform_access
         self.runtime = directory.root.resolve().parent
         self.config = Path(config) if config else policies.path.parent/'workspace-scenes.json'
         self.required_marker = policies.path.parent/'.workspace-scenes-required'
@@ -109,12 +111,14 @@ class WorkspaceScenes:
 
     def context(self, principal):
         config, entry = self.allocation(principal)
-        can_create = bool(entry and entry.allow_create and
+        can_create = bool(self.platform_access and principal.workspace_owner or
+                          entry and entry.allow_create and
                           (principal.workspace_owner or principal.subject in entry.creator_subjects))
         digest = checksum({'configuration': config.model_dump() if config else None,
                            'source_catalog': self.sources.fingerprints,
-                           'scope': self.scope(principal), 'subject': principal.subject})
-        return {'profile': 'cospace.workspace-scenes-context/0.1', 'enabled': config is not None,
+                           'scope': self.scope(principal), 'subject': principal.subject,
+                           'platform_access':self.platform_access})
+        return {'profile': 'cospace.workspace-scenes-context/0.1', 'enabled': config is not None or self.platform_access,
                 'can_create': can_create, 'workspace_id': principal.workspace_id,
                 'context_sha256': digest, 'configuration_revision': config.revision if config else 0}
 
