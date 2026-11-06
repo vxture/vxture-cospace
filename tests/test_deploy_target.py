@@ -36,3 +36,6 @@ def test_registry_access_is_temporary_and_fallback_is_independent():
     assert 'for attempt in 1 2 3' in script
     assert 'login_registry ghcr.io' in script
     assert 'login_registry "$ACR_REGISTRY"' in script
+    deploy = (Path(__file__).resolve().parents[1] / 'deploy/deploy.sh').read_text()
+    assert '180s docker pull "$primary"' in deploy
+    assert '300s docker pull "$fallback"' in deploy
