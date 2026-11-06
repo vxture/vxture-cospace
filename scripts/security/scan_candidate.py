@@ -2,6 +2,7 @@
 from pathlib import Path
 import argparse
 import subprocess
+import sys
 import tempfile
 
 
@@ -18,6 +19,8 @@ def main():
     with tempfile.TemporaryDirectory(prefix='cospace-index-scan-') as temporary:
         prefix = Path(temporary).as_posix() + '/'
         subprocess.run(['git', 'checkout-index', '--all', '--prefix=' + prefix], check=True, cwd=root)
+        subprocess.run([sys.executable, str(root / 'scripts/security/expand_archives.py'),
+                        temporary, str(Path(temporary) / '.archive-inspection')], check=True)
         result = subprocess.run([
             'gitleaks', 'dir', temporary, '--config', str(root / '.gitleaks.toml'),
             '--max-archive-depth', '3', '--max-decode-depth', '5', '--ignore-gitleaks-allow',

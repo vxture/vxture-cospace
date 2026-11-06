@@ -149,7 +149,11 @@ class FilePackages(LocalPackages):
                 target.parent.mkdir(parents=True, exist_ok=True)
                 try:
                     stage.rename(target)
-                except FileExistsError:
+                except OSError as error:
+                    # Linux reports a populated destination as ENOTEMPTY;
+                    # Windows reports EEXIST. Other filesystem errors propagate.
+                    if error.errno not in (errno.EEXIST, errno.ENOTEMPTY):
+                        raise
                     # Identical prior orphan may be reused only after full fresh-source verification.
                     if verify(target, source) != receipt:
                         fail('content_corrupt', 'sealed directory differs from fixed input')

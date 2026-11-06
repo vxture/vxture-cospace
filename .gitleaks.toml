@@ -28,3 +28,10 @@ paths = [
   '''pnpm-lock\.yaml''',
   '''.*\.(png|jpg|jpeg|gif|webp|ico|woff2?|ttf|eot|pdf)$''',
 ]
+
+[[rules]]
+id = "linkedin-client-id"
+[[rules.allowlists]]
+description = "Reviewed design-ui source-map icon names, not a LinkedIn client ID"
+regexTarget = "match"
+regexes = ['''^LinkedinLogoIcon","ChatCircleIcon"$''']

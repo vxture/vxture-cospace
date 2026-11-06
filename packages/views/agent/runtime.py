@@ -1,6 +1,6 @@
 """R0 synthetic runtime contract. External fixed source required; no activation."""
 from pathlib import Path
-import os
+import ntpath
 import uuid
 
 from packages.data.imports import canonical, sha
@@ -95,7 +95,7 @@ def verify(root, source):
     for item in components:
         member = item['member']
         name = str(relative(member['path']))
-        if any(os.path.isreserved(part) for part in relative(name).parts):
+        if any(ntpath.isreserved(part) for part in relative(name).parts):
             fail('unsafe_path', 'reserved Windows member path')
         if name.casefold() in seen:
             fail('unsafe_path', 'duplicate or case-colliding member')
