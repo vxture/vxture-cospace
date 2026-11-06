@@ -20,6 +20,7 @@ from packages.data.input_coordinates import InputCoordinates, CoordinateChange, 
 from packages.data.input_routes import route
 from packages.data.input_facts import facts, FactsUnavailable
 from packages.data.input_preview import preview as input_preview,PreviewUnavailable
+from packages.data.scene_pointcloud_workspace import ScenePointcloudWorkspace,ComposeRegion,SceneCloudUnavailable,SceneCloudConflict,SceneCloudAuthorizationPending
 from packages.data.rgbd_input_preview import directory as rgbd_directory, frame as rgbd_frame
 from packages.construction.build_preview import preview as build_preview
 from packages.construction.build_process import read_process
@@ -30,9 +31,10 @@ from packages.service.public_errors import public_error
 
 
 class BusinessAccess:
-    def __init__(self, rp, policies, directory, jobs, registration_sources=None,workspace_config=None,consumer_config=None,subscriptions=None):
+    def __init__(self, rp, policies, directory, jobs, registration_sources=None,workspace_config=None,consumer_config=None,subscriptions=None,scene_pointcloud_config=None):
         self.rp,self.policies,self.directory,self.jobs=rp,policies,directory,jobs
         self.subscriptions=subscriptions
+        self.scene_pointclouds=ScenePointcloudWorkspace(jobs.inputs,scene_pointcloud_config) if jobs.inputs else None
         self.sources=SpaceSources(directory.root,registration_sources or {})
         self.workspace_scenes=WorkspaceScenes(directory,policies,self.sources,workspace_config,
             platform_access=subscriptions is not None)
@@ -88,6 +90,10 @@ class BusinessAccess:
             return {'principal':principal}
         if path=='/api/input-uploads' and method in ('GET','POST'):
             space(q.get('space_id'),'data.manage');return {'principal':principal}
+        if ((path=='/api/scene-pointclouds' or re.fullmatch(r'/api/scene-pointclouds/(tiles/t[0-9]{5}/[0-2]|compositions/compose-[a-f0-9]{24})',path)) and method in ('GET','HEAD')
+                or (path=='/api/scene-pointclouds/compositions' or re.fullmatch(r'/api/scene-pointclouds/compositions/compose-[a-f0-9]{24}/register',path)) and method=='POST'):
+            space(body.get('space_id') if method=='POST' else q.get('space_id'),'data.manage')
+            return {'principal':principal}
         if path=='/api/build-preview' and method in ('GET','HEAD'):
             wanted=q.get('space_id');space(wanted,'build.run')
             artifact('candidate:'+str(q.get('candidate_id','')),'build.run',wanted)
@@ -279,6 +285,50 @@ class BusinessAccess:
             revision,policy=await run_in_threadpool(self.policies.load)
             context=await run_in_threadpool(self.authorize,request,session,policy,body)
             request.state.platform_principal=context['principal'];request.state.policy_revision=revision
+            if path.startswith('/api/scene-pointclouds'):
+                from fastapi.responses import Response
+                if self.scene_pointclouds is None:return deny(503,'input_catalog_not_configured')
+                try:
+                    if request.method=='POST':
+                        if request.query_params:return deny(422,'scene_cloud_invalid_request')
+                        completing=re.fullmatch(r'/api/scene-pointclouds/compositions/(compose-[a-f0-9]{24})/register',path)
+                        if completing:
+                            if set(body)!={'space_id'}:return deny(422,'scene_cloud_invalid_request')
+                            wanted=body['space_id']
+                        else:
+                            compose=ComposeRegion.model_validate(body);wanted=compose.space_id
+                        def reauthorize():
+                            try:
+                                current,_=self.rp.resolve(rpsid,active=False,require_access=True)
+                                if current is not None:self.require_subscription(current)
+                            except (IdentityUnavailable,SubscriptionUnavailable):
+                                raise SceneCloudAuthorizationPending() from None
+                            except (IdentityRejected,SubscriptionDenied):
+                                raise PermissionError() from None
+                            if current is None:raise PermissionError()
+                            _,fresh_policy=self.policies.load()
+                            principal=self.rp.verifier.verify(current['access_token'])
+                            if principal.subject!=context['principal'].subject:raise PermissionError()
+                            PlatformResourceAccess(self.directory,self.jobs,fresh_policy).space(principal,wanted,'data.manage')
+                        if completing:
+                            result=await run_in_threadpool(self.scene_pointclouds.complete,wanted,completing[1],context['principal'].subject,reauthorize)
+                        else:result=await run_in_threadpool(self.scene_pointclouds.start,compose,context['principal'].subject,reauthorize)
+                        return JSONResponse(result,status_code=202,headers={'Cache-Control':'no-store'})
+                    tile_path=re.fullmatch(r'/api/scene-pointclouds/tiles/(t[0-9]{5})/([0-2])',path)
+                    expected={'space_id','index_sha256'} if tile_path else {'space_id'}
+                    if set(request.query_params)!=expected:return deny(422,'scene_cloud_invalid_request')
+                    wanted=request.query_params['space_id']
+                    if tile_path:
+                        raw=await run_in_threadpool(self.scene_pointclouds.tile,wanted,tile_path[1],int(tile_path[2]),request.query_params['index_sha256'])
+                        return Response(raw,media_type='application/octet-stream',headers={'Cache-Control':'no-store'})
+                    if path=='/api/scene-pointclouds':result=await run_in_threadpool(self.scene_pointclouds.directory,wanted)
+                    else:result=await run_in_threadpool(self.scene_pointclouds.status,wanted,path.rsplit('/',1)[-1])
+                    return JSONResponse(result,headers={'Cache-Control':'no-store'})
+                except ValidationError:return deny(422,'scene_cloud_invalid_request')
+                except SceneCloudAuthorizationPending:return deny(503,'accounts_confirmation_required')
+                except SceneCloudConflict as exc:return deny(409,str(exc))
+                except PermissionError:raise
+                except (SceneCloudUnavailable,ValueError,KeyError,OSError,TypeError):return deny(409,'scene_cloud_evidence_unavailable')
             shared=getattr(self.jobs,'ontology_store',None)
             rules=WorkspaceOntologies(shared.root if shared else self.jobs.root.parent/'preview-ontologies',context['principal'])
             request.state.ontology_store=rules

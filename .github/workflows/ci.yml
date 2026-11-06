@@ -34,6 +34,8 @@ jobs:
       - run: npm install --global pnpm@10.32.1
       - run: pnpm --dir apps/workbench install --frozen-lockfile
       - run: pnpm --dir apps/workbench build
+      - name: Scene display planner, tile integrity and bounded cache tests
+        run: node --experimental-strip-types --test tests/frontend/scene-cloud-data.test.mjs
       - uses: actions/setup-python@v6
         with:
           python-version: '3.14'

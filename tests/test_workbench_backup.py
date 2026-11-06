@@ -41,6 +41,29 @@ def test_backup_verify_and_original_path_restore_preserve_every_byte(runtime):
     assert Path(json.loads((root/'runtime/preview-inputs/input-aaaaaaaaaaaaaaaa.json').read_bytes())['snapshot']).exists()
 
 
+@pytest.mark.parametrize('external',[False,True])
+def test_scene_cloud_binding_backup_is_self_contained(runtime,external):
+    from test_scene_pointcloud_workspace import assets_at
+    root,output=runtime
+    location=root.parent/'external-cloud' if external else root/'runtime/preview-inputs/full-cloud'
+    config,_,_,_=assets_at(location,'space-'+'1'*16)
+    (root/'setup/scene-pointclouds.json').write_bytes(config.read_bytes())
+    if external:
+        with pytest.raises(ValueError,match='external_scene_cloud_assets'):save(runtime)
+        assert not output.exists()
+    else:
+        before=tree(root);result=save(runtime)
+        root.rename(root.with_name('before-restore'))
+        assert restore(output,root,result['sha256'])['status']=='passed'
+        assert tree(root)==before
+
+
+def test_unfinished_scene_composition_blocks_backup(runtime):
+    root,_=runtime;job=root/'runtime/preview-inputs/scene-compositions/compose-test/job.json'
+    job.parent.mkdir(parents=True);job.write_text('{"state":"running"}')
+    with pytest.raises(ValueError,match='unfinished_composition'):save(runtime)
+
+
 def test_running_service_and_second_start_block_backup(runtime):
     root,output=runtime
     with service_guard(root/'runtime'):

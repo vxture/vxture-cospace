@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "SceneBinding": {
+      "additionalProperties": false,
+      "properties": {
+        "space_id": {
+          "pattern": "^space-[a-f0-9]{16}$",
+          "title": "Space Id",
+          "type": "string"
+        },
+        "root": {
+          "minLength": 1,
+          "title": "Root",
+          "type": "string"
+        },
+        "scene_sha256": {
+          "pattern": "^[a-f0-9]{64}$",
+          "title": "Scene Sha256",
+          "type": "string"
+        },
+        "tiles_root": {
+          "minLength": 1,
+          "title": "Tiles Root",
+          "type": "string"
+        },
+        "index_sha256": {
+          "pattern": "^[a-f0-9]{64}$",
+          "title": "Index Sha256",
+          "type": "string"
+        }
+      },
+      "required": [
+        "space_id",
+        "root",
+        "scene_sha256",
+        "tiles_root",
+        "index_sha256"
+      ],
+      "title": "SceneBinding",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "profile": {
+      "const": "cospace.scene-pointcloud-bindings/0.1",
+      "title": "Profile",
+      "type": "string"
+    },
+    "bindings": {
+      "items": {
+        "$ref": "#/$defs/SceneBinding"
+      },
+      "maxItems": 1000,
+      "title": "Bindings",
+      "type": "array"
+    }
+  },
+  "required": [
+    "profile",
+    "bindings"
+  ],
+  "title": "SceneCloudConfig",
+  "type": "object"
+}

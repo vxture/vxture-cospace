@@ -43,3 +43,5 @@
 新增[合成检查任务v0.1](check-job-v0.1.md)及其[Schema](check-job-v0.1.schema.json)，用于固定输入检查、单次attempt及报告追溯，不升级空间候选、真值或服务发布契约。
 
 新增[任务只读接口v0.1](job-reading-v0.1.md)，含分页、详情、输入及报告投影；与空间发布消费的有效性门禁分别管理。
+
+新增[场景点云工作区 v0.1](scene-pointcloud-workspace-v0.1.md)，描述按场景授权的显示分块、区域派生及可续登记任务；绑定和区域请求分别有运行时同步 Schema。

@@ -45,7 +45,7 @@ def safe_name(name):
 def business_member(name):
     # Retain retired seat audit files in existing backups; runtime no longer uses them.
     parts=PurePosixPath(name).parts
-    if (parts[0]=='setup' and name not in ('setup/sources.json','setup/workspace-scenes.json','setup/consumer-access.json')
+    if (parts[0]=='setup' and name not in ('setup/sources.json','setup/workspace-scenes.json','setup/consumer-access.json','setup/scene-pointclouds.json')
             or parts[0]=='policy' and name not in ('policy/space-policy.sqlite3','policy/platform-events.sqlite3','policy/product-seats.sqlite3','policy/.workspace-scenes-required')
             or parts[0]=='runtime' and not (name=='runtime/preview-lifecycle.sqlite3'
                 or len(parts)>2 and parts[1] in RUNTIME_DIRS)):
@@ -85,6 +85,19 @@ def validate_runtime(root,original_root=None):
     from packages.infrastructure.space_policy_store import SpacePolicyStore
     Config.model_validate(sources)
     WorkspaceSceneConfig.model_validate_json((root/'setup/workspace-scenes.json').read_bytes())
+    cloud_config=root/'setup/scene-pointclouds.json'
+    if cloud_config.exists():
+        from packages.data.scene_pointcloud_workspace import SceneCloudConfig
+        parsed=SceneCloudConfig.model_validate_json(cloud_config.read_bytes())
+        if len({b.space_id for b in parsed.bindings})!=len(parsed.bindings):raise ValueError('backup_duplicate_scene_cloud_binding')
+        for binding in parsed.bindings:
+            for location,member,expected in ((binding.root,'scene.json',binding.scene_sha256),
+                                             (binding.tiles_root,'index.json',binding.index_sha256)):
+                path=Path(location)
+                if not path.is_absolute() or not path.resolve().is_relative_to(original_root/'runtime/preview-inputs'):
+                    raise ValueError('backup_external_scene_cloud_assets')
+                saved=root/path.resolve().relative_to(original_root)/member
+                if not saved.is_file() or digest(saved)!=expected:raise ValueError('backup_scene_cloud_assets_changed')
     consumer=root/'setup/consumer-access.json'
     if consumer.exists():
         from packages.service.online_consumer import ConsumerConfig
@@ -111,6 +124,9 @@ def validate_runtime(root,original_root=None):
         for p in (root/'runtime/preview-builds').glob(pattern):
             if json.loads(p.read_bytes()).get('state') in ('queued','running'):
                 raise ValueError('backup_unfinished_build_restart_and_resolve_first')
+    for p in (root/'runtime/preview-inputs/scene-compositions').glob('*/job.json'):
+        if json.loads(p.read_bytes()).get('state') in ('queued','running'):
+            raise ValueError('backup_unfinished_composition_restart_and_resolve_first')
     for p in root.rglob('*.sqlite3'):
         with closing(sqlite3.connect(p.resolve().as_uri()+'?mode=ro&immutable=1',uri=True)) as db:
             if db.execute('PRAGMA quick_check').fetchall()!=[('ok',)]:raise ValueError('backup_database_integrity')

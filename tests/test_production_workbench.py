@@ -11,6 +11,7 @@ def test_explicit_bootstrap_empty_permissions_and_no_overwrite(tmp_path):
     _,policy=SpacePolicyStore(business/'policy').load()
     assert not policy.bindings and not policy.grants
     assert json.loads((business/'setup/workspace-scenes.json').read_bytes())['workspaces']==[]
+    assert json.loads((business/'setup/scene-pointclouds.json').read_bytes())['bindings']==[]
     validate_runtime(business)
     with pytest.raises(ValueError,match='empty_business_root'):initialize(business)
     assert roots(business,tmp_path/'state')==(business,tmp_path/'state')
