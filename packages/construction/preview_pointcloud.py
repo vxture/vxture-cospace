@@ -18,6 +18,9 @@ def build(snapshot,output,identity,binding=None,*,batch_ref=None):
     source={'format':FORMAT,'snapshot_sha256':checked['snapshot_sha256'],'cloud_sha256':checked['cloud_sha256'],
             'source_scope':'declared_existing_pointcloud','provenance':doc['provenance']}
     if doc.get('source_receipt_path'):source['source_receipt']=source_receipt(snapshot,doc)
+    if doc.get('composition_path'):
+        from packages.data.pointcloud_composition import read_composition
+        source['composition']=read_composition(snapshot,doc)
     if binding is not None:source['input_binding']=binding
     if batch_ref:source['batch_ref']=batch_ref
     metadata={'id':identity,'label':binding['label'] if binding else '已有点云',

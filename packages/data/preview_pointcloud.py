@@ -45,6 +45,7 @@ class Manifest(BaseModel):
     coordinates: Coordinates
     provenance: Provenance
     source_receipt_path: Literal['source.json'] | None = None
+    composition_path: Literal['composition.json'] | None = None
 
 
 class SourceReceipt(BaseModel):
@@ -98,6 +99,8 @@ def manifest(snapshot):
     if len(set(axes))!=3 or any(not re.fullmatch(r'[A-Za-z][A-Za-z0-9_-]{0,39}',v) for v in axes):
         raise ValueError('pointcloud_axes_invalid')
     source_receipt(root,doc)
+    from packages.data.pointcloud_composition import read_composition
+    read_composition(root,doc)
     return doc,hashlib.sha256(raw).hexdigest()
 
 

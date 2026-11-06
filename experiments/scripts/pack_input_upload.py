@@ -23,6 +23,8 @@ def pack(snapshot,tracking,output,format=None):
         files=[(snapshot/'pointcloud.json','snapshot/pointcloud.json'),(snapshot/'cloud.ply','snapshot/cloud.ply')]
         if json.loads((snapshot/'pointcloud.json').read_bytes()).get('source_receipt_path')=='source.json':
             files.append((snapshot/'source.json','snapshot/source.json'))
+        if json.loads((snapshot/'pointcloud.json').read_bytes()).get('composition_path')=='composition.json':
+            files.append((snapshot/'composition.json','snapshot/composition.json'))
     else:files=[(snapshot/'sample.json','snapshot/sample.json'),(snapshot/'sample.bag','snapshot/sample.bag')]
     if len(files)+1>MAX_FILES or sum(p.stat().st_size for p,_ in files)>MAX_EXPANDED-1024:raise ValueError('upload_package_budget')
     with output.open('xb') as stream,zipfile.ZipFile(stream,'w',compression=zipfile.ZIP_DEFLATED,compresslevel=3) as archive:
