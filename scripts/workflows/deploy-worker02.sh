@@ -19,10 +19,25 @@ helper="/tmp/cospace-deploy-$GITHUB_RUN_ID.sh"
 cat > "$RUNNER_TEMP/cospace-deploy.sh" <<'REMOTE'
 set -euo pipefail
 test "$(hostname -s)" = vx-worker-02
-printf '%s' "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin
-printf '%s' "$ACR_PASSWORD" | docker login "$ACR_REGISTRY" -u "$ACR_USERNAME" --password-stdin
+umask 077
+export DOCKER_CONFIG
+DOCKER_CONFIG="$(mktemp -d /tmp/cospace-registry.XXXXXXXX)"
+cleanup() { rm -rf -- "$DOCKER_CONFIG"; rm -f -- "$0"; }
+trap cleanup EXIT
+login_registry() {
+  local registry="$1" username="$2" password="$3"
+  for attempt in 1 2 3; do
+    if printf '%s' "$password" | docker login "$registry" -u "$username" --password-stdin; then return 0; fi
+    sleep 2
+  done
+  echo "Registry authentication unavailable; image pull will try the other registry" >&2
+  return 0
+}
+# A fallback registry outage must not block a working primary registry. Pulls
+# still fail closed if neither registry can supply the requested revision.
+login_registry ghcr.io "$GHCR_USERNAME" "$GHCR_TOKEN"
+login_registry "$ACR_REGISTRY" "$ACR_USERNAME" "$ACR_PASSWORD"
 bash /srv/md0/cospace/deploy/deploy.sh
-rm -- "$0"
 REMOTE
 scp -i ~/.ssh/deploy_key -P "$port" -o StrictHostKeyChecking=yes "$RUNNER_TEMP/cospace-deploy.sh" "$remote:$helper"
 cmd=''

@@ -27,3 +27,15 @@ def test_deploy_checks_private_state_without_relaxing_permissions():
     assert 'sudo -n test -f "$STACK_ROOT/etc/secrets/$key"' in script
     assert 'sudo -n test -f "$STACK_ROOT/data/business/setup/workspace-scenes.json"' in script
     assert 'chmod' not in script
+
+
+def test_registry_access_is_temporary_and_fallback_is_independent():
+    script = (Path(__file__).resolve().parents[1] / 'scripts/workflows/deploy-worker02.sh').read_text()
+    assert 'DOCKER_CONFIG="$(mktemp -d /tmp/cospace-registry.XXXXXXXX)"' in script
+    assert 'trap cleanup EXIT' in script
+    assert 'for attempt in 1 2 3' in script
+    assert 'login_registry ghcr.io' in script
+    assert 'login_registry "$ACR_REGISTRY"' in script
+    deploy = (Path(__file__).resolve().parents[1] / 'deploy/deploy.sh').read_text()
+    assert '180s docker pull "$primary"' in deploy
+    assert '300s docker pull "$fallback"' in deploy

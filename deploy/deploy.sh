@@ -16,9 +16,9 @@ for key in client-secret session-key webhook-secret; do
 done
 sudo -n test -f "$STACK_ROOT/data/business/setup/workspace-scenes.json"
 primary="ghcr.io/$GHCR_NAMESPACE/cospace-app:$IMAGE_TAG"
-if ! docker pull "$primary"; then
+if ! timeout --kill-after=10s 180s docker pull "$primary"; then
   fallback="$ACR_REGISTRY/$ACR_NAMESPACE/cospace-app:$IMAGE_TAG"
-  docker pull "$fallback"
+  timeout --kill-after=10s 300s docker pull "$fallback"
   docker tag "$fallback" "$primary"
 fi
 revision="$(docker image inspect "$primary" --format '{{index .Config.Labels "org.opencontainers.image.revision"}}')"
