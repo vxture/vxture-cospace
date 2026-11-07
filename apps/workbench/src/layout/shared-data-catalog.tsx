@@ -9,7 +9,7 @@ type Item={key:string;record_id:string;space_id:string;space_name:string;categor
 type Report={profile:string;workspace_id:string;space_id:string|null;status:string;issues:{source:string;space_id:string|null}[];spaces:{id:string;name:string}[];items:Item[];counts:Record<string,number>;total:number;offset:number;next_offset:number|null;observed_at:string};
 const labels:Record<string,string>={all:'全部数据',original:'原始与输入',process:'过程数据',result:'成果数据'};
 const kinds:Record<string,string>={input:'登记输入',attachment:'配套原文件',batch:'采集批次',preflight:'最近预检记录',job:'构建任务',candidate:'模型候选',human_view:'人视图',agent_view:'智能体视图',publication:'固定发布',offline_package:'离线交付入口'};
-const states:Record<string,string>={registered:'已登记',stored_original:'已保存原文件',draft:'整理中',sealed:'已封存',disabled:'已停用',passed:'检查通过',failed:'失败',registration_changed:'登记已变化',queued:'已排队',running:'运行中',interrupted:'已中断',succeeded:'执行成功',candidate_recorded:'已有候选记录',view_declared:'已声明视图',publication_recorded:'已有发布记录',export_on_request:'按需导出，未生成',unknown:'状态待核查'};
+const states:Record<string,string>={registered:'已登记',stored_original:'已保存原文件',draft:'整理中',sealed:'已封存',disabled:'已停用',passed:'检查通过',failed:'失败',registration_changed:'登记已变化',queued:'已排队',running:'运行中',interrupted:'已中断',views_failed:'视图待恢复',succeeded:'执行成功',candidate_recorded:'已有候选记录',view_declared:'已声明视图',publication_recorded:'已有发布记录',export_on_request:'按需导出，未生成',unknown:'状态待核查'};
 export function SharedDataCatalog(){
  const target=useRecordNavigation(),platform=usePlatformSession();
  const hash=location.hash,params=new URLSearchParams(hash.split('?')[1]||'');

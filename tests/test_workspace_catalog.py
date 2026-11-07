@@ -56,6 +56,16 @@ def test_failed_task_is_process_record_not_candidate(secured):
     assert 'private filesystem detail' not in json.dumps(items)
 
 
+def test_view_recovery_is_not_unknown_or_a_finished_candidate(secured):
+    _, client, _, _, jobs, _, spaces, *_ = secured
+    sign_in(secured,'usr_engineer')
+    root=jobs.root/'build-view-recovery';root.mkdir()
+    (root/'job.json').write_text(json.dumps({'id':root.name,'space_id':spaces[0]['id'],
+        'project_id':spaces[0]['project_id'],'state':'views_failed'}))
+    rows=[i for i in client.get('/api/data-catalog').json()['items'] if i['record_id']==root.name]
+    assert len(rows)==1 and rows[0]['kind']=='job' and rows[0]['state']=='views_failed'
+
+
 def test_filters_pagination_validation_and_partial_failure(secured):
     _, client, _, _, jobs, _, spaces, *_ = secured
     sign_in(secured, 'usr_engineer')

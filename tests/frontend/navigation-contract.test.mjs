@@ -4,7 +4,7 @@ import {moduleLinkFromHash,recordLinkFromHash,sceneLinkFromHash} from '../../app
 import {moduleNames,moduleScopes} from '../../apps/workbench/src/layout/product-navigation.ts';
 
 test('all module switches preserve only scene context, including shared support filters',()=>{
- const source='#build?space=scene-a&tab=tasks&input=input-a&batch=batch-a&job=job-a&publication=old&artifact=candidate-a&from=data&ontology_id=rule-a&ontology_version=1&ontology_sha256=abc';
+ const source='#build?space=scene-a&tab=tasks&input=input-a&check=12&batch=batch-a&job=job-a&publication=old&artifact=candidate-a&from=data&ontology_id=rule-a&ontology_version=1&ontology_sha256=abc';
  for(const route of Object.keys(moduleNames))assert.equal(moduleLinkFromHash(route,source),`#${route}?space=scene-a`);
 });
 
@@ -35,7 +35,7 @@ test('URL context remains tab-local, encoded and independent of global last-scen
 
 
 test('scene selection preserves valid capabilities and clears every old record',()=>{
- const source='#build?space=old&tab=tasks&job=old&input=old&batch=old&publication=old';
+ const source='#build?space=old&tab=tasks&job=old&input=old&check=12&batch=old&publication=old';
  assert.equal(sceneLinkFromHash('build','next',source),'#build?space=next&tab=tasks');
  assert.equal(sceneLinkFromHash('association','next',source),'#association?space=next');
  assert.equal(sceneLinkFromHash('build','',source),'#build?space=&tab=tasks');

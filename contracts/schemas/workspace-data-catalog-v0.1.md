@@ -15,14 +15,14 @@
 | original | input | 既有登记与说明；保留输入ID，定位场景资料详情。已有模型作为构建输入时仍在本分类，界面称“原始与输入”，不伪称传感器原始采集 |
 | original | attachment | 场景配套原文件记录；定位该场景配套资料列表，再选择具体原文件 |
 | process | batch | 既有封存／草稿／停用批次及其ID，定位该批次 |
-| process | preflight | 最新保存的预检证据；投影 record_id 为 input_id@sequence，定位原输入；登记变化标 registration_changed，不重新预检 |
+| process | preflight | 最新保存的预检证据；投影 record_id 为 input_id@sequence，通过check固定序号定位原输入的历史记录；登记变化标 registration_changed，不重新预检 |
 | process | job | 直接读取保存 job.json，含运行中、失败和中断；不调用 jobs.list/poll；定位原任务 |
 | result | candidate | succeeded 任务的候选记录声明，不读几何或声称快照可用；定位既有场景版本详情 |
 | result | human_view / agent_view | 同源 model.json 中的视图声明；保留其模型ID及父级定位，key 用 kind 区分，不复制文件或构造新业务身份 |
 | result | publication | 固定发布保存记录；定位原固定发布。记录存在不等于当前分发可用 |
 | result | offline_package | 有导出权限的发布交付入口，state=export_on_request；不是已生成包或导出历史，点击进入原服务页面执行原门禁 |
 
-本批查询原始／过程／成果的现有可访问对象。未持久化的算法中间产物、完整预检历史、点云显示分块的全量资产化、跨场景复用写入、导出历史和消费设备状态未新增。IFC 原文件可作为配套资料管理；IFC 构件解析结果仍在原关联工作面，目录不将其伪造成已登记构建输入。
+本批查询原始／过程／成果的现有可访问对象。未持久化的算法中间产物、点云显示分块的全量资产化、跨场景复用写入、导出历史和消费设备状态未新增。N12已补资料详情的[完整预检历史](preflight-history-v0.1.md)，目录仍仅索引最近一条。IFC 原文件可作为配套资料管理；IFC 构件解析结果仍在原关联工作面，目录不将其伪造成已登记构建输入。
 
 ## 响应与完整性
 
