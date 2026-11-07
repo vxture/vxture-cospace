@@ -5,7 +5,7 @@ import sqlite3
 import zipfile
 from pydantic import ValidationError
 from packages.lifecycle.workspace_scenes import WorkspaceScenes,CreateScene,WorkspaceScenesConflict,WorkspaceScenesUnavailable
-from urllib.parse import unquote
+from urllib.parse import unquote,quote
 from fastapi import Request
 from fastapi.responses import JSONResponse
 from starlette.concurrency import run_in_threadpool
@@ -23,6 +23,7 @@ from packages.data.input_facts import facts, FactsUnavailable
 from packages.data.input_preview import preview as input_preview,PreviewUnavailable
 from packages.data.scene_pointcloud_workspace import ScenePointcloudWorkspace,ComposeRegion,SceneCloudUnavailable,SceneCloudConflict,SceneCloudAuthorizationPending
 from packages.data.ifc_workspace import IfcWorkspace
+from packages.data.scene_attachments import SceneAttachments,AttachmentRejected,MAX_BYTES as MAX_ATTACHMENT_BYTES,metadata as attachment_metadata
 from packages.data.rgbd_input_preview import directory as rgbd_directory, frame as rgbd_frame
 from packages.construction.build_preview import preview as build_preview
 from packages.construction.build_process import read_process
@@ -38,6 +39,7 @@ class BusinessAccess:
         self.subscriptions=subscriptions
         self.scene_pointclouds=ScenePointcloudWorkspace(jobs.inputs,scene_pointcloud_config) if jobs.inputs else None
         self.scene_ifc=IfcWorkspace(directory,jobs,scene_ifc_config)
+        self.attachments=SceneAttachments(jobs.inputs) if jobs.inputs else None
         self.sources=SpaceSources(directory.root,registration_sources or {})
         self.workspace_scenes=WorkspaceScenes(directory,policies,self.sources,workspace_config,
             platform_access=subscriptions is not None)
@@ -92,6 +94,8 @@ class BusinessAccess:
             if method=='POST' and not principal.workspace_owner:raise PermissionError()
             return {'principal':principal}
         if path=='/api/input-uploads' and method in ('GET','POST'):
+            space(q.get('space_id'),'data.manage');return {'principal':principal}
+        if (path=='/api/scene-attachments' or re.fullmatch(r'/api/scene-attachments/attachment-[a-f0-9]{16}',path)) and method in ('GET','HEAD','POST'):
             space(q.get('space_id'),'data.manage');return {'principal':principal}
         if path in ('/api/scene-ifc','/api/scene-ifc/element') and method in ('GET','HEAD'):
             space(q.get('space_id'),'association.edit');return {'principal':principal}
@@ -276,6 +280,50 @@ class BusinessAccess:
                     try:result=await run_in_threadpool(InputUploads(self.jobs.inputs).register,upload,
                         request.query_params['space_id'],request.query_params['label'],context['principal'].subject)
                     except ImportError:return deny(503,'registration_adapter_unavailable')
+                return JSONResponse(result,status_code=201 if result['created'] else 200,headers={'Cache-Control':'no-store'})
+            attachment_path=re.fullmatch(r'/api/scene-attachments/(attachment-[a-f0-9]{16})',path)
+            if (path=='/api/scene-attachments' or attachment_path) and request.method in ('GET','HEAD','POST'):
+                revision,policy=await run_in_threadpool(self.policies.load)
+                context=await run_in_threadpool(self.authorize,request,session,policy,{})
+                request.state.platform_principal=context['principal'];request.state.policy_revision=revision
+                if self.attachments is None:return deny(503,'input_catalog_not_configured')
+                if request.method in ('GET','HEAD'):
+                    if attachment_path:
+                        if set(request.query_params)!={'space_id'}:return deny(422,'attachment_request_invalid')
+                        try:
+                            record,raw=await run_in_threadpool(self.attachments.download,request.query_params['space_id'],attachment_path[1])
+                        except (AttachmentRejected,OSError,ValueError,TypeError):return deny(409,'attachment_unavailable')
+                        from fastapi.responses import Response
+                        return Response(raw if request.method!='HEAD' else b'',media_type='application/octet-stream',headers={
+                            'Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Content-Security-Policy':"sandbox; default-src 'none'",
+                            'Content-Disposition':"attachment; filename=reference; filename*=UTF-8''"+quote(record['name'],safe=''),
+                            'Content-Length':str(len(raw))})
+                    if set(request.query_params)!={'space_id'}:return deny(422,'attachment_request_invalid')
+                    try:result=await run_in_threadpool(self.attachments.list,request.query_params['space_id'])
+                    except (AttachmentRejected,OSError,ValueError,TypeError):return deny(409,'attachment_unavailable')
+                    return JSONResponse({'profile':'cospace.scene-attachments/0.1','space_id':request.query_params['space_id'],'attachments':result},headers={'Cache-Control':'no-store'})
+                if attachment_path or set(request.query_params)!={'space_id','name'}:return deny(422,'attachment_metadata_invalid')
+                try:attachment_metadata(request.query_params['space_id'],request.query_params['name'])
+                except AttachmentRejected:return deny(422,'attachment_metadata_invalid')
+                length=request.headers.get('content-length')
+                if length is not None and (not length.isdigit() or not 0<int(length)<=MAX_ATTACHMENT_BYTES):return deny(413,'attachment_size_budget')
+                import tempfile
+                from pathlib import Path
+                staging=self.jobs.inputs.root/'.upload-staging';staging.mkdir(exist_ok=True)
+                with tempfile.TemporaryDirectory(dir=staging,prefix='attachment-') as temporary:
+                    upload=Path(temporary)/'original';received=0
+                    with upload.open('xb') as stream:
+                        async for chunk in request.stream():
+                            received+=len(chunk)
+                            if received>MAX_ATTACHMENT_BYTES:return deny(413,'attachment_size_budget')
+                            await run_in_threadpool(stream.write,chunk)
+                    current,_=await run_in_threadpool(self.rp.resolve,rpsid,active=False,require_access=True)
+                    if current is None:return deny(401,'authentication_required')
+                    await run_in_threadpool(self.require_subscription,current)
+                    revision,policy=await run_in_threadpool(self.policies.load)
+                    context=await run_in_threadpool(self.authorize,request,current,policy,{})
+                    try:result=await run_in_threadpool(self.attachments.register,upload,request.query_params['space_id'],request.query_params['name'],context['principal'].subject)
+                    except AttachmentRejected:return deny(409,'attachment_rejected')
                 return JSONResponse(result,status_code=201 if result['created'] else 200,headers={'Cache-Control':'no-store'})
             raw=await request.body() if request.method not in ('GET','HEAD') else b''
             if len(raw)>1_048_576:return deny(413,'request_too_large')

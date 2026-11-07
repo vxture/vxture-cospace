@@ -20,6 +20,7 @@ import {AcquisitionBatches} from './acquisition-batches';
 import {InputBatchLinks,VersionSource,useSceneHistory} from './scene-history';
 import {ArtifactImpact} from './artifact-impact';
 import {ArtifactControl} from './artifact-control';
+import {SceneAttachments,AttachmentSummary,type Attachment} from './scene-attachments';
 import {realScreenHref} from './real-space-data';
 import './data-workspace.css';
 import './module-workspace.css';
@@ -31,7 +32,7 @@ type Kind='input'|'candidate'|'publication'|'offline_package';
 type Artifact={key:string;kind:Kind;record_id:string;label:string;classification:string;state:string;created_at:string|null;integrity:string;problems:string[];resources:Record<string,string>;selected:boolean;format?:string;lifecycle_state?:string;model_manifest_sha256?:string};
 type Relation={from:string;to:string|null;relation:string;status:string};
 type Catalog={space_id?:string;profile:string;items:Artifact[];relations:Relation[];observed_at:string};
-type View='inputs'|'batches'|'versions'|'lineage'|'pointcloud';
+type View='inputs'|'batches'|'versions'|'lineage'|'pointcloud'|'references';
 const kindNames:Record<Kind,string>={input:'资料',candidate:'模型版本',publication:'固定发布',offline_package:'离线交付'};
 const relationNames:Record<string,string>={built_from:'构建输入',annotated_from:'修订基线',published_from:'发布来源',sourced_from:'输入来源',exported_from:'离线导出'};
 const relationStates:Record<string,string>={matched:'绑定一致',missing:'来源缺失',mismatch:'绑定不一致',unrecorded:'未记录'};
@@ -50,19 +51,21 @@ function Availability({item}:{item?:Artifact}){
 
 export function InputDirectory(){
  const target=useRecordNavigation(),platform=usePlatformSession();
+ const [reference,setReference]=useState<Attachment|null>(null);
  const [spaces,setSpaces]=useState<Space[]>([]),[directoryError,setDirectoryError]=useState(''),[directoryBusy,setDirectoryBusy]=useState(true);
  const [savedEntries,setEntries]=useState<Entry[]>([]),[savedCatalog,setCatalog]=useState<Catalog|null>(null),[busy,setBusy]=useState(false),[error,setError]=useState('');
  const [search,setSearch]=useState(''),[spaceSearch,setSpaceSearch]=useState(''),[filter,setFilter]=useState('all'),[revision,setRevision]=useState(0),[directoryRevision,setDirectoryRevision]=useState(0),[notice,setNotice]=useState('');
  const [importOpen,setImportOpen]=useState(false),[intakeRevision,setIntakeRevision]=useState(0),[historyRevision,setHistoryRevision]=useState(0);
  const [sidebar,setSidebar]=useState(()=>window.innerWidth>620),[tools,setTools]=useState<'sources'|null>(null),[detailMode,setDetailMode]=useState<'summary'|'impact'|'control'>('summary');
- const view:View=target.tab==='pointcloud'?'pointcloud':target.tab==='versions'||target.tab==='artifacts'?'versions':target.tab==='batches'||target.batch&&!target.tab?'batches':target.tab==='lineage'||target.artifact&&!target.input?'lineage':'inputs';
+ const view:View=target.tab==='references'?'references':target.tab==='pointcloud'?'pointcloud':target.tab==='versions'||target.tab==='artifacts'?'versions':target.tab==='batches'||target.batch&&!target.tab?'batches':target.tab==='lineage'||target.artifact&&!target.input?'lineage':'inputs';
  const scene=spaces.find(s=>s.id===target.space);
  const catalog=savedCatalog?.space_id===target.space?savedCatalog:null;
  const entries=catalog?savedEntries:[];
  const selectionKey=target.input?`input:${target.input}`:target.artifact;
  const selectedEntry=entries.find(e=>`input:${e.id}`===selectionKey);
  const selectedArtifact=catalog?.items.find(a=>a.key===selectionKey);
- const hasSelection=view!=='batches'&&view!=='pointcloud'&&!!(selectedEntry||selectedArtifact);
+ const referenceSelected=view==='references'&&reference?.space_id===target.space?reference:null;
+ const hasSelection=!!referenceSelected||view!=='batches'&&view!=='pointcloud'&&view!=='references'&&!!(selectedEntry||selectedArtifact);
  const history=useSceneHistory(scene?.id||'',revision+historyRevision,view==='versions'||selectedArtifact?.kind==='candidate');
  const selectedBatch=history.batches.find(b=>b.id===target.batch);
  const inputBatch=selectedEntry&&selectedBatch?.members.some(m=>m.input_id===selectedEntry.id)?selectedBatch:undefined;
@@ -131,13 +134,13 @@ export function InputDirectory(){
    <SceneModuleNavigation route="data" scene={scene}/>
    <div className="data-overview" aria-label="当前场景数据概览"><div><FolderOpen size={17}/><span>资料</span><strong>{catalog?entries.length:'—'}</strong></div><div><Stack size={17}/><span>模型版本</span><strong>{catalog?versions.length:'—'}</strong></div><div><Cube size={17}/><span>固定发布</span><strong>{catalog?releases.length:'—'}</strong></div><span className="data-overview-note">{issues>0?<><WarningCircle size={14}/>{issues} 项成果需核查</>:<><Info size={14}/>样本流程 · 质量尚未验收</>}</span></div>
    {scene&&view==='inputs'&&<DataIntake space={scene.id} batchId={target.batch||undefined} {...intake} onSources={()=>setTools('sources')} onImport={()=>setImportOpen(true)} onInspect={()=>{document.querySelector<HTMLElement>('.data-input-preflight')?.focus();document.querySelector('.data-input-preflight')?.scrollIntoView({block:'nearest'});}} onChoose={()=>{setNotice('请从资料列表选择本次要构建的资料。');document.querySelector<HTMLElement>('.data-record-name')?.focus();}}/>}
-   <div className="data-viewbar"><div className="data-tabs" role="tablist" aria-label="数据管理视图">{([{id:'inputs',label:'资料',icon:FolderOpen,count:entries.length},{id:'pointcloud',label:'场景点云',icon:Cube,count:null},{id:'batches',label:'采集批次',icon:Database,count:history.batches.length},{id:'versions',label:'场景版本',icon:Stack,count:versions.length},{id:'lineage',label:'来源追溯',icon:GitBranch,count:catalog?.relations.length||0}] as const).map(t=><Button key={t.id} id={`data-tab-${t.id}`} role="tab" aria-selected={view===t.id} aria-controls="data-view-panel" tabIndex={view===t.id?0:-1} variant="ghost" onClick={()=>switchView(t.id)} onKeyDown={e=>{if(e.key==='ArrowRight'||e.key==='ArrowLeft'){e.preventDefault();const ids:View[]=['inputs','pointcloud','batches','versions','lineage'];const next=ids[(ids.indexOf(t.id)+(e.key==='ArrowRight'?1:4))%5];switchView(next);requestAnimationFrame(()=>document.getElementById(`data-tab-${next}`)?.focus());}}}><t.icon size={16}/>{t.label}{t.count!==null&&<span className="data-tab-count">{catalog?t.count:'—'}</span>}</Button>)}</div><div className="data-secondary-tools">{platform&&<Button variant="ghost" size="sm" disabled={!scene} onClick={()=>setTools('sources')}><SlidersHorizontal size={14}/>来源配置</Button>}</div></div>
+   <div className="data-viewbar"><div className="data-tabs" role="tablist" aria-label="数据管理视图">{([{id:'inputs',label:'资料',icon:FolderOpen,count:entries.length},{id:'references',label:'配套资料',icon:FileText,count:null},{id:'pointcloud',label:'场景点云',icon:Cube,count:null},{id:'batches',label:'采集批次',icon:Database,count:history.batches.length},{id:'versions',label:'场景版本',icon:Stack,count:versions.length},{id:'lineage',label:'来源追溯',icon:GitBranch,count:catalog?.relations.length||0}] as const).map(t=><Button key={t.id} id={`data-tab-${t.id}`} role="tab" aria-selected={view===t.id} aria-controls="data-view-panel" tabIndex={view===t.id?0:-1} variant="ghost" onClick={()=>switchView(t.id)} onKeyDown={e=>{if(e.key==='ArrowRight'||e.key==='ArrowLeft'){e.preventDefault();const ids:View[]=['inputs','references','pointcloud','batches','versions','lineage'];const next=ids[(ids.indexOf(t.id)+(e.key==='ArrowRight'?1:ids.length-1))%ids.length];switchView(next);requestAnimationFrame(()=>document.getElementById(`data-tab-${next}`)?.focus());}}}><t.icon size={16}/>{t.label}{t.count!==null&&<span className="data-tab-count">{catalog?t.count:'—'}</span>}</Button>)}</div><div className="data-secondary-tools">{platform&&<Button variant="ghost" size="sm" disabled={!scene} onClick={()=>setTools('sources')}><SlidersHorizontal size={14}/>来源配置</Button>}</div></div>
    {view==='inputs'&&inputBatch&&<div className="data-batch-context"><span>本次批次：{inputBatch.name}</span><Button asChild variant="ghost" size="sm"><a href={recordLink('data',{space:target.space,tab:'batches',batch:inputBatch.id})}>返回批次</a></Button></div>}
    {notice&&<p className="data-notice" role="status">{notice}</p>}
    {!busy&&catalog&&selectionKey&&!selectedEntry&&!selectedArtifact&&<p className="data-notice" role="alert">所选记录不存在于当前场景，请重新选择资料或版本。</p>}
    <div className="data-content">
     <section className="data-browser" id="data-view-panel" role="tabpanel" aria-labelledby={`data-tab-${view}`}>
-    {view==='pointcloud'?scene?<React.Suspense fallback={<p role="status">正在打开场景点云…</p>}><SceneCloudWorkspace key={scene.id+(platform?.user?.workspace_id||'engineering')} endpoint={endpoint} space={scene.id} onRegistered={()=>setRevision(v=>v+1)}/></React.Suspense>:<div className="data-empty">请先选择有权限的场景空间。</div>:<>
+    {view==='references'?scene?<SceneAttachments key={scene.id+(platform?.user?.workspace_id||'engineering')} endpoint={endpoint} space={scene.id} revision={revision} onChanged={refresh} onSelect={setReference}/>:<div className="data-empty">请先选择有权限的场景空间。</div>:view==='pointcloud'?scene?<React.Suspense fallback={<p role="status">正在打开场景点云…</p>}><SceneCloudWorkspace key={scene.id+(platform?.user?.workspace_id||'engineering')} endpoint={endpoint} space={scene.id} onRegistered={()=>setRevision(v=>v+1)}/></React.Suspense>:<div className="data-empty">请先选择有权限的场景空间。</div>:<>
     {scene&&!directoryBusy&&!directoryError&&!busy&&!error&&<SceneProgress key={[scene.id,target.input,target.job,target.publication].join(':')} space={scene.id} name={scene.name} input={target.input} revision={revision+intakeRevision+historyRevision}/>}
      {view!=='batches'&&<div className="data-toolbar"><div className="data-search"><MagnifyingGlass size={16}/><Input aria-label="搜索当前数据" placeholder={view==='inputs'?'搜索资料名称、格式…':view==='versions'?'搜索模型版本…':'搜索成果或来源关系…'} value={search} onChange={e=>setSearch(e.target.value)}/>{search&&<button aria-label="清除搜索" onClick={()=>setSearch('')}><X size={13}/></button>}</div><NativeSelect aria-label="筛选当前数据" value={filter} onChange={e=>setFilter(e.target.value)}><option value="all">{view==='inputs'?'全部类别 / 格式':view==='versions'?'全部版本':'全部关系'}</option>{view==='inputs'?<><option value="acquisition">原始采集资料</option><option value="existing_product">已有空间成果</option>{Array.from(new Set(entries.map(e=>e.format))).map(f=><option key={f} value={f}>{formatShort(f)}</option>)}</>:view==='versions'?<><option value="selected">当前候选</option><option value="published">有关联发布</option><option value="issues">需核查</option></>:<><option value="issues">关系需核查</option>{Array.from(new Set(catalog?.relations.map(r=>r.relation))).map(r=><option key={r} value={r}>{relationNames[r]||r}</option>)}</>}</NativeSelect><span className="data-result-count">{busy?'读取中…':`${shown} 项`}</span></div>}
      {view==='versions'&&target.batch&&<div className="data-batch-context" aria-label="版本批次筛选"><span>批次：{selectedBatch?.name||'未找到可读批次'} · 仅显示显式绑定版本</span><Button asChild variant="ghost" size="sm"><a href={recordLink('data',{space:target.space,tab:'batches',batch:target.batch})}>返回批次</a></Button><Button asChild variant="ghost" size="sm"><a href={recordLink('data',{space:target.space,tab:'versions'})}>全部版本</a></Button></div>}
@@ -157,7 +160,7 @@ export function InputDirectory(){
 
    </div>
   </section>
-    {hasSelection&&<aside className="data-detail" id="data-detail-panel" aria-label={selectedEntry?"资料详情面板":"数据详情面板"} onKeyDown={e=>{if(e.key==='Escape')navigate({});}}>
+    {hasSelection&&!referenceSelected&&<aside className="data-detail" id="data-detail-panel" aria-label={selectedEntry?"资料详情面板":"数据详情面板"} onKeyDown={e=>{if(e.key==='Escape')navigate({});}}>
      <header className="data-detail-heading"><span>{selectedEntry?'资料详情':selectedArtifact?kindNames[selectedArtifact.kind]+'详情':'详情'}</span><Button variant="ghost" size="sm" className="data-icon-button" aria-label="关闭数据详情" onClick={()=>navigate({})}><X size={17}/></Button></header>
      <div className="data-detail-scroll"><div className="data-detail-title"><span className="data-detail-symbol">{selectedEntry?<FileText size={26} weight="duotone"/>:<Cube size={26} weight="duotone"/>}</span><h2>{title}</h2><Availability item={selectedArtifact}/></div>
       <dl className="data-detail-facts"><div><dt>所属场景</dt><dd>{scene?.name}</dd></div><div><dt>资料类别</dt><dd>{selectedEntry?(selectedEntry.format==='ply_pointcloud'?'已有空间成果':'原始采集资料'):selectedArtifact?kindNames[selectedArtifact.kind]:''}</dd></div>{selectedEntry&&<><div><dt>格式</dt><dd>{formatShort(selectedEntry.format)}</dd></div><div><dt>规模</dt><dd>{inputCounts(selectedEntry)}</dd></div></>}{selectedArtifact&&!selectedEntry&&<div><dt>形成时间</dt><dd>{date(selectedArtifact.created_at)}</dd></div>}</dl>
@@ -172,6 +175,7 @@ export function InputDirectory(){
       {selectedArtifact&&detailMode==='control'&&<ArtifactControl space={target.space} artifact={selectedArtifact.kind==='offline_package'?`publication:${selectedArtifact.record_id}`:selectedArtifact.key} onClose={()=>setDetailMode('summary')} onCommitted={()=>setRevision(v=>v+1)}/>}
      </div>
     </aside>}
+  {referenceSelected&&<aside className="data-detail" aria-label="配套资料详情面板"><header className="data-detail-heading"><span>配套资料详情</span><Button variant="ghost" size="sm" className="data-icon-button" aria-label="关闭配套资料详情" onClick={()=>setReference(null)}><X size={17}/></Button></header><div className="data-detail-scroll"><AttachmentSummary item={referenceSelected} endpoint={endpoint}/></div></aside>}
   <Dialog open={!!tools} onOpenChange={open=>{if(!open){setTools(null);if(target.tab==='sources')navigate({tab:'inputs'});}}}><DialogContent className="data-management-dialog"><DialogHeader><DialogTitle>资料来源配置</DialogTitle><DialogDescription>管理当前场景允许登记的来源。</DialogDescription></DialogHeader>{tools==='sources'&&<SourceSettings key={target.space} spaceId={target.space} onSaved={()=>setIntakeRevision(v=>v+1)} onImport={()=>{setTools(null);if(target.tab==='sources')navigate({tab:'inputs'});setImportOpen(true);}}/>}</DialogContent></Dialog>
  </div>;
 }
