@@ -18,3 +18,10 @@ session的公共字段：`enabled`、`authenticated`、`authority_state`（cache
 认证失败不回显上游error_description、code、JWT或密钥。平台或加密存储不可用返回503；CSRF/Origin拒绝返回403；业务API无会话401。identity_pilot中有会话的业务调用仍返回503；authorized_workbench中还必须通过当前凭据、中央确认有效期与空间策略检查，无权限返回403，策略或中央确认不可用返回503。所有响应Cache-Control:no-store；生产会话Cookie为host-only HttpOnly Secure SameSite=Lax。
 
 登录存储没有自定登录TTL。600秒只限制待完成的授权请求，30秒只为中心查询失败重试间隔，都不是accounts登录寿命。刷新pending在网络请求前落盘；中断后不再次使用同一refresh token。该机制保留登录但可能要求重新连接以修复授权凭据，不自动重放刷新。
+
+
+## N6 有效确认缓存
+
+有会话时增加 `authority_ready:boolean`。仅在 `authority_state` 为 `cached`／`confirmed`、服务端当前时间严格早于中央 `next_check_at` 且没有 `retry_at` 时为 true。此值由服务端计算，浏览器不自定登录期限。后台 GET 不查询中央、不续期；过期缓存仍为 cached，但 authority_ready=false。
+
+工作台接受 confirmed，或 authority_ready=true 的 cached；字段缺失的 cached 保持阻断。unavailable／signed_out 不因该字段放行。进入工作台不等于获得空间权限、订阅或刷新令牌权限，业务端点仍重新执行 require_access 与能力校验。旧前端可忽略新增字段；新前端与提供该字段的后端应随同一镜像发布。

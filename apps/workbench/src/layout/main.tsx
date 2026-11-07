@@ -1,3 +1,4 @@
+import {NavigationGuard} from './navigation-guard';
 /// <reference types="vite/client" />
 import React, { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
@@ -161,4 +162,4 @@ function Space({config,full}:{config:Config;full:()=>void}){
 
  </section>;
 }
-createRoot(document.getElementById('root')!).render(<ThemeProvider defaultMode="light"><TooltipProvider><AuthBoundary><App/></AuthBoundary></TooltipProvider></ThemeProvider>);
+createRoot(document.getElementById('root')!).render(<ThemeProvider defaultMode="light"><TooltipProvider><AuthBoundary><App/></AuthBoundary><NavigationGuard/></TooltipProvider></ThemeProvider>);

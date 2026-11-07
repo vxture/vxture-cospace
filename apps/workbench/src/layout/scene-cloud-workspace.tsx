@@ -9,21 +9,21 @@ import './scene-cloud.css';
 type Job={id:string;space_id:string;state:string;input_id:string|null;issue:string|null;matched_points?:number;retained_points?:number;request:{index_sha256:string}};
 export function SceneCloudWorkspace({endpoint,space,onRegistered}:{endpoint:string;space:string;onRegistered:()=>void}){
  const [data,setData]=useState<CloudDirectory|null>(null),[loading,setLoading]=useState(true),[error,setError]=useState(''),[revision,setRevision]=useState(0),[configured,setConfigured]=useState(true);
- useEffect(()=>{const refresh=()=>{setData(null);setRevision(v=>v+1);};window.addEventListener('cospace:session-confirmed',refresh);return()=>window.removeEventListener('cospace:session-confirmed',refresh);},[]);
- useEffect(()=>{setData(null);setConfigured(true);setLoading(true);setError('');const controller=new AbortController();
+ useEffect(()=>{const refresh=()=>{setRevision(v=>v+1);};window.addEventListener('cospace:session-confirmed',refresh);return()=>window.removeEventListener('cospace:session-confirmed',refresh);},[]);
+ useEffect(()=>{setConfigured(true);setLoading(true);setError('');const controller=new AbortController();
   fetch(`${endpoint}/api/scene-pointclouds?`+new URLSearchParams({space_id:space}),{signal:controller.signal,cache:'no-store'}).then(async r=>{if(!r.ok)throw Error(r.status===403?'没有当前场景的资料管理权限。':'场景点云暂不可读，请重试。');const value=await r.json();if(value.space_id!==space)throw Error('返回资料与当前场景不一致。');if(value.configured===false){if(!controller.signal.aborted)setConfigured(false);return;}const checked=directory(value,space);if(!controller.signal.aborted)setData(checked);}).catch(e=>{if(!controller.signal.aborted)setError(e.message);}).finally(()=>{if(!controller.signal.aborted)setLoading(false);});return()=>controller.abort();
  },[endpoint,space,revision]);
- if(loading)return <div className="data-empty" role="status">正在读取场景点云索引…</div>;
- if(error)return <div className="data-empty" role="alert"><h2>场景点云暂不可用</h2><p>{error}</p><Button onClick={()=>setRevision(v=>v+1)}>重新读取</Button></div>;
+ if(loading&&!data)return <div className="data-empty" role="status">正在读取场景点云索引…</div>;
+ if(error&&!data)return <div className="data-empty" role="alert"><h2>场景点云暂不可用</h2><p>{error}</p><Button onClick={()=>setRevision(v=>v+1)}>重新读取</Button></div>;
  if(!configured||!data)return <div className="data-empty"><h2>此场景暂无全量点云</h2><p>场景点云接入后，可在这里选择来源、浏览局部并生成区域资料。</p></div>;
- return <CloudEditor key={space+data.index_sha256} endpoint={endpoint} data={data} onRegistered={onRegistered}/>;
+ return <>{error&&<div role="alert"><p>{error}。区域参数保留，请重新读取后继续。</p><Button onClick={()=>setRevision(v=>v+1)}>重新读取</Button></div>}<div hidden={!!error} inert={!!error}><CloudEditor key={space+data.index_sha256} endpoint={endpoint} data={data} onRegistered={onRegistered}/></div></>;
 }
 function CloudEditor({endpoint,data,onRegistered}:{endpoint:string;data:CloudDirectory;onRegistered:()=>void}){
  const [sources,setSources]=useState(data.sources.map((_,i)=>i)),[bounds,setBounds]=useState<Bounds>(()=>fullBounds(data)),[draft,setDraft]=useState(()=>fullBounds(data).flat().map(v=>String(+v.toFixed(5)))),[step,setStep]=useState('0.5'),[label,setLabel]=useState('场景区域点云'),[error,setError]=useState(''),[busy,setBusy]=useState(false),[job,setJob]=useState<Job|null>(null),[picking,setPicking]=useState(false),[pollRevision,setPollRevision]=useState(0);
  const api=useRef<CloudCamera|null>(null),alive=useRef(true),generation=useRef(0),posting=useRef(false);
  const active=job?.state==='running'||job?.state==='queued';
  const dirtyBounds=draft.some((v,i)=>v.trim()===''||!Number.isFinite(Number(v))||Math.abs(Number(v)-bounds.flat()[i])>1e-8);
- useUnsavedNavigation(!job&&(dirtyBounds||label!=='场景区域点云'||step!=='0.5'||JSON.stringify(bounds)!==JSON.stringify(fullBounds(data))||sources.length!==data.sources.length),'区域资料参数');
+ useUnsavedNavigation(!job&&(dirtyBounds||label!=='场景区域点云'||step!=='0.5'||JSON.stringify(bounds)!==JSON.stringify(fullBounds(data))||sources.length!==data.sources.length),'区域资料参数',{discard:()=>{apply(fullBounds(data));setSources(data.sources.map((_,i)=>i));setLabel('场景区域点云');setStep('0.5');}});
  const storageKey='cospace.scene-cloud-job:'+data.space_id+':'+data.index_sha256;
  useEffect(()=>()=>{alive.current=false;generation.current++;},[]);
  function apply(next:Bounds){api.current?.pick(false);setBounds(next);setDraft(next.flat().map(v=>String(+v.toFixed(5))));setPicking(false);setError('');}

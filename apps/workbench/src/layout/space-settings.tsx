@@ -1,4 +1,4 @@
-import {useUnsavedNavigation} from './unsaved-navigation';
+import {useUnsavedNavigation,runGuarded,navigateSafely} from './unsaved-navigation';
 import React,{useEffect,useState} from 'react';
 import {Button,Field,FieldLabel,Input,NativeSelect,Textarea,Separator,StatusBadge} from '@vxture/design-system';
 import {businessEndpoint as endpoint} from './business-endpoint';
@@ -22,18 +22,19 @@ export function SpaceSettings(){
    const body:Settings=await r.json();if(active){setData(body);setName(body.space.name);setDescription(body.space.description);}
   }).catch(e=>{if(active)setError(e.message);}).finally(()=>{if(active)setLoading(false);});return()=>{active=false;};
  },[target.space,refresh]);
- async function save(e:React.FormEvent){e.preventDefault();if(!data||busy)return;setBusy(true);setError('');setNotice('');
+ async function save(e?:React.FormEvent){e?.preventDefault();if(!data||busy)return false;setBusy(true);setError('');setNotice('');
   try{const r=await fetch(`${endpoint}/api/space-settings`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({space_id:data.space.id,expected_revision:data.revision,name:name.trim(),description:description.trim(),reason:reason.trim()})});
    if(!r.ok)throw Error(r.status===409?'配置已被其他人修改，请重新读取后核对。':r.status===403?'当前无管理权限，未保存。':'保存失败，请稍后重新读取配置确认。');
    const body:Settings=await r.json();setData(body);setName(body.space.name);setDescription(body.space.description);setReason('');
    setSpaces(old=>old.map(s=>s.id===body.space.id?{...s,...body.space}:s));setNotice('已保存到服务端，空间目录将显示新信息。');
-  }catch(e){setError(e instanceof Error?e.message:'保存失败');}finally{setBusy(false);}
+   return true;
+  }catch(e){setError(e instanceof Error?e.message:'保存失败');return false;}finally{setBusy(false);}
  }
  const dirty=!!data&&(name.trim()!==data.space.name||description.trim()!==data.space.description);
- useUnsavedNavigation(dirty,'场景信息');
+ useUnsavedNavigation(dirty,'场景信息',{discard:()=>{if(data){setName(data.space.name);setDescription(data.space.description);}setReason('');},save:()=>save(),canSave:!busy&&!!data?.can_manage&&!!reason.trim()&&!!name.trim()});
  return <div className="flex flex-col gap-xl" aria-label="空间基本配置">
-  <div className="flex flex-wrap items-center justify-between gap-md"><div><h2 className="text-heading-2">空间基本信息</h2><p className="mt-sm text-body-small text-muted-foreground">按授权空间保存。名称与用途描述用于目录展示。</p></div><Button variant="outline" disabled={busy||loading} onClick={()=>setRefresh(v=>v+1)}>重新读取配置</Button></div>
-  <Field><FieldLabel htmlFor="settings-space">选择空间</FieldLabel><NativeSelect id="settings-space" disabled={busy} value={target.space} onChange={e=>{location.hash=recordLink('settings',{space:e.target.value}).slice(1);}}><option value="" disabled>请选择授权空间</option>{spaces.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</NativeSelect></Field>
+  <div className="flex flex-wrap items-center justify-between gap-md"><div><h2 className="text-heading-2">空间基本信息</h2><p className="mt-sm text-body-small text-muted-foreground">按授权空间保存。名称与用途描述用于目录展示。</p></div><Button variant="outline" disabled={busy||loading} onClick={()=>void runGuarded(()=>setRefresh(v=>v+1))}>重新读取配置</Button></div>
+  <Field><FieldLabel htmlFor="settings-space">选择空间</FieldLabel><NativeSelect id="settings-space" disabled={busy} value={target.space} onChange={e=>{const id=e.target.value;e.target.value=target.space;void navigateSafely(recordLink('settings',{space:id}));}}><option value="" disabled>请选择授权空间</option>{spaces.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</NativeSelect></Field>
   {loading&&<p role="status">正在读取空间配置…</p>}
   {error&&<p role="alert" className="text-body-small text-destructive">{error}</p>}
   {notice&&<p role="status" className="text-body-small text-primary">{notice}</p>}

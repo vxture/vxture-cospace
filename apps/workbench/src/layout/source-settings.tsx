@@ -1,4 +1,4 @@
-import {useUnsavedNavigation} from './unsaved-navigation';
+import {useUnsavedNavigation,runGuarded} from './unsaved-navigation';
 import React,{useEffect,useState} from 'react';
 import {Button,Checkbox,Field,FieldLabel,Input,StatusBadge} from '@vxture/design-system';
 import {businessEndpoint as endpoint} from './business-endpoint';
@@ -16,16 +16,17 @@ export function SourceSettings({spaceId,onSaved,onImport}:{spaceId:string;onSave
    const value:Settings=await r.json();if(active){setData(value);setChosen(value.sources.map(s=>s.id));}
   }).catch(e=>{if(active)setError(e.message);}).finally(()=>{if(active)setLoading(false);});return()=>{active=false;};
  },[spaceId,refresh]);
- async function save(e:React.FormEvent){e.preventDefault();if(!data||busy)return;setBusy(true);setError('');setNotice('');
+ async function save(e?:React.FormEvent){e?.preventDefault();if(!data||busy)return false;setBusy(true);setError('');setNotice('');
   try{const r=await fetch(`${endpoint}/api/source-settings`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({space_id:spaceId,expected_revision:data.revision,catalog_sha256:data.catalog_sha256,enabled_source_ids:chosen,reason:reason.trim()})});
    if(!r.ok)throw Error(r.status===409?'配置或来源清单已更新，请重新读取后核对。':r.status===403?'当前无来源配置权限，未保存。':'保存失败，请重新读取确认。');
    const value:Settings=await r.json();setData(value);setChosen(value.sources.map(s=>s.id));setReason('');setNotice('来源配置已保存，可继续导入资料。');onSaved?.();
-  }catch(e){setError(e instanceof Error?e.message:'保存失败');}finally{setBusy(false);}
+   return true;
+  }catch(e){setError(e instanceof Error?e.message:'保存失败');return false;}finally{setBusy(false);}
  }
  const dirty=!!data&&(JSON.stringify([...chosen].sort((a,b)=>a.localeCompare(b)))!==JSON.stringify(data.sources.map(s=>s.id).sort((a,b)=>a.localeCompare(b)))||data.unavailable_source_ids.length>0);
- useUnsavedNavigation(!!data&&JSON.stringify([...chosen].sort((a,b)=>a.localeCompare(b)))!==JSON.stringify(data.sources.map(s=>s.id).sort((a,b)=>a.localeCompare(b))),'来源配置');
+ useUnsavedNavigation(!!data&&JSON.stringify([...chosen].sort((a,b)=>a.localeCompare(b)))!==JSON.stringify(data.sources.map(s=>s.id).sort((a,b)=>a.localeCompare(b))),'来源配置',{discard:()=>{if(data)setChosen(data.sources.map(s=>s.id));setReason('');},save:()=>save(),canSave:!busy&&!!data?.can_manage&&!!reason.trim()});
  return <section aria-label="空间资料来源配置" className="flex min-w-0 flex-col gap-lg">
-  <div className="flex flex-wrap items-start justify-between gap-md"><div><h2 className="text-heading-2">资料来源</h2><p className="mt-sm text-body-small text-muted-foreground">为空间选择可登记的封存资料。登记后再预检、构建。</p></div><Button variant="outline" disabled={busy||loading||!spaceId} onClick={()=>setRefresh(v=>v+1)}>重新读取来源</Button></div>
+  <div className="flex flex-wrap items-start justify-between gap-md"><div><h2 className="text-heading-2">资料来源</h2><p className="mt-sm text-body-small text-muted-foreground">为空间选择可登记的封存资料。登记后再预检、构建。</p></div><Button variant="outline" disabled={busy||loading||!spaceId} onClick={()=>void runGuarded(()=>setRefresh(v=>v+1))}>重新读取来源</Button></div>
   {!spaceId&&<p className="text-body-small text-muted-foreground">请先选择空间。</p>}
   {loading&&<p role="status">正在读取来源配置…</p>}{error&&<p role="alert" className="text-body-small text-destructive">{error}</p>}{notice&&<p role="status" className="text-body-small text-primary">{notice}</p>}
   {data&&<><div className="flex flex-wrap items-center gap-md"><StatusBadge tone={data.can_manage?'info':'neutral'}>{data.can_manage?'可配置':'只读'}</StatusBadge><span className="text-label-small text-muted-foreground">修订 {data.revision} · 已启用 {data.sources.length} 项</span></div>
