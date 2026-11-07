@@ -1,4 +1,5 @@
-import React,{createContext,useContext,useEffect,useRef,useState} from 'react';
+import {sessionScopeKey,sessionConfirmed} from './session-continuity';
+import React,{createContext,useContext,useEffect,useLayoutEffect,useRef,useState} from 'react';
 import {Button,Icon} from '@vxture/design-system';
 import {HomeLayout} from './home-layout';
 import {productQuotaMessage} from './product-quota-messages';
@@ -65,26 +66,48 @@ export function AuthBoundary({children}:{children:React.ReactNode}){
 function BusinessSession({children}:{children:React.ReactNode}){
  const [quotaError,setQuotaError]=useState('');
  const [session,setSession]=useState<Session|null>(null),[ready,setReady]=useState(false),[error,setError]=useState('');
+ const retained=useRef<Session|null>(null),lastScope=useRef('');
+ useLayoutEffect(()=>{
+  const key=sessionScopeKey(session);if(!key)return;
+  if(lastScope.current&&lastScope.current!==key){
+   const route=location.hash.slice(1).split('?')[0]||'space';history.replaceState(null,'',`${location.pathname}${location.search}#${route}`);
+   window.dispatchEvent(new Event('cospace:scope-reset'));window.dispatchEvent(new HashChangeEvent('hashchange'));
+  }
+  lastScope.current=key;
+ },[session]);
  const [subscription,setSubscription]=useState<Subscription|null>(null),[subscriptionRequired,setSubscriptionRequired]=useState(false),[subscriptionUnavailable,setSubscriptionUnavailable]=useState(false);
- useEffect(()=>{let stopped=false;const nativeFetch=window.fetch.bind(window);let csrf='';let activityAt=0;let confirming:Promise<void>|null=null;let needsSubscription=false;
-  const checkSubscription=async()=>{if(!needsSubscription)return;try{const r=await nativeFetch('/api/subscription',{cache:'no-store'});if(!r.ok)throw Error();const value:Subscription=await r.json();if(!stopped){setSubscription(value);setSubscriptionUnavailable(false);}}catch{if(!stopped){setSubscription(null);setSubscriptionUnavailable(true);}}};
-  const confirm=async()=>{if(!csrf)return;const response=await nativeFetch('/api/auth/session',{method:'POST',headers:{'X-CoSpace-CSRF':csrf}});if(!response.ok)throw new Error('会话确认暂不可用');const next:Session=await response.json();if(!stopped){setSession(next);csrf=next.csrf||'';if(next.authority_state==='unavailable')throw new Error('会话确认暂不可用');setError('');}if(next.authenticated)await checkSubscription();};
-  const recheck=(notify=false)=>{if(confirming)return;activityAt=Date.now();confirming=confirm().then(()=>{if(notify&&!stopped)window.dispatchEvent(new Event('cospace:session-confirmed'));}).catch(()=>{if(!stopped)setError('平台暂不可用，会话已保留。');}).finally(()=>{confirming=null;});};
+ useEffect(()=>{let stopped=false;const nativeFetch=window.fetch.bind(window);let csrf='';let activityAt=0;let confirming:Promise<void>|null=null;let needsSubscription=false;let authority:Session|null=null;let businessAllowed=false;let generation=0;
+  const checkSubscription=async()=>{if(!needsSubscription){businessAllowed=true;return;}businessAllowed=false;try{const r=await nativeFetch('/api/subscription',{cache:'no-store'});if(!r.ok)throw Error();const value:Subscription=await r.json();businessAllowed=value.business_allowed;if(!stopped){setSubscription(value);setSubscriptionUnavailable(false);}}catch{if(!stopped){setSubscription(null);setSubscriptionUnavailable(true);}}};
+  const confirm=async()=>{
+   if(!csrf){const r=await nativeFetch('/api/auth/session',{cache:'no-store'});if(!r.ok)throw new Error('会话暂不可读');const saved:Session=await r.json();csrf=saved.csrf||'';authority=saved;if(!saved.authenticated){setSession(saved);return;}}
+   const response=await nativeFetch('/api/auth/session',{method:'POST',headers:{'X-CoSpace-CSRF':csrf}});
+   if(!response.ok){authority=null;businessAllowed=false;generation++;setSession(old=>old?{...old,authority_state:'unavailable'}:old);throw new Error('会话确认暂不可用');}
+   const next:Session=await response.json();if(stopped)return;
+   if(sessionScopeKey(authority)!==sessionScopeKey(next)){generation++;businessAllowed=false;setSubscription(null);setSession({...next,authority_state:'checking'});}
+   authority=next;csrf=next.csrf||'';
+   if(!sessionConfirmed(next)){businessAllowed=false;setSession(next);if(next.authenticated)throw new Error('会话确认暂不可用');return;}
+   setError('');await checkSubscription();if(!stopped)setSession(next);
+  };
+  const recheck=(notify=false)=>{if(confirming)return;activityAt=Date.now();confirming=confirm().then(()=>{if(notify&&!stopped&&sessionConfirmed(authority)&&businessAllowed)window.dispatchEvent(new Event('cospace:session-confirmed'));}).catch(()=>{if(!stopped){authority=null;businessAllowed=false;generation++;setSession(old=>old?{...old,authority_state:'unavailable'}:old);setError('平台暂不可用，未保存修改保留在当前标签页。');}}).finally(()=>{confirming=null;});};
   const activity=(event:Event)=>{if(!event.isTrusted||document.visibilityState!=='visible'||Date.now()-activityAt<30000)return;recheck();};
   const resume=(event:Event)=>{if(!event.isTrusted||document.visibilityState!=='visible')return;recheck(true);};
   const retry=()=>recheck(true);
-  const bootstrap=async()=>{const config=await nativeFetch('/api/auth/config').then(r=>{if(!r.ok)throw Error();return r.json();});needsSubscription=config.subscription_authorization===true;setSubscriptionRequired(needsSubscription);const response=await nativeFetch('/api/auth/session',{cache:'no-store'});if(!response.ok)throw Error('无法读取平台会话');const next:Session=await response.json();csrf=next.csrf||'';
+  const bootstrap=async()=>{const config=await nativeFetch('/api/auth/config').then(r=>{if(!r.ok)throw Error();return r.json();});needsSubscription=config.subscription_authorization===true;setSubscriptionRequired(needsSubscription);const response=await nativeFetch('/api/auth/session',{cache:'no-store'});if(!response.ok)throw Error('无法读取平台会话');const next:Session=await response.json();csrf=next.csrf||'';authority=next;
    if(next.authenticated)await confirm();else if(!stopped)setSession(next);
    if(stopped)return;
    window.fetch=async(input,init)=>{const url=new URL(typeof input==='string'?input:input instanceof URL?input.href:input.url,location.href);
     if(url.origin!==location.origin)return nativeFetch(input,init);
+    const requestGeneration=generation;
     if(confirming&&!url.pathname.startsWith('/api/auth/'))await confirming;
+    if(requestGeneration!==generation)return new Response(JSON.stringify({detail:'session_scope_changed'}),{status:409,headers:{'Content-Type':'application/json'}});
+    if(!url.pathname.startsWith('/api/auth/')&&(!sessionConfirmed(authority)||!businessAllowed))return new Response(JSON.stringify({detail:'session_confirmation_required'}),{status:401,headers:{'Content-Type':'application/json'}});
     const method=(init?.method||(input instanceof Request?input.method:'GET')).toUpperCase();
     const headers=new Headers(init?.headers||(input instanceof Request?input.headers:undefined));
     if(!['GET','HEAD'].includes(method)&&csrf)headers.set('X-CoSpace-CSRF',csrf);
     const result=await nativeFetch(input,{...init,headers});
+    if(requestGeneration!==generation)return new Response(JSON.stringify({detail:'session_scope_changed'}),{status:409,headers:{'Content-Type':'application/json'}});
     if(needsSubscription&&[403,409,503].includes(result.status)){const body=await result.clone().json().catch(()=>({}));const quotaMessage=productQuotaMessage(body.code||body.detail);if(quotaMessage)setQuotaError(quotaMessage);if(body.detail==='subscription_required'||body.detail==='subscription_unavailable')await checkSubscription();}
-    if(result.status===401&&!url.pathname.startsWith('/api/auth/')){setSession({authenticated:false,authority_state:'signed_out'});setError('');}
+    if(result.status===401&&!url.pathname.startsWith('/api/auth/')){authority=null;businessAllowed=false;csrf='';generation++;setSession({authenticated:false,authority_state:'signed_out'});setError('');}
     if(result.ok&&!['GET','HEAD'].includes(method)&&url.pathname.startsWith('/api/')&&!url.pathname.startsWith('/api/auth/')&&!/comparisons|\/query(?:-range)?$/.test(url.pathname))window.dispatchEvent(new Event('cospace:records-changed'));
     return result;
    };
@@ -94,7 +117,13 @@ function BusinessSession({children}:{children:React.ReactNode}){
  },[]);
  if(error&&!ready)return <main className="flex min-h-dvh items-center justify-center"><p role="alert">{error}</p></main>;
  if(!ready)return <main className="flex min-h-dvh items-center justify-center"><p role="status">正在确认平台会话…</p></main>;
- if(!session?.authenticated)return <PlatformIdentityPage business/>;
- if(subscriptionRequired&&(!subscription?.business_allowed||subscriptionUnavailable))return <HomeLayout><p className="text-body-small text-muted-foreground">{session.user?.display_name} · 当前工作区</p><SubscriptionNotice value={subscription} unavailable={subscriptionUnavailable} onRetry={()=>window.dispatchEvent(new Event('cospace:confirm-session'))}/><Button variant="ghost" onClick={()=>platformLogout(session.csrf||'')}>退出登录</Button></HomeLayout>;
- return <PlatformSession.Provider value={session}>{children}{(quotaError||error)&&<div role="alert" className="fixed bottom-lg left-lg right-lg z-notification flex flex-wrap items-center gap-md rounded-md border bg-popover p-lg text-body-small"><span>{quotaError||error}</span>{quotaError&&<><Button variant="ghost" size="sm" onClick={()=>setQuotaError('')}>关闭提示</Button></>}</div>}</PlatformSession.Provider>;
+ const authorized=sessionConfirmed(session)&&(!subscriptionRequired||!!subscription?.business_allowed&&!subscriptionUnavailable);
+ if(session?.authenticated&&retained.current&&sessionScopeKey(session)!==sessionScopeKey(retained.current))retained.current=null;
+ if(authorized)retained.current=session;
+ const suspended=!!retained.current&&!authorized;
+ return <>
+  {retained.current&&<div style={authorized?{display:'contents'}:{display:'none'}} aria-hidden={!authorized} inert={!authorized}><PlatformSession.Provider value={retained.current}><React.Fragment key={sessionScopeKey(retained.current)}>{children}</React.Fragment></PlatformSession.Provider></div>}
+  {!authorized&&(!session?.authenticated?<><PlatformIdentityPage business/>{suspended&&<section className="fixed bottom-lg left-lg right-lg rounded-md border bg-popover p-lg" aria-label="恢复当前工作"><p>会话已失效。未保存修改仅保留在当前标签页，刷新或关闭会丢失。可在其他标签页重新登录，再回来检查会话。</p><Button onClick={()=>window.dispatchEvent(new Event('cospace:confirm-session'))}>重新检查会话</Button></section>}</>:session.authority_state!=='confirmed'?<HomeLayout><h2>等待恢复平台会话</h2><p>工作面已遮挡，内存草稿保留。确认会话后可继续；不会重放保存、构建或发布操作。</p><Button onClick={()=>window.dispatchEvent(new Event('cospace:confirm-session'))}>重新检查会话</Button></HomeLayout>:<HomeLayout><p>{session.user?.display_name} · 当前工作区</p><SubscriptionNotice value={subscription} unavailable={subscriptionUnavailable} onRetry={()=>window.dispatchEvent(new Event('cospace:confirm-session'))}/><Button variant="ghost" onClick={()=>platformLogout(session.csrf||'')}>退出登录</Button></HomeLayout>)}
+  {authorized&&(quotaError||error)&&<div role="alert" className="fixed bottom-lg left-lg right-lg z-notification flex flex-wrap items-center gap-md rounded-md border bg-popover p-lg text-body-small"><span>{quotaError||error}</span>{quotaError&&<Button variant="ghost" size="sm" onClick={()=>setQuotaError('')}>关闭提示</Button>}</div>}
+ </>;
 }

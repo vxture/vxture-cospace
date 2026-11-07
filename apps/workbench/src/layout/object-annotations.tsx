@@ -1,4 +1,4 @@
-import {useUnsavedNavigation} from './unsaved-navigation';
+import {useUnsavedNavigation,runGuarded} from './unsaved-navigation';
 import {businessEndpoint} from './business-endpoint';
 import React,{useEffect,useRef,useState} from 'react';
 import {AnchorPicker} from './anchor-picker';
@@ -24,7 +24,7 @@ function ObjectAnnotationEditor(){
  const generation=useRef(0),anchorRequest=useRef<AbortController|null>(null),saving=useRef(false);
  useEffect(()=>()=>{generation.current++;anchorRequest.current?.abort();},[]);
  const [busy,setBusy]=useState(false),[reading,setReading]=useState(false),[error,setError]=useState(''),[created,setCreated]=useState<{id:string;candidate_url:string}|null>(null);
- useUnsavedNavigation(!!base&&!created&&(JSON.stringify(objects)!==original||!!identity||!!editing),'对象标注');
+ useUnsavedNavigation(!!base&&!created&&(JSON.stringify(objects)!==original||!!identity||!!editing),'对象标注',{discard:()=>{setObjects(JSON.parse(original));setIdentity('');setEditing('');setAnchor(null);setProperties({});}});
  useEffect(()=>{
   if(!target.space)return;const controller=new AbortController();setError('');
   Promise.all([fetch(`${endpoint}/api/builds?space_id=${target.space}`,{signal:controller.signal}),fetch(`${endpoint}/api/ontologies`,{signal:controller.signal}),fetch(`${endpoint}/api/selection?space_id=${target.space}`,{signal:controller.signal})]).then(async responses=>{
@@ -68,8 +68,8 @@ function ObjectAnnotationEditor(){
  if(!target.space)return <p className="text-body-small text-muted-foreground">选择工程空间后可建立对象标注候选。</p>;
  return <Card className="module-surface" aria-label="对象标注工作面"><CardHeader><CardTitle>对象标注</CardTitle></CardHeader><CardContent className="flex flex-col gap-lg">
   <p className="text-body-small text-muted-foreground">在固定模型上人工标注，生成独立新候选。锚点来自真实模型；对象类型和名称仍待现场核实。</p>
-  <label htmlFor="annotation-base" className="text-body-small">基础候选</label><NativeSelect id="annotation-base" aria-label="标注基础候选" value={baseId} onChange={e=>setBaseId(e.target.value)} disabled={busy||reading}><option value="">请选择已有候选</option>{jobs.map(job=><option key={job.id} value={job.id}>{job.id}</option>)}</NativeSelect>
-  <label htmlFor="annotation-ontology" className="text-body-small">固定本体版本</label><NativeSelect id="annotation-ontology" aria-label="标注本体版本" value={refKey} onChange={e=>{setRefKey(e.target.value);setCreated(null);setEditing('');setIdentity('');setAnchor(null);}} disabled={busy}><option value="">请选择规则版本</option>{versions.map(v=><option key={key(v)} value={key(v)}>{v.title} · V{v.version}</option>)}</NativeSelect>
+  <label htmlFor="annotation-base" className="text-body-small">基础候选</label><NativeSelect id="annotation-base" aria-label="标注基础候选" value={baseId} onChange={e=>{const value=e.target.value;e.target.value=baseId;void runGuarded(()=>setBaseId(value));}} disabled={busy||reading}><option value="">请选择已有候选</option>{jobs.map(job=><option key={job.id} value={job.id}>{job.id}</option>)}</NativeSelect>
+  <label htmlFor="annotation-ontology" className="text-body-small">固定本体版本</label><NativeSelect id="annotation-ontology" aria-label="标注本体版本" value={refKey} onChange={e=>{const value=e.target.value;e.target.value=refKey;void runGuarded(()=>{setRefKey(value);setCreated(null);setEditing('');setIdentity('');setAnchor(null);});}} disabled={busy}><option value="">请选择规则版本</option>{versions.map(v=><option key={key(v)} value={key(v)}>{v.title} · V{v.version}</option>)}</NativeSelect>
   {base&&<p className="break-all text-label-small text-muted-foreground">坐标：{base.frame_id} · 米 · {base.point_count.toLocaleString()} 个模型点 · 基础摘要 {base.model_manifest_sha256}</p>}
   {base&&rules&&<form onSubmit={add} className="flex flex-col gap-md border-t border-border pt-lg">
    <div className="grid grid-cols-1 gap-md md:grid-cols-2"><div className="flex flex-col gap-sm"><label htmlFor="object-id">对象ID</label><Input id="object-id" aria-label="标注对象ID" value={identity} onChange={e=>setIdentity(e.target.value)} placeholder="object-001" maxLength={160} pattern="[a-zA-Z0-9][a-zA-Z0-9_.:\-]*" required disabled={busy||Boolean(editing)}/></div><div className="flex flex-col gap-sm"><label htmlFor="object-type">类型</label><NativeSelect id="object-type" aria-label="标注对象类型" value={typeId} onChange={e=>{setTypeId(e.target.value);setProperties({});}} required disabled={busy}><option value="">请选择本体类型</option>{Object.entries(rules.types).map(([id,type])=><option key={id} value={id}>{type.title} · {id}</option>)}</NativeSelect></div></div>

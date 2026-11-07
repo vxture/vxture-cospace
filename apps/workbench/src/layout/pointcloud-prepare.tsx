@@ -1,3 +1,4 @@
+import {useUnsavedNavigation} from './unsaved-navigation';
 import React,{useEffect,useMemo,useRef,useState} from 'react';
 import {Button,Input,Textarea,NativeSelect,Switch,DialogFooter,StatusBadge} from '@vxture/design-system';
 import {checkCloud,preparePackage,Declaration,CheckedCloud} from './pointcloud-package';
@@ -9,6 +10,8 @@ export function PointcloudPrepare({endpoint,spaceId,capabilities,capabilityError
  const [file,setFile]=useState<File|null>(null),[name,setName]=useState(''),[frame,setFrame]=useState(''),[axes,setAxes]=useState<[string,string,string]>(['','','']),[scope,setScope]=useState(''),[description,setDescription]=useState('');
  const [metres,setMetres]=useState(false),[confirmed,setConfirmed]=useState(false),[prepared,setPrepared]=useState<Prepared|null>(null),[busy,setBusy]=useState<'checking'|'uploading'|null>(null),[error,setError]=useState(''),[download,setDownload]=useState('');
  const [checked,setChecked]=useState<CheckedCloud|null>(null);
+ const [formRevision,setFormRevision]=useState(0);
+ const acknowledge=useUnsavedNavigation(!!(file||name||frame||description||scope||axes.some(Boolean)||metres),'PLY准备参数',{discard:()=>{setFile(null);setName('');setFrame('');setDescription('');setAxes(['','','']);setScope('');setMetres(false);setConfirmed(false);setPrepared(null);setChecked(null);setFormRevision(v=>v+1);}});
  const generation=useRef(0),request=useRef<AbortController|null>(null),gate=useRef(false);
  useEffect(()=>{onBusyChange(!!busy);return()=>onBusyChange(false);},[busy,onBusyChange]);
  useEffect(()=>{return()=>{generation.current++;request.current?.abort();};},[spaceId,endpoint]);
@@ -35,11 +38,11 @@ export function PointcloudPrepare({endpoint,spaceId,capabilities,capabilityError
   try{const r=await fetch(`${endpoint}/api/input-uploads?${new URLSearchParams({space_id:spaceId,label:name.trim()})}`,{method:'POST',headers:{'Content-Type':'application/zip'},body:prepared.bundle,signal:controller.signal});const body=await r.json();
    if(!r.ok){const messages:Record<string,string>={upload_content_validation_failed:'服务端复核未通过，请核查原文件和声明后重新准备。',upload_scene_storage_budget:'当前场景上传存储预算已满，请联系管理员。',upload_existing_evidence_invalid:'原登记资料已变化，请核查历史资料。',space_access_denied:'当前账户无权向此场景登记资料。',authentication_required:'登录会话已失效，请重新登录。'};throw Error(messages[body.detail]||'登记未完成，请重试相同准备包或刷新资料列表核查。');}
    if(body.input?.space_id!==spaceId||body.input?.format!=='ply_pointcloud'||!body.input?.id||body.upload?.sha256!==prepared.sha256)throw Error('入库回执与当前场景或准备包不一致，请刷新核查。');
-   if(run===generation.current)onRegistered(body.input.id,body.created);
+   if(run===generation.current){acknowledge();onRegistered(body.input.id,body.created);}
   }catch(e){if(run===generation.current&&!controller.signal.aborted)setError(e instanceof TypeError?'连接中断，登记结果未确认。可重试相同准备包，系统会复用已登记记录。':e instanceof SyntaxError?'登记回执无法确认，请刷新列表或重试相同准备包。':e instanceof Error?e.message:'登记未完成，请重试。');}finally{gate.current=false;if(run===generation.current)setBusy(null);}
  }
  if(!enabled)return <div className="flex flex-col gap-md"><p role={capabilityError?'alert':'status'} className="text-body-small">{capabilityError||(!capabilities?'正在读取准备能力…':'当前服务未开放浏览器PLY准备，可使用已有资料包或已配置来源。')}</p>{capabilityError&&<Button size="sm" variant="outline" onClick={onRetry}>重试读取入口</Button>}<DialogFooter><Button variant="outline" onClick={onCancel}>取消</Button></DialogFooter></div>;
- return <form onSubmit={inspect} className="pointcloud-prepare-form" aria-label="本机PLY准备">
+ return <form key={formRevision} onSubmit={inspect} className="pointcloud-prepare-form" aria-label="本机PLY准备">
   <p className="text-label-small text-muted-foreground">支持二进制小端 XYZ／XYZRGB，最大32MiB、100万点。原文件保持不变；坐标不做转换。</p>
   <fieldset disabled={!!busy} className="pointcloud-fields">
    <label>PLY文件<Input aria-label="原始PLY文件" type="file" accept=".ply" required onChange={e=>{invalidate();setChecked(null);const next=e.target.files?.[0]||null;setFile(next);setName(next?.name.replace(/\.ply$/i,'').slice(0,100)||'');}}/></label>

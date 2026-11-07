@@ -1,4 +1,4 @@
-import {useUnsavedNavigation,confirmUnsavedChanges} from './unsaved-navigation';
+import {useUnsavedNavigation,runGuarded} from './unsaved-navigation';
 import React,{useEffect,useRef,useState} from 'react';
 import {Button,Card,CardHeader,CardTitle,CardContent,Input,NativeSelect} from '@vxture/design-system';
 type Property={title:string;type:'string';required:boolean;min_length:number;max_length:number};
@@ -11,29 +11,31 @@ const fresh=():RuleDocument=>({profile:'cospace.preview-ontology/0.1',ontology_i
 const identity=()=>crypto.randomUUID().replaceAll('-','');
 export function OntologyAuthoring({endpoint,source,onSealed}:{endpoint:string;source:RuleDocument|null;onSealed:(record:{ontology_id:string;version:string;sha256:string})=>void}){
  const [context,setContext]=useState<Context|null>(null),[draft,setDraft]=useState<Draft|null>(null),[doc,setDoc]=useState<RuleDocument|null>(null),[reason,setReason]=useState(''),[dirty,setDirty]=useState(false),[validation,setValidation]=useState(''),[error,setError]=useState(''),[notice,setNotice]=useState(''),[busy,setBusy]=useState(false),[refresh,setRefresh]=useState(0);
- useUnsavedNavigation(dirty,'本体规则');
+ useUnsavedNavigation(dirty,'本体规则',{discard:()=>{setDoc(draft?structuredClone(draft.definition):null);setDirty(false);setReason('');},save:()=>perform('save'),canSave:!busy&&!!reason.trim()&&!!context?.can_edit});
  const [typeId,setTypeId]=useState(''),[propertyId,setPropertyId]=useState(''),[relationId,setRelationId]=useState(''),[selectedType,setSelectedType]=useState('');
  const generation=useRef(0),gate=useRef(false),requestId=useRef(''),newDraft=useRef('');
+ useEffect(()=>{const refreshPermissions=()=>setRefresh(v=>v+1);window.addEventListener('cospace:session-confirmed',refreshPermissions);return()=>window.removeEventListener('cospace:session-confirmed',refreshPermissions);},[]);
  useEffect(()=>{const controller=new AbortController(),run=++generation.current;setContext(null);setError('');
   fetch(`${endpoint}/api/ontology-authoring`,{signal:controller.signal,cache:'no-store'}).then(async r=>{if(r.status===404)return null;if(!r.ok)throw Error('本体编辑工作区无法读取。');const v=await r.json();if(v.profile!=='cospace.ontology-authoring/0.1'||!Array.isArray(v.drafts))throw Error('本体工作区响应无效。');return v;}).then(v=>{if(run===generation.current)setContext(v);}).catch(e=>{if(!controller.signal.aborted)setError(e.message);});return()=>{controller.abort();generation.current++;};
  },[endpoint,refresh]);
- function open(value:RuleDocument,saved:Draft|null){if(dirty&&!confirmUnsavedChanges())return;setDoc(structuredClone(value));setDraft(saved);setDirty(!saved);setReason('');setValidation('');setError('');setNotice('');setSelectedType(Object.keys(value.types)[0]||'');requestId.current='';newDraft.current='draft-'+identity();}
+ function open(value:RuleDocument,saved:Draft|null){void runGuarded(()=>{setDoc(structuredClone(value));setDraft(saved);setDirty(!saved);setReason('');setValidation('');setError('');setNotice('');setSelectedType(Object.keys(value.types)[0]||'');requestId.current='';newDraft.current='draft-'+identity();});}
  function update(value:RuleDocument){setDoc(value);setDirty(true);setValidation('');setNotice('');requestId.current='';}
  const validId=(id:string)=>/^[a-z][a-z0-9_]{0,63}$/.test(id)&&!['__proto__','constructor','prototype'].includes(id);
  function changeType(id:string,value:TypeRule){if(doc)update({...doc,types:{...doc.types,[id]:value}});}
  async function call(path:string,body:unknown){const r=await fetch(`${endpoint}/api/ontology-authoring/${path}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const v=await r.json();if(!r.ok)throw Error(({ontology_draft_revision_changed:'草稿修订已变化，请重新打开核查。',ontology_version_already_sealed:'同名版本已经固定，请使用新版本号。',shared_template_read_only:'预置版本只读，请使用新版本号或本体ID。',ontology_draft_already_sealed:'此草稿已固定，请复制为新版本。'} as Record<string,string>)[v.detail]||'操作未确认，请重新读取草稿与版本核查。');return v;}
  async function perform(kind:'validate'|'save'|'seal'){
-  if(!doc||gate.current)return;gate.current=true;setBusy(true);setError('');setNotice('');const run=generation.current;
+  if(!doc||gate.current)return false;gate.current=true;setBusy(true);setError('');setNotice('');const run=generation.current;
   try{if(kind==='validate'){const v=await call('validate',{definition:doc});if(run===generation.current)setValidation(v.status==='passed'?'规则校验通过':v.issues.join('；'));}
    if(kind==='save'){if(!reason.trim())throw Error('请填写本次修改原因。');if(!requestId.current)requestId.current=identity();const v=await call('drafts',{draft_id:draft?.draft_id||newDraft.current,expected_revision:draft?.revision||0,request_id:requestId.current,definition:doc,reason:reason.trim()});if(run===generation.current){setDraft(v);setDirty(false);setNotice('草稿已保存，尚未保存为固定规则版本。');setContext(c=>c?{...c,drafts:[v,...c.drafts.filter(d=>d.draft_id!==v.draft_id)]}:c);}}
    if(kind==='seal'){if(!draft||dirty)throw Error('请先保存当前草稿。');const v=await call('seal',{draft_id:draft.draft_id,expected_revision:draft.revision,expected_sha256:draft.sha256});if(run===generation.current){setDraft({...draft,sealed:true});setContext(c=>c?{...c,drafts:c.drafts.map(d=>d.draft_id===draft.draft_id?{...d,sealed:true}:d)}:c);setNotice('固定版本已保存。场景需明确选择该版本，已有模型与发布不变。');onSealed(v);}}
-  }catch(e){if(run===generation.current)setError((e as Error).message);}finally{gate.current=false;if(run===generation.current)setBusy(false);}
+   return run===generation.current;
+  }catch(e){if(run===generation.current)setError((e as Error).message);return false;}finally{gate.current=false;if(run===generation.current)setBusy(false);}
  }
  if(!context&&!error)return null;
  return <Card className="module-surface" aria-label="本体规则维护"><CardHeader><CardTitle>本体规则维护</CardTitle></CardHeader><CardContent className="flex min-w-0 flex-col gap-md">
  {error&&<p role="alert">{error}</p>}{context&&<><p>规则归属当前 Workspace：{context.workspace_id}，可供其多个场景引用。预置规则为只读模板，固定版本不会自动更新场景。</p>
  {!context.can_edit&&<p>当前可查看与应用规则；维护工作区规则需要 Workspace 所有者权限。</p>}
- <div className="flex flex-wrap gap-sm"><Button disabled={!context.can_edit||busy} onClick={()=>open(fresh(),null)}>新建本体草稿</Button><Button variant="outline" disabled={!context.can_edit||!source||busy} onClick={()=>{if(source){const parts=source.version.split('.').map(Number);parts[2]++;open({...source,version:parts.join('.')},null);}}}>复制所选版本为草稿</Button><Button variant="ghost" disabled={busy} onClick={()=>{if(!confirmUnsavedChanges())return;setDoc(null);setDraft(null);setDirty(false);setRefresh(v=>v+1);}}>刷新草稿</Button></div>
+ <div className="flex flex-wrap gap-sm"><Button disabled={!context.can_edit||busy} onClick={()=>open(fresh(),null)}>新建本体草稿</Button><Button variant="outline" disabled={!context.can_edit||!source||busy} onClick={()=>{if(source){const parts=source.version.split('.').map(Number);parts[2]++;open({...source,version:parts.join('.')},null);}}}>复制所选版本为草稿</Button><Button variant="ghost" disabled={busy} onClick={()=>{void runGuarded(()=>{setDoc(null);setDraft(null);setDirty(false);setRefresh(v=>v+1);});}}>刷新草稿</Button></div>
  <label>已保存草稿<NativeSelect aria-label="选择本体草稿" value={draft?.draft_id||''} disabled={busy} onChange={e=>{const d=context.drafts.find(v=>v.draft_id===e.target.value);if(d)open(d.definition,d);}}><option value="">选择草稿继续编辑或查看</option>{context.drafts.map(d=><option key={d.draft_id} value={d.draft_id}>{d.definition.title||'未命名'} · V{d.definition.version} · 修订{d.revision}{d.sealed?' · 已固定':''}</option>)}</NativeSelect></label>
  {doc&&<><fieldset disabled={busy||!context.can_edit||!!draft?.sealed} className="flex min-w-0 flex-col gap-md">
  <div className="grid grid-cols-1 gap-md md:grid-cols-2"><label>本体ID<Input aria-label="本体ID" value={doc.ontology_id} maxLength={64} onChange={e=>update({...doc,ontology_id:e.target.value})}/></label><label>版本号<Input aria-label="本体版本号" value={doc.version} maxLength={14} onChange={e=>update({...doc,version:e.target.value})}/></label></div>
