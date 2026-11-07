@@ -119,6 +119,11 @@ class StorageInventory:
                     if owner is None:continue
                     add(record['snapshot'],owner)
                     if record.get('tracking'):add(record['tracking'],owner)
+                from packages.data.scene_attachments import stored_records
+                for folder,record in stored_records(self.inputs.root,verify=True):
+                    owner=scopes.get(record.get('space_id'))
+                    if owner is None:continue
+                    add(folder,owner)
                 for pattern in ('build-*/job.json','publications/preview-*/publication.json'):
                     for path in sorted(self.jobs.root.glob(pattern)):
                         record=json.loads(path.read_bytes());owner=scopes.get(record.get('space_id'))

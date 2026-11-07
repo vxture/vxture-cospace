@@ -136,6 +136,11 @@ def validate_runtime(root,original_root=None):
                 if (not source.is_absolute() or not source.resolve().is_relative_to(original_root/'runtime')
                         or not (root/source.resolve().relative_to(original_root)).exists()):
                     raise ValueError('backup_external_or_missing_input_use_uploaded_inputs')
+    from packages.data.scene_attachments import stored_records
+    try:
+        list(stored_records(root/'runtime/preview-inputs', verify=True))
+    except (OSError,ValueError,TypeError,KeyError):
+        raise ValueError('backup_scene_attachments_invalid') from None
     for pattern in ('*/job.json','*/views/*/task.json'):
         for p in (root/'runtime/preview-builds').glob(pattern):
             if json.loads(p.read_bytes()).get('state') in ('queued','running'):
