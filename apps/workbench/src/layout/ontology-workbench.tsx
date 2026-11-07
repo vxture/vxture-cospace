@@ -1,3 +1,4 @@
+import {useRecordNavigation} from './record-navigation';
 import {businessEndpoint} from './business-endpoint';
 import {OntologyAuthoring,type RuleDocument} from './ontology-authoring';
 import React,{useEffect,useRef,useState} from 'react';
@@ -18,6 +19,8 @@ function message(code:string){
  return ({ontology_not_found:'该本体版本不存在。',ontology_reference_mismatch:'本体摘要与固定引用不一致，请核对后重新选择。',ontology_integrity_changed:'已封存规则内容不完整或被修改，已停止读取和校验。',ontology_store_not_configured:'本体规则库尚未配置。',ontology_definition_invalid:'本体规则结构无效。'} as Record<string,string>)[code]||'本体服务读取失败，请检查本机服务后重试。';
 }
 export function OntologyWorkbench(){
+ const target=useRecordNavigation();
+ const rules=target.tab==='rules'||!target.tab&&new URLSearchParams(location.hash.split('?')[1]||'').has('ontology_id');
  const [versions,setVersions]=useState<Version[]>([]),[reference,setReference]=useState(readReference),[loaded,setLoaded]=useState<Loaded|null>(null);
  const [listing,setListing]=useState(false),[reading,setReading]=useState(false),[error,setError]=useState(''),[revision,setRevision]=useState(0);
  const [text,setText]=useState(''),[result,setResult]=useState<Result|null>(null),[checkError,setCheckError]=useState(''),[busy,setBusy]=useState(false);
@@ -58,8 +61,8 @@ export function OntologyWorkbench(){
  }
  const current=loaded?.record;
  return <div className="flex flex-col gap-xl">
-  <OntologyAuthoring endpoint={endpoint} source={loaded?.definition as unknown as RuleDocument||null} onSealed={record=>{setRevision(v=>v+1);const params=new URLSearchParams(location.hash.split('?')[1]||'');params.set('ontology_id',record.ontology_id);params.set('ontology_version',record.version);params.set('ontology_sha256',record.sha256);location.hash='ontology?'+params;}}/>
-  <div className="flex flex-wrap items-center justify-between gap-md"><p className="text-body-small text-muted-foreground">查看固定版本的类型与关系规则，校验对象草稿。预置模板及当前 Workspace 的规则可供其多个场景引用。</p><Button variant="outline" disabled={listing||reading||busy} onClick={()=>setRevision(n=>n+1)}>刷新规则库</Button></div>
+  <div hidden={rules}><OntologyAuthoring endpoint={endpoint} source={loaded?.definition as unknown as RuleDocument||null} onSealed={record=>{setRevision(v=>v+1);const params=new URLSearchParams(location.hash.split('?')[1]||'');params.set('ontology_id',record.ontology_id);params.set('ontology_version',record.version);params.set('ontology_sha256',record.sha256);location.hash='ontology?'+params;}}/>
+  </div><div hidden={!rules} className="flex flex-col gap-xl"><div className="flex flex-wrap items-center justify-between gap-md"><p className="text-body-small text-muted-foreground">查看固定版本的类型与关系规则，校验对象草稿。预置模板及当前 Workspace 的规则可供其多个场景引用。</p><Button variant="outline" disabled={listing||reading||busy} onClick={()=>setRevision(n=>n+1)}>刷新规则库</Button></div>
   <Card className="module-surface" aria-label="本体版本"><CardHeader><CardTitle>本体版本</CardTitle></CardHeader><CardContent className="flex flex-col gap-md">
    <NativeSelect aria-label="选择本体版本" value={versions.some(v=>key(v)===referenceKey)?referenceKey:''} onChange={e=>choose(e.target.value)} disabled={listing||busy}><option value="">{listing?'读取版本中…':'请选择固定本体版本'}</option>{versions.map(v=><option key={key(v)} value={key(v)}>{v.title} · V{v.version}</option>)}</NativeSelect>
    {error&&<p role="alert">{error}</p>}{!listing&&!error&&!versions.length&&<p role="status" className="text-body-small text-muted-foreground">尚无封存本体版本，请由工程师配置规则源后启动服务。</p>}
@@ -71,5 +74,5 @@ export function OntologyWorkbench(){
    {loaded.definition.relations&&<Card aria-label="本体关系规则"><CardHeader><CardTitle>关系规则</CardTitle></CardHeader><CardContent className="flex min-w-0 flex-col gap-lg">{Object.entries(loaded.definition.relations).map(([id,r])=><section key={id} className="break-all border-b border-border pb-md"><h3 className="text-body-small font-medium">{r.title} · {id}</h3><p className="mt-sm text-label-small text-muted-foreground">来源：{r.source_types.map(t=>loaded.definition.types[t]?.title||t).join("、")}；目标：{r.target_types.map(t=>loaded.definition.types[t]?.title||t).join("、")}</p><p className="mt-sm text-label-small text-muted-foreground">{r.symmetric?"无向连接，反向重复拒绝；不表示可通行。":"有向归属；包含与位于统一检查单一父空间、循环及反向等价重复。"}</p></section>)}<p className="text-label-small text-muted-foreground">通用规则：端点存在、类型匹配、禁止自身关系。实例在空间关联创建，规则通过不代表现场语义已确认。</p></CardContent></Card>}
    <Card aria-label="对象草稿校验"><CardHeader><CardTitle>对象草稿校验</CardTitle></CardHeader><CardContent className="flex flex-col gap-md"><p className="text-body-small text-muted-foreground">仅检查类型、ID及属性规则，不保存对象，不确认位置或现场语义。草稿校验不修改已有模型或发布。</p><label htmlFor="ontology-draft" className="text-body-small">对象数组 JSON</label><Textarea id="ontology-draft" aria-label="对象草稿JSON" rows={12} className="font-mono text-body-small" maxLength={64000} value={text} onChange={e=>draft(e.target.value)} placeholder="输入对象草稿，或填入下方校验示例"/><div className="flex flex-wrap gap-sm"><Button disabled={busy||!text.trim()} onClick={inspect}>{busy?'校验中…':'校验草稿'}</Button><Button variant="outline" disabled={busy} onClick={()=>draft(JSON.stringify([{object_id:'draft-cabinet-01',type_id:'cabinet',properties:{name:'待确认柜体（校验草稿）'}}],null,2))}>填入校验示例</Button></div>{checkError&&<p role="alert">{checkError}</p>}{result&&<section aria-label="草稿校验结果" className="flex flex-col gap-md border-t border-border pt-md"><div className="flex flex-wrap items-center gap-sm"><StatusBadge tone={result.status==='passed'?'success':'danger'}>{result.status==='passed'?'规则校验通过':'规则校验未通过'}</StatusBadge><span className="text-label-small text-muted-foreground">{result.object_count} 个草稿 · {result.issues.length} 个问题</span></div><p className="text-label-small text-muted-foreground">{new Date(result.checked_at).toLocaleString('zh-CN',{hour12:false})} · V{result.ontology_ref.version} · 未保存，现场语义未确认</p>{result.issues.map((issue,i)=><div key={i} className="flex flex-col gap-xs border-b border-border pb-sm"><p className="text-body-small">{issue.object_id||'ID未填写'}：{issue.message}</p><p className="break-all text-label-small text-muted-foreground">{issue.path} · {issue.code}</p></div>)}</section>}</CardContent></Card>
   </div>}
- </div>;
+ </div></div>;
 }

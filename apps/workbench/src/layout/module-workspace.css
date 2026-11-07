@@ -1,8 +1,3 @@
-.module-context-bar{display:flex;align-items:center;gap:20px;flex-shrink:0;min-height:46px;padding:0 28px;border-block:1px solid var(--border);overflow-x:auto;white-space:nowrap;font-size:11px}
-.module-context-name{color:var(--muted-foreground);max-width:180px;text-overflow:ellipsis;overflow:hidden;flex-shrink:0;margin-right:auto}
-.module-context-bar a{display:flex;align-items:center;min-height:44px;color:var(--muted-foreground);border-bottom:2px solid transparent}
-.module-context-bar a[aria-current=page]{color:var(--primary);border-color:var(--primary)}
-.module-context-bar a:hover{color:var(--primary)}.module-context-disabled{color:var(--muted-foreground);opacity:.5}
 .module-body{flex:1;min-height:0;overflow:auto;overscroll-behavior:contain;padding:24px 28px 32px;font-size:12px;scrollbar-width:thin}
 .module-body .text-heading-2{font-size:16px;font-weight:550}.module-body .text-body{font-size:13px}.module-body .text-body-small{font-size:12px;line-height:1.8}.module-body .text-label-small{font-size:11px}
 .module-body .module-surface{border:0;background:transparent!important;background-image:none!important;box-shadow:none;border-radius:0;padding:0}
@@ -11,8 +6,6 @@
 .module-body select,.module-body [data-slot=select-trigger]{min-height:32px;font-size:12px}
 .module-body .text-heading-3{font-size:15px;font-weight:550}
 .module-scope-note{font-size:11px;line-height:1.8;color:var(--muted-foreground);margin:0 0 20px}
-.module-subtabs{display:flex;gap:24px;align-items:center;border-bottom:1px solid var(--border);margin-bottom:24px;overflow:auto}
-.module-subtabs a{padding:0 0 12px;white-space:nowrap;color:var(--muted-foreground);font-size:12px;border-bottom:2px solid transparent}.module-subtabs a[aria-current=page]{color:var(--primary);border-color:var(--primary)}
 .module-subview{min-width:0}.module-flow-links{display:flex;gap:12px;flex-wrap:wrap;margin-block:18px}
 .module-section-heading{display:flex;justify-content:space-between;align-items:center;gap:12px}.module-section-heading h2{font-size:15px;font-weight:550;margin:0}.module-section-heading h3{font-size:13px;font-weight:500;margin:0}.module-section-heading>span{font-size:11px;color:var(--muted-foreground)}
 .module-preview-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,320px),1fr));gap:20px;margin-top:22px}

@@ -1,3 +1,4 @@
+import {useUnsavedNavigation} from './unsaved-navigation';
 import React,{useEffect,useState} from 'react';
 import {Button,Field,FieldLabel,Input,NativeSelect,Textarea,Separator,StatusBadge} from '@vxture/design-system';
 import {businessEndpoint as endpoint} from './business-endpoint';
@@ -29,6 +30,7 @@ export function SpaceSettings(){
   }catch(e){setError(e instanceof Error?e.message:'保存失败');}finally{setBusy(false);}
  }
  const dirty=!!data&&(name.trim()!==data.space.name||description.trim()!==data.space.description);
+ useUnsavedNavigation(dirty,'场景信息');
  return <div className="flex flex-col gap-xl" aria-label="空间基本配置">
   <div className="flex flex-wrap items-center justify-between gap-md"><div><h2 className="text-heading-2">空间基本信息</h2><p className="mt-sm text-body-small text-muted-foreground">按授权空间保存。名称与用途描述用于目录展示。</p></div><Button variant="outline" disabled={busy||loading} onClick={()=>setRefresh(v=>v+1)}>重新读取配置</Button></div>
   <Field><FieldLabel htmlFor="settings-space">选择空间</FieldLabel><NativeSelect id="settings-space" disabled={busy} value={target.space} onChange={e=>{location.hash=recordLink('settings',{space:e.target.value}).slice(1);}}><option value="" disabled>请选择授权空间</option>{spaces.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</NativeSelect></Field>

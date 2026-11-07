@@ -1,3 +1,4 @@
+import {useUnsavedNavigation} from './unsaved-navigation';
 import {inputDisplayName} from './input-format';
 import React,{useEffect,useRef,useState} from 'react';
 import {Button,Card,CardHeader,CardTitle,CardContent,Input,NativeSelect,StatusBadge,Switch,Dialog,DialogContent,DialogHeader,DialogTitle,DialogDescription,DialogFooter,Table,TableHeader,TableBody,TableHead,TableRow,TableCell} from '@vxture/design-system';
@@ -28,6 +29,7 @@ export function AcquisitionBatches({onChanged}:{onChanged?:()=>void}={}){
  async function create(event:React.FormEvent){event.preventDefault();if(busy)return;setBusy(true);setError('');try{const result=await post('/api/batches',{space_id:target.space,name,origin,note});if(!active.current)return;setDialog(false);setRevision(v=>v+1);onChanged?.();location.hash=recordLink('data',{space:target.space,tab:'batches',batch:result.id,...(target.input?{input:target.input}:{})});}catch(e){setError((e as Error).message);}finally{setBusy(false);}}
  async function change(operation:string){if(!current||busy)return;setBusy(true);setError('');try{await post(`/api/batches/${current.id}/transitions`,{space_id:target.space,expected_revision:current.revision,operation,reason,...(operation==='replace_members'?{input_ids:members}:{})});if(!active.current)return;setReason('');setRevision(v=>v+1);onChanged?.();}catch(e){if(active.current){setError((e as Error).message);setDetail(null);}}finally{setBusy(false);}}
  const dirty=Boolean(current)&&JSON.stringify([...members].sort())!==JSON.stringify(current!.members.map(m=>m.input_id).sort());
+ useUnsavedNavigation(dirty,'采集批次成员');
  return <section aria-label="采集批次管理" className="data-batches-page flex min-w-0 flex-col gap-lg"><div className="flex flex-wrap items-center justify-between gap-md"><p className="text-body-small text-muted-foreground">整理资料、封存成员并追溯构建与发布。停用批次阻止该批次的新构建，保留已有成果。</p><div className="flex gap-sm"><Button variant="outline" disabled={loading||busy||!target.space} onClick={()=>{setRevision(v=>v+1);onChanged?.();}}>刷新批次</Button><Button disabled={busy||!target.space} onClick={()=>{setName('');setNote('');setOrigin('imported_sample');setDialog(true);}}>创建批次</Button></div></div>
  {!target.space&&<p className="text-body-small">请先选择工作空间。历史未关联资料不自动划入批次。</p>}{loading&&<p role="status">正在读取批次…</p>}{error&&<p role="alert" className="break-all text-body-small">{error}</p>}
  {target.input&&inputs.some(i=>i.id===target.input)&&<p className="data-batch-context">本次整理：{inputs.find(i=>i.id===target.input)?.label}。选择整理中的批次或新建批次，确认成员后保存。</p>}

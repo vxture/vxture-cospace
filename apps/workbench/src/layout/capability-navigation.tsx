@@ -1,0 +1,17 @@
+import {approveNavigation,confirmUnsavedChanges} from './unsaved-navigation';
+import {CreateSceneButton} from './create-scene';
+import {Button} from '@vxture/design-system';
+import React from 'react';
+import {NativeSelect} from '@vxture/design-system';
+import {recordLink,useRecordNavigation} from './record-navigation';
+import {moduleNames,ModuleRoute} from './product-navigation';
+import {SceneSpace} from './scene-directory';
+import './capability-navigation.css';
+const capabilities:Record<ModuleRoute,[string,string][]>={data:[['inputs','资料与预检'],['references','配套资料'],['pointcloud','场景点云'],['batches','采集批次'],['versions','场景版本'],['lineage','来源追溯']],build:[['flow','构建流程'],['tasks','构建任务'],['candidate','当前模型候选']],association:[['objects','语义与几何'],['ifc','IFC 构件资料'],['business','对象与业务'],['relations','对象间关系']],delivery:[['','发布与交付']],space:[['','固定发布预览']],ontology:[['','规则与版本']]};
+export function CapabilityNavigation({route,view}:{route:ModuleRoute;view?:string}){
+ const target=useRecordNavigation(),items=capabilities[route],active=view||target.tab||items[0][0];
+ return <aside id="data-scene-sidebar" className="data-sidebar capability-sidebar"><strong>{moduleNames[route]}</strong><nav aria-label={`${moduleNames[route]}能力导航`}>{items.map(([id,label])=><a key={id} id={`data-tab-${id}`} href={recordLink(route,{tab:id,...(route==='build'&&id!=='candidate'?{input:target.input||'',job:target.job||'',batch:target.batch||''}:{})})} aria-current={active===id?'page':undefined}>{label}</a>)}</nav>{route==='data'&&<a href={recordLink('data',{scope:'all'})}>共用数据目录</a>}</aside>;
+}
+export function SceneScope({spaces,current,onChoose,loading,error,onRefresh}:{spaces:SceneSpace[];current:string;onChoose:(id:string)=>void;loading:boolean;error:string;onRefresh:()=>void}){
+ return <div className="scene-scope" aria-label="当前操作场景"><label htmlFor="workbench-scene">操作场景</label><NativeSelect id="workbench-scene" value={current} disabled={loading} onChange={e=>{if(approveNavigation())onChoose(e.target.value);else e.target.value=current;}}><option value="">请选择场景空间</option>{current&&!spaces.some(s=>s.id===current)&&<option value={current}>场景不可访问</option>}{spaces.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</NativeSelect><Button size="sm" variant="ghost" disabled={loading} onClick={()=>{if(confirmUnsavedChanges())onRefresh();}}>刷新场景</Button><CreateSceneButton onCreated={id=>{if(approveNavigation()){onRefresh();onChoose(id);}}}/>{loading&&<span role="status">正在读取场景…</span>}{error&&<span role="alert">{error}</span>}</div>;
+}

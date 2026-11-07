@@ -1,3 +1,4 @@
+import {useUnsavedNavigation} from './unsaved-navigation';
 import React,{useEffect,useState} from 'react';
 import {Button,Card,CardHeader,CardTitle,CardContent,Input,NativeSelect,Switch,StatusBadge} from '@vxture/design-system';
 import {previewEndpoint as endpoint} from './real-space-data';
@@ -47,6 +48,7 @@ export function ObjectRelations(){
   try{const ontology_ref={ontology_id:ref.ontology_id,version:ref.version,sha256:ref.sha256};const response=await fetch(`${endpoint}/api/relation-candidates`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({space_id:target.space,base_candidate_id:base,base_manifest_sha256:hash,ontology_ref,relations})});const body=await response.json();if(!response.ok){if(body.detail?.issues){setReport(body.detail);throw Error('服务端关系校验未通过。');}throw Error(`关系候选生成失败：${typeof body.detail==='string'?body.detail:'请重新读取基础与规则。'}`);}if(body.space_id!==target.space||body.base_candidate_id!==base)throw Error('候选响应绑定不一致。');setCreated(body.id);setAck(false);}catch(e){setError(e instanceof Error?e.message:'生成失败');}finally{setBusy(false);}
  }
  const changed=original!==JSON.stringify(relations)||Boolean(reference&&reference!==originalRef),selectedRule=rules[draft.type_id];
+ useUnsavedNavigation(!!hash&&!created&&(changed||Object.values(draft).some(Boolean)),'对象间关系');
  if(!target.space)return <p className="text-body-small text-muted-foreground">选择工程空间后可建立对象间关系。</p>;
  return <Card className="module-surface" aria-label="对象间关系"><CardHeader><div className="flex flex-wrap items-center justify-between gap-sm"><CardTitle>对象间关系</CardTitle><Button size="sm" variant="outline" disabled={busy||loading||reading} onClick={()=>setRevision(n=>n+1)}>重新载入关系</Button></div></CardHeader><CardContent className="flex min-w-0 flex-col gap-lg">
  <p className="text-body-small text-muted-foreground">以固定本体规则声明对象间关系，生成新候选后核对发布。关系仍待核实，连接不表示可通行。</p>

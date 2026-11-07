@@ -1,3 +1,4 @@
+import {useUnsavedNavigation} from './unsaved-navigation';
 import React,{useEffect,useRef,useState} from 'react';
 import {InputCoordinates} from './input-coordinates';
 import {Button,Field,FieldLabel,Input,Textarea} from '@vxture/design-system';
@@ -12,6 +13,7 @@ export function InputDescription({endpoint,space,identity,onSaved,onCoordinatesS
  const [data,setData]=useState<Description|null>(null),[facts,setFacts]=useState<Facts|null>(null),[editing,setEditing]=useState(false),[busy,setBusy]=useState(false),[loading,setLoading]=useState(true),[error,setError]=useState(''),[factsError,setFactsError]=useState(''),[notice,setNotice]=useState(''),[refresh,setRefresh]=useState(0);
  const [name,setName]=useState(''),[description,setDescription]=useState(''),[use,setUse]=useState(''),[reason,setReason]=useState('');
  const generation=useRef(0);
+ useUnsavedNavigation(!!data&&editing&&(name!==data.display_name||description!==data.description||use!==data.intended_use||!!reason),'资料说明');
  useEffect(()=>{
   const run=++generation.current,controller=new AbortController();setData(null);setFacts(null);setError('');setFactsError('');setNotice('');setEditing(false);setBusy(false);setLoading(true);
   const read=async(kind:string)=>{const r=await fetch(`${endpoint}/api/inputs/${identity}/${kind}?`+new URLSearchParams({space_id:space}),{signal:controller.signal,cache:'no-store'});if(!r.ok)throw Error(r.status===403?'没有此资料的管理权限。':kind==='facts'?'来源证据暂不可读或已变化，请重新核对资料。':'资料说明暂不可读，请重试。');const body=await r.json();if(body.input_id!==identity||body.space_id!==space||body.profile!==`cospace.input-${kind==='facts'?'facts':'description'}/0.1`)throw Error('返回资料与当前场景不一致。');return body;};

@@ -18,6 +18,8 @@ def test_complete_and_historical_context_are_independent_and_readonly(tmp_path, 
     for publication in (old, new):
         report = workflow(pubs, spaces[0]['id'], publication_id=publication['id'])
         s = report['summary']
+        assert s['journey']['target'] == {'kind':'publication','id':publication['id']}
+        assert [step['status'] for step in s['journey']['steps']] == ['unknown','unknown','unknown','complete']
         assert s['service_status'] == 'complete' and s['consumer_status'] == 'unobserved'
         assert s['viewing_publication']['publication_id'] == publication['id']
         assert s['viewing_publication']['matches_current'] == (publication == new)
@@ -29,6 +31,8 @@ def test_complete_and_historical_context_are_independent_and_readonly(tmp_path, 
 def test_new_unpublished_candidate_preserves_old_available_release(tmp_path):
     _, _, _, spaces, _, pubs, old, _ = prepared(tmp_path, publish=False)
     s = workflow(pubs, spaces[0]['id'])['summary']
+    assert s['journey']['current_step'] == 'delivery'
+    assert [step['status'] for step in s['journey']['steps']] == ['complete','complete','complete','pending']
     assert s['service_status'] == 'pending' and s['work']['label'] == '当前候选待发布'
     assert s['available_publication_count'] == 1
     assert s['publications'][0]['publication_id'] == old['id'] and not s['publications'][0]['matches_current']
@@ -43,11 +47,17 @@ def test_explicit_task_does_not_revoke_fixed_versions(tmp_path, state, label):
     (job / 'job.json').write_text(json.dumps({'id': job.name, 'state': state, **{k:new[k] for k in ('space_id','project_id')}}))
     s = workflow(pubs, spaces[0]['id'], job_id=job.name)['summary']
     assert s['service_status'] == 'complete' and s['available_publication_count'] == 2
+    assert s['journey']['target'] == {'kind':'job','id':job.name}
+    assert s['journey']['steps'][1]['status'] == ('in_progress' if state in ('queued','running') else 'needs_attention')
+    assert s['journey']['steps'][0]['status'] == 'unknown'
     assert s['work']['label'] == label and s['work']['action']['values']['job'] == job.name
     assert s['tracked_job']['is_current'] is False
     assert s['candidate_ref']['candidate_id'] == new['candidate_id']
     # Without explicit tracking, no arbitrary latest job is made the user's target.
-    assert workflow(pubs, spaces[0]['id'])['summary']['work']['label'] == '服务端流程已完成'
+    untracked = workflow(pubs, spaces[0]['id'])['summary']
+    assert untracked['work']['label'] == '服务端流程已完成'
+    assert untracked['journey']['target'] == {'kind':'candidate','id':new['candidate_id']}
+    assert untracked['journey']['steps'][1]['status'] == 'complete'
 
 
 def test_paused_target_never_falls_back(tmp_path):
@@ -57,6 +67,8 @@ def test_paused_target_never_falls_back(tmp_path):
     jobs.controls.change(pubs, ControlChange(space_id=space, artifact=artifact, expected_revision=0,
         expected_snapshot_sha256=snapshot, operation='pause_distribution', reason='P12 isolated test'))
     s = workflow(pubs, space, publication_id=new['id'])['summary']
+    assert s['journey']['steps'][-1]['status'] == 'needs_attention'
+    assert s['journey']['current_step'] == 'delivery'
     assert s['viewing_publication']['status'] == 'paused' and s['service_status'] == 'needs_attention'
     assert s['available_publication_count'] == 1
     assert s['primary_action']['module'] == 'delivery' and s['primary_action']['values']['publication'] == new['id']
@@ -72,6 +84,8 @@ def test_explicit_preparation_does_not_change_selected_or_publications(tmp_path,
             'detail':'saved evidence only', 'next_action':{'module':'build' if ready else 'data', 'label':'next', 'values':{'space':spaces[0]['id'],'input':'input-target'}}}
     before = inventory(tmp_path)
     s = workflow(pubs, spaces[0]['id'], preparation_report=prep)['summary']
+    assert s['journey']['target'] == {'kind':'input','id':'input-target'}
+    assert [step['status'] for step in s['journey']['steps']] == ['complete' if ready else 'needs_attention','pending','pending','pending']
     assert s['work']['label'] == ('资料可用于构建' if ready else '资料待准备')
     assert s['service_status'] == 'complete' and s['available_publication_count'] == 2
     assert inventory(tmp_path) == before
@@ -82,6 +96,8 @@ def test_empty_scene_is_pending_without_side_effects(tmp_path):
     scene = directory.create('space', 'P12 empty', spaces[0]['project_id'])
     before = inventory(tmp_path)
     s = workflow(PreviewPublications(jobs), scene['id'])['summary']
+    assert s['journey']['target'] == {'kind':'scene','id':scene['id']}
+    assert [step['status'] for step in s['journey']['steps']] == ['pending']*4
     assert s['service_status'] == 'pending' and not s['publications'] and not s['candidate_ref']
     assert s['primary_action']['module'] == 'data' and inventory(tmp_path) == before
 
@@ -111,7 +127,8 @@ def test_viewer_summary_omits_engineering_and_cannot_request_job(secured):
     _, c, _, _, _, _, spaces, _, _, new = secured
     sign_in(secured)
     s = c.get('/api/workflow', params={'space_id':spaces[0]['id'],'publication_id':new['id']})
-    assert s.status_code == 200, s.text
+    assert s.status_code == 200
+    assert s.json()['summary']['journey'] is None, s.text
     data = s.json()
     assert data['summary']['work'] is None and data['summary']['candidate_ref'] is None
     assert 'preparation' not in data and data['candidate_ref'] is None
@@ -134,3 +151,17 @@ def test_engineer_http_exact_context_and_session_expiry_recovery(secured):
     restored = c.get('/api/workflow', params=params)
     assert restored.status_code == 200, restored.text
     assert restored.json()['summary'] == first.json()['summary']
+
+
+def test_journey_does_not_claim_review_for_readable_unreviewed_candidate(tmp_path):
+    _, jobs, _, spaces, _, pubs, _, new = prepared(tmp_path)
+    selection_path = jobs.root / 'space-selections' / (spaces[0]['id'] + '.json')
+    selection = json.loads(selection_path.read_bytes())
+    selection.pop('selection_review', None)
+    selection_path.write_text(json.dumps(selection))
+    journey = workflow(pubs, spaces[0]['id'])['summary']['journey']
+    assert journey['target'] == {'kind':'candidate','id':new['candidate_id']}
+    assert journey['steps'][1]['status'] == 'complete'
+    assert journey['steps'][2]['status'] == 'pending'
+    assert journey['steps'][3]['status'] == 'complete'
+    assert journey['current_step'] == 'review'

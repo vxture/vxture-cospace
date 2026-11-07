@@ -1,3 +1,4 @@
+import {useUnsavedNavigation} from './unsaved-navigation';
 import {businessEndpoint} from './business-endpoint';
 import React,{useEffect,useRef,useState} from 'react';
 import {AnchorPicker} from './anchor-picker';
@@ -19,10 +20,11 @@ function ObjectAnnotationEditor(){
  const target=useRecordNavigation();
  const [jobs,setJobs]=useState<{id:string;state:string}[]>([]),[versions,setVersions]=useState<Version[]>([]),[baseId,setBaseId]=useState(''),[refKey,setRefKey]=useState(''),[rules,setRules]=useState<Rules|null>(null);
  const [base,setBase]=useState<Anchor|null>(null),[anchor,setAnchor]=useState<Anchor|null>(null),[index,setIndex]=useState('0'),[identity,setIdentity]=useState(''),[typeId,setTypeId]=useState(''),[properties,setProperties]=useState<Record<string,string>>({}),[objects,setObjects]=useState<Draft[]>([]);
- const [editing,setEditing]=useState('');
+ const [editing,setEditing]=useState(''),[original,setOriginal]=useState('[]');
  const generation=useRef(0),anchorRequest=useRef<AbortController|null>(null),saving=useRef(false);
  useEffect(()=>()=>{generation.current++;anchorRequest.current?.abort();},[]);
  const [busy,setBusy]=useState(false),[reading,setReading]=useState(false),[error,setError]=useState(''),[created,setCreated]=useState<{id:string;candidate_url:string}|null>(null);
+ useUnsavedNavigation(!!base&&!created&&(JSON.stringify(objects)!==original||!!identity||!!editing),'对象标注');
  useEffect(()=>{
   if(!target.space)return;const controller=new AbortController();setError('');
   Promise.all([fetch(`${endpoint}/api/builds?space_id=${target.space}`,{signal:controller.signal}),fetch(`${endpoint}/api/ontologies`,{signal:controller.signal}),fetch(`${endpoint}/api/selection?space_id=${target.space}`,{signal:controller.signal})]).then(async responses=>{
@@ -33,12 +35,12 @@ function ObjectAnnotationEditor(){
   }).catch(e=>{if(!controller.signal.aborted)setError(e.message);});return()=>controller.abort();
  },[target.space,target.job]);
  useEffect(()=>{
-  const controller=new AbortController();generation.current++;anchorRequest.current?.abort();setBase(null);setAnchor(null);setObjects([]);setCreated(null);setIndex('0');setIdentity('');setEditing('');setError('');
+  const controller=new AbortController();generation.current++;anchorRequest.current?.abort();setBase(null);setAnchor(null);setObjects([]);setOriginal('[]');setCreated(null);setIndex('0');setIdentity('');setEditing('');setError('');
   if(!baseId){setReading(false);return()=>controller.abort();}setReading(true);
   fetch(`${endpoint}/candidates/${baseId}/api/anchor?point_index=0`,{signal:controller.signal}).then(async a=>{
    if(!a.ok)throw Error('模型锚点读取失败。');const info=await a.json();if(controller.signal.aborted)return;
    if(info.candidate_id!==baseId)throw Error('基础候选响应不一致。');setBase(info);
-   if(info.has_semantic_objects){const o=await fetch(`${endpoint}/candidates/${baseId}/api/objects`,{signal:controller.signal});if(!o.ok)throw Error('已有对象快照无法读取。');const existing=await o.json();if(controller.signal.aborted)return;setRefKey(key(existing.ontology_ref));setObjects(existing.objects.map((obj:{object_id:string;type_id:string;properties:Record<string,string>;evidence:{point_index:number}})=>({object_id:obj.object_id,type_id:obj.type_id,properties:obj.properties,point_index:obj.evidence.point_index})));}
+   if(info.has_semantic_objects){const o=await fetch(`${endpoint}/candidates/${baseId}/api/objects`,{signal:controller.signal});if(!o.ok)throw Error('已有对象快照无法读取。');const existing=await o.json();if(controller.signal.aborted)return;setRefKey(key(existing.ontology_ref));const saved=existing.objects.map((obj:{object_id:string;type_id:string;properties:Record<string,string>;evidence:{point_index:number}})=>({object_id:obj.object_id,type_id:obj.type_id,properties:obj.properties,point_index:obj.evidence.point_index}));setObjects(saved);setOriginal(JSON.stringify(saved));}
   }).catch(e=>{if(!controller.signal.aborted){setBase(null);setError(e.message);}}).finally(()=>{if(!controller.signal.aborted)setReading(false);});return()=>controller.abort();
  },[baseId]);
  useEffect(()=>{

@@ -1,3 +1,4 @@
+import {useUnsavedNavigation} from './unsaved-navigation';
 import React,{useEffect,useState} from 'react';
 import {Button,Checkbox,Field,FieldLabel,Input,StatusBadge} from '@vxture/design-system';
 import {businessEndpoint as endpoint} from './business-endpoint';
@@ -22,6 +23,7 @@ export function SourceSettings({spaceId,onSaved,onImport}:{spaceId:string;onSave
   }catch(e){setError(e instanceof Error?e.message:'保存失败');}finally{setBusy(false);}
  }
  const dirty=!!data&&(JSON.stringify([...chosen].sort())!==JSON.stringify(data.sources.map(s=>s.id).sort())||data.unavailable_source_ids.length>0);
+ useUnsavedNavigation(!!data&&JSON.stringify([...chosen].sort())!==JSON.stringify(data.sources.map(s=>s.id).sort()),'来源配置');
  return <section aria-label="空间资料来源配置" className="flex min-w-0 flex-col gap-lg">
   <div className="flex flex-wrap items-start justify-between gap-md"><div><h2 className="text-heading-2">资料来源</h2><p className="mt-sm text-body-small text-muted-foreground">为空间选择可登记的封存资料。登记后再预检、构建。</p></div><Button variant="outline" disabled={busy||loading||!spaceId} onClick={()=>setRefresh(v=>v+1)}>重新读取来源</Button></div>
   {!spaceId&&<p className="text-body-small text-muted-foreground">请先选择空间。</p>}
