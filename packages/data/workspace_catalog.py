@@ -123,7 +123,7 @@ def catalog(jobs, directory, policy, principal, query):
                 add(record | {'id': record['id'] + '@' + str(check['sequence'])},
                     'preflight', 'process', record.get('label', record['id']),
                     check['status'] if check['registration_matches'] else 'registration_changed',
-                    'data', tab='inputs', input=record['id'])
+                    'data', tab='inputs', input=record['id'], check=str(check['sequence']))
         except (OSError, ValueError, TypeError, KeyError, PreflightUnavailable):
             issue('preflight', record['space_id'])
 
@@ -132,7 +132,7 @@ def catalog(jobs, directory, policy, principal, query):
         if 'build.run' in policy.capabilities(principal, space):
             # Failed/queued/running tasks are process records, never candidates.
             state = record.get('state')
-            state = state if isinstance(state, str) and state in ('queued','running','succeeded','failed','interrupted') else 'unknown'
+            state = state if isinstance(state, str) and state in ('queued','running','succeeded','failed','interrupted','views_failed') else 'unknown'
             add(record, 'job', 'process', record['id'], state,
                 'build', tab='tasks', job=record['id'])
         if record.get('state') == 'succeeded':

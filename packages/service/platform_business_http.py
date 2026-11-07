@@ -15,7 +15,7 @@ from packages.service.platform_resource_access import PlatformResourceAccess
 from packages.lifecycle.space_settings import SpaceSettingsChange, SettingsConflict, SettingsUnavailable
 from packages.data.space_sources import SpaceSources, SourceChange, SourcesConflict, SourcesUnavailable
 from packages.data.preview_registration import PreviewRegistration
-from packages.data.preflight_records import PreflightRecords, PreflightUnavailable
+from packages.data.preflight_records import PreflightRecords, PreflightUnavailable, PreflightHistoryQuery
 from packages.data.input_descriptions import InputDescriptions, DescriptionChange, DescriptionConflict, DescriptionUnavailable
 from packages.data.input_coordinates import InputCoordinates, CoordinateChange, CoordinatesConflict, CoordinatesUnavailable
 from packages.data.input_routes import route
@@ -188,7 +188,7 @@ class BusinessAccess:
                 return {'principal':principal}
             m=re.fullmatch(r'/api/inputs/([^/]+)',path)
             if m:artifact('input:'+m[1],'data.manage',q.get('space_id'));return {'principal':principal}
-            m=re.fullmatch(r'/api/inputs/([^/]+)/preflight',path)
+            m=re.fullmatch(r'/api/inputs/([^/]+)/preflight(?:/history)?',path)
             if m:artifact('input:'+m[1],'data.manage',q.get('space_id'));return {'principal':principal}
             m=re.fullmatch(r'/api/batches/([^/]+)',path)
             if m:batch(m[1],q.get('space_id'),'data.manage');return {'principal':principal}
@@ -512,6 +512,15 @@ class BusinessAccess:
                 try:result=await run_in_threadpool(self.workspace_scenes.create,context['principal'],change)
                 except (OSError,sqlite3.Error):return deny(503,'workspace_scene_storage_unavailable_retry_same_request')
                 return JSONResponse(result,status_code=201 if result['created'] else 200,headers={'Cache-Control':'no-store'})
+            history_path=re.fullmatch(r'/api/inputs/([^/]+)/preflight/history',path)
+            if history_path:
+                try:query=PreflightHistoryQuery.model_validate(dict(request.query_params))
+                except ValidationError:return deny(422,'preflight_history_query_invalid')
+                if query.sequence is not None and query.before_sequence is not None:
+                    return deny(422,'preflight_history_cursor_conflict')
+                result=await run_in_threadpool(PreflightRecords(self.jobs.inputs).history,history_path[1],
+                    limit=query.limit,before_sequence=query.before_sequence,sequence=query.sequence)
+                return JSONResponse(result,headers={'Cache-Control':'no-store'})
             check_path=re.fullmatch(r'/api/inputs/([^/]+)/preflight',path)
             if check_path:
                 store=PreflightRecords(self.jobs.inputs)
