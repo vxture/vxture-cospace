@@ -75,6 +75,14 @@ class PartitionIndex(BaseModel):
     layout:Literal['little_endian_int64_xyz']
     selection_rule:Literal['cell_center_in_half_open_aabb']
 
+    @model_validator(mode='before')
+    @classmethod
+    def strict_declarations(cls,value):
+        # Literal validation alone accepts numeric 0 as False and 4096.0 as an int.
+        if isinstance(value,dict) and (value.get('robot_ready') is not False or type(value.get('max_tile_cells')) is not int):
+            raise ValueError('partition_declaration_types')
+        return value
+
     @model_validator(mode='after')
     def valid(self):
         if (self.robot_ready or set(self.source_files)!={'publication.json','model.json'}

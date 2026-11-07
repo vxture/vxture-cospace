@@ -110,7 +110,8 @@ def test_archive_tampering_and_reuse_refused(tmp_path,change):
 
 def test_index_semantics_reject_overlap_count_and_source_binding(tmp_path):
     value=prepared(tmp_path);files=contents(value[4]);doc=json.loads(files['index.json'])
-    for changed in (doc|{'total_cells':3},doc|{'robot_ready':True},doc|{'resolution_m':float('nan')}):
+    for changed in (doc|{'total_cells':3},doc|{'robot_ready':True},doc|{'robot_ready':0},
+                    doc|{'max_tile_cells':4096.0},doc|{'resolution_m':float('nan')}):
         with pytest.raises(ValueError):PartitionIndex.model_validate(changed)
     doc['partitions'][1]['cell_bounds']=doc['partitions'][0]['cell_bounds']
     with pytest.raises(ValueError,match='overlap'):PartitionIndex.model_validate(doc)
