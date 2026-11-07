@@ -1,0 +1,223 @@
+{
+  "$defs": {
+    "Member": {
+      "additionalProperties": false,
+      "properties": {
+        "sha256": {
+          "pattern": "^[a-f0-9]{64}$",
+          "title": "Sha256",
+          "type": "string"
+        },
+        "bytes": {
+          "maximum": 33554432,
+          "minimum": 1,
+          "title": "Bytes",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "sha256",
+        "bytes"
+      ],
+      "title": "Member",
+      "type": "object"
+    },
+    "Partition": {
+      "additionalProperties": false,
+      "properties": {
+        "sha256": {
+          "pattern": "^[a-f0-9]{64}$",
+          "title": "Sha256",
+          "type": "string"
+        },
+        "bytes": {
+          "maximum": 33554432,
+          "minimum": 1,
+          "title": "Bytes",
+          "type": "integer"
+        },
+        "id": {
+          "pattern": "^p[0-9]{5}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "cells": {
+          "maximum": 4096,
+          "minimum": 1,
+          "title": "Cells",
+          "type": "integer"
+        },
+        "cell_bounds": {
+          "items": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array"
+          },
+          "maxItems": 2,
+          "minItems": 2,
+          "title": "Cell Bounds",
+          "type": "array"
+        }
+      },
+      "required": [
+        "sha256",
+        "bytes",
+        "id",
+        "cells",
+        "cell_bounds"
+      ],
+      "title": "Partition",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "profile": {
+      "const": "cospace.partitioned-agent/0.1",
+      "title": "Profile",
+      "type": "string"
+    },
+    "publication_id": {
+      "pattern": "^preview-[a-f0-9]{16}$",
+      "title": "Publication Id",
+      "type": "string"
+    },
+    "model_id": {
+      "maxLength": 160,
+      "minLength": 1,
+      "title": "Model Id",
+      "type": "string"
+    },
+    "space_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Space Id"
+    },
+    "project_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Project Id"
+    },
+    "model_manifest_sha256": {
+      "pattern": "^[a-f0-9]{64}$",
+      "title": "Model Manifest Sha256",
+      "type": "string"
+    },
+    "source_model_sha256": {
+      "pattern": "^[a-f0-9]{64}$",
+      "title": "Source Model Sha256",
+      "type": "string"
+    },
+    "source_agent_sha256": {
+      "pattern": "^[a-f0-9]{64}$",
+      "title": "Source Agent Sha256",
+      "type": "string"
+    },
+    "canonical_cells_sha256": {
+      "pattern": "^[a-f0-9]{64}$",
+      "title": "Canonical Cells Sha256",
+      "type": "string"
+    },
+    "frame_id": {
+      "maxLength": 256,
+      "minLength": 1,
+      "title": "Frame Id",
+      "type": "string"
+    },
+    "resolution_m": {
+      "maximum": 1000,
+      "minimum": 1e-06,
+      "title": "Resolution M",
+      "type": "number"
+    },
+    "total_cells": {
+      "maximum": 500000,
+      "minimum": 1,
+      "title": "Total Cells",
+      "type": "integer"
+    },
+    "max_tile_cells": {
+      "const": 4096,
+      "title": "Max Tile Cells",
+      "type": "integer"
+    },
+    "source_files": {
+      "additionalProperties": {
+        "$ref": "#/$defs/Member"
+      },
+      "title": "Source Files",
+      "type": "object"
+    },
+    "partitions": {
+      "items": {
+        "$ref": "#/$defs/Partition"
+      },
+      "maxItems": 1024,
+      "minItems": 1,
+      "title": "Partitions",
+      "type": "array"
+    },
+    "coverage": {
+      "const": "surface_evidence_only",
+      "title": "Coverage",
+      "type": "string"
+    },
+    "quality": {
+      "const": "unverified",
+      "title": "Quality",
+      "type": "string"
+    },
+    "robot_ready": {
+      "const": false,
+      "title": "Robot Ready",
+      "type": "boolean"
+    },
+    "layout": {
+      "const": "little_endian_int64_xyz",
+      "title": "Layout",
+      "type": "string"
+    },
+    "selection_rule": {
+      "const": "cell_center_in_half_open_aabb",
+      "title": "Selection Rule",
+      "type": "string"
+    }
+  },
+  "required": [
+    "profile",
+    "publication_id",
+    "model_id",
+    "model_manifest_sha256",
+    "source_model_sha256",
+    "source_agent_sha256",
+    "canonical_cells_sha256",
+    "frame_id",
+    "resolution_m",
+    "total_cells",
+    "max_tile_cells",
+    "source_files",
+    "partitions",
+    "coverage",
+    "quality",
+    "robot_ready",
+    "layout",
+    "selection_rule"
+  ],
+  "title": "PartitionIndex",
+  "type": "object"
+}

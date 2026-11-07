@@ -15,6 +15,7 @@ from packages.construction.preview_model import PreviewModel,digest
 from packages.construction.preview_jobs import PreviewJobs
 from packages.service.preview_publications import PreviewPublications
 from packages.views.agent.preview_offline import export_bundle,sha,bundle_profile
+from packages.views.agent.partitioned_preview import export_partitions
 from packages.service.preview_checklist import checklist
 from packages.service.preview_workflow import workflow
 from packages.data.preview_inputs import PreviewInputs
@@ -353,6 +354,21 @@ def create_app(root,jobs=None,update_evidence=None,registration_sources=None,sou
                 'download_url':record['preview_url']+'offline.zip',
                 'sha256':sha(data),'bytes':len(data),'quality':'unverified','robot_ready':False,
                 'contents':['package.json','publication.json','model.json','agent.npz']+(['objects.json','ontology.json'] if semantic else [])+(['business.json'] if current.manifest.get('business_association') else [])+(['relations.json'] if current.manifest.get('object_relations') else [])}
+    def partition_delivery(identity):
+        record,current=publication(identity)
+        try:return export_partitions(record,current)
+        except (ValueError,OSError,KeyError,TypeError,OverflowError) as exc:
+            raise HTTPException(409,'partition_delivery_unavailable') from exc
+    @app.get('/publications/{identity}/partitions.json')
+    def publication_partitions_info(identity:str):
+        _,info=partition_delivery(identity)
+        return {**info,'download_url':f'/publications/{identity}/partitions.zip'}
+    @app.get('/publications/{identity}/partitions.zip')
+    def publication_partitions(identity:str):
+        data,info=partition_delivery(identity)
+        return Response(data,media_type='application/zip',headers={
+            'Content-Disposition':f'attachment; filename="{identity}-partitions.zip"',
+            'X-CoSpace-Package-SHA256':info['sha256'],'X-CoSpace-Index-SHA256':info['index_sha256']})
     @app.get('/publications/{identity}/{name}')
     def publication_file(identity:str,name:str):
         record,current=publication(identity)
