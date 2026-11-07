@@ -13,6 +13,10 @@ export function InputDescription({endpoint,space,identity,onSaved,onCoordinatesS
  const [data,setData]=useState<Description|null>(null),[facts,setFacts]=useState<Facts|null>(null),[editing,setEditing]=useState(false),[busy,setBusy]=useState(false),[loading,setLoading]=useState(true),[error,setError]=useState(''),[factsError,setFactsError]=useState(''),[notice,setNotice]=useState(''),[refresh,setRefresh]=useState(0);
  const [name,setName]=useState(''),[description,setDescription]=useState(''),[use,setUse]=useState(''),[reason,setReason]=useState('');
  const generation=useRef(0);
+ const [factsRevision,setFactsRevision]=useState(0);
+ useEffect(()=>{if(!factsRevision)return;const controller=new AbortController();setFacts(null);setFactsError('');
+  fetch(`${endpoint}/api/inputs/${identity}/facts?`+new URLSearchParams({space_id:space}),{signal:controller.signal,cache:'no-store'}).then(async r=>{if(!r.ok)throw Error('坐标已保存，来源证据暂不可读，请重新读取核查。');const value:Facts=await r.json();if(value.input_id!==identity||value.space_id!==space||value.profile!=='cospace.input-facts/0.1')throw Error('来源证据与当前资料不一致。');if(!controller.signal.aborted)setFacts(value);}).catch(e=>{if(!controller.signal.aborted)setFactsError(e.message);});return()=>controller.abort();
+ },[endpoint,space,identity,factsRevision]);
  useUnsavedNavigation(!!data&&editing&&(name!==data.display_name||description!==data.description||use!==data.intended_use||!!reason),'资料说明',{discard:()=>{setEditing(false);setReason('');},save:()=>save(),canSave:!busy&&!!reason.trim()&&!!name.trim()});
  useEffect(()=>{
   const run=++generation.current,controller=new AbortController();setData(null);setFacts(null);setError('');setFactsError('');setNotice('');setEditing(false);setBusy(false);setLoading(true);
@@ -31,7 +35,7 @@ export function InputDescription({endpoint,space,identity,onSaved,onCoordinatesS
   }catch(e){if(run===generation.current)setError(e instanceof Error?e.message:'保存失败');return false;}finally{if(run===generation.current)setBusy(false);}
  }
  return <section className="data-detail-section input-description" aria-label="资料说明与来源信息">
-  <InputCoordinates endpoint={endpoint} space={space} identity={identity} onSaved={()=>{setRefresh(v=>v+1);onCoordinatesSaved?.();}}/>
+  <InputCoordinates endpoint={endpoint} space={space} identity={identity} onSaved={()=>{setFactsRevision(v=>v+1);onCoordinatesSaved?.();}}/>
   <div className="flex items-center justify-between gap-sm"><h3>资料说明</h3>{data&&!editing&&<Button size="sm" variant="ghost" onClick={edit}>编辑说明</Button>}</div>
   {loading&&<p role="status">正在读取说明…</p>}{error&&<p role="alert" className="text-destructive">{error}</p>}{notice&&<p role="status" className="text-primary">{notice}</p>}
   {editing&&data?<form onSubmit={save} className="flex flex-col gap-md" aria-label="编辑资料说明">
