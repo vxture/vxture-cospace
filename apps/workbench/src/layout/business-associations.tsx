@@ -1,3 +1,4 @@
+import {useUnsavedNavigation} from './unsaved-navigation';
 import React,{useEffect,useState} from 'react';
 import {Button,Card,CardHeader,CardTitle,CardContent,Input,NativeSelect,StatusBadge,Switch} from '@vxture/design-system';
 import {recordLink,useRecordNavigation} from './record-navigation';
@@ -52,6 +53,7 @@ export function BusinessAssociations(){
  const available=new Map(records.map(r=>[r.ref.record_id,r]));for(const obj of objects)for(const link of obj.business_links||[])if(available.get(link.ref.record_id)?.ref.sha256!==link.ref.sha256)available.set(link.ref.record_id,link);
  const initial=JSON.stringify(objects.flatMap(obj=>(obj.business_links||[]).map(link=>[obj.object_id,link.ref])).sort());
  const changed=initial!==JSON.stringify(Object.entries(bindings).sort());
+ useUnsavedNavigation((!!hash&&changed&&!created)||Object.values(draft).some(Boolean),'台账与对象绑定');
  if(!target.space)return <p className="text-body-small text-muted-foreground">选择工程空间后可登记台账并建立对象绑定。</p>;
  return <Card className="module-surface" aria-label="对象与业务台账"><CardHeader><div className="flex flex-wrap items-center justify-between gap-sm"><CardTitle>对象与业务台账</CardTitle><Button size="sm" variant="outline" disabled={busy||saving||loading||reading} onClick={()=>setRevision(v=>v+1)}>重新载入关联</Button></div></CardHeader><CardContent className="flex flex-col gap-lg">
  <p className="text-body-small text-muted-foreground">对象引用固定台账版本，生成新候选后仍需人工核对与发布。当前为本机设备台账登记，未对接外部系统。</p>

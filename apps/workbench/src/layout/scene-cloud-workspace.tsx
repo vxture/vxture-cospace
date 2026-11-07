@@ -1,3 +1,4 @@
+import {useUnsavedNavigation} from './unsaved-navigation';
 import React,{useEffect,useRef,useState} from 'react';
 import {Button,Input,NativeSelect} from '@vxture/design-system';
 import {SceneCloudCanvas,CloudCamera} from './scene-cloud-canvas';
@@ -22,6 +23,7 @@ function CloudEditor({endpoint,data,onRegistered}:{endpoint:string;data:CloudDir
  const api=useRef<CloudCamera|null>(null),alive=useRef(true),generation=useRef(0),posting=useRef(false);
  const active=job?.state==='running'||job?.state==='queued';
  const dirtyBounds=draft.some((v,i)=>v.trim()===''||!Number.isFinite(Number(v))||Math.abs(Number(v)-bounds.flat()[i])>1e-8);
+ useUnsavedNavigation(!job&&(dirtyBounds||label!=='场景区域点云'||step!=='0.5'||JSON.stringify(bounds)!==JSON.stringify(fullBounds(data))||sources.length!==data.sources.length),'区域资料参数');
  const storageKey='cospace.scene-cloud-job:'+data.space_id+':'+data.index_sha256;
  useEffect(()=>()=>{alive.current=false;generation.current++;},[]);
  function apply(next:Bounds){api.current?.pick(false);setBounds(next);setDraft(next.flat().map(v=>String(+v.toFixed(5))));setPicking(false);setError('');}

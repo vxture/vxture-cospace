@@ -36,6 +36,8 @@ jobs:
       - run: pnpm --dir apps/workbench build
       - name: Scene display planner, tile integrity and bounded cache tests
         run: node --experimental-strip-types --test tests/frontend/scene-cloud-data.test.mjs
+      - name: Module navigation context and explicit business handoff tests
+        run: node --experimental-strip-types --test tests/frontend/navigation-contract.test.mjs
       - uses: actions/setup-python@v6
         with:
           python-version: '3.14'

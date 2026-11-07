@@ -1,3 +1,5 @@
+import {confirmUnsavedChanges} from './unsaved-navigation';
+import {useSceneDirectory} from './use-scene-directory';
 import React,{useEffect,useState} from 'react';
 import {Button,Input,NativeSelect,StatusBadge,Dialog,DialogContent,DialogHeader,DialogTitle,DialogDescription,Table,TableHeader,TableHead,TableBody,TableRow,TableCell} from '@vxture/design-system';
 import {Database,Cube,FolderOpen,FileText,GitBranch,MagnifyingGlass,ArrowClockwise,CaretRight,X,Stack,ArrowUpRight,LinkSimple,SlidersHorizontal,Clock,SidebarSimple,Info,WarningCircle} from '@phosphor-icons/react';
@@ -6,10 +8,8 @@ import {usePlatformSession} from './platform-auth';
 import {recordLink,useRecordNavigation} from './record-navigation';
 import {InputRegistration} from './input-registration';
 import {SampleLibrary} from './sample-library';
-import {CreateSceneButton} from './create-scene';
-import {SceneDirectory,SceneSpace} from './scene-directory';
 import {SceneProgress} from './scene-progress';
-import {SceneModuleNavigation} from './module-workspace';
+import {CapabilityNavigation,SceneScope} from './capability-navigation';
 import {InputDetails} from './input-details';
 import {InputDescription,InputPresentation} from './input-description';
 import {InputPreview} from './input-preview';
@@ -27,7 +27,6 @@ import './module-workspace.css';
 const SceneCloudWorkspace=React.lazy(()=>import('./scene-cloud-workspace').then(m=>({default:m.SceneCloudWorkspace})));
 
 type Entry={cloud_sha256?:string;snapshot_sha256?:string;presentation?:InputPresentation;id:string;label:string;format:string;input_frames:number;used_frames:number;point_count?:number;verified_image_members?:number;verified_messages?:number};
-type Space=SceneSpace;
 type Kind='input'|'candidate'|'publication'|'offline_package';
 type Artifact={key:string;kind:Kind;record_id:string;label:string;classification:string;state:string;created_at:string|null;integrity:string;problems:string[];resources:Record<string,string>;selected:boolean;format?:string;lifecycle_state?:string;model_manifest_sha256?:string};
 type Relation={from:string;to:string|null;relation:string;status:string};
@@ -52,9 +51,9 @@ function Availability({item}:{item?:Artifact}){
 export function InputDirectory(){
  const target=useRecordNavigation(),platform=usePlatformSession();
  const [reference,setReference]=useState<Attachment|null>(null);
- const [spaces,setSpaces]=useState<Space[]>([]),[directoryError,setDirectoryError]=useState(''),[directoryBusy,setDirectoryBusy]=useState(true);
  const [savedEntries,setEntries]=useState<Entry[]>([]),[savedCatalog,setCatalog]=useState<Catalog|null>(null),[busy,setBusy]=useState(false),[error,setError]=useState('');
- const [search,setSearch]=useState(''),[spaceSearch,setSpaceSearch]=useState(''),[filter,setFilter]=useState('all'),[revision,setRevision]=useState(0),[directoryRevision,setDirectoryRevision]=useState(0),[notice,setNotice]=useState('');
+ const [search,setSearch]=useState(''),[filter,setFilter]=useState('all'),[revision,setRevision]=useState(0),[directoryRevision,setDirectoryRevision]=useState(0),[notice,setNotice]=useState('');
+ const {spaces,loading:directoryBusy,error:directoryError}=useSceneDirectory(directoryRevision);
  const [importOpen,setImportOpen]=useState(false),[intakeRevision,setIntakeRevision]=useState(0),[historyRevision,setHistoryRevision]=useState(0);
  const [sidebar,setSidebar]=useState(()=>window.innerWidth>620),[tools,setTools]=useState<'sources'|null>(null),[detailMode,setDetailMode]=useState<'summary'|'impact'|'control'>('summary');
  const view:View=target.tab==='references'?'references':target.tab==='pointcloud'?'pointcloud':target.tab==='versions'||target.tab==='artifacts'?'versions':target.tab==='batches'||target.batch&&!target.tab?'batches':target.tab==='lineage'||target.artifact&&!target.input?'lineage':'inputs';
@@ -74,13 +73,6 @@ export function InputDirectory(){
  const releases=catalog?.items.filter(i=>i.kind==='publication')||[];
  const issues=catalog?.items.filter(i=>i.integrity==='unavailable').length||0;
 
- useEffect(()=>{
-  const request=new AbortController();setDirectoryBusy(true);setDirectoryError('');setSpaces([]);
-  fetch(`${endpoint}/api/spaces`,{signal:request.signal}).then(async r=>{if(!r.ok)throw Error('场景目录暂不可用，请刷新重试。');const body=await r.json();if(!Array.isArray(body.spaces))throw Error('场景目录格式无法识别。');if(!request.signal.aborted)setSpaces(body.spaces);}).catch(e=>{if(!request.signal.aborted)setDirectoryError(e.message);}).finally(()=>{if(!request.signal.aborted)setDirectoryBusy(false);});
-  return()=>request.abort();
- },[platform?.user?.workspace_id,directoryRevision]);
- // Only suggest an authorized scene when the URL did not explicitly request one.
- useEffect(()=>{if(!target.space&&spaces.length)location.replace(recordLink('data',{space:spaces[0].id,tab:view}));},[spaces,target.space]);
  useEffect(()=>{
   setEntries([]);setCatalog(null);setError('');setSearch('');setFilter('all');setDetailMode('summary');
   if(!target.space||!scene){setBusy(false);return;}
@@ -127,14 +119,15 @@ export function InputDirectory(){
     <g fill="currentColor"><circle cx="150" cy="223" r="2.5"/><circle cx="381" cy="138" r="2.5"/><circle cx="443" cy="316" r="2.5"/><circle cx="85" cy="282" r="2.5"/></g>
    </svg>
   </div>
-  <SceneDirectory spaces={spaces} current={target.space} workspace={platform?.user?.workspace_id||'本机工程预览'} search={spaceSearch} onSearch={setSpaceSearch} onChoose={chooseSpace} loading={directoryBusy} error={directoryError}/>
+  <CapabilityNavigation route="data" view={view}/>
 
   <section className="data-main" aria-label="数据管理工作区">
-   <header className="data-heading"><div className="data-heading-copy"><div className="data-breadcrumb"><Button variant="outline" size="sm" className="data-icon-button data-sidebar-toggle" aria-label={sidebar?'收起场景目录':'展开场景目录'} title={sidebar?'收起场景目录':'展开场景目录'} aria-expanded={sidebar} aria-controls="data-scene-sidebar" onClick={()=>setSidebar(v=>!v)}><SidebarSimple size={16} weight="regular"/></Button><span>构建</span><CaretRight size={12}/><span>数据管理</span>{scene&&<><CaretRight size={12}/><span className="data-breadcrumb-scene">{scene.name}</span></>}</div><h1>数据管理</h1><p>按场景空间管理资料、历史版本与发布成果。</p></div><div className="data-heading-actions"><CreateSceneButton onCreated={id=>{setDirectoryRevision(v=>v+1);chooseSpace(id);setNotice('场景空间已创建，可上传资料包或从已配置来源导入。');}}/><Button variant="outline" size="sm" className="data-icon-button" aria-label="刷新数据" title="刷新数据" disabled={busy} onClick={refresh}><ArrowClockwise size={16} className={busy?'data-spin':''}/></Button><SampleLibrary key={`samples-${target.space}`} endpoint={endpoint} spaceId={scene?.id||''} spaceName={scene?.name||''} authorized={!!platform} onRegistered={registered} onManageSources={()=>setTools('sources')}/><InputRegistration key={target.space} spaceId={scene?.id||''} endpoint={endpoint} triggerLabel="导入资料" spaceName={scene?.name} open={importOpen} onOpenChange={setImportOpen} onManageSources={()=>setTools('sources')} onRegistered={registered}/></div></header>
-   <SceneModuleNavigation route="data" scene={scene}/>
+   <SceneScope spaces={spaces} current={target.space} onChoose={chooseSpace} loading={directoryBusy} error={directoryError} onRefresh={()=>setDirectoryRevision(v=>v+1)}/>
+   <header className="data-heading"><div className="data-heading-copy"><div className="data-breadcrumb"><Button variant="outline" size="sm" className="data-icon-button data-sidebar-toggle" aria-label={sidebar?'收起能力导航':'展开能力导航'} title={sidebar?'收起能力导航':'展开能力导航'} aria-expanded={sidebar} aria-controls="data-scene-sidebar" onClick={()=>setSidebar(v=>!v)}><SidebarSimple size={16} weight="regular"/></Button><span>共用支撑</span><CaretRight size={12}/><span>数据管理</span>{scene&&<><CaretRight size={12}/><span className="data-breadcrumb-scene">{scene.name}</span></>}</div><h1>数据管理</h1><p>按场景空间管理资料、历史版本与发布成果。</p></div><div className="data-heading-actions"><Button asChild size="sm" variant="outline"><a href={recordLink('data',{scope:'all'})}>共用数据目录</a></Button><Button variant="outline" size="sm" className="data-icon-button" aria-label="刷新数据" title="刷新数据" disabled={busy} onClick={()=>{if(confirmUnsavedChanges())refresh();}}><ArrowClockwise size={16} className={busy?'data-spin':''}/></Button><SampleLibrary key={`samples-${target.space}`} endpoint={endpoint} spaceId={scene?.id||''} spaceName={scene?.name||''} authorized={!!platform} onRegistered={registered} onManageSources={()=>setTools('sources')}/><InputRegistration key={target.space} spaceId={scene?.id||''} endpoint={endpoint} triggerLabel="导入资料" spaceName={scene?.name} open={importOpen} onOpenChange={setImportOpen} onManageSources={()=>setTools('sources')} onRegistered={registered}/></div></header>
+
    <div className="data-overview" aria-label="当前场景数据概览"><div><FolderOpen size={17}/><span>资料</span><strong>{catalog?entries.length:'—'}</strong></div><div><Stack size={17}/><span>模型版本</span><strong>{catalog?versions.length:'—'}</strong></div><div><Cube size={17}/><span>固定发布</span><strong>{catalog?releases.length:'—'}</strong></div><span className="data-overview-note">{issues>0?<><WarningCircle size={14}/>{issues} 项成果需核查</>:<><Info size={14}/>样本流程 · 质量尚未验收</>}</span></div>
    {scene&&view==='inputs'&&<DataIntake space={scene.id} batchId={target.batch||undefined} {...intake} onSources={()=>setTools('sources')} onImport={()=>setImportOpen(true)} onInspect={()=>{document.querySelector<HTMLElement>('.data-input-preflight')?.focus();document.querySelector('.data-input-preflight')?.scrollIntoView({block:'nearest'});}} onChoose={()=>{setNotice('请从资料列表选择本次要构建的资料。');document.querySelector<HTMLElement>('.data-record-name')?.focus();}}/>}
-   <div className="data-viewbar"><div className="data-tabs" role="tablist" aria-label="数据管理视图">{([{id:'inputs',label:'资料',icon:FolderOpen,count:entries.length},{id:'references',label:'配套资料',icon:FileText,count:null},{id:'pointcloud',label:'场景点云',icon:Cube,count:null},{id:'batches',label:'采集批次',icon:Database,count:history.batches.length},{id:'versions',label:'场景版本',icon:Stack,count:versions.length},{id:'lineage',label:'来源追溯',icon:GitBranch,count:catalog?.relations.length||0}] as const).map(t=><Button key={t.id} id={`data-tab-${t.id}`} role="tab" aria-selected={view===t.id} aria-controls="data-view-panel" tabIndex={view===t.id?0:-1} variant="ghost" onClick={()=>switchView(t.id)} onKeyDown={e=>{if(e.key==='ArrowRight'||e.key==='ArrowLeft'){e.preventDefault();const ids:View[]=['inputs','references','pointcloud','batches','versions','lineage'];const next=ids[(ids.indexOf(t.id)+(e.key==='ArrowRight'?1:ids.length-1))%ids.length];switchView(next);requestAnimationFrame(()=>document.getElementById(`data-tab-${next}`)?.focus());}}}><t.icon size={16}/>{t.label}{t.count!==null&&<span className="data-tab-count">{catalog?t.count:'—'}</span>}</Button>)}</div><div className="data-secondary-tools">{platform&&<Button variant="ghost" size="sm" disabled={!scene} onClick={()=>setTools('sources')}><SlidersHorizontal size={14}/>来源配置</Button>}</div></div>
+   <div className="data-viewbar"><div className="data-secondary-tools">{platform&&<Button variant="ghost" size="sm" disabled={!scene} onClick={()=>setTools('sources')}><SlidersHorizontal size={14}/>来源配置</Button>}</div></div>
    {view==='inputs'&&inputBatch&&<div className="data-batch-context"><span>本次批次：{inputBatch.name}</span><Button asChild variant="ghost" size="sm"><a href={recordLink('data',{space:target.space,tab:'batches',batch:inputBatch.id})}>返回批次</a></Button></div>}
    {notice&&<p className="data-notice" role="status">{notice}</p>}
    {!busy&&catalog&&selectionKey&&!selectedEntry&&!selectedArtifact&&<p className="data-notice" role="alert">所选记录不存在于当前场景，请重新选择资料或版本。</p>}

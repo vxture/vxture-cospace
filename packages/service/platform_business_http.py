@@ -31,6 +31,7 @@ from packages.service.space_preparation import preparation
 from packages.data.input_uploads import InputUploads,UploadRejected,MAX_UPLOAD,capabilities as upload_capabilities,metadata as upload_metadata
 from packages.ontology.workspace_authoring import WorkspaceOntologies,DraftChange,SealDraft
 from packages.service.public_errors import public_error
+from packages.data.workspace_catalog import catalog as workspace_catalog, CatalogQuery, CatalogUnavailable
 
 
 class BusinessAccess:
@@ -58,6 +59,9 @@ class BusinessAccess:
         principal=self.rp.verifier.verify(session['access_token'])
         access=PlatformResourceAccess(self.directory,self.jobs,policy)
         path=request.url.path; method=request.method; q=request.query_params
+        if path=='/api/data-catalog' and method in ('GET','HEAD'):
+            if q.get('space_id'):access.space(principal,q['space_id'],'data.manage')
+            return {'principal':principal}
         if path=='/api/workspace-scenes' and method in ('GET','HEAD','POST'):
             context=self.workspace_scenes.context(principal)
             if method=='POST' and not context['can_create']:raise PermissionError()
@@ -338,6 +342,12 @@ class BusinessAccess:
             revision,policy=await run_in_threadpool(self.policies.load)
             context=await run_in_threadpool(self.authorize,request,session,policy,body)
             request.state.platform_principal=context['principal'];request.state.policy_revision=revision
+            if path=='/api/data-catalog':
+                try:query=CatalogQuery.model_validate(dict(request.query_params))
+                except ValidationError:return deny(422,'catalog_query_invalid')
+                try:result=await run_in_threadpool(workspace_catalog,self.jobs,self.directory,policy,context['principal'],query)
+                except CatalogUnavailable:return deny(503,'catalog_budget_exceeded')
+                return JSONResponse(result,headers={'Cache-Control':'no-store'})
             if path.startswith('/api/scene-ifc'):
                 try:
                     expected={'space_id'} if path=='/api/scene-ifc' else {'space_id','element_id','catalog_sha256'}
@@ -538,7 +548,11 @@ class BusinessAccess:
                 summary=result['summary']
                 summary['primary_action']['allowed']=required[summary['primary_action']['module']] in caps
                 if summary['work']:summary['work']['action']['allowed']=required[summary['work']['action']['module']] in caps
+                for step in summary['journey']['steps']:
+                    if step['action']:
+                        step['action']['allowed']=required[step['action']['module']] in caps
                 if 'build.run' not in caps:
+                    summary['journey']=None
                     summary['work']=None;summary['candidate_ref']=None;summary['tracked_job']=None
                     result['candidate_ref']=None;result['selection_status']='not_disclosed'
                     result['counts']={k:v for k,v in result['counts'].items() if k in ('publication','offline_package')}

@@ -1,3 +1,4 @@
+import {useUnsavedNavigation,confirmUnsavedChanges} from './unsaved-navigation';
 import React,{useEffect,useRef,useState} from 'react';
 import {Button,Card,CardHeader,CardTitle,CardContent,Input,NativeSelect} from '@vxture/design-system';
 type Property={title:string;type:'string';required:boolean;min_length:number;max_length:number};
@@ -10,12 +11,13 @@ const fresh=():RuleDocument=>({profile:'cospace.preview-ontology/0.1',ontology_i
 const identity=()=>crypto.randomUUID().replaceAll('-','');
 export function OntologyAuthoring({endpoint,source,onSealed}:{endpoint:string;source:RuleDocument|null;onSealed:(record:{ontology_id:string;version:string;sha256:string})=>void}){
  const [context,setContext]=useState<Context|null>(null),[draft,setDraft]=useState<Draft|null>(null),[doc,setDoc]=useState<RuleDocument|null>(null),[reason,setReason]=useState(''),[dirty,setDirty]=useState(false),[validation,setValidation]=useState(''),[error,setError]=useState(''),[notice,setNotice]=useState(''),[busy,setBusy]=useState(false),[refresh,setRefresh]=useState(0);
+ useUnsavedNavigation(dirty,'本体规则');
  const [typeId,setTypeId]=useState(''),[propertyId,setPropertyId]=useState(''),[relationId,setRelationId]=useState(''),[selectedType,setSelectedType]=useState('');
  const generation=useRef(0),gate=useRef(false),requestId=useRef(''),newDraft=useRef('');
  useEffect(()=>{const controller=new AbortController(),run=++generation.current;setContext(null);setError('');
   fetch(`${endpoint}/api/ontology-authoring`,{signal:controller.signal,cache:'no-store'}).then(async r=>{if(r.status===404)return null;if(!r.ok)throw Error('本体编辑工作区无法读取。');const v=await r.json();if(v.profile!=='cospace.ontology-authoring/0.1'||!Array.isArray(v.drafts))throw Error('本体工作区响应无效。');return v;}).then(v=>{if(run===generation.current)setContext(v);}).catch(e=>{if(!controller.signal.aborted)setError(e.message);});return()=>{controller.abort();generation.current++;};
  },[endpoint,refresh]);
- function open(value:RuleDocument,saved:Draft|null){setDoc(structuredClone(value));setDraft(saved);setDirty(!saved);setReason('');setValidation('');setError('');setNotice('');setSelectedType(Object.keys(value.types)[0]||'');requestId.current='';newDraft.current='draft-'+identity();}
+ function open(value:RuleDocument,saved:Draft|null){if(dirty&&!confirmUnsavedChanges())return;setDoc(structuredClone(value));setDraft(saved);setDirty(!saved);setReason('');setValidation('');setError('');setNotice('');setSelectedType(Object.keys(value.types)[0]||'');requestId.current='';newDraft.current='draft-'+identity();}
  function update(value:RuleDocument){setDoc(value);setDirty(true);setValidation('');setNotice('');requestId.current='';}
  const validId=(id:string)=>/^[a-z][a-z0-9_]{0,63}$/.test(id)&&!['__proto__','constructor','prototype'].includes(id);
  function changeType(id:string,value:TypeRule){if(doc)update({...doc,types:{...doc.types,[id]:value}});}
@@ -31,7 +33,7 @@ export function OntologyAuthoring({endpoint,source,onSealed}:{endpoint:string;so
  return <Card className="module-surface" aria-label="本体规则维护"><CardHeader><CardTitle>本体规则维护</CardTitle></CardHeader><CardContent className="flex min-w-0 flex-col gap-md">
  {error&&<p role="alert">{error}</p>}{context&&<><p>规则归属当前 Workspace：{context.workspace_id}，可供其多个场景引用。预置规则为只读模板，固定版本不会自动更新场景。</p>
  {!context.can_edit&&<p>当前可查看与应用规则；维护工作区规则需要 Workspace 所有者权限。</p>}
- <div className="flex flex-wrap gap-sm"><Button disabled={!context.can_edit||busy} onClick={()=>open(fresh(),null)}>新建本体草稿</Button><Button variant="outline" disabled={!context.can_edit||!source||busy} onClick={()=>{if(source){const parts=source.version.split('.').map(Number);parts[2]++;open({...source,version:parts.join('.')},null);}}}>复制所选版本为草稿</Button><Button variant="ghost" disabled={busy} onClick={()=>{setDoc(null);setDraft(null);setRefresh(v=>v+1);}}>刷新草稿</Button></div>
+ <div className="flex flex-wrap gap-sm"><Button disabled={!context.can_edit||busy} onClick={()=>open(fresh(),null)}>新建本体草稿</Button><Button variant="outline" disabled={!context.can_edit||!source||busy} onClick={()=>{if(source){const parts=source.version.split('.').map(Number);parts[2]++;open({...source,version:parts.join('.')},null);}}}>复制所选版本为草稿</Button><Button variant="ghost" disabled={busy} onClick={()=>{if(!confirmUnsavedChanges())return;setDoc(null);setDraft(null);setDirty(false);setRefresh(v=>v+1);}}>刷新草稿</Button></div>
  <label>已保存草稿<NativeSelect aria-label="选择本体草稿" value={draft?.draft_id||''} disabled={busy} onChange={e=>{const d=context.drafts.find(v=>v.draft_id===e.target.value);if(d)open(d.definition,d);}}><option value="">选择草稿继续编辑或查看</option>{context.drafts.map(d=><option key={d.draft_id} value={d.draft_id}>{d.definition.title||'未命名'} · V{d.definition.version} · 修订{d.revision}{d.sealed?' · 已固定':''}</option>)}</NativeSelect></label>
  {doc&&<><fieldset disabled={busy||!context.can_edit||!!draft?.sealed} className="flex min-w-0 flex-col gap-md">
  <div className="grid grid-cols-1 gap-md md:grid-cols-2"><label>本体ID<Input aria-label="本体ID" value={doc.ontology_id} maxLength={64} onChange={e=>update({...doc,ontology_id:e.target.value})}/></label><label>版本号<Input aria-label="本体版本号" value={doc.version} maxLength={14} onChange={e=>update({...doc,version:e.target.value})}/></label></div>
