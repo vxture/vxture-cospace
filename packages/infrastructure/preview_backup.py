@@ -45,7 +45,7 @@ def safe_name(name):
 def business_member(name):
     # Retain retired seat audit files in existing backups; runtime no longer uses them.
     parts=PurePosixPath(name).parts
-    if (parts[0]=='setup' and name not in ('setup/sources.json','setup/workspace-scenes.json','setup/consumer-access.json','setup/scene-pointclouds.json')
+    if (parts[0]=='setup' and name not in ('setup/sources.json','setup/workspace-scenes.json','setup/consumer-access.json','setup/scene-pointclouds.json','setup/scene-ifc.json')
             or parts[0]=='policy' and name not in ('policy/space-policy.sqlite3','policy/platform-events.sqlite3','policy/product-seats.sqlite3','policy/.workspace-scenes-required')
             or parts[0]=='runtime' and not (name=='runtime/preview-lifecycle.sqlite3'
                 or len(parts)>2 and parts[1] in RUNTIME_DIRS)):
@@ -98,6 +98,22 @@ def validate_runtime(root,original_root=None):
                     raise ValueError('backup_external_scene_cloud_assets')
                 saved=root/path.resolve().relative_to(original_root)/member
                 if not saved.is_file() or digest(saved)!=expected:raise ValueError('backup_scene_cloud_assets_changed')
+    ifc_config=root/'setup/scene-ifc.json'
+    if ifc_config.exists():
+        from packages.data.ifc_workspace import IfcConfig,read_json,sha,validate_catalog,validate_source,load_mesh
+        parsed=IfcConfig.model_validate_json(ifc_config.read_bytes())
+        if len({b.space_id for b in parsed.bindings})!=len(parsed.bindings):raise ValueError('backup_duplicate_ifc_binding')
+        for binding in parsed.bindings:
+            path=Path(binding.root)
+            if not path.is_absolute() or not path.resolve().is_relative_to(original_root/'runtime/preview-inputs'):
+                raise ValueError('backup_external_ifc_assets')
+            saved=root/path.resolve().relative_to(original_root)
+            raw,doc=read_json(saved/'ifc.json',8*1024*1024)
+            if sha(raw)!=binding.catalog_sha256:raise ValueError('backup_ifc_assets_changed')
+            validate_catalog(doc)
+            validate_source(saved,doc)
+            for product in doc['products']:
+                if product['geometry_status']=='extracted':load_mesh(saved,product)
     consumer=root/'setup/consumer-access.json'
     if consumer.exists():
         from packages.service.online_consumer import ConsumerConfig

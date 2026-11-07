@@ -64,6 +64,21 @@ def test_unfinished_scene_composition_blocks_backup(runtime):
     with pytest.raises(ValueError,match='unfinished_composition'):save(runtime)
 
 
+@pytest.mark.parametrize('external',[False,True])
+def test_ifc_catalog_assets_and_binding_backup_are_self_contained(runtime,external):
+    from test_ifc_inspection import assets_at
+    root,output=runtime
+    location=root.parent/'external-ifc' if external else root/'runtime/preview-inputs/ifc'
+    config,_,_=assets_at(location,'space-'+'1'*16)
+    (root/'setup/scene-ifc.json').write_bytes(config.read_bytes())
+    if external:
+        with pytest.raises(ValueError,match='external_ifc_assets'):save(runtime)
+        assert not output.exists()
+    else:
+        before=tree(root);result=save(runtime);root.rename(root.with_name('original-ifc'))
+        assert restore(output,root,result['sha256'])['status']=='passed' and tree(root)==before
+
+
 def test_running_service_and_second_start_block_backup(runtime):
     root,output=runtime
     with service_guard(root/'runtime'):

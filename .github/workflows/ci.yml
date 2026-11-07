@@ -59,6 +59,8 @@ jobs:
       - run: python -m pip install uv==0.12.17
       - run: uv sync --frozen --all-extras
       - run: uv run --frozen pytest -q --junitxml=test-results.xml
+      - name: Isolated native IFC parser regression (SI units and placements)
+        run: uv run --no-build --project experiments/ifc-tool --frozen --group dev pytest -q tests/test_ifc_native.py
       - uses: actions/upload-artifact@v7
         if: always()
         with:
@@ -82,4 +84,4 @@ jobs:
           curl -fsSL --proto '=https' --proto-redir '=https' --tlsv1.2 "$url" -o /tmp/osv-bin/osv-scanner
           echo "$sha256  /tmp/osv-bin/osv-scanner" | sha256sum -c -
           chmod +x /tmp/osv-bin/osv-scanner
-      - run: /tmp/osv-bin/osv-scanner scan -L apps/workbench/pnpm-lock.yaml -L uv.lock --config .osv-scanner.toml
+      - run: /tmp/osv-bin/osv-scanner scan -L apps/workbench/pnpm-lock.yaml -L uv.lock --config .osv-scanner.toml -L experiments/ifc-tool/uv.lock

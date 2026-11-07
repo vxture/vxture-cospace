@@ -91,7 +91,7 @@ jobs:
           # reporting step below rather than end the job here.
           set -uo pipefail
           rc=0
-          /tmp/osv-bin/osv-scanner scan -L apps/workbench/pnpm-lock.yaml -L uv.lock --config .osv-scanner.toml  \
+          /tmp/osv-bin/osv-scanner scan -L apps/workbench/pnpm-lock.yaml -L uv.lock --config .osv-scanner.toml -L experiments/ifc-tool/uv.lock  \
             > /tmp/osv-report.txt 2>&1 || rc=$?
           cat /tmp/osv-report.txt
           echo "rc=${rc}" >> "$GITHUB_OUTPUT"

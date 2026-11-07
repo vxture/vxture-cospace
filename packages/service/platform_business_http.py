@@ -2,6 +2,7 @@
 import json
 import re
 import sqlite3
+import zipfile
 from pydantic import ValidationError
 from packages.lifecycle.workspace_scenes import WorkspaceScenes,CreateScene,WorkspaceScenesConflict,WorkspaceScenesUnavailable
 from urllib.parse import unquote
@@ -21,6 +22,7 @@ from packages.data.input_routes import route
 from packages.data.input_facts import facts, FactsUnavailable
 from packages.data.input_preview import preview as input_preview,PreviewUnavailable
 from packages.data.scene_pointcloud_workspace import ScenePointcloudWorkspace,ComposeRegion,SceneCloudUnavailable,SceneCloudConflict,SceneCloudAuthorizationPending
+from packages.data.ifc_workspace import IfcWorkspace
 from packages.data.rgbd_input_preview import directory as rgbd_directory, frame as rgbd_frame
 from packages.construction.build_preview import preview as build_preview
 from packages.construction.build_process import read_process
@@ -31,10 +33,11 @@ from packages.service.public_errors import public_error
 
 
 class BusinessAccess:
-    def __init__(self, rp, policies, directory, jobs, registration_sources=None,workspace_config=None,consumer_config=None,subscriptions=None,scene_pointcloud_config=None):
+    def __init__(self, rp, policies, directory, jobs, registration_sources=None,workspace_config=None,consumer_config=None,subscriptions=None,scene_pointcloud_config=None,scene_ifc_config=None):
         self.rp,self.policies,self.directory,self.jobs=rp,policies,directory,jobs
         self.subscriptions=subscriptions
         self.scene_pointclouds=ScenePointcloudWorkspace(jobs.inputs,scene_pointcloud_config) if jobs.inputs else None
+        self.scene_ifc=IfcWorkspace(directory,jobs,scene_ifc_config)
         self.sources=SpaceSources(directory.root,registration_sources or {})
         self.workspace_scenes=WorkspaceScenes(directory,policies,self.sources,workspace_config,
             platform_access=subscriptions is not None)
@@ -90,6 +93,8 @@ class BusinessAccess:
             return {'principal':principal}
         if path=='/api/input-uploads' and method in ('GET','POST'):
             space(q.get('space_id'),'data.manage');return {'principal':principal}
+        if path in ('/api/scene-ifc','/api/scene-ifc/element') and method in ('GET','HEAD'):
+            space(q.get('space_id'),'association.edit');return {'principal':principal}
         if ((path=='/api/scene-pointclouds' or re.fullmatch(r'/api/scene-pointclouds/(tiles/t[0-9]{5}/[0-2]|compositions/compose-[a-f0-9]{24})',path)) and method in ('GET','HEAD')
                 or (path=='/api/scene-pointclouds/compositions' or re.fullmatch(r'/api/scene-pointclouds/compositions/compose-[a-f0-9]{24}/register',path)) and method=='POST'):
             space(body.get('space_id') if method=='POST' else q.get('space_id'),'data.manage')
@@ -285,6 +290,15 @@ class BusinessAccess:
             revision,policy=await run_in_threadpool(self.policies.load)
             context=await run_in_threadpool(self.authorize,request,session,policy,body)
             request.state.platform_principal=context['principal'];request.state.policy_revision=revision
+            if path.startswith('/api/scene-ifc'):
+                try:
+                    expected={'space_id'} if path=='/api/scene-ifc' else {'space_id','element_id','catalog_sha256'}
+                    if set(request.query_params)!=expected:return deny(422,'ifc_invalid_request')
+                    if path=='/api/scene-ifc':result=await run_in_threadpool(self.scene_ifc.directory_view,request.query_params['space_id'])
+                    else:result=await run_in_threadpool(self.scene_ifc.preview,request.query_params['space_id'],request.query_params['element_id'],request.query_params['catalog_sha256'])
+                    return JSONResponse(result,headers={'Cache-Control':'no-store'})
+                except ValidationError:return deny(422,'ifc_invalid_request')
+                except (ValueError,KeyError,OSError,TypeError,zipfile.BadZipFile):return deny(409,'ifc_evidence_unavailable')
             if path.startswith('/api/scene-pointclouds'):
                 from fastapi.responses import Response
                 if self.scene_pointclouds is None:return deny(503,'input_catalog_not_configured')

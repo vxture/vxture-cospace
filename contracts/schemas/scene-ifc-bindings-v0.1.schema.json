@@ -1,0 +1,53 @@
+{
+  "$defs": {
+    "IfcBinding": {
+      "additionalProperties": false,
+      "properties": {
+        "space_id": {
+          "pattern": "^space-[a-f0-9]{16}$",
+          "title": "Space Id",
+          "type": "string"
+        },
+        "root": {
+          "minLength": 1,
+          "title": "Root",
+          "type": "string"
+        },
+        "catalog_sha256": {
+          "pattern": "^[a-f0-9]{64}$",
+          "title": "Catalog Sha256",
+          "type": "string"
+        }
+      },
+      "required": [
+        "space_id",
+        "root",
+        "catalog_sha256"
+      ],
+      "title": "IfcBinding",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "profile": {
+      "const": "cospace.scene-ifc-bindings/0.1",
+      "title": "Profile",
+      "type": "string"
+    },
+    "bindings": {
+      "items": {
+        "$ref": "#/$defs/IfcBinding"
+      },
+      "maxItems": 1000,
+      "title": "Bindings",
+      "type": "array"
+    }
+  },
+  "required": [
+    "profile",
+    "bindings"
+  ],
+  "title": "IfcConfig",
+  "type": "object"
+}
