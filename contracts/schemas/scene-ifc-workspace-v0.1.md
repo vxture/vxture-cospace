@@ -22,7 +22,7 @@ uv run --project experiments/ifc-tool --frozen python -m experiments.scripts.ins
 
 在私有 `setup/scene-ifc.json` 中配置[场景绑定 Schema](scene-ifc-bindings-v0.1.schema.json)。每项绑定实际场景 ID、目录绝对路径和外部保留的 `ifc.json` SHA256；重复场景拒绝。生产默认绑定为空；已有部署未配置时保持可启动。
 
-本机受权服务支持 `--scene-ifc-config`。生产资产放在业务根的 `runtime/preview-inputs` 中，参与现有存储统计和冷备份；外部路径在备份时明确拒绝。备份/恢复核验目录、原 IFC 及全部已提取网格，保持原路径恢复。
+本机受权服务支持 `--scene-ifc-config`。生产资产放在业务根的 `runtime/preview-inputs` 中，参与冷备份；外部路径在备份时明确拒绝。当前离线配置的 IFC 资产尚未登记为产品输入，不纳入现有按登记输入核算的存储用量；后续通用资料上传接入时统一处理。备份/恢复核验目录、原 IFC 及全部已提取网格，保持原路径恢复。
 
 | 请求 | 行为 |
 | --- | --- |
