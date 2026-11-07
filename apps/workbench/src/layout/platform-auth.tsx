@@ -4,7 +4,7 @@ import {Button,Icon} from '@vxture/design-system';
 import {HomeLayout} from './home-layout';
 import {productQuotaMessage} from './product-quota-messages';
 
-type Session={authenticated:boolean;authority_state:string;csrf?:string;access_ready?:boolean;user?:{subject:string;display_name:string;org_id:string;workspace_id:string}};
+type Session={authenticated:boolean;authority_state:string;authority_ready?:boolean;csrf?:string;access_ready?:boolean;user?:{subject:string;display_name:string;org_id:string;workspace_id:string}};
 export type AuthMode='checking'|'preview'|'platform'|'business'|'unavailable';
 export const PlatformSession=createContext<Session|null>(null);
 export const usePlatformSession=()=>useContext(PlatformSession);
@@ -123,7 +123,7 @@ function BusinessSession({children}:{children:React.ReactNode}){
  const suspended=!!retained.current&&!authorized;
  return <>
   {retained.current&&<div style={authorized?{display:'contents'}:{display:'none'}} aria-hidden={!authorized} inert={!authorized}><PlatformSession.Provider value={retained.current}><React.Fragment key={sessionScopeKey(retained.current)}>{children}</React.Fragment></PlatformSession.Provider></div>}
-  {!authorized&&(!session?.authenticated?<><PlatformIdentityPage business/>{suspended&&<section className="fixed bottom-lg left-lg right-lg rounded-md border bg-popover p-lg" aria-label="恢复当前工作"><p>会话已失效。未保存修改仅保留在当前标签页，刷新或关闭会丢失。可在其他标签页重新登录，再回来检查会话。</p><Button onClick={()=>window.dispatchEvent(new Event('cospace:confirm-session'))}>重新检查会话</Button></section>}</>:session.authority_state!=='confirmed'?<HomeLayout><h2>等待恢复平台会话</h2><p>工作面已遮挡，内存草稿保留。确认会话后可继续；不会重放保存、构建或发布操作。</p><Button onClick={()=>window.dispatchEvent(new Event('cospace:confirm-session'))}>重新检查会话</Button></HomeLayout>:<HomeLayout><p>{session.user?.display_name} · 当前工作区</p><SubscriptionNotice value={subscription} unavailable={subscriptionUnavailable} onRetry={()=>window.dispatchEvent(new Event('cospace:confirm-session'))}/><Button variant="ghost" onClick={()=>platformLogout(session.csrf||'')}>退出登录</Button></HomeLayout>)}
+  {!authorized&&(!session?.authenticated?<><PlatformIdentityPage business/>{suspended&&<section className="fixed bottom-lg left-lg right-lg rounded-md border bg-popover p-lg" aria-label="恢复当前工作"><p>会话已失效。未保存修改仅保留在当前标签页，刷新或关闭会丢失。可在其他标签页重新登录，再回来检查会话。</p><Button onClick={()=>window.dispatchEvent(new Event('cospace:confirm-session'))}>重新检查会话</Button></section>}</>:!sessionConfirmed(session)?<HomeLayout><h2>等待恢复平台会话</h2><p>工作面已遮挡，内存草稿保留。确认会话后可继续；不会重放保存、构建或发布操作。</p><Button onClick={()=>window.dispatchEvent(new Event('cospace:confirm-session'))}>重新检查会话</Button></HomeLayout>:<HomeLayout><p>{session.user?.display_name} · 当前工作区</p><SubscriptionNotice value={subscription} unavailable={subscriptionUnavailable} onRetry={()=>window.dispatchEvent(new Event('cospace:confirm-session'))}/><Button variant="ghost" onClick={()=>platformLogout(session.csrf||'')}>退出登录</Button></HomeLayout>)}
   {authorized&&(quotaError||error)&&<div role="alert" className="fixed bottom-lg left-lg right-lg z-notification flex flex-wrap items-center gap-md rounded-md border bg-popover p-lg text-body-small"><span>{quotaError||error}</span>{quotaError&&<Button variant="ghost" size="sm" onClick={()=>setQuotaError('')}>关闭提示</Button>}</div>}
  </>;
 }

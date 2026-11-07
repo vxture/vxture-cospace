@@ -10,15 +10,16 @@ export function PointcloudPrepare({endpoint,spaceId,capabilities,capabilityError
  const [file,setFile]=useState<File|null>(null),[name,setName]=useState(''),[frame,setFrame]=useState(''),[axes,setAxes]=useState<[string,string,string]>(['','','']),[scope,setScope]=useState(''),[description,setDescription]=useState('');
  const [metres,setMetres]=useState(false),[confirmed,setConfirmed]=useState(false),[prepared,setPrepared]=useState<Prepared|null>(null),[busy,setBusy]=useState<'checking'|'uploading'|null>(null),[error,setError]=useState(''),[download,setDownload]=useState('');
  const [checked,setChecked]=useState<CheckedCloud|null>(null);
+ const completed=useRef(false);
  const [formRevision,setFormRevision]=useState(0);
- const acknowledge=useUnsavedNavigation(!!(file||name||frame||description||scope||axes.some(Boolean)||metres),'PLY准备参数',{discard:()=>{setFile(null);setName('');setFrame('');setDescription('');setAxes(['','','']);setScope('');setMetres(false);setConfirmed(false);setPrepared(null);setChecked(null);setFormRevision(v=>v+1);}});
+ const acknowledge=useUnsavedNavigation(!completed.current&&!!(file||name||frame||description||scope||axes.some(Boolean)||metres),'PLY准备参数',{discard:()=>{setFile(null);setName('');setFrame('');setDescription('');setAxes(['','','']);setScope('');setMetres(false);setConfirmed(false);setPrepared(null);setChecked(null);setFormRevision(v=>v+1);}});
  const generation=useRef(0),request=useRef<AbortController|null>(null),gate=useRef(false);
  useEffect(()=>{onBusyChange(!!busy);return()=>onBusyChange(false);},[busy,onBusyChange]);
  useEffect(()=>{return()=>{generation.current++;request.current?.abort();};},[spaceId,endpoint]);
  useEffect(()=>{if(!prepared){setDownload('');return;}const url=URL.createObjectURL(prepared.bundle);setDownload(url);return()=>URL.revokeObjectURL(url);},[prepared]);
  const enabled=canPreparePointcloud(capabilities);
  const geometry=useMemo(()=>checked?{...checked.display,unit:metres?'m':'',frame_id:frame.trim()||'原文件局部坐标',axes}:null,[checked,metres,frame,axes]);
- function invalidate(){generation.current++;setPrepared(null);setConfirmed(false);setError('');}
+ function invalidate(){completed.current=false;generation.current++;setPrepared(null);setConfirmed(false);setError('');}
  async function inspectFile(){
   if(gate.current||!file||!enabled)return;gate.current=true;const run=++generation.current,controller=new AbortController();request.current=controller;setPrepared(null);setConfirmed(false);setBusy('checking');setError('');setChecked(null);
   try{const cloud=await checkCloud(file,controller.signal);if(run===generation.current)setChecked(cloud);}catch(e){if(run===generation.current&&!controller.signal.aborted)setError(e instanceof Error?e.message:'文件检查失败。');}finally{gate.current=false;if(run===generation.current)setBusy(null);}
@@ -38,7 +39,7 @@ export function PointcloudPrepare({endpoint,spaceId,capabilities,capabilityError
   try{const r=await fetch(`${endpoint}/api/input-uploads?${new URLSearchParams({space_id:spaceId,label:name.trim()})}`,{method:'POST',headers:{'Content-Type':'application/zip'},body:prepared.bundle,signal:controller.signal});const body=await r.json();
    if(!r.ok){const messages:Record<string,string>={upload_content_validation_failed:'服务端复核未通过，请核查原文件和声明后重新准备。',upload_scene_storage_budget:'当前场景上传存储预算已满，请联系管理员。',upload_existing_evidence_invalid:'原登记资料已变化，请核查历史资料。',space_access_denied:'当前账户无权向此场景登记资料。',authentication_required:'登录会话已失效，请重新登录。'};throw Error(messages[body.detail]||'登记未完成，请重试相同准备包或刷新资料列表核查。');}
    if(body.input?.space_id!==spaceId||body.input?.format!=='ply_pointcloud'||!body.input?.id||body.upload?.sha256!==prepared.sha256)throw Error('入库回执与当前场景或准备包不一致，请刷新核查。');
-   if(run===generation.current){acknowledge();onRegistered(body.input.id,body.created);}
+   if(run===generation.current){completed.current=true;acknowledge();onRegistered(body.input.id,body.created);}
   }catch(e){if(run===generation.current&&!controller.signal.aborted)setError(e instanceof TypeError?'连接中断，登记结果未确认。可重试相同准备包，系统会复用已登记记录。':e instanceof SyntaxError?'登记回执无法确认，请刷新列表或重试相同准备包。':e instanceof Error?e.message:'登记未完成，请重试。');}finally{gate.current=false;if(run===generation.current)setBusy(null);}
  }
  if(!enabled)return <div className="flex flex-col gap-md"><p role={capabilityError?'alert':'status'} className="text-body-small">{capabilityError||(!capabilities?'正在读取准备能力…':'当前服务未开放浏览器PLY准备，可使用已有资料包或已配置来源。')}</p>{capabilityError&&<Button size="sm" variant="outline" onClick={onRetry}>重试读取入口</Button>}<DialogFooter><Button variant="outline" onClick={onCancel}>取消</Button></DialogFooter></div>;
@@ -48,7 +49,7 @@ export function PointcloudPrepare({endpoint,spaceId,capabilities,capabilityError
    <label>PLY文件<Input aria-label="原始PLY文件" type="file" accept=".ply" required onChange={e=>{invalidate();setChecked(null);const next=e.target.files?.[0]||null;setFile(next);setName(next?.name.replace(/\.ply$/i,'').slice(0,100)||'');}}/></label>
    <Button type="button" size="sm" variant="outline" className="self-start" disabled={!file||!!busy} onClick={inspectFile}>检查文件并预览</Button>
    {geometry&&<GeometryPreview data={geometry} label="本机资料预览"/>}
-   <label>资料名称<Input aria-label="PLY资料名称" value={name} required maxLength={100} onChange={e=>setName(e.target.value)}/></label>
+   <label>资料名称<Input aria-label="PLY资料名称" value={name} required maxLength={100} onChange={e=>{completed.current=false;setName(e.target.value);}}/></label>
    <div className="pointcloud-coordinate-grid"><label>局部坐标系<Input aria-label="PLY局部坐标系" placeholder="例如 os1_16/os_sensor" value={frame} maxLength={100} required onChange={e=>{invalidate();setFrame(e.target.value);}}/></label><label>坐标范围<NativeSelect aria-label="PLY坐标范围" value={scope} required onChange={e=>{invalidate();setScope(e.target.value);}}><option value="" disabled>明确选择范围</option><option value="sensor_local">传感器局部</option><option value="scene_local">场景局部</option></NativeSelect></label></div>
    <div className="pointcloud-axes">{['X','Y','Z'].map((axis,i)=><label key={axis}>{axis}轴语义<Input aria-label={`PLY ${axis}轴语义`} placeholder={`如 sensor_${axis.toLowerCase()}`} value={axes[i]} maxLength={40} required onChange={e=>{invalidate();setAxes(values=>values.map((v,index)=>index===i?e.target.value:v) as [string,string,string]);}}/></label>)}</div>
    <label>来源说明<Textarea aria-label="PLY来源说明" placeholder="说明文件来自哪里、包含什么范围，以及已知处理情况。" value={description} required maxLength={500} onChange={e=>{invalidate();setDescription(e.target.value);}}/></label>

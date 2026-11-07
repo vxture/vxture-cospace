@@ -55,9 +55,9 @@ document.addEventListener('click',event=>{
 },true);
 window.addEventListener('beforeunload',event=>{if(drafts.entries.size){event.preventDefault();event.returnValue='';}});
 export function useUnsavedNavigation(dirty:boolean,label:string,options:Omit<Draft,'label'>={}){
- const id=useRef(Symbol());
- useLayoutEffect(()=>{drafts.set(id.current,dirty?{label,...options}:null);return()=>drafts.set(id.current,null);});
- return()=>drafts.set(id.current,null);
+ const id=useRef(Symbol()),acknowledged=useRef(false);
+ useLayoutEffect(()=>{if(!dirty)acknowledged.current=false;drafts.set(id.current,dirty&&!acknowledged.current?{label,...options}:null);return()=>drafts.set(id.current,null);});
+ return()=>{acknowledged.current=true;drafts.set(id.current,null);};
 }
 
 window.addEventListener('cospace:scope-reset',()=>{

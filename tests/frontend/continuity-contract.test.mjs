@@ -43,3 +43,9 @@ test('all drafts are checked before the first write and discard resets every edi
  assert.equal(await registry.saveAll(),false);assert.equal(writes,0);
  registry.discardAll();assert.deepEqual(resets,['supported','review required']);assert.equal(registry.entries.size,0);
 });
+
+test('server-confirmed cache remains usable while unverified, expired and unavailable cache is blocked',()=>{
+ const scope={authenticated:true,authority_state:'cached',user:{org_id:'org',workspace_id:'workspace',subject:'one'}};
+ assert.equal(sessionConfirmed({...scope,authority_ready:true}),true);
+ for(const value of [scope,{...scope,authority_ready:false},{...scope,authority_state:'unavailable',authority_ready:true},{...scope,authenticated:false,authority_ready:true}])assert.equal(sessionConfirmed(value),false);
+});

@@ -300,3 +300,21 @@ def test_incomplete_refresh_payload_blocks_replay_but_preserves_login(runtime):
     with pytest.raises(IdentityUnavailable):rp.resolve(sid,active=True,require_access=True)
     assert rp.store.get('session',sid)['refresh_blocked']
     assert rp.resolve(sid)[0] is not None
+
+def test_public_authority_readiness_tracks_server_confirmation_window(runtime):
+    rp, client, accounts, clock = runtime
+    login(rp,client,accounts)
+    calls=len(accounts.calls)
+    recent=activity(rp,client).json()
+    assert len(accounts.calls)==calls
+    assert recent['authority_state']=='cached' and recent['authority_ready'] is True
+    clock[0]+=91
+    stale=client.get('/api/auth/session').json()
+    assert len(accounts.calls)==calls
+    assert stale['authority_state']=='cached' and stale['authority_ready'] is False
+    accounts.unavailable=True
+    unavailable=activity(rp,client).json()
+    assert unavailable['authenticated'] and unavailable['authority_ready'] is False
+    accounts.unavailable=False;clock[0]+=31
+    recovered=activity(rp,client).json()
+    assert recovered['authority_state']=='confirmed' and recovered['authority_ready'] is True
