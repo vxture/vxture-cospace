@@ -20,6 +20,7 @@ COPY deploy/linux/requirements.lock /app/deploy/linux/requirements.lock
 RUN pip install --no-cache-dir --require-hashes -r /app/deploy/linux/requirements.lock
 COPY packages /app/packages
 COPY experiments/scripts /app/experiments/scripts
+COPY experiments/templates/*.html /app/experiments/templates/
 COPY contracts/schemas /app/contracts/schemas
 COPY configs/ontology /app/configs/ontology
 COPY --from=workbench /src/apps/workbench/dist /app/apps/workbench/dist

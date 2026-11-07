@@ -44,6 +44,8 @@ jobs:
       - run: uv run --frozen python -m compileall -q apps packages experiments/scripts
       - name: Build production container from source (no publish or deploy)
         run: docker build --file deploy/linux/Dockerfile --build-arg GIT_SHA="$GITHUB_SHA" --tag cospace:ci .
+      - name: Verify frozen model and dual-view composition inside production image
+        run: docker run --rm -i --entrypoint python cospace:ci < tests/container_preview_smoke.py
   test-coverage:
     name: test-coverage
     runs-on: ubuntu-latest
