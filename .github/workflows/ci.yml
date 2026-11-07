@@ -60,7 +60,7 @@ jobs:
       - run: uv sync --frozen --all-extras
       - run: uv run --frozen pytest -q --junitxml=test-results.xml
       - name: Isolated native IFC parser regression (SI units and placements)
-        run: uv run --project experiments/ifc-tool --frozen --group dev pytest -q tests/test_ifc_native.py
+        run: uv run --no-build --project experiments/ifc-tool --frozen --group dev pytest -q tests/test_ifc_native.py
       - uses: actions/upload-artifact@v7
         if: always()
         with:
