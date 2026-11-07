@@ -1,5 +1,7 @@
 # 数据模式
 
+新增[场景 IFC 构件资料](scene-ifc-workspace-v0.1.md)及[场景绑定 Schema](scene-ifc-bindings-v0.1.schema.json)：离线解析、保留源文件、授权构件目录与几何预览；坐标关系待确认，不自动创建业务对象。
+
 新增[分区智能体表面交付 v0.1](partitioned-agent-v0.1.md)及[索引 Schema](partitioned-agent-v0.1.schema.json)：固定发布按空间拆分、摘要绑定、离线按范围读取和明确超限；保留旧离线协议，不推断自由空间或机器人可用性。
 
 2026-10-28 新增 [NCLT ms25原生CSV预检](nclt-ms25-preflight-v0.1.md)：固定10列、整数微秒和单位来源、逐行数值与时间诊断。已有公开实测ms25字节验证，未取得激光或完成算法准入。
