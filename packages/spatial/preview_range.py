@@ -7,7 +7,7 @@ DEFAULT_RANGE_CELLS = 1024
 MAX_ABS_COORDINATE_M = 1_000_000
 
 
-def surface_range(cells, resolution, bounds_m, frame_id, expected_frame, limit):
+def range_indices(resolution, bounds_m, frame_id, expected_frame, limit):
     if (not isinstance(frame_id, str) or not frame_id or len(frame_id) > 256
             or frame_id != expected_frame):
         raise ValueError('range_frame_mismatch')
@@ -31,6 +31,11 @@ def surface_range(cells, resolution, bounds_m, frame_id, expected_frame, limit):
         step=Decimal(str(resolution))
         index_lo=[int((Decimal(str(v))/step-Decimal('.5')).to_integral_value(rounding=ROUND_CEILING)) for v in lo]
         index_hi=[int((Decimal(str(v))/step-Decimal('.5')).to_integral_value(rounding=ROUND_CEILING)) for v in hi]
+    return lo,hi,index_lo,index_hi
+
+
+def surface_range(cells, resolution, bounds_m, frame_id, expected_frame, limit):
+    lo,hi,index_lo,index_hi=range_indices(resolution,bounds_m,frame_id,expected_frame,limit)
     selected = []
     count = 0
     # Do not enumerate unknown volume or allocate an unbounded list of matches.

@@ -1,5 +1,7 @@
 # 数据模式
 
+新增[分区智能体表面交付 v0.1](partitioned-agent-v0.1.md)及[索引 Schema](partitioned-agent-v0.1.schema.json)：固定发布按空间拆分、摘要绑定、离线按范围读取和明确超限；保留旧离线协议，不推断自由空间或机器人可用性。
+
 2026-10-28 新增 [NCLT ms25原生CSV预检](nclt-ms25-preflight-v0.1.md)：固定10列、整数微秒和单位来源、逐行数值与时间诊断。已有公开实测ms25字节验证，未取得激光或完成算法准入。
 
 2026-10-28 新增 [P1离线bag预检报告](bag-preflight-v0.1.md)及 [Schema](bag-preflight-v0.1.schema.json)：标准PointCloud2/Imu原字节读取、布局与数值检查、整数纳秒统计和明确拒绝报告。未接入真实采集、算法准入或既有导入器。

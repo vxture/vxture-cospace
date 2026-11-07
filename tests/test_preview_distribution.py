@@ -22,6 +22,7 @@ def endpoints(pub,model):
             ('POST',prefix+'/api/query',{'point_m':list(point)}),
             ('POST',prefix+'/api/query-range',{'bounds_m':bounds,'frame_id':model.manifest['frame_id'],'limit':4096}),
             ('GET',prefix+'/',None),('GET',prefix+'/offline.zip',None),('GET',prefix+'/offline.json',None),
+            ('GET',prefix+'/partitions.zip',None),('GET',prefix+'/partitions.json',None),
             *[('GET',prefix+'/'+name,None) for name in (*pub['files'],'publication.json')]]
 
 def test_pause_all_distribution_paths_and_restore_exact_bytes(tmp_path):

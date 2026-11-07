@@ -121,7 +121,7 @@ def test_viewer_can_browse_fixed_geometry_and_metadata(secured,suffix):
     assert r.status_code==200,r.text[:200]
 
 
-@pytest.mark.parametrize('suffix',['/offline.zip','/offline.json','/agent.npz','/spatial.npz','/publication.json','/offline-checks.json'])
+@pytest.mark.parametrize('suffix',['/offline.zip','/offline.json','/partitions.zip','/partitions.json','/agent.npz','/spatial.npz','/publication.json','/offline-checks.json'])
 def test_preview_grant_does_not_allow_export(secured,suffix):
     _,c,*_=secured;new=secured[-1];sign_in(secured)
     assert c.get('/publications/'+new['id']+suffix).status_code==403
@@ -136,6 +136,20 @@ def test_engineer_export_and_viewer_query_post_csrf(secured):
     assert r.json()['space_id']==spaces[0]['id']
     sign_in(secured,'usr_engineer')
     assert c.get('/publications/'+new['id']+'/offline.zip').status_code==200
+
+
+@pytest.mark.parametrize('user,expected',[('usr_engineer',200),('usr_manager',200),('usr_local_test',403),('usr_other',403)])
+@pytest.mark.parametrize('suffix',['partitions.json','partitions.zip'])
+def test_partition_delivery_obeys_current_scene_export_grant(secured,user,expected,suffix):
+    _,client,accounts,_,*_=secured;record=secured[-1]
+    path=record['preview_url']+suffix
+    assert client.get(path).status_code==401
+    sign_in(secured,user)
+    response=client.get(path);assert response.status_code==expected,response.text[:200]
+    assert response.headers['cache-control']=='no-store'
+    if expected==200:
+        accounts.workspace='foreign-workspace';sign_in(secured,user)
+        assert client.get(path).status_code==403
 
 
 @pytest.mark.parametrize('route',['/api/selection','/api/semantic-candidates','/api/business-candidates','/api/relation-candidates',
