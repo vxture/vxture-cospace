@@ -35,7 +35,7 @@ export function SceneProgress({space,name,input,revision=0,onRead}:{space:string
   <div className="scene-progress-main"><div className="scene-progress-copy">
    <div className="scene-progress-heading"><span>{viewing?'当前查看发布':'场景进度'}</span>{summary&&<StatusBadge tone={viewing?.status==='paused'?'warning':viewing?.status==='unavailable'||summary.work?.status==='needs_attention'?'warning':summary.service_status==='complete'?'success':'neutral'}>{viewing?(viewing.status==='available'?'分发中':viewing.status==='paused'?'暂停分发':'成果不可读'):summary.work?.label||'固定发布概况'}</StatusBadge>}</div>
    {busy&&<p role="status">正在读取场景进度…</p>}{error&&<p role="alert">{error}</p>}
-   {summary&&<><p className="scene-progress-reference">{viewing?`版本：${viewing.publication_id}`:summary.tracked_job?`跟进任务：${summary.tracked_job.job_id}`:summary.candidate_ref?`工作候选：${summary.candidate_ref.candidate_id}`:'尚未选择工作候选'}</p>
+   {summary&&<><p className="scene-progress-reference">{viewing?`版本：${viewing.publication_id}`:summary.journey?.target.kind==='input'?`跟进资料：${summary.journey.target.id}`:summary.tracked_job?`跟进任务：${summary.tracked_job.job_id}`:summary.candidate_ref?`工作候选：${summary.candidate_ref.candidate_id}`:summary.work?'尚未选择工作候选':'按当前授权查看固定发布'}</p>
     {viewing?<p>{viewing.matches_current?'对应当前工作候选。':'历史候选发布；保持此版本查看。'}{summary.work?`${summary.tracked_job&&!summary.tracked_job.is_current?'跟进任务':'当前工作'}：${summary.work.label}。`:''}</p>:summary.work&&<p>{summary.work.detail}</p>}
     <p className="scene-progress-meta">可用固定发布 {summary.available_publication_count} 个 · 消费端未观测 · 质量待验收<span>读取于 {new Date(result!.observed_at).toLocaleTimeString('zh-CN',{hour12:false})}</span></p>
    </>}
