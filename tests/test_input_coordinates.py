@@ -59,7 +59,7 @@ def test_stable_identity_history_preflight_and_fixed_models(tmp_path):
     assert len(catalog.list())==1
 
 
-def test_audited_revisions_match_historical_artifacts_and_admission(tmp_path):
+def test_audited_revisions_match_historical_artifacts_and_admission(tmp_path,monkeypatch):
     from packages.construction.preview_jobs import PreviewJobs
     from packages.service.preview_publications import PreviewPublications
     from packages.data.preview_artifacts import artifact_catalog
@@ -76,6 +76,13 @@ def test_audited_revisions_match_historical_artifacts_and_admission(tmp_path):
     with pytest.raises(ValueError,match='coordinate_revision_changed'):jobs.start(original['id'],spaces[0],input_revision=0)
     with pytest.raises(ValueError,match='preflight_required'):jobs.start(original['id'],spaces[0],input_revision=1)
     assert catalog.resolve(original['id'])['coordinate_revision']['revision']==1
+    checks=PreflightRecords(catalog)
+    saved=checks.save(original['id'],preflight(catalog,original['id']),'test',checks.fingerprint(original['id']))
+    monkeypatch.setattr('packages.construction.preview_jobs.subprocess.Popen',lambda *a,**k:(_ for _ in ()).throw(OSError('test spawn')))
+    admitted=jobs.start(original['id'],spaces[0],input_revision=1)
+    assert admitted['build_admission']['saved_preflight_sequence']==saved['sequence']
+    checks.save(original['id'],preflight(catalog,original['id']),'test',checks.fingerprint(original['id']))
+    assert jobs.list()[0]['build_admission']==admitted['build_admission']
 
 
 def test_idempotent_retry_noop_conflict_and_concurrency(tmp_path):

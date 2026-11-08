@@ -6,7 +6,7 @@ from packages.data.preview_pointcloud import source_receipt
 from packages.construction.preview_derivations import freeze
 
 
-def build(snapshot,output,identity,binding=None,*,batch_ref=None):
+def build(snapshot,output,identity,binding=None,*,batch_ref=None,build_admission=None):
     checked,points,colors,doc=read_cloud(snapshot)
     if binding and binding.get('coordinate_revision'):
         from packages.data.input_coordinates import interpret
@@ -23,6 +23,12 @@ def build(snapshot,output,identity,binding=None,*,batch_ref=None):
         source['composition']=read_composition(snapshot,doc)
     if binding is not None:source['input_binding']=binding
     if batch_ref:source['batch_ref']=batch_ref
+    if build_admission is not None:
+        from packages.construction.build_admission import validate
+        validate(build_admission,binding)
+        if build_admission['job_id'] != identity:
+            raise ValueError('build_admission_job_mismatch')
+        source['build_admission']=build_admission
     metadata={'id':identity,'label':binding['label'] if binding else '已有点云',
         'frame_id':checked['frame_id'],'axes':checked['axes'],'unit':'m',
         'data_kind':'existing_pointcloud_candidate','appearance':checked['appearance'],'source':source,

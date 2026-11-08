@@ -2,6 +2,7 @@ import {useRecordNavigation} from './record-navigation';
 import {businessEndpoint} from './business-endpoint';
 import {OntologyAuthoring,type RuleDocument} from './ontology-authoring';
 import {OntologyComparison} from './ontology-comparison';
+import {OntologyUsage} from './ontology-usage';
 import React,{useEffect,useRef,useState} from 'react';
 import {Button,Card,CardHeader,CardTitle,CardContent,NativeSelect,Textarea,StatusBadge,Table,TableHeader,TableBody,TableRow,TableHead,TableCell} from '@vxture/design-system';
 
@@ -70,6 +71,7 @@ export function OntologyWorkbench(){
    {reading&&<p role="status">正在核对规则摘要…</p>}
    {current&&!error&&<><div className="flex flex-wrap items-center gap-sm"><StatusBadge tone="success">规则完整性已核对</StatusBadge><span className="text-body-small">{current.ontology_id} · V{current.version} · {current.type_count} 种类型</span></div><p className="break-all text-label-small text-muted-foreground">SHA256：{current.sha256}</p><p className="text-label-small text-muted-foreground">封存于 {new Date(current.registered_at).toLocaleString('zh-CN',{hour12:false})} · 场景及模型显式引用固定版本</p></>}
   </CardContent></Card>
+  {loaded&&!error&&<OntologyUsage key={referenceKey} endpoint={endpoint} reference={loaded.record}/>}
   {loaded&&!error&&<OntologyComparison key={referenceKey} endpoint={endpoint} current={loaded as unknown as Parameters<typeof OntologyComparison>[0]['current']} versions={versions}/>}
   {loaded&&!error&&<div className="grid min-w-0 grid-cols-1 items-start gap-xl xl:grid-cols-2">
    <Card aria-label="类型与属性规则"><CardHeader><CardTitle>类型与属性</CardTitle></CardHeader><CardContent className="flex min-w-0 flex-col gap-lg"><p className="text-body-small text-muted-foreground">{loaded.definition.description}</p>{Object.entries(loaded.definition.types).map(([id,type])=><section key={id} className="flex min-w-0 flex-col gap-sm border-b border-border pb-lg"><h3 className="text-body-small font-medium">{type.title} <span className="font-normal text-muted-foreground">{id}</span></h3><p className="text-label-small text-muted-foreground">{type.description}</p><div className="overflow-x-auto"><Table><TableHeader><TableRow><TableHead>属性</TableHead><TableHead>类型</TableHead><TableHead>要求</TableHead></TableRow></TableHeader><TableBody>{Object.entries(type.properties).map(([name,rule])=><TableRow key={name}><TableCell>{rule.title}<span className="ml-sm text-label-small text-muted-foreground">{name}</span></TableCell><TableCell>字符串</TableCell><TableCell>{rule.required?'必填':'选填'} · {rule.min_length}–{rule.max_length} 字</TableCell></TableRow>)}</TableBody></Table></div></section>)}<Button asChild variant="link" className="self-start"><a href={`${endpoint}/api/ontologies/${current!.ontology_id}/${current!.version}?sha256=${current!.sha256}`} target="_blank" rel="noopener noreferrer">查看规则JSON</a></Button></CardContent></Card>

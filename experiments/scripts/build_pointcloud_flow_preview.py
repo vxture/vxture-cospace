@@ -11,7 +11,7 @@ def main():
     p.add_argument('--candidate-id',required=True);p.add_argument('--input-binding',type=Path)
     p.add_argument('--freeze-only',action='store_true',required=True)
     a=p.parse_args();job=json.loads(a.input_binding.read_bytes()) if a.input_binding else {}
-    model=build(a.snapshot,a.output,a.candidate_id,job.get('input_binding'),batch_ref=job.get('batch_ref'))
+    model=build(a.snapshot,a.output,a.candidate_id,job.get('input_binding'),batch_ref=job.get('batch_ref'),build_admission=job.get('build_admission'))
     print(json.dumps({'model_id':model['id'],'stage':'model_frozen'}))
 
 

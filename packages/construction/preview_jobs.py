@@ -55,6 +55,8 @@ class PreviewJobs:
                 if record.get('batch_ref')!=model.manifest.get('source',{}).get('batch_ref'):raise ValueError('candidate_batch_binding_mismatch')
                 if record.get('input_binding') != model.manifest.get('source',{}).get('input_binding'):
                     raise ValueError('candidate_input_binding_mismatch')
+                from packages.construction.build_admission import match_source
+                match_source(record,model.manifest.get('source',{}))
                 record.update(state='succeeded',model_id=model.manifest['id'],
                               candidate_url=f'/candidates/{identity}/',error=None)
             except (ValueError,OSError,KeyError) as exc: record.update(state='failed',error=str(exc))
@@ -77,7 +79,7 @@ class PreviewJobs:
         with self.lock:
             self.poll()
             if self.active or self.split.active: raise ValueError('build_already_running')
-            registered=None
+            registered=None; admission_preflight=None
             if self.inputs is not None:
                 if not input_id: raise ValueError('input_selection_required')
                 registered=self.inputs.read(input_id)
@@ -91,6 +93,7 @@ class PreviewJobs:
                     from packages.data.preflight_records import PreflightRecords
                     check=PreflightRecords(self.inputs).latest(input_id)
                     if not check or not check['registration_matches'] or check['status']!='passed':raise ValueError('input_revision_preflight_required')
+                admission_preflight=check['sequence'] if current else None
                 snapshot=Path(registered['snapshot']); tracking=Path(registered['tracking']) if registered.get('tracking') else None
             else:
                 if input_id is not None: raise ValueError('input_catalog_not_configured')
@@ -98,7 +101,7 @@ class PreviewJobs:
                 snapshot=self.snapshot; tracking=self.tracking
             if self.batches is None and (batch_id is not None or batch_revision is not None):raise ValueError('batches_not_configured')
             guard=self.batches.admit(registered,ownership,batch_id,batch_revision) if self.batches else nullcontext(None)
-            with guard as batch_ref:return self._launch(registered,snapshot,tracking,ownership,input_id,batch_ref,retry_ref)
+            with guard as batch_ref:return self._launch(registered,snapshot,tracking,ownership,input_id,batch_ref,retry_ref,admission_preflight)
 
     @serialized(lambda self:self.root.parent)
     def retry(self,space_id,previous_id,request_id):
@@ -127,7 +130,7 @@ class PreviewJobs:
                        retry_ref={'retry_of':previous_id,'retry_request_id':request_id},input_revision=registered.get('coordinate_revision',{}).get('revision',0))
         return {'created':True,'job':job}
 
-    def _launch(self,registered,snapshot,tracking,ownership,input_id,batch_ref,retry_ref=None):
+    def _launch(self,registered,snapshot,tracking,ownership,input_id,batch_ref,retry_ref=None,admission_preflight=None):
         mapping=registered is not None and registered['format']=='ros1_lidar_multiframe_icp'
         lidar=registered is not None and registered['format'] in ('ros1_lidar_single_frame','ros1_lidar_multiframe_icp')
         pointcloud=registered is not None and registered['format']=='ply_pointcloud'
@@ -139,6 +142,9 @@ class PreviewJobs:
                 'candidate_url':None,'error':None,**ownership}
         if registered:
             record['input_binding']={k:v for k,v in registered.items() if k not in ('snapshot','tracking')}
+        if registered and pointcloud:
+            from packages.construction.build_admission import receipt
+            record['build_admission']=receipt(identity,record['input_binding'],admission_preflight)
         if batch_ref:record['batch_ref']=batch_ref
         if retry_ref:record.update(retry_ref)
         if registered:record.update(pipeline='model_then_views/0.1',stage='building_model')
@@ -201,7 +207,7 @@ class PreviewJobs:
         if counterpart['frozen_model']!=previous['frozen_model'] or counterpart['view_kind']!=other:raise ValueError('view_model_mismatch')
         if counterpart['state']=='succeeded':self.split.manifest(previous['view_tasks'][other],previous['frozen_model'],other)
         identity='build-'+uuid.uuid4().hex[:16];(self.root/identity).mkdir()
-        job={k:previous[k] for k in ('input_id','input_binding','batch_ref') if k in previous}
+        job={k:previous[k] for k in ('input_id','input_binding','batch_ref','build_admission') if k in previous}
         job.update(id=identity,state='running',created_at=now(),method='derive_frozen_views',pipeline='model_then_views/0.1',
             stage='deriving_views',candidate_url=None,error=None,frozen_model=previous['frozen_model'],
             view_tasks=dict(previous['view_tasks']),view_parent_id=previous_id,rerun_view=kind,view_request_id=request_id,**ownership)
@@ -220,6 +226,8 @@ class PreviewJobs:
         if records[identity].get('input_binding') is not None:
             if records[identity]['input_binding'] != model.manifest.get('source',{}).get('input_binding'):
                 raise ValueError('candidate_input_binding_mismatch')
+        from packages.construction.build_admission import match_source
+        match_source(records[identity],model.manifest.get('source',{}))
         if records[identity].get('pipeline')=='model_then_views/0.1':
             declaration=model.manifest.get('derivation',{})
             if (declaration.get('frozen_model')!=records[identity].get('frozen_model') or

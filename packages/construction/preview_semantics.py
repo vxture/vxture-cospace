@@ -115,6 +115,7 @@ def annotate(jobs,ontologies,request,*,business=None,relations=None):
                     'base_candidate_id':request.base_candidate_id,'base_manifest_sha256':request.base_manifest_sha256,
                     'annotation_id':annotation_id,'object_count':len(objects),
                     'candidate_url':f'/candidates/{identity}/','error':None}
+            if base_job.get('build_admission'):record['build_admission']=base_job['build_admission']
             if base_job.get('batch_ref'):record['batch_ref']=base_job['batch_ref']
             if business is not None:
                 record.update(method='manual_business_association_over_fixed_geometry',business_binding_count=len(bindings))

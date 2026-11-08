@@ -30,6 +30,7 @@ from packages.construction.build_process import read_process
 from packages.service.space_preparation import preparation
 from packages.data.input_uploads import InputUploads,UploadRejected,MAX_UPLOAD,capabilities as upload_capabilities,metadata as upload_metadata
 from packages.ontology.workspace_authoring import WorkspaceOntologies,DraftChange,SealDraft
+from packages.ontology.scene_usage import usage as scene_ontology_usage, UsageQuery
 from packages.service.public_errors import public_error
 from packages.data.workspace_catalog import catalog as workspace_catalog, CatalogQuery, CatalogUnavailable
 
@@ -59,6 +60,10 @@ class BusinessAccess:
         principal=self.rp.verifier.verify(session['access_token'])
         access=PlatformResourceAccess(self.directory,self.jobs,policy)
         path=request.url.path; method=request.method; q=request.query_params
+        if path=='/api/ontology-usage' and method in ('GET','HEAD'):
+            access.space(principal,q.get('space_id'),'data.manage')
+            access.space(principal,q.get('space_id'),'space.preview')
+            return {'principal':principal}
         if path=='/api/data-catalog' and method in ('GET','HEAD'):
             if q.get('space_id'):access.space(principal,q['space_id'],'data.manage')
             return {'principal':principal}
@@ -409,6 +414,13 @@ class BusinessAccess:
             shared=getattr(self.jobs,'ontology_store',None)
             rules=WorkspaceOntologies(shared.root if shared else self.jobs.root.parent/'preview-ontologies',context['principal'])
             request.state.ontology_store=rules
+            if path=='/api/ontology-usage':
+                try:
+                    query=UsageQuery.model_validate(dict(request.query_params))
+                    result=await run_in_threadpool(scene_ontology_usage,self.jobs,self.directory,policy,context['principal'],rules,query)
+                except ValidationError:return deny(422,'ontology_usage_query_invalid')
+                except (ValueError,OSError,KeyError,TypeError):return deny(409,'ontology_usage_unavailable')
+                return JSONResponse(result,headers={'Cache-Control':'no-store'})
             if path.startswith('/api/ontology-authoring'):
                 try:
                     if path=='/api/ontology-authoring' and request.method in ('GET','HEAD'):

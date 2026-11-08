@@ -57,6 +57,7 @@ def lineage(publications, identity, *, provenance=False):
             if binding:
                 matched = matched and job.get('input_id') == binding.get('id') and job.get('input_binding') == binding
             matched = matched and job.get('batch_ref') == source.get('batch_ref')
+            matched = matched and job.get('build_admission') == source.get('build_admission')
             status = 'matched' if matched else 'mismatch'
             detail = ('任务、候选模型摘要及已记录的输入绑定一致。' if matched
                       else '当前构建任务或候选内容与发布保存的绑定不一致。')
@@ -66,6 +67,15 @@ def lineage(publications, identity, *, provenance=False):
         model_manifest_sha256=record['model_manifest_sha256'],
         source_model_sha256=record['source_model_sha256'])
     if provenance:
+        admission = source.get('build_admission')
+        admission_status = 'not_recorded'
+        if admission is not None:
+            from packages.construction.build_admission import validate
+            try:
+                validate(admission, binding)
+                admission_status = 'recorded'
+            except (ValueError, TypeError, KeyError):
+                admission_status = 'invalid'
         add('candidate', '来源候选', nodes[1]['status'], candidate,
             '固定发布保存的来源候选；与当前工作选择无关。',
             model_manifest_sha256=record['model_manifest_sha256'])
@@ -77,7 +87,9 @@ def lineage(publications, identity, *, provenance=False):
         return {'profile': 'cospace.publication-provenance/0.1', 'publication_id': identity,
                 **owned(record), 'checked_at': now(), 'nodes': nodes,
                 'package_generated': False, 'preflight_sequence': None,
-                'notice': '核对固定发布及当前可读来源；未导出离线包、未重检源文件。构建未保存预检序号，资料历史不作为当时构建预检证据。',
+                'build_admission': admission if admission_status == 'recorded' else None,
+                'build_admission_status': admission_status,
+                'notice': '核对固定发布及当前可读来源；未导出离线包、未重检源文件。准入依据仅覆盖新增点云构建；历史及其他格式不回填。保存预检、准入文件校验和任务执行结果分别记录。',
                 'robot_ready': False, 'production_ready': False}
     bundle = export_bundle(record, model)
     add('package', '离线交付包', 'matched', identity+'-offline.zip',
