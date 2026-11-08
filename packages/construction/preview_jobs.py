@@ -130,6 +130,26 @@ class PreviewJobs:
                        retry_ref={'retry_of':previous_id,'retry_request_id':request_id},input_revision=registered.get('coordinate_revision',{}).get('revision',0))
         return {'created':True,'job':job}
 
+    def _process_declaration(self,record,registered,snapshot,ownership):
+        if registered is None or registered['format']!='nyu_rgbd_with_existing_poses':return
+        pairs=[p for p in json.loads((snapshot/'report.json').read_bytes())['pairs'] if p['accepted']]
+        stamps=[p.get('depth_time_us') for p in pairs]
+        if ownership and stamps and all(type(t) is int and 0<=t<=2**53-1 for t in stamps) and all(a<b for a,b in zip(stamps,stamps[1:])):
+            record['process_profile']='cospace.build-process/0.1'
+        else:record['process_unsupported_reason']='source_frame_time_unavailable'
+
+    def _launch_command(self,record,registered,snapshot,tracking):
+        modules={'ros1_lidar_multiframe_icp':'build_lidar_mapping_preview','ply_pointcloud':'build_pointcloud_flow_preview',
+                 'ros1_lidar_single_frame':'build_lidar_flow_preview'}
+        format=registered['format'] if registered else 'nyu_rgbd_with_existing_poses'
+        directory=self.root/record['id']
+        command=[sys.executable,'-m','experiments.scripts.'+modules.get(format,'build_nyu_flow_preview'),
+                 '--snapshot',str(snapshot),'--output',str(directory/('frozen' if registered else 'output')),
+                 '--candidate-id',record['id']]
+        if format=='nyu_rgbd_with_existing_poses':command+=['--tracking',str(tracking)]
+        if registered:command+=['--input-binding',str(directory/'job.json'),'--freeze-only']
+        return command
+
     def _launch(self,registered,snapshot,tracking,ownership,input_id,batch_ref,retry_ref=None,admission_preflight=None):
         mapping=registered is not None and registered['format']=='ros1_lidar_multiframe_icp'
         lidar=registered is not None and registered['format'] in ('ros1_lidar_single_frame','ros1_lidar_multiframe_icp')
@@ -138,7 +158,7 @@ class PreviewJobs:
             raise ValueError('configured_input_missing')
         identity='build-'+uuid.uuid4().hex[:16]; directory=self.root/identity; directory.mkdir()
         record={'id':identity,'state':'queued','created_at':now(),'input_id':input_id or 'nyu-office-short',
-                'method':'laser_scan_to_scan_icp' if mapping else 'normalize_declared_pointcloud' if pointcloud else 'single_sensor_frame_no_registration' if lidar else 'rebuild_from_frozen_rgbd_and_existing_poses','stage':'candidate_and_dual_views',
+                'method':{'ros1_lidar_multiframe_icp':'laser_scan_to_scan_icp','ply_pointcloud':'normalize_declared_pointcloud','ros1_lidar_single_frame':'single_sensor_frame_no_registration'}.get(registered['format'] if registered else '', 'rebuild_from_frozen_rgbd_and_existing_poses'),'stage':'candidate_and_dual_views',
                 'candidate_url':None,'error':None,**ownership}
         if registered:
             record['input_binding']={k:v for k,v in registered.items() if k not in ('snapshot','tracking')}
@@ -149,20 +169,10 @@ class PreviewJobs:
         if retry_ref:record.update(retry_ref)
         if registered:record.update(pipeline='model_then_views/0.1',stage='building_model')
         if mapping:record['process_profile']='cospace.lidar-build-process/0.1'
-        if registered and not lidar and not pointcloud:
-            pairs=[p for p in json.loads((snapshot/'report.json').read_bytes())['pairs'] if p['accepted']]
-            stamps=[p.get('depth_time_us') for p in pairs]
-            if ownership and stamps and all(type(t) is int and 0<=t<=2**53-1 for t in stamps) and all(a<b for a,b in zip(stamps,stamps[1:])):
-                record['process_profile']='cospace.build-process/0.1'
-            else:record['process_unsupported_reason']='source_frame_time_unavailable'
+        self._process_declaration(record,registered,snapshot,ownership)
         self.save(record); log=(directory/'build.log').open('wb')
         try:
-            command=[sys.executable,'-m','experiments.scripts.build_lidar_mapping_preview' if mapping else 'experiments.scripts.build_pointcloud_flow_preview' if pointcloud else 'experiments.scripts.build_lidar_flow_preview' if lidar else 'experiments.scripts.build_nyu_flow_preview',
-                '--snapshot',str(snapshot),'--output',str(directory/('frozen' if registered else 'output')),
-                '--candidate-id',identity]
-            if not lidar and not pointcloud:command+=['--tracking',str(tracking)]
-            if registered: command+=['--input-binding',str(directory/'job.json')]
-            if registered:command+=['--freeze-only']
+            command=self._launch_command(record,registered,snapshot,tracking)
             process=subprocess.Popen(command,stdout=log,stderr=subprocess.STDOUT,
                 creationflags=getattr(subprocess,'CREATE_NO_WINDOW',0))
         except OSError as exc:

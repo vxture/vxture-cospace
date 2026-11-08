@@ -17,7 +17,9 @@ def test_fixed_references_scope_pagination_and_metadata_only(tmp_path,monkeypatc
     monkeypatch.setattr(jobs,'poll',lambda:pytest.fail('must not poll'))
     monkeypatch.setattr(jobs,'model',lambda *a:pytest.fail('must not load model'))
     report=usage(jobs,directory,Allowed(),None,store,query)
-    assert report['status']=='ready' and report['total']>=2 and report['next_offset']==1
+    assert report['status']=='ready'
+    assert report['total']>=2
+    assert report['next_offset']==1
     rows=[]
     for offset in range(report['total']):
         page=usage(jobs,directory,Allowed(),None,store,query.model_copy(update={'offset':offset}))
@@ -27,7 +29,9 @@ def test_fixed_references_scope_pagination_and_metadata_only(tmp_path,monkeypatc
     assert not any(r['id']==old['id'] for r in rows)
     assert all(r['ontology_ref']==ref and spaces[0]['id'] in r['href'] for r in rows)
     empty=usage(jobs,directory,Allowed(),None,store,query.model_copy(update={'space_id':spaces[1]['id']}))
-    assert empty['status']=='ready' and empty['items']==[] and empty['total']==0
+    assert empty['status']=='ready'
+    assert empty['items']==[]
+    assert empty['total']==0
 
 
 def test_partial_for_corrupt_metadata_and_budget_no_foreign_details(tmp_path,monkeypatch):
@@ -36,10 +40,12 @@ def test_partial_for_corrupt_metadata_and_budget_no_foreign_details(tmp_path,mon
     query=UsageQuery(space_id=spaces[0]['id'],**ref)
     path=jobs.root/'build-corrupt';path.mkdir();(path/'job.json').write_bytes(b'broken')
     report=usage(jobs,directory,Allowed(),None,store,query)
-    assert report['status']=='partial' and 'build-corrupt' not in json.dumps(report)
+    assert report['status']=='partial'
+    assert 'build-corrupt' not in json.dumps(report)
     monkeypatch.setattr('packages.ontology.scene_usage.MAX_RECORDS',0)
     report=usage(jobs,directory,Allowed(),None,store,query)
-    assert report['status']=='partial' and report['items']==[]
+    assert report['status']=='partial'
+    assert report['items']==[]
 
 
 def test_denies_before_reading_rules_or_metadata(tmp_path):
@@ -48,7 +54,8 @@ def test_denies_before_reading_rules_or_metadata(tmp_path):
     class NoRules:
         def read(self,*args):pytest.fail('must authorize first')
     query=UsageQuery(space_id='space-'+'a'*16,ontology_id='x',version='1',sha256='a'*64)
-    with pytest.raises(PermissionError):usage(None,None,Denied(),None,NoRules(),query)
+    policy=Denied();rules=NoRules()
+    with pytest.raises(PermissionError):usage(None,None,policy,None,rules,query)
 
 
 @pytest.mark.parametrize('user,status',[('usr_local_test',403),('usr_other',403),('usr_engineer',409),('usr_manager',409)])

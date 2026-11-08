@@ -19,6 +19,46 @@ class UsageQuery(BaseModel):
     limit: int = Field(default=20, ge=1, le=100)
 
 
+def reference_model(root, path, kind, ownership, record):
+    identity = path.parent.name
+    model_path = path.parent/('output/model.json' if kind == 'candidate' else 'model.json')
+    model, model_sha = metadata(root, model_path, with_digest=True)
+    match(model, ownership)
+    model_id = identity if kind == 'candidate' else record['candidate_id']
+    if model.get('id') != model_id:
+        raise ValueError('model_mismatch')
+    if kind == 'publication' and model_sha != record.get('model_manifest_sha256'):
+        raise ValueError('publication_manifest_changed')
+    annotation = model.get('semantic_annotation', {})
+    if not isinstance(annotation, dict):
+        raise ValueError('annotation_invalid')
+    return annotation.get('ontology_ref')
+
+
+def reference_item(root, path, kind, ownership, ref):
+    record = metadata(root, path)
+    if not isinstance(record.get('space_id'), str):
+        raise ValueError('ownership_unknown')
+    if record['space_id'] != ownership['space_id']:
+        return None
+    match(record, ownership)
+    identity = path.parent.name
+    expected = r'build-[A-Za-z0-9-]+' if kind == 'candidate' else r'preview-[a-f0-9]{16}'
+    if record.get('id') != identity or not re.fullmatch(expected, identity):
+        raise ValueError('identity_mismatch')
+    if kind == 'candidate' and record.get('state') != 'succeeded':
+        return None
+    if reference_model(root, path, kind, ownership, record) != ref:
+        return None
+    values = {'space': ownership['space_id']}
+    if kind == 'candidate':
+        route = 'data'; values.update(tab='versions', artifact='candidate:'+identity)
+    else:
+        route = 'delivery'; values['publication'] = identity
+    return {'kind': kind, 'id': identity, 'href': '#'+route+'?'+urlencode(values),
+            'ontology_ref': ref, 'integrity': 'metadata_only'}
+
+
 def usage(jobs, directory, policy, principal, rules, query):
     policy.require(principal, query.space_id, 'data.manage')
     policy.require(principal, query.space_id, 'space.preview')
@@ -36,41 +76,9 @@ def usage(jobs, directory, policy, principal, rules, query):
                 partial = True
                 break
             try:
-                record = metadata(root, path)
-                # Unknown ownership is not exposed. Global metadata corruption
-                # or budget exhaustion makes the observation incomplete.
-                if not isinstance(record.get('space_id'), str):
-                    partial = True
-                    continue
-                if record['space_id'] != query.space_id:
-                    continue
-                match(record, ownership)
-                identity = path.parent.name
-                expected = r'build-[A-Za-z0-9-]+' if kind == 'candidate' else r'preview-[a-f0-9]{16}'
-                if record.get('id') != identity or not re.fullmatch(expected, identity):
-                    raise ValueError('identity_mismatch')
-                if kind == 'candidate' and record.get('state') != 'succeeded':
-                    continue
-                model_path = path.parent/('output/model.json' if kind == 'candidate' else 'model.json')
-                model, model_sha = metadata(root, model_path, with_digest=True)
-                match(model, ownership)
-                model_id = identity if kind == 'candidate' else record['candidate_id']
-                if model.get('id') != model_id:
-                    raise ValueError('model_mismatch')
-                if kind == 'publication' and model_sha != record.get('model_manifest_sha256'):
-                    raise ValueError('publication_manifest_changed')
-                annotation = model.get('semantic_annotation', {})
-                if not isinstance(annotation, dict):
-                    raise ValueError('annotation_invalid')
-                if annotation.get('ontology_ref') != ref:
-                    continue
-                values = {'space': query.space_id}
-                if kind == 'candidate':
-                    route = 'data'; values.update(tab='versions', artifact='candidate:'+identity)
-                else:
-                    route = 'delivery'; values['publication'] = identity
-                items.append({'kind': kind, 'id': identity, 'href': '#'+route+'?'+urlencode(values),
-                              'ontology_ref': ref, 'integrity': 'metadata_only'})
+                item = reference_item(root, path, kind, ownership, ref)
+                if item is not None:
+                    items.append(item)
             except (OSError, ValueError, KeyError, TypeError):
                 partial = True
     items.sort(key=lambda item: (item['kind'], item['id']))
