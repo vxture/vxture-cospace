@@ -141,21 +141,24 @@ class PreviewJobs:
     def _launch_command(self,record,registered,snapshot,tracking):
         modules={'ros1_lidar_multiframe_icp':'build_lidar_mapping_preview','ply_pointcloud':'build_pointcloud_flow_preview',
                  'ros1_lidar_single_frame':'build_lidar_flow_preview'}
-        format=registered['format'] if registered else 'nyu_rgbd_with_existing_poses'
+        input_format=registered['format'] if registered else 'nyu_rgbd_with_existing_poses'
         directory=self.root/record['id']
-        command=[sys.executable,'-m','experiments.scripts.'+modules.get(format,'build_nyu_flow_preview'),
+        command=[sys.executable,'-m','experiments.scripts.'+modules.get(input_format,'build_nyu_flow_preview'),
                  '--snapshot',str(snapshot),'--output',str(directory/('frozen' if registered else 'output')),
                  '--candidate-id',record['id']]
-        if format=='nyu_rgbd_with_existing_poses':command+=['--tracking',str(tracking)]
+        if input_format=='nyu_rgbd_with_existing_poses':command+=['--tracking',str(tracking)]
         if registered:command+=['--input-binding',str(directory/'job.json'),'--freeze-only']
         return command
+
+    def _require_input_files(self,lidar,pointcloud,snapshot,tracking):
+        if not lidar and not pointcloud and (not (snapshot/'report.json').is_file() or tracking is None or not tracking.is_file()):
+            raise ValueError('configured_input_missing')
 
     def _launch(self,registered,snapshot,tracking,ownership,input_id,batch_ref,retry_ref=None,admission_preflight=None):
         mapping=registered is not None and registered['format']=='ros1_lidar_multiframe_icp'
         lidar=registered is not None and registered['format'] in ('ros1_lidar_single_frame','ros1_lidar_multiframe_icp')
         pointcloud=registered is not None and registered['format']=='ply_pointcloud'
-        if not lidar and not pointcloud and (not (snapshot/'report.json').is_file() or tracking is None or not tracking.is_file()):
-            raise ValueError('configured_input_missing')
+        self._require_input_files(lidar,pointcloud,snapshot,tracking)
         identity='build-'+uuid.uuid4().hex[:16]; directory=self.root/identity; directory.mkdir()
         record={'id':identity,'state':'queued','created_at':now(),'input_id':input_id or 'nyu-office-short',
                 'method':{'ros1_lidar_multiframe_icp':'laser_scan_to_scan_icp','ply_pointcloud':'normalize_declared_pointcloud','ros1_lidar_single_frame':'single_sensor_frame_no_registration'}.get(registered['format'] if registered else '', 'rebuild_from_frozen_rgbd_and_existing_poses'),'stage':'candidate_and_dual_views',

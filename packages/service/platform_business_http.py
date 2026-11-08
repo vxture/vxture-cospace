@@ -38,6 +38,11 @@ from packages.data.workspace_catalog import catalog as workspace_catalog, Catalo
 DATA_MANAGE='data.manage'
 SPACE_PREVIEW='space.preview'
 
+SELECTION_ROUTE='/api/selection'
+PUBLICATIONS_ROUTE='/api/publications'
+INPUTS_ROUTE='/api/inputs'
+PUBLICATION_MANAGE='publication.manage'
+
 
 class BusinessAccess:
     def __init__(self, rp, policies, directory, jobs, registration_sources=None,workspace_config=None,consumer_config=None,subscriptions=None,scene_pointcloud_config=None,scene_ifc_config=None):
@@ -186,17 +191,17 @@ class BusinessAccess:
             if path=='/api/ontologies':
                 return {'principal':principal}
             if re.fullmatch(r'/api/ontologies/[^/]+/[^/]+',path):return {'principal':principal}
-            caps={'/api/publications':SPACE_PREVIEW,'/api/selection':SPACE_PREVIEW,
+            caps={PUBLICATIONS_ROUTE:SPACE_PREVIEW,SELECTION_ROUTE:SPACE_PREVIEW,
                 '/api/workspace-model':SPACE_PREVIEW,'/api/workflow':SPACE_PREVIEW,
-                '/api/builds':'build.run','/api/inputs':DATA_MANAGE,'/api/artifacts':DATA_MANAGE,
+                '/api/builds':'build.run',INPUTS_ROUTE:DATA_MANAGE,'/api/artifacts':DATA_MANAGE,
                 '/api/batches':DATA_MANAGE,'/api/ledger':'association.edit'}
             if path in caps:
                 wanted=q.get('space_id');space(wanted,caps[path])
-                if path in ('/api/selection','/api/workspace-model'):selected(wanted,caps[path])
+                if path in (SELECTION_ROUTE,'/api/workspace-model'):selected(wanted,caps[path])
                 return {'principal':principal}
             if path in ('/api/artifact-control','/api/artifact-impact'):
                 value=q.get('artifact','');kind=value.split(':')[0]
-                cap={'input':DATA_MANAGE,'candidate':'build.run','publication':'publication.manage'}.get(kind)
+                cap={'input':DATA_MANAGE,'candidate':'build.run','publication':PUBLICATION_MANAGE}.get(kind)
                 if not cap:raise PermissionError()
                 space(q.get('space_id'),cap);artifact(value,cap,q.get('space_id'))
                 return {'principal':principal}
@@ -223,20 +228,20 @@ class BusinessAccess:
             if re.fullmatch(r'/api/ontologies/[^/]+/[^/]+/validate',path):return {'principal':principal}
             caps={'/api/ledger':'association.edit','/api/business-candidates':'association.edit',
                 '/api/relation-candidates':'association.edit','/api/semantic-candidates':'association.edit',
-                '/api/selection':'build.run','/api/candidate-comparisons':'build.run','/api/candidate-reviews':'build.run',
-                '/api/publication-comparisons':SPACE_PREVIEW,'/api/publications':'publication.manage',
-                '/api/inputs':DATA_MANAGE,'/api/batches':DATA_MANAGE,'/api/builds':'build.run'}
+                SELECTION_ROUTE:'build.run','/api/candidate-comparisons':'build.run','/api/candidate-reviews':'build.run',
+                '/api/publication-comparisons':SPACE_PREVIEW,PUBLICATIONS_ROUTE:PUBLICATION_MANAGE,
+                INPUTS_ROUTE:DATA_MANAGE,'/api/batches':DATA_MANAGE,'/api/builds':'build.run'}
             if path in caps:
                 wanted=references(caps[path])
-                if path in ('/api/selection','/api/candidate-comparisons','/api/candidate-reviews','/api/publications'):
+                if path in (SELECTION_ROUTE,'/api/candidate-comparisons','/api/candidate-reviews',PUBLICATIONS_ROUTE):
                     selected(wanted,caps[path])
                 if body.get('batch_id'):batch(body['batch_id'],wanted,DATA_MANAGE)
                 return {'principal':principal}
             if path=='/api/artifact-control/transitions':
-                value=body.get('artifact','');cap={'input':DATA_MANAGE,'candidate':'build.run','publication':'publication.manage'}.get(value.split(':')[0])
+                value=body.get('artifact','');cap={'input':DATA_MANAGE,'candidate':'build.run','publication':PUBLICATION_MANAGE}.get(value.split(':')[0])
                 if not cap:raise PermissionError()
                 space(body.get('space_id'),cap);artifact(value,cap,body.get('space_id'))
-                if body.get('replacement_publication_id'):artifact('publication:'+body['replacement_publication_id'],'publication.manage',body.get('space_id'))
+                if body.get('replacement_publication_id'):artifact('publication:'+body['replacement_publication_id'],PUBLICATION_MANAGE,body.get('space_id'))
                 return {'principal':principal}
             m=re.fullmatch(r'/api/inputs/([^/]+)/preflight',path)
             if m:artifact('input:'+m[1],DATA_MANAGE,q.get('space_id'));return {'principal':principal}
@@ -516,7 +521,7 @@ class BusinessAccess:
                     result=await run_in_threadpool(store.change,identity,change,context['principal'].subject)
                 else:result=await run_in_threadpool(store.read,identity,wanted)
                 return JSONResponse(result,headers={'Cache-Control':'no-store'})
-            if path=='/api/inputs' and request.method in ('GET','HEAD'):
+            if path==INPUTS_ROUTE and request.method in ('GET','HEAD'):
                 if self.jobs.inputs is None:return deny(503,'input_catalog_not_configured')
                 wanted=request.query_params.get('space_id')
                 def entries():
@@ -612,7 +617,7 @@ class BusinessAccess:
                         'enabled_count':len(result['sources']),'reload_policy':'per_request'}}
                     result['sources']=[s|{'route':route(s['format'])} for s in result['sources']]
                 return JSONResponse(result,headers={'Cache-Control':'no-store'})
-            if path=='/api/inputs' and request.method=='POST':
+            if path==INPUTS_ROUTE and request.method=='POST':
                 sources=await run_in_threadpool(self.workspace_scenes.scoped_sources,context['principal'])
                 from experiments.scripts.serve_nyu_flow_preview import RegistrationRequest
                 change=RegistrationRequest.model_validate(body)

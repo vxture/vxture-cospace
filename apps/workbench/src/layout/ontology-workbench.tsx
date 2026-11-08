@@ -38,10 +38,13 @@ export function OntologyWorkbench(){
   const controller=new AbortController();validation.current?.abort();setBusy(false);setResult(null);setCheckError('');setLoaded(null);setReading(false);setError('');
   if(!reference.ontology_id||!reference.version||!reference.sha256)return()=>controller.abort();
   if(!/^[a-z][a-z0-9-]{0,63}$/.test(reference.ontology_id)||!/^\d{1,4}\.\d{1,4}\.\d{1,4}$/.test(reference.version)||!/^[a-f0-9]{64}$/.test(reference.sha256)){setError('固定规则引用格式无效。');return()=>controller.abort();}
+  if(!versions.length)return()=>controller.abort();
+  const authorized=versions.find(v=>key(v)===referenceKey);
+  if(!authorized){setError('固定规则不在当前授权版本目录中。');return()=>controller.abort();}
   setReading(true);
-  fetch(`${endpoint}/api/ontologies/${encodeURIComponent(reference.ontology_id)}/${encodeURIComponent(reference.version)}?${new URLSearchParams({sha256:reference.sha256})}`,{signal:controller.signal}).then(async r=>{const body=await r.json();if(!r.ok)throw Error(message(body.detail));if(key(body.record)!==referenceKey||body.integrity!=='verified')throw Error('规则响应与所选版本不一致。');return body as Loaded;}).then(body=>{if(!controller.signal.aborted)setLoaded(body);}).catch(e=>{if(!controller.signal.aborted)setError(e.message);}).finally(()=>{if(!controller.signal.aborted)setReading(false);});
+  fetch(`${endpoint}/api/ontologies/${encodeURIComponent(authorized.ontology_id)}/${encodeURIComponent(authorized.version)}?${new URLSearchParams({sha256:authorized.sha256})}`,{signal:controller.signal}).then(async r=>{const body=await r.json();if(!r.ok)throw Error(message(body.detail));if(key(body.record)!==referenceKey||body.integrity!=='verified')throw Error('规则响应与所选版本不一致。');return body as Loaded;}).then(body=>{if(!controller.signal.aborted)setLoaded(body);}).catch(e=>{if(!controller.signal.aborted)setError(e.message);}).finally(()=>{if(!controller.signal.aborted)setReading(false);});
   return()=>{controller.abort();validation.current?.abort();};
- },[referenceKey,revision]);
+ },[referenceKey,revision,versions]);
  function choose(value:string){
   const record=versions.find(v=>key(v)===value);const params=new URLSearchParams(location.hash.split('?')[1]||'');
   for(const name of ['ontology_id','ontology_version','ontology_sha256'])params.delete(name);
