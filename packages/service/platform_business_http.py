@@ -156,6 +156,11 @@ class BusinessAccess:
             kind='publication' if m[1]=='publications' else 'candidate'; suffix=m[3] or '/'
             cap=None
             if method in ('GET','HEAD'):
+                if kind=='publication' and suffix=='/api/provenance':
+                    if q:raise PermissionError()
+                    artifact(kind+':'+m[2],'data.manage')
+                    artifact(kind+':'+m[2],'space.preview')
+                    return {'principal':principal}
                 if suffix in ('/','/index.html','/human.ply','/views.js','/model.json','/objects.json','/ontology.json','/business.json','/relations.json',
                               '/api/preview','/api/thumbnail','/api/objects','/api/checklist','/api/lineage') or re.fullmatch(r'/api/objects/[^/]+',suffix):cap='space.preview'
                 elif suffix in ('/api/anchor','/api/anchor-preview') and kind=='candidate':cap='association.edit'

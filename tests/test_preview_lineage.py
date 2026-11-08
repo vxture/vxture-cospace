@@ -59,3 +59,20 @@ def test_legacy_publication_does_not_infer_registration(tmp_path):
     report=lineage(pubs,record['id'])
     assert report['nodes'][0]['status']=='missing' and report['nodes'][0]['id'] is None
     assert report['nodes'][1]['status']=='matched'
+
+
+def test_provenance_does_not_export_or_infer_preflight(tmp_path,monkeypatch):
+    initial,jobs,pubs,record,registration=prepared(tmp_path)
+    monkeypatch.setattr('packages.service.preview_lineage.export_bundle',lambda *a: (_ for _ in ()).throw(AssertionError('must not export')))
+    before={p.name:p.read_bytes() for p in (pubs.root/record['id']).iterdir()}
+    with TestClient(create_app(initial,jobs)) as client:
+        response=client.get(record['preview_url']+'api/provenance')
+        assert response.status_code==200,response.text
+        assert response.headers['cache-control']=='no-store'
+        report=response.json()
+    assert report['profile']=='cospace.publication-provenance/0.1'
+    assert report['package_generated'] is False and report['preflight_sequence'] is None
+    assert [n['kind'] for n in report['nodes']]==['input','build','publication','candidate','ontology']
+    assert report['nodes'][0]['id']==registration['id']
+    assert report['nodes'][-1]['status']=='missing'
+    assert {p.name:p.read_bytes() for p in (pubs.root/record['id']).iterdir()}==before

@@ -318,6 +318,13 @@ def create_app(root,jobs=None,update_evidence=None,registration_sources=None,sou
         if publications is None: raise HTTPException(404,'publication_not_found')
         try: return checklist(publications,identity,update_evidence)
         except (ValueError,OSError,KeyError) as exc: raise HTTPException(409,str(exc)) from exc
+    @app.get('/publications/{identity}/api/provenance')
+    def publication_provenance(identity:str):
+        if publications is None: raise HTTPException(404,'publication_not_found')
+        try:
+            return JSONResponse(lineage(publications,identity,provenance=True),headers={'Cache-Control':'no-store'})
+        except (ValueError,OSError,KeyError,TypeError) as exc:
+            raise HTTPException(409,'publication_provenance_unavailable') from exc
     @app.get('/publications/{identity}/api/lineage')
     def publication_lineage(identity:str):
         if publications is None: raise HTTPException(404,'publication_not_found')

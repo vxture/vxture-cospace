@@ -7,10 +7,12 @@ from packages.views.agent.preview_offline import export_bundle, sha
 from packages.lifecycle.preview_scope import owned
 
 
-def lineage(publications, identity):
+def lineage(publications, identity, *, provenance=False):
     record, model = publications.read(identity)
     source = model.manifest.get('source', {})
     binding = source.get('input_binding')
+    if provenance and binding and owned(binding) != owned(record):
+        raise ValueError('lineage_input_scope_mismatch')
     nodes = []
 
     def add(kind, title, status, identifier, detail, **extra):
@@ -29,6 +31,8 @@ def lineage(publications, identity):
         else:
             try:
                 registered = publications.jobs.inputs.read(binding['id'])
+                if provenance and owned(registered) != owned(record):
+                    raise ValueError('lineage_input_scope_mismatch')
                 expected = {k:v for k,v in registered.items() if k not in ('snapshot','tracking')}
                 if expected != binding:
                     status = 'mismatch'; detail = '当前登记记录与模型保存的输入绑定不一致。'
@@ -61,6 +65,20 @@ def lineage(publications, identity):
     add('publication', '固定发布', 'matched', identity, '当前发布文件完整性已核对。',
         model_manifest_sha256=record['model_manifest_sha256'],
         source_model_sha256=record['source_model_sha256'])
+    if provenance:
+        add('candidate', '来源候选', nodes[1]['status'], candidate,
+            '固定发布保存的来源候选；与当前工作选择无关。',
+            model_manifest_sha256=record['model_manifest_sha256'])
+        ref = model.manifest.get('semantic_annotation', {}).get('ontology_ref')
+        add('ontology', '固定本体规则', 'matched' if ref else 'missing',
+            ref.get('ontology_id') if ref else None,
+            '发布快照保存的规则引用；不自动升级。' if ref else '此发布未记录本体引用。',
+            **({'ontology_ref': ref} if ref else {}))
+        return {'profile': 'cospace.publication-provenance/0.1', 'publication_id': identity,
+                **owned(record), 'checked_at': now(), 'nodes': nodes,
+                'package_generated': False, 'preflight_sequence': None,
+                'notice': '核对固定发布及当前可读来源；未导出离线包、未重检源文件。构建未保存预检序号，资料历史不作为当时构建预检证据。',
+                'robot_ready': False, 'production_ready': False}
     bundle = export_bundle(record, model)
     add('package', '离线交付包', 'matched', identity+'-offline.zip',
         '由此固定发布导出，包内发布及模型绑定校验通过。', sha256=sha(bundle), bytes=len(bundle),
