@@ -1,5 +1,6 @@
 """Authorized metadata projection; never poll workers, load geometry or export files."""
 from datetime import datetime, timezone
+import hashlib
 import json
 import re
 import sqlite3
@@ -29,7 +30,7 @@ class CatalogQuery(BaseModel):
     limit: int = Field(default=50, ge=1, le=100)
 
 
-def metadata(root, path):
+def metadata(root, path, *, with_digest=False):
     checked_path(root, path)
     with path.open('rb') as stream:
         raw = stream.read(MAX_METADATA_BYTES + 1)
@@ -38,7 +39,7 @@ def metadata(root, path):
     record = json.loads(raw)
     if not isinstance(record, dict):
         raise ValueError('metadata_invalid')
-    return record
+    return (record, hashlib.sha256(raw).hexdigest()) if with_digest else record
 
 
 def catalog(jobs, directory, policy, principal, query):

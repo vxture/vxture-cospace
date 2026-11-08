@@ -117,6 +117,8 @@ class SplitBuilds:
     def begin(self,record):
         saved,ref=frozen(self.root/record['id']/'frozen');match(saved['metadata'],owned(record))
         if saved['metadata'].get('source',{}).get('input_binding')!=record.get('input_binding') or saved['metadata'].get('source',{}).get('batch_ref')!=record.get('batch_ref'):raise ValueError('frozen_input_binding_mismatch')
+        from packages.construction.build_admission import match_source
+        match_source(record,saved['metadata'].get('source',{}))
         record.update(frozen_model=ref,stage='deriving_views',view_tasks={})
         for kind in ('human','agent'):record['view_tasks'][kind]=self.launch(record,kind)
         self.jobs.save(record)
@@ -149,6 +151,8 @@ class SplitBuilds:
 
     def compose(self,job):
         saved,_=self.frozen(job['frozen_model']);meta=saved['metadata'];match(meta,owned(job))
+        from packages.construction.build_admission import match_source
+        match_source(job,meta.get('source',{}))
         views={kind:self.manifest(job['view_tasks'][kind],job['frozen_model'],kind) for kind in ('human','agent')}
         root=self.root/job['id'];staging=root/('.output-'+uuid.uuid4().hex);staging.mkdir()
         try:

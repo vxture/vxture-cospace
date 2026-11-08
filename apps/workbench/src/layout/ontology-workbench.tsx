@@ -2,6 +2,7 @@ import {useRecordNavigation} from './record-navigation';
 import {businessEndpoint} from './business-endpoint';
 import {OntologyAuthoring,type RuleDocument} from './ontology-authoring';
 import {OntologyComparison} from './ontology-comparison';
+import {OntologyUsage} from './ontology-usage';
 import React,{useEffect,useRef,useState} from 'react';
 import {Button,Card,CardHeader,CardTitle,CardContent,NativeSelect,Textarea,StatusBadge,Table,TableHeader,TableBody,TableRow,TableHead,TableCell} from '@vxture/design-system';
 
@@ -36,10 +37,14 @@ export function OntologyWorkbench(){
  useEffect(()=>{
   const controller=new AbortController();validation.current?.abort();setBusy(false);setResult(null);setCheckError('');setLoaded(null);setReading(false);setError('');
   if(!reference.ontology_id||!reference.version||!reference.sha256)return()=>controller.abort();
+  if(!/^[a-z][a-z0-9-]{0,63}$/.test(reference.ontology_id)||!/^\d{1,4}\.\d{1,4}\.\d{1,4}$/.test(reference.version)||!/^[a-f0-9]{64}$/.test(reference.sha256)){setError('固定规则引用格式无效。');return()=>controller.abort();}
+  if(!versions.length)return()=>controller.abort();
+  const authorized=versions.find(v=>key(v)===referenceKey);
+  if(!authorized){setError('固定规则不在当前授权版本目录中。');return()=>controller.abort();}
   setReading(true);
-  fetch(`${endpoint}/api/ontologies/${encodeURIComponent(reference.ontology_id)}/${encodeURIComponent(reference.version)}?${new URLSearchParams({sha256:reference.sha256})}`,{signal:controller.signal}).then(async r=>{const body=await r.json();if(!r.ok)throw Error(message(body.detail));if(key(body.record)!==referenceKey||body.integrity!=='verified')throw Error('规则响应与所选版本不一致。');return body as Loaded;}).then(body=>{if(!controller.signal.aborted)setLoaded(body);}).catch(e=>{if(!controller.signal.aborted)setError(e.message);}).finally(()=>{if(!controller.signal.aborted)setReading(false);});
+  fetch(`${endpoint}/api/ontologies/${encodeURIComponent(authorized.ontology_id)}/${encodeURIComponent(authorized.version)}?${new URLSearchParams({sha256:authorized.sha256})}`,{signal:controller.signal}).then(async r=>{const body=await r.json();if(!r.ok)throw Error(message(body.detail));if(key(body.record)!==referenceKey||body.integrity!=='verified')throw Error('规则响应与所选版本不一致。');return body as Loaded;}).then(body=>{if(!controller.signal.aborted)setLoaded(body);}).catch(e=>{if(!controller.signal.aborted)setError(e.message);}).finally(()=>{if(!controller.signal.aborted)setReading(false);});
   return()=>{controller.abort();validation.current?.abort();};
- },[referenceKey,revision]);
+ },[referenceKey,revision,versions]);
  function choose(value:string){
   const record=versions.find(v=>key(v)===value);const params=new URLSearchParams(location.hash.split('?')[1]||'');
   for(const name of ['ontology_id','ontology_version','ontology_sha256'])params.delete(name);
@@ -70,6 +75,7 @@ export function OntologyWorkbench(){
    {reading&&<p role="status">正在核对规则摘要…</p>}
    {current&&!error&&<><div className="flex flex-wrap items-center gap-sm"><StatusBadge tone="success">规则完整性已核对</StatusBadge><span className="text-body-small">{current.ontology_id} · V{current.version} · {current.type_count} 种类型</span></div><p className="break-all text-label-small text-muted-foreground">SHA256：{current.sha256}</p><p className="text-label-small text-muted-foreground">封存于 {new Date(current.registered_at).toLocaleString('zh-CN',{hour12:false})} · 场景及模型显式引用固定版本</p></>}
   </CardContent></Card>
+  {loaded&&!error&&<OntologyUsage key={referenceKey} endpoint={endpoint} reference={loaded.record}/>}
   {loaded&&!error&&<OntologyComparison key={referenceKey} endpoint={endpoint} current={loaded as unknown as Parameters<typeof OntologyComparison>[0]['current']} versions={versions}/>}
   {loaded&&!error&&<div className="grid min-w-0 grid-cols-1 items-start gap-xl xl:grid-cols-2">
    <Card aria-label="类型与属性规则"><CardHeader><CardTitle>类型与属性</CardTitle></CardHeader><CardContent className="flex min-w-0 flex-col gap-lg"><p className="text-body-small text-muted-foreground">{loaded.definition.description}</p>{Object.entries(loaded.definition.types).map(([id,type])=><section key={id} className="flex min-w-0 flex-col gap-sm border-b border-border pb-lg"><h3 className="text-body-small font-medium">{type.title} <span className="font-normal text-muted-foreground">{id}</span></h3><p className="text-label-small text-muted-foreground">{type.description}</p><div className="overflow-x-auto"><Table><TableHeader><TableRow><TableHead>属性</TableHead><TableHead>类型</TableHead><TableHead>要求</TableHead></TableRow></TableHeader><TableBody>{Object.entries(type.properties).map(([name,rule])=><TableRow key={name}><TableCell>{rule.title}<span className="ml-sm text-label-small text-muted-foreground">{name}</span></TableCell><TableCell>字符串</TableCell><TableCell>{rule.required?'必填':'选填'} · {rule.min_length}–{rule.max_length} 字</TableCell></TableRow>)}</TableBody></Table></div></section>)}<Button asChild variant="link" className="self-start"><a href={`${endpoint}/api/ontologies/${current!.ontology_id}/${current!.version}?sha256=${current!.sha256}`} target="_blank" rel="noopener noreferrer">查看规则JSON</a></Button></CardContent></Card>
