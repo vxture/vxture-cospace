@@ -673,7 +673,8 @@ class BusinessAccess:
                             related.append(saved|status)
                         related.sort(key=lambda v:v['created_at'],reverse=True)
                         latest=related[0] if related else None
-                        values.append(record|{'publications':related,'capabilities':sorted(policy.capabilities(context['principal'],record['id'])),
+                        values.append(record|{'project_name':self.directory.read('project',record['project_id'])['name'],
+                            'publications':related,'capabilities':sorted(policy.capabilities(context['principal'],record['id'])),
                             'publication_id':latest['id'] if latest and latest['lifecycle_state']=='active' else None,
                             'state':'no_publication' if not latest else 'preview_published' if latest['lifecycle_state']=='active' else 'distribution_paused'})
                     result={'spaces':values,'legacy_records':'unassigned','access_scope':'authorized_spaces','policy_revision':revision}
