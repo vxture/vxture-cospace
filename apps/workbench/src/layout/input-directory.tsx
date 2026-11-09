@@ -1,3 +1,4 @@
+import {appNavigate} from './app-router';
 import {runGuarded,navigateSafely} from './unsaved-navigation';
 import {useSceneDirectory} from './use-scene-directory';
 import React,{useEffect,useState} from 'react';
@@ -92,8 +93,8 @@ export function InputDirectory(){
  useEffect(()=>{if(!notice)return;const timer=setTimeout(()=>setNotice(''),5000);return()=>clearTimeout(timer);},[notice]);
 
  function navigate(values:Record<string,string>){void navigateSafely(recordLink('data',{space:target.space,tab:view,...((view==='versions'||view==='inputs')&&target.batch?{batch:target.batch}:{}),...values}));}
- function chooseSpace(id:string){setTools(null);setNotice('');setEntries([]);setCatalog(null);location.hash=recordLink('data',{space:id,tab:view});}
- function switchView(next:View){setSearch('');setFilter('all');location.hash=recordLink('data',{space:target.space,tab:next});}
+ function chooseSpace(id:string){setTools(null);setNotice('');setEntries([]);setCatalog(null);appNavigate(recordLink('data',{space:id,tab:view}));}
+ function switchView(next:View){setSearch('');setFilter('all');appNavigate(recordLink('data',{space:target.space,tab:next}));}
  function select(item:Artifact|Entry){if('key' in item&&item.kind==='input')void navigateSafely(recordLink('data',{space:target.space,tab:'inputs',input:item.record_id}));else navigate('key' in item?{artifact:item.key}:{input:item.id});}
  function refresh(){setRevision(v=>v+1);if(directoryError)setDirectoryRevision(v=>v+1);}
  const matches=(s:string)=>s.toLocaleLowerCase().includes(search.trim().toLocaleLowerCase());
@@ -104,7 +105,7 @@ export function InputDirectory(){
  const total=view==='inputs'?entries.length:view==='versions'?versions.length:catalog?.relations.length||0;
  const title=selectedEntry?.presentation?.display_name||selectedEntry?.label||selectedArtifact?.label||'';
  function descriptionSaved(value:InputPresentation){const id=selectedEntry?.id;setEntries(old=>old.map(e=>e.id===id?{...e,presentation:value}:e));setCatalog(old=>old?{...old,items:old.items.map(a=>a.kind==='input'&&a.record_id===id?{...a,label:value.display_name}:a)}:old);setIntakeRevision(v=>v+1);}
- function registered(id:string,created:boolean){void runGuarded(()=>{setNotice(created?'资料已登记，请在右侧执行预检。':'已定位当前场景的已有资料。');setRevision(v=>v+1);location.hash=recordLink('data',{space:target.space,tab:'inputs',input:id});});}
+ function registered(id:string,created:boolean){void runGuarded(()=>{setNotice(created?'资料已登记，请在右侧执行预检。':'已定位当前场景的已有资料。');setRevision(v=>v+1);appNavigate(recordLink('data',{space:target.space,tab:'inputs',input:id}));});}
 
  return <div className={`data-workspace ${sidebar?'':'data-sidebar-hidden'} ${hasSelection?'data-has-detail':''}`}>
   <div className="data-workspace-decoration" aria-hidden="true">

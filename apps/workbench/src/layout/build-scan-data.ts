@@ -17,5 +17,5 @@ export function scanOrder(data:PreviewGeometry){
 }
 
 export function buildScanHref(space:string,job:string,input:string){
- return `./layout.html?screen=build&${new URLSearchParams({space,job,input})}#build?${new URLSearchParams({space,job,input,tab:'flow'})}`;
+ return `/build?${new URLSearchParams({screen:'build',space,job,input,tab:'flow'})}`;
 }

@@ -66,7 +66,7 @@ def main():
         policies=SpacePolicyStore(output/'auth/policies')
         policies.replace(policy,expected_revision=0,actor='local_mock_journey_setup',reason='isolated copied scene acceptance')
         rp=PlatformLogin(cfg,LocalRpStore(output/'auth/sessions',cfg.encryption_key.get_secret_value()))
-        print('LOCAL MOCK journey acceptance: '+cfg.origin+'/workbench/layout.html',flush=True)
+        print('LOCAL MOCK journey acceptance: '+cfg.origin+'/',flush=True)
         uvicorn.run(assemble(rp,policies,sample,sample/'preview-builds'/args.candidate/'output'),
                     host='127.0.0.1',port=args.port,access_log=False)
     finally:accounts.stop()

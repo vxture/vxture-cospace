@@ -10,17 +10,18 @@ from pydantic import BaseModel, ConfigDict, SecretStr, model_validator
 from packages.infrastructure.platform_identity import PlatformVerifierConfig, NoRedirect, IdentityUnavailable
 
 
+APP_ROUTES=('/', '/space', '/data', '/build', '/delivery', '/ontology', '/association', '/settings', '/members', '/identity', '/account')
+
+
 def safe_return(value):
-    if not isinstance(value, str) or len(value) > 2048:
-        raise ValueError('invalid_return_path')
     decoded = value
     for _ in range(3): decoded = unquote(decoded)
     parsed = urlsplit(decoded)
-    if (not decoded.startswith('/workbench/') or decoded.startswith('//') or parsed.scheme or parsed.netloc
-            or '\\' in decoded or any(ord(c) < 32 or ord(c) == 127 for c in decoded)
-            or '..' in parsed.path.split('/')):
+    if (parsed.path not in APP_ROUTES or decoded.startswith('//') or parsed.scheme or parsed.netloc
+            or '\\' in decoded or any(ord(c) < 32 or ord(c) == 127 for c in decoded)):
         raise ValueError('invalid_return_path')
     return value
+
 
 
 class RpConfig(BaseModel):

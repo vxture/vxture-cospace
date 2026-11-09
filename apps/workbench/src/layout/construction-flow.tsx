@@ -1,3 +1,4 @@
+import {appNavigate} from './app-router';
 import React,{useEffect,useState} from 'react';
 import {Button,NativeSelect,StatusBadge} from '@vxture/design-system';
 import {ArrowClockwise,ArrowUpRight,Database,Cube,Eye,Robot,ArrowRight} from '@phosphor-icons/react';
@@ -63,7 +64,7 @@ export function ConstructionFlow({active=true}:{active?:boolean}={}){
  return <section className="construction-flow" aria-label="场景空间构建流程">
   <div className="construction-flow-heading"><div><h2>资料到双视图</h2><p>一个场景、一份三维模型，两类视图从同一模型派生。</p></div><Button variant="outline" size="sm" aria-label="刷新构建流程" disabled={busy} onClick={()=>setRevision(n=>n+1)}><ArrowClockwise size={15}/></Button></div>
   {busy&&!data?<p role="status">正在核对当前场景的构建成果…</p>:error?<div role="alert" className="construction-flow-message">{error}</div>:<>
-   <div className="construction-flow-target"><label htmlFor="flow-job">本次构建</label><NativeSelect id="flow-job" value={job?.id||''} onChange={e=>{location.hash=recordLink('build',{tab:'flow',...(target.input?{input:target.input}:{}),...(e.target.value?{job:e.target.value}:{})});}}><option value="" disabled>{data?.jobs.length?'选择任务':'尚无构建任务'}</option>{data?.jobs.filter(j=>!target.input||j.input_id===target.input).map(j=><option key={j.id} value={j.id}>{new Date(j.created_at).toLocaleString('zh-CN',{hour12:false})} · {j.id}</option>)}</NativeSelect><StatusBadge tone={model?'success':job?.state==='failed'?'danger':'warning'}>{state}</StatusBadge></div>
+   <div className="construction-flow-target"><label htmlFor="flow-job">本次构建</label><NativeSelect id="flow-job" value={job?.id||''} onChange={e=>{appNavigate(recordLink('build',{tab:'flow',...(target.input?{input:target.input}:{}),...(e.target.value?{job:e.target.value}:{})}));}}><option value="" disabled>{data?.jobs.length?'选择任务':'尚无构建任务'}</option>{data?.jobs.filter(j=>!target.input||j.input_id===target.input).map(j=><option key={j.id} value={j.id}>{new Date(j.created_at).toLocaleString('zh-CN',{hour12:false})} · {j.id}</option>)}</NativeSelect><StatusBadge tone={model?'success':job?.state==='failed'?'danger':'warning'}>{state}</StatusBadge></div>
    <ol className="construction-flow-stages">
     {[{icon:Database,title:'资料入库',status:input?'已登记':data?.inputs.length?'待选择':'待导入',detail:input?input.label:'在当前场景空间登记和检查资料。'},
       {icon:Cube,title:'三维模型 · 真值候选',status:stages?.frozen_model?'已冻结':model?'已生成':state,detail:(model||stages?.metadata)?`${(model?.construction||stages!.metadata!.construction).model_points.toLocaleString()} 个模型点 · ${(model?.construction||stages!.metadata!.construction).used_frames}/${(model?.construction||stages!.metadata!.construction).input_frames} 帧`:'将观测重建或已有成果整理为固定模型。'},

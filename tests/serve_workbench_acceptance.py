@@ -20,7 +20,7 @@ def main():
     output = args.output.resolve()
     if output.is_relative_to(REPO) or not 1024 <= args.port <= 65535:
         parser.error('new_external_runtime_and_loopback_port_required')
-    if not (REPO/'apps/workbench/dist/layout.html').is_file():
+    if not (REPO/'apps/workbench/dist/index.html').is_file():
         parser.error('build_workbench_first')
     output.mkdir(parents=True, exist_ok=False)
 
@@ -80,7 +80,7 @@ def main():
         (output/'context.json').write_text(json.dumps({'origin':config.origin, 'space':spaces[0]['id'],
             'foreign':spaces[1]['id'], 'old':old['id'], 'current':current['id'],
             'candidate':current['candidate_id'], 'upload':str(upload/'sample.zip')}), encoding='utf-8')
-        print(f'Local synthetic acceptance: {config.origin}/workbench/layout.html', flush=True)
+        print(f'Local synthetic acceptance: {config.origin}/', flush=True)
         uvicorn.run(app, host='127.0.0.1', port=args.port, access_log=False)
     finally:
         accounts.stop()

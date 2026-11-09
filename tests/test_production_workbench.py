@@ -53,7 +53,7 @@ def test_allowlisted_bundle_contains_no_business_data_or_secret_files(tmp_path):
     from experiments.scripts.package_production import package
     import tarfile
     root=tmp_path/'repo';paths={
-        'apps/workbench/dist/layout.html':b'<html/>','deploy/linux/requirements.lock':b'',
+        'apps/workbench/dist/index.html':b'<html/>','deploy/linux/requirements.lock':b'',
         'packages/code.py':b'pass','var/secret':b'private','tests/test_fixture.py':b'pass',
         '.git/config':b'private','output/leaked-token.json':b'private',
     }
@@ -61,7 +61,7 @@ def test_allowlisted_bundle_contains_no_business_data_or_secret_files(tmp_path):
         p=root/name;p.parent.mkdir(parents=True,exist_ok=True);p.write_bytes(raw)
     result=package(root,tmp_path/'software.tar.gz','test-release')
     with tarfile.open(result['bundle']) as archive:
-        assert set(archive.getnames())=={'apps/workbench/dist/layout.html','deploy/linux/requirements.lock','packages/code.py','release.json'}
+        assert set(archive.getnames())=={'apps/workbench/dist/index.html','deploy/linux/requirements.lock','packages/code.py','release.json'}
         manifest=json.loads(archive.extractfile('release.json').read())
         assert manifest['business_data_included'] is manifest['secrets_included'] is False
     with pytest.raises(FileExistsError):package(root,tmp_path/'software.tar.gz','test-release')

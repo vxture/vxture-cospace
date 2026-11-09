@@ -1,3 +1,4 @@
+import {appNavigate} from './app-router';
 import React,{useEffect,useRef,useState} from 'react';
 import {Button} from '@vxture/design-system';
 import {businessEndpoint as endpoint} from './business-endpoint';
@@ -22,7 +23,7 @@ export function BuildRecovery({job,inputState}:{job:RecoverableJob;inputState?:s
  const latch=useRef(false),alive=useRef(true);
  useEffect(()=>{alive.current=true;try{const saved=sessionStorage.getItem(key);if(saved&&!/^[a-f0-9]{32}$/.test(saved))throw Error();setToken(saved||'');setPending(!!saved);setStorageReady(true);}catch{setMessage('浏览器无法保存提交记录，请允许本站会话存储后刷新。');}return()=>{alive.current=false;};},[key]);
  const unavailable=!!inputState&&inputState!=='active';
- const navigate=(next:RecoverableJob)=>{if(next.space_id!==job.space_id||next.retry_of!==job.id||next.input_id!==job.input_id)throw Error('重试结果与原场景或资料不一致。');location.hash=recordLink('build',{space:job.space_id,tab:'flow',job:next.id,...(next.input_id?{input:next.input_id}:{})});};
+ const navigate=(next:RecoverableJob)=>{if(next.space_id!==job.space_id||next.retry_of!==job.id||next.input_id!==job.input_id)throw Error('重试结果与原场景或资料不一致。');appNavigate(recordLink('build',{space:job.space_id,tab:'flow',job:next.id,...(next.input_id?{input:next.input_id}:{})}));};
  async function act(check:boolean){
   if(latch.current)return;latch.current=true;setBusy(true);setMessage('');
   try{

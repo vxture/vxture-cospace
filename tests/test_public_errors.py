@@ -121,7 +121,7 @@ def test_local_idp_rejects_header_control_characters(control):
     try:
         accounts.rp_origin='http://127.0.0.1/rp'+control
         query=urlencode({'client_id':accounts.client_id,
-                         'post_logout_redirect_uri':accounts.rp_origin+'/workbench/layout.html'})
+                         'post_logout_redirect_uri':accounts.rp_origin+'/'})
         with pytest.raises(HTTPError) as caught:urlopen(accounts.issuer+'/oidc/end_session?'+query)
         assert caught.value.code==400
         assert caught.value.headers.get('X-Injected') is None

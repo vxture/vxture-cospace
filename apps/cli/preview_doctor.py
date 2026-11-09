@@ -46,8 +46,8 @@ def diagnose(root, model_root, config, full_check=False):
         add('initial_model',True,{'model_id':model.manifest['id'],'members':len(model.manifest['members'])})
     except (ImportError,ValueError,OSError,KeyError,TypeError) as exc:
         add('initial_model',False,str(exc),'按运行指南生成初始预览产物。')
-    front=(root/'apps/workbench/dist/layout.html').is_file()
-    add('workbench',front,'检查 dist/layout.html 是否存在','在 apps/workbench 执行 pnpm install --frozen-lockfile 和 pnpm run build。')
+    front=(root/'apps/workbench/dist/index.html').is_file()
+    add('workbench',front,'检查 dist/index.html 是否存在','在 apps/workbench 执行 pnpm install --frozen-lockfile 和 pnpm run build。')
     return {'profile':'cospace.preview-doctor/0.1','status':'passed' if all(c['status']=='passed' for c in checks) else 'failed',
             'full_source_check':full_check,'checks':checks,
             'scope':'local_files_and_runtime_only; no HTTP, port or browser check'}

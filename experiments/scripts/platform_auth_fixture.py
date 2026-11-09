@@ -59,7 +59,7 @@ class MockAccounts:
                     code = parent.issue(pending)
                     return self.send(302, location=pending['redirect_uri']+'?'+urlencode({'state':pending['state'], 'code':code}))
                 if path.path == '/oidc/end_session':
-                    if q.get('client_id') != parent.client_id or q.get('post_logout_redirect_uri') != parent.rp_origin+'/workbench/layout.html':
+                    if q.get('client_id') != parent.client_id or q.get('post_logout_redirect_uri') != parent.rp_origin+'/':
                         return self.send(400, {'error': 'invalid_request'})
                     parent.valid = False; parent.calls.append({'path':'/oidc/end_session'})
                     return self.send(302, location=q['post_logout_redirect_uri'])

@@ -3,10 +3,11 @@ from pathlib import Path
 from contextlib import AsyncExitStack, asynccontextmanager
 from urllib.parse import parse_qs, urlsplit
 from fastapi import FastAPI, Request, HTTPException
-from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.concurrency import run_in_threadpool
 from starlette.middleware.trustedhost import TrustedHostMiddleware
+from packages.infrastructure.platform_rp import APP_ROUTES
 from packages.infrastructure.platform_identity import IdentityRejected, IdentityUnavailable
 from packages.infrastructure.platform_subscription import SubscriptionUnavailable, WebhookRejected, WebhookConflict
 
@@ -95,7 +96,7 @@ def create_auth_app(rp, workbench=Path('apps/workbench/dist'), business=None, ac
             except WebhookConflict:raise HTTPException(409,'webhook_id_payload_conflict') from None
 
     @app.get('/auth/login')
-    def login(request: Request, returnTo: str = '/workbench/layout.html#space'):
+    def login(request: Request, returnTo: str = '/space'):
         try: url, browser = rp.begin(returnTo, request.cookies.get(browser_cookie))
         except ValueError as exc: raise HTTPException(400, 'return_path_rejected') from exc
         response = RedirectResponse(url, status_code=302)
@@ -152,8 +153,18 @@ def create_auth_app(rp, workbench=Path('apps/workbench/dist'), business=None, ac
         response = RedirectResponse(url, status_code=303); clear_cookie(response, cookie)
         return response
 
-    @app.get('/')
-    def index(): return RedirectResponse('/workbench/layout.html', status_code=302)
+    def app_entry():
+        entry = Path(workbench) / 'index.html'
+        if not entry.is_file(): raise HTTPException(404, 'workbench_not_built')
+        return FileResponse(entry, media_type='text/html')
+
+    for route in APP_ROUTES:
+        app.add_api_route(route, app_entry, methods=['GET', 'HEAD'], include_in_schema=False)
+
+    @app.api_route('/workbench/{retired:path}', methods=['GET', 'HEAD'])
+    @app.api_route('/workbench', methods=['GET', 'HEAD'])
+    @app.api_route('/index.html', methods=['GET', 'HEAD'])
+    def retired_entry(): raise HTTPException(404, 'page_not_found')
 
     if business is None:
         @app.api_route('/api/{remaining:path}', methods=['GET', 'POST', 'HEAD', 'PUT', 'DELETE', 'PATCH'])
@@ -162,7 +173,9 @@ def create_auth_app(rp, workbench=Path('apps/workbench/dist'), business=None, ac
             if session is None: raise HTTPException(401, 'authentication_required')
             raise HTTPException(503, 'space_authorization_not_configured')
 
-    if Path(workbench).is_dir(): app.mount('/workbench', StaticFiles(directory=workbench, html=True))
+    # Only generated assets are public; source/experimental HTML is never mounted.
+    assets = Path(workbench) / 'assets'
+    if assets.is_dir(): app.mount('/assets', StaticFiles(directory=assets))
     if business is not None:
         app.mount('/',business)
         app.middleware('http')(access.dispatch)

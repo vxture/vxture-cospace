@@ -1,17 +1,18 @@
+import {subscribeAppLocation,appLocation} from './app-router';
 import {createContext,useContext,useSyncExternalStore} from 'react';
-import {recordLinkFromHash,moduleLinkFromHash} from './navigation-contract';
+import {recordLinkFromUrl,moduleLinkFromUrl} from './navigation-contract';
 import type {ModuleRoute} from './product-navigation';
 
-const subscribe=(update:()=>void)=>{window.addEventListener('hashchange',update);return()=>window.removeEventListener('hashchange',update);};
-const snapshot=()=>location.hash;
+const subscribe=subscribeAppLocation;
+const snapshot=()=>appLocation();
 type Navigation={tab:string;batch:string;space:string;input:string;job:string;publication:string;from:string;artifact:string};
 const NavigationScope=createContext<Navigation|null>(null);
 export const RecordNavigationProvider=NavigationScope.Provider;
 
 export function recordLink(route:'space'|'data'|'build'|'delivery'|'association'|'ontology'|'settings', values:Record<string,string>){
- return recordLinkFromHash(route,values,location.hash);
+ return recordLinkFromUrl(route,values,appLocation());
 }
-export function moduleLink(route:ModuleRoute){return moduleLinkFromHash(route,location.hash);}
+export function moduleLink(route:ModuleRoute){return moduleLinkFromUrl(route,appLocation());}
 export function useRecordNavigation(){
  const scope=useContext(NavigationScope);
  // All modules read one synchronous URL snapshot. Independent state/effect copies

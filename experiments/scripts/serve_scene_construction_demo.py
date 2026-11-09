@@ -52,7 +52,7 @@ def main():
         policies.replace(policy,expected_revision=0,actor='isolated_scene_demo_setup',reason='verified sample; local mock only')
         rp=PlatformLogin(cfg,LocalRpStore(runtime/'sessions',cfg.encryption_key.get_secret_value()))
         initial=sample/'preview-builds'/report['candidate_id']/'output'
-        url=cfg.origin+'/workbench/layout.html#build?space='+report['space_id']+'&tab=flow&job='+report['candidate_id']
+        url=cfg.origin+'/build?space='+report['space_id']+'&tab=flow&job='+report['candidate_id']
         (evidence/'demo.json').write_text(json.dumps({'origin':cfg.origin,'construction_url':url,
             'publication_url':cfg.origin+'/publications/'+report['publication_id']+'/',
             'identity_provider':'local_mock_only','space_id':report['space_id']},ensure_ascii=False,indent=2)+'\n',encoding='utf-8')

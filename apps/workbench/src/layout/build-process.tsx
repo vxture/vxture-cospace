@@ -39,7 +39,7 @@ export function BuildProcess({space,job,input}:{space:string;job:string;input:st
   void poll();void read('/api/spaces/'+encodeURIComponent(space)).then(s=>{if(!controller.signal.aborted&&s.id===space)setName(s.name||s.label||'场景空间');}).catch(()=>{});
   return()=>{controller.abort();clearTimeout(timer);};
  },[space,job,input,retry]);
- const back=`./layout.html#build?${new URLSearchParams({space,job,input,tab:'flow'})}`;
+ const back=`/build?${new URLSearchParams({space,job,input,tab:'flow'})}`;
  return <main className="build-scan dark" aria-label="全屏构建画布">
   {initial&&data&&<Suspense fallback={<p className="build-scan-message" role="status">正在打开空间画布…</p>}><Canvas data={initial} process={playback}/></Suspense>}
   <div className="build-scan-top"><div className="build-scan-title"><Icon name="cube" size="sm"/><span>{name}</span><span className="build-scan-divider"/><span className="build-scan-mode">{following?'跟随构建':'过程回放'}</span></div><Button asChild size="sm" variant="ghost"><a href={back} aria-label="返回构建流程"><Icon name="arrow-left" size="sm"/>构建流程</a></Button></div>

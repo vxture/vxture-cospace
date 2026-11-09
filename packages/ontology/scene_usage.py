@@ -55,7 +55,7 @@ def reference_item(root, path, kind, ownership, ref):
         route = 'data'; values.update(tab='versions', artifact='candidate:'+identity)
     else:
         route = 'delivery'; values['publication'] = identity
-    return {'kind': kind, 'id': identity, 'href': '#'+route+'?'+urlencode(values),
+    return {'kind': kind, 'id': identity, 'href': '/'+route+'?'+urlencode(values),
             'ontology_ref': ref, 'integrity': 'metadata_only'}
 
 

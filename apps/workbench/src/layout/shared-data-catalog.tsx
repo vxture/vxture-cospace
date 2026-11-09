@@ -1,3 +1,4 @@
+import {appNavigate,appLocation} from './app-router';
 import React,{useEffect,useState} from 'react';
 import {Button,Input,NativeSelect} from '@vxture/design-system';
 import {businessEndpoint} from './business-endpoint';
@@ -13,14 +14,14 @@ const kinds:Record<string,string>={input:'登记输入',attachment:'配套原文
 const states:Record<string,string>={registered:'已登记',stored_original:'已保存原文件',draft:'整理中',sealed:'已封存',disabled:'已停用',passed:'检查通过',failed:'失败',registration_changed:'登记已变化',queued:'已排队',running:'运行中',interrupted:'已中断',views_failed:'视图待恢复',succeeded:'执行成功',candidate_recorded:'已有候选记录',view_declared:'已声明视图',publication_recorded:'已有发布记录',export_on_request:'按需导出，未生成',unknown:'状态待核查'};
 export function SharedDataCatalog(){
  const target=useRecordNavigation(),platform=usePlatformSession();
- const hash=location.hash,params=new URLSearchParams(hash.split('?')[1]||'');
+ const hash=appLocation(),params=new URLSearchParams(hash.split('?')[1]||'');
  const category=Object.hasOwn(labels,params.get('category')||'')?params.get('category')!:'all';
  const filter=params.has('filter_space')?params.get('filter_space')||'':params.get('scope')==='all'?'':target.space,search=params.get('search')||'';
  const offset=/^\d+$/.test(params.get('offset')||'')?Number(params.get('offset')):0;
  const [draft,setDraft]=useState(search),[saved,setSaved]=useState<{key:string;report:Report}|null>(null),[busy,setBusy]=useState(true),[error,setError]=useState(''),[revision,setRevision]=useState(0);
  const workspace=platform?.user?.workspace_id||'',key=JSON.stringify([workspace,filter,category,search,offset,revision]);
  const report=saved?.key===key?saved.report:null;
- function navigate(change:Record<string,string>){location.hash=recordLink('data',{space:target.space,scope:'all',category,filter_space:filter,search,offset:'0',...change});}
+ function navigate(change:Record<string,string>){appNavigate(recordLink('data',{space:target.space,scope:'all',category,filter_space:filter,search,offset:'0',...change}));}
  useEffect(()=>setDraft(search),[search]);
  useEffect(()=>{
   const controller=new AbortController();setSaved(null);setBusy(true);setError('');

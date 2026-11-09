@@ -69,7 +69,7 @@ def test_pkce_login_public_session_and_encrypted_server_storage(runtime):
     rp, client, accounts, clock = runtime
     assert client.get('/api/auth/session').json()['authenticated'] is False
     response, sid = login(rp, client, accounts)
-    assert response.headers['location'] == rp.config.origin+'/workbench/layout.html#space'
+    assert response.headers['location'] == rp.config.origin+'/space'
     assert 'HttpOnly' in response.headers['set-cookie'] and 'SameSite=lax' in response.headers['set-cookie']
     assert 'Domain=' not in response.headers['set-cookie'] and 'Max-Age=' not in response.headers['set-cookie'].split(',')[0]
     result = client.get('/api/auth/session'); data = result.json()
@@ -211,7 +211,7 @@ def test_csrf_origin_and_global_logout(runtime):
     assert response.status_code == 303 and rp.store.get('session',sid) is None
     q = parse_qs(urlsplit(response.headers['location']).query)
     assert q['client_id'] == [rp.config.client_id] and 'id_token_hint' in q
-    assert q['post_logout_redirect_uri'] == [rp.config.origin+'/workbench/layout.html']
+    assert q['post_logout_redirect_uri'] == [rp.config.origin+'/']
     assert client.get('/api/auth/session').json()['authenticated'] is False
 
 

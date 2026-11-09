@@ -1,3 +1,4 @@
+import {appNavigate} from './app-router';
 import React,{useEffect,useRef,useState} from 'react';
 import {Button,StatusBadge} from '@vxture/design-system';
 import {businessEndpoint as endpoint} from './business-endpoint';
@@ -14,7 +15,7 @@ export function ViewDerivations({stages,state,input}:{stages:BuildStages;state:s
  useEffect(()=>{alive.current=true;try{const saved:Record<string,string>={};for(const kind of ['human','agent']){const token=sessionStorage.getItem(key(kind));if(token){if(!/^[a-f0-9]{32}$/.test(token))throw Error();saved[kind]=token;}}setPending(saved);setReady(true);}catch{setError('浏览器无法保存提交记录，请允许会话存储后刷新。');}return()=>{alive.current=false;};},[stages.space_id,stages.job_id]);
  const go=(job:{id:string;space_id:string;view_parent_id:string;rerun_view:string},kind:string)=>{
   if(job.space_id!==stages.space_id||job.view_parent_id!==stages.job_id||job.rerun_view!==kind)throw Error('视图任务与当前场景不一致。');
-  location.hash=recordLink('build',{space:stages.space_id,tab:'flow',job:job.id,...(input?{input}:{})});
+  appNavigate(recordLink('build',{space:stages.space_id,tab:'flow',job:job.id,...(input?{input}:{})}));
  };
  async function start(kind:string){
   if(latch.current)return;latch.current=true;setBusy(kind);setError('');

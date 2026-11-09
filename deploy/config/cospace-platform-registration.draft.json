@@ -44,8 +44,8 @@
           "http://127.0.0.1:8791/auth/callback"
         ],
         "postLogoutRedirectUris": [
-          "https://cospace.ruyin.work/workbench/layout.html",
-          "http://127.0.0.1:8791/workbench/layout.html"
+          "https://cospace.ruyin.work/",
+          "http://127.0.0.1:8791/"
         ],
         "allowedScopes": [
           "openid",
