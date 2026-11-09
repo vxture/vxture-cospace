@@ -6,6 +6,11 @@
 @source "../../node_modules/@vxture/design-ui/dist";
 @source "./**/*.tsx";
 
+/* One DS text baseline also covers portalled menus and drawers. Brand headings
+   keep their own DS role; native controls inherit the same sans family. */
+body{font-family:var(--body-font-family);font-size:var(--body-font-size);line-height:var(--body-line-height)}
+button,input,select,textarea{font-family:inherit}
+
 /* Product front door: shared DS shell, one alignment grid, one primary action. */
 .cospace-home{min-height:100dvh;display:flex;flex-direction:column;--home-width:var(--container-page-xl);--home-inset:var(--space-xl)}
 .home-header>div,.home-main,.home-footer-inner{width:100%;max-width:var(--home-width);padding-inline:var(--home-inset);margin-inline:auto;box-sizing:border-box}
