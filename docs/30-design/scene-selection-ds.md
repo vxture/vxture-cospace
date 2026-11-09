@@ -44,11 +44,20 @@ Reference: <https://a.amap.com/jsapi/static/doc/20230922/index.html>.
 
 ## Map surface transparency
 
-Every map overlay uses one surface recipe in both themes: 72% DS card color
-(28% transparency) and 12 px backdrop blur. This includes the directory heading,
+Every map overlay uses one surface recipe in both themes: 60% DS card color
+(40% transparency) and 3 px backdrop blur. This includes the directory heading,
 directory, phase tabs, mode switch, tool group, legend, status/group panels,
 settings popover and the map-only detail drawer. Portal surfaces declare the
 same variables explicitly. Nested controls use 12% card color, with 24% hover
 and 36% selected primary-muted tints, avoiding stacked opaque panels. Text,
 icons, semantic status tags and primary actions retain their DS contrast.
 Catalog detail drawers retain the standard DS surface.
+
+Dark map appearance uses AMap's official neutral `dark` style (幻影黑), replacing
+`darkblue`. Administrative enhancement lines use cartographic neutral dark grays
+(nation #454545, province #383838); these are map data paint, not UI brand colors.
+Light map appearance and its boundary treatment remain unchanged.
+
+The official dark basemap retains red national borders. A grayscale filter is
+scoped to SDK map canvases only to neutralize these accents; marker DOM,
+legend/status colors, attribution and all UI retain their original colors.
