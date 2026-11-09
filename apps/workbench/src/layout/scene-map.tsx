@@ -32,7 +32,7 @@ export function SceneMap({spaces,loading,error,onBack,onRefresh}:{spaces:SceneSp
     if(scenes.length>1){const count=document.createElement('span');count.className='scene-map-marker-count';count.textContent=String(scenes.length);button.append(count);}
     button.onclick=event=>{event.stopPropagation();if(scenes.length>1){setSelected('');setGroup(scenes.map(s=>s.id));}else choice.current(first.id);};
     const marker=new sdk.Marker({position:point,content:button,anchor:'bottom-center',map:map.current});created.push(marker);
-   });markers.current=created;if(created.length)map.current.setFitView(created,false,[80,80,100,360],16);
+   });markers.current=created;if(created.length)map.current.setFitView(created,false,(host.current?.clientWidth||0)>600?[100,100,360,80]:[100,100,30,30],16);
   }).catch(e=>{if(alive)setStatus(e.message);});
   return()=>{alive=false;created.forEach(marker=>marker.setMap(null));};
  },[visible,ready]);
