@@ -1,6 +1,6 @@
 export type Point=[number,number];
 export type AmapMarker={on:(event:string,callback:()=>void)=>void;setMap:(map:AmapMap|null)=>void;setContent:(content:HTMLElement)=>void};
-export type AmapMap={destroy:()=>void;setMapStyle:(style:string)=>void;setZoomAndCenter:(zoom:number,point:Point)=>void;setFitView:(markers?:AmapMarker[],immediately?:boolean,padding?:number[],maxZoom?:number)=>void;zoomIn:()=>void;zoomOut:()=>void;on:(event:string,callback:()=>void)=>void;off:(event:string,callback:()=>void)=>void};
+export type AmapMap={destroy:()=>void;setFeatures:(features:string[])=>void;setStatus:(status:{scrollWheel:boolean})=>void;setMapStyle:(style:string)=>void;setZoomAndCenter:(zoom:number,point:Point)=>void;setFitView:(markers?:AmapMarker[],immediately?:boolean,padding?:number[],maxZoom?:number)=>void;zoomIn:()=>void;zoomOut:()=>void;on:(event:string,callback:()=>void)=>void;off:(event:string,callback:()=>void)=>void};
 export type AmapSDK={Map:new(host:HTMLElement,options:Record<string,unknown>)=>AmapMap;Marker:new(options:Record<string,unknown>)=>AmapMarker;convertFrom:(points:Point[],type:string,callback:(status:string,result:{locations?:{getLng:()=>number;getLat:()=>number}[]})=>void)=>void};
 declare global{interface Window{AMap?:AmapSDK;_AMapSecurityConfig?:{serviceHost:string}}}
 let pending:Promise<AmapSDK>|undefined;
