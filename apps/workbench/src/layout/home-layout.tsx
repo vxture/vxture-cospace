@@ -123,7 +123,7 @@ export function HomeLayout({children,tools,footerTools}:{children:React.ReactNod
    </div>
    </div>
   </main>
-  {footerTools&&<div className="home-preview-tools" aria-label="设计验证工具">{footerTools}</div>}<ShellLegalFooter className="home-footer" innerClassName="home-footer-inner" copyright="© 2026 Vxture · CoSpace" links={[]}/>
+  {footerTools&&<div className="home-preview-tools" aria-label="设计验证工具">{footerTools}</div>}<footer className="home-footer public-legal-footer"><div className="home-footer-inner"><span>© 2026 VXTURE | RUYIN</span><nav aria-label="法律信息"><a href="https://vxture.com/zh-CN/legal/terms" target="_blank" rel="noopener noreferrer">服务条款</a><a href="https://vxture.com/zh-CN/legal/privacy" target="_blank" rel="noopener noreferrer">隐私政策</a><a href="https://vxture.com/zh-CN/legal/copyright" target="_blank" rel="noopener noreferrer">版权声明</a></nav></div></footer>
  </div>;
  return <div className="cospace-home bg-background text-foreground" id="login-screen">
   <ShellHeader className="home-header" height="xl" layout="centered" surface="transparent" leading={<PlatformProductBrand/>} trailing={<PublicHeaderTools/>}/>
@@ -137,6 +137,6 @@ export function HomeLayout({children,tools,footerTools}:{children:React.ReactNod
     <section className="home-entry" aria-label="登录 CoSpace">{children}</section>
    </div>
   </main>
-  {footerTools&&<div className="home-preview-tools" aria-label="设计验证工具">{footerTools}</div>}<ShellLegalFooter className="home-footer" innerClassName="home-footer-inner" copyright="© 2026 Vxture · CoSpace" links={[]}/>
+  {footerTools&&<div className="home-preview-tools" aria-label="设计验证工具">{footerTools}</div>}<footer className="home-footer public-legal-footer"><div className="home-footer-inner"><span>© 2026 VXTURE | RUYIN</span><nav aria-label="法律信息"><a href="https://vxture.com/zh-CN/legal/terms" target="_blank" rel="noopener noreferrer">服务条款</a><a href="https://vxture.com/zh-CN/legal/privacy" target="_blank" rel="noopener noreferrer">隐私政策</a><a href="https://vxture.com/zh-CN/legal/copyright" target="_blank" rel="noopener noreferrer">版权声明</a></nav></div></footer>
  </div>;
 }
