@@ -40,8 +40,8 @@
 .home-entry-heading h1{font-size:clamp(28px,2.5vw,36px);line-height:1.4;font-weight:600;letter-spacing:-.025em;margin:var(--space-sm) 0 0}
 .home-entry-heading p{font-size:var(--body-font-size);line-height:1.9;color:var(--muted-foreground);margin:var(--space-lg) 0 0}
 .home-entry-heading .home-welcome{font-size:18px;line-height:1.5;font-weight:400;margin:0;color:var(--muted-foreground)}
-.home-login-button{width:100%;height:48px;min-height:48px;justify-content:space-between;padding-inline:var(--space-xl);margin-top:var(--space-3xl);border-radius:var(--radius-md);font-size:var(--body-font-size);box-shadow:none}
-.home-login-button svg{width:18px;height:18px}
+.home-login-button{position:relative;width:100%;height:48px;min-height:48px;justify-content:center;padding-inline:var(--space-xl);margin-top:var(--space-3xl);border-radius:var(--radius-md);font-size:var(--body-font-size);box-shadow:none}
+.home-login-button svg{position:absolute;right:var(--space-xl);width:18px;height:18px}
 .home-entry-note{font-size:var(--label-small-font-size);line-height:1.7;color:var(--muted-foreground);margin:var(--space-lg) 0 0}
 /* Separate the welcome/action group from the quiet account note at the panel foot. */
 .home-entry:has(.home-signin-core){justify-content:flex-start;padding-block:var(--space-xl)}
@@ -155,3 +155,4 @@
 
 /* Keep the DS header shadow above workspace surfaces and below popup portals. */
 #workbench-shell>header{position:relative;z-index:20}
+.home-entry-heading{text-align:center}.home-secure-note{display:flex;align-items:center;justify-content:center;gap:8px;text-align:center}.home-secure-note svg{flex-shrink:0}.home-preview-tools{display:flex;justify-content:flex-end;padding:0 var(--space-xl) var(--space-sm)}.home-preview-tools button{font-size:var(--label-small-font-size);color:var(--muted-foreground)}
