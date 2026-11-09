@@ -165,7 +165,7 @@ function MapLab(){
   };
   document.addEventListener('pointerdown',dismiss);return()=>document.removeEventListener('pointerdown',dismiss);
  },[selectedId]);
- function changeView(next:string){setView(next);setSelectedId('');setEntered('');setGroup([]);setConfig(false);} 
+ function changeView(next:string){setView(next);setSelectedId('');setEntered('');setGroup([]);setConfig(false);}
 
  useEffect(()=>{
   const close=(event:KeyboardEvent)=>{if(event.key!=='Escape')return;if(config)setConfig(false);else if(group.length)setGroup([]);else{setSelectedId('');setEntered('');}};
@@ -193,4 +193,3 @@ function MapLab(){
 }
 
 createRoot(document.getElementById('root')!).render(<ThemeProvider defaultMode="light"><MapLab/></ThemeProvider>);
-
