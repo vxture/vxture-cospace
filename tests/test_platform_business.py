@@ -186,7 +186,9 @@ def test_missing_policy_never_falls_back_to_preview(secured):
     '/api/auth/%2e%2e/%2e%2e/spatial.npz','/workbench/%2e%2e/spatial.npz'])
 def test_no_root_static_unknown_route_or_encoding_bypass(secured,path):
     _,c,*_=secured;sign_in(secured)
-    assert c.get(path).status_code==403
+    response=c.get(path)
+    assert response.status_code==(404 if path=='/index.html' else 403)
+    assert 'location' not in response.headers
 
 
 def test_foreign_direct_references_comparison_and_forged_scope_deny(secured):
