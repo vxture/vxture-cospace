@@ -1,0 +1,12 @@
+/* DS owns typography, controls and card/drawer surfaces. These rules compose
+   the service grid, bounded descriptions and technical endpoint metadata. */
+.spatial-service-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr));gap:24px}
+.spatial-service-card{min-width:0}
+.spatial-service-symbol{display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:var(--radius-md);background:var(--primary-muted);color:var(--primary-muted-foreground)}
+.spatial-service-description{font-size:var(--body-small-font-size);line-height:var(--body-small-line-height);color:var(--muted-foreground);display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;min-height:calc(var(--body-small-line-height) * 2)}
+.spatial-service-metadata{display:grid;grid-template-columns:72px minmax(0,1fr);gap:12px;font-size:var(--body-small-font-size);line-height:var(--body-small-line-height)}
+.spatial-service-metadata dt{color:var(--muted-foreground)}
+.spatial-service-metadata dd{margin:0;overflow-wrap:anywhere}
+.spatial-service-address,.spatial-service-example{min-width:0;overflow-wrap:anywhere;white-space:pre-wrap;font-size:var(--label-small-font-size);line-height:var(--body-small-line-height);padding:12px;border-radius:var(--radius-md);background:var(--muted);color:var(--foreground)}
+.spatial-service-address{flex:1}
+.spatial-service-example{max-height:320px;overflow:auto}

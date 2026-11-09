@@ -10,6 +10,7 @@ export function ProductLauncher({route,hasScene=false,hrefForRoute,onNavigate}:{
  return <nav className="product-launcher-grid" aria-label="功能 Launcher">
   <ShellPanelSection title={<span className="product-launcher-section-title">场景中心<small>默认首页</small></span>} divided={false} className="product-launcher-group product-launcher-home">
    <ShellPanelRow icon="app-grid" label="我的场景" description="查看、选择与创建场景" chevron={false} href="/space" active={route==='space'&&!hasScene} onClick={onNavigate}/>
+   <ShellPanelRow icon="globe" label="空间服务" description="发现服务与获取接入支持" chevron={false} href="/services" active={route==='services'} onClick={onNavigate}/>
    <p className="product-launcher-home-note">从场景开始，连接数据、构建与服务。</p>
   </ShellPanelSection>
   {[work,resources].map(group=><ShellPanelSection key={group.title} title={<span className="product-launcher-section-title">{group.title}</span>} divided={false} className="product-launcher-group">

@@ -16,6 +16,16 @@ from packages.service.platform_auth_http import create_auth_app
 NOW = 1_800_000_000
 
 
+def test_spatial_services_is_an_internal_application_return(runtime, tmp_path):
+    rp, _, _, _ = runtime
+    (tmp_path/'index.html').write_text('<main>CoSpace</main>', encoding='utf-8')
+    assert safe_return('/services') == '/services'
+    with TestClient(create_auth_app(rp, tmp_path), base_url=rp.config.origin) as client:
+        response = client.get('/services')
+        assert response.status_code == 200 and '<main>CoSpace</main>' in response.text
+        assert client.get('/services.html').status_code == 404
+
+
 def test_fetch_logout_keeps_origin_and_csrf_protection(runtime):
     rp,c,accounts,_=runtime
     login(rp,c,accounts)
