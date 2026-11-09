@@ -3,7 +3,7 @@ import {Input} from '@vxture/design-system';
 import {Database,Cube,MagnifyingGlass,CaretRight} from '@phosphor-icons/react';
 
 export type ScenePublication={id:string;created_at:string;preview_url:string;candidate_id:string;lifecycle_state?:string};
-export type SceneSpace={id:string;name:string;project_id:string;description?:string;capabilities?:string[];publications?:ScenePublication[]};
+export type SceneSpace={id:string;name:string;project_id:string;description?:string;overview_url?:string;capabilities?:string[];publications?:ScenePublication[]};
 export function SceneDirectory({spaces,current,workspace,search,onSearch,onChoose,loading,error,library=false}:{spaces:SceneSpace[];current:string;workspace:string;search:string;onSearch:(s:string)=>void;onChoose:(id:string)=>void;loading:boolean;error:string;library?:boolean}){
  const visible=spaces.filter(s=>s.name.toLocaleLowerCase().includes(search.trim().toLocaleLowerCase()));
  return <aside id="data-scene-sidebar" className="data-sidebar" aria-label="场景空间目录">

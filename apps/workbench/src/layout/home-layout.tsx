@@ -1,6 +1,9 @@
+import {PublicHeaderTools} from './public-header-tools';
+
+import {PlatformHeader as ShellHeader} from './platform-header';
 import React from 'react';
-import {ShellHeader,ShellHeaderMark,ShellHeaderDivider,ShellProductTitle,ShellLegalFooter} from '@vxture/design-system';
-import brandMark from '@vxture/design-system/assets/brands/vx-brand/vxture-logo-icon.svg';
+import {ShellHeaderMark,ShellHeaderDivider,ShellProductTitle,ShellLegalFooter} from '@vxture/design-system';
+import {PlatformProductBrand} from './product-brand';
 
 // Product illustration only. It does not represent a captured or published space.
 function SpatialIllustration({expanded=false}:{expanded?:boolean}){
@@ -106,32 +109,34 @@ function SiteSceneBackground(){
  </svg>;
 }
 
-export function HomeLayout({children,tools}:{children:React.ReactNode;tools?:React.ReactNode}){
+export function HomeLayout({children,tools,footerTools}:{children:React.ReactNode;tools?:React.ReactNode;footerTools?:React.ReactNode}){
  const panoramic=new URLSearchParams(location.search).get('home')!=='split';
  if(panoramic)return <div className="cospace-home home-panorama bg-background text-foreground" id="login-screen">
   <div className="home-panorama-backdrop" aria-hidden="true"><SiteSceneBackground/></div>
-  <ShellHeader className="home-header" height="xl" layout="centered" surface="transparent" leading={<><ShellHeaderMark src={brandMark} alt="Vxture"/><ShellProductTitle name="Vxture"/><ShellHeaderDivider className="home-brand-divider"/><ShellProductTitle name="CoSpace"/></>} trailing={<><a className="home-compare-link" href="?home=split" target="_blank" rel="noopener noreferrer">查看双栏版 <span aria-hidden="true">↗</span></a>{tools}</>}/>
+  <ShellHeader className="home-header" height="xl" layout="centered" surface="transparent" leading={<PlatformProductBrand/>} trailing={<PublicHeaderTools/>}/>
   <main className="home-main home-panorama-main">
+   <div className="home-content-inner">
    <div className="home-panorama-content">
     <p className="home-panorama-eyebrow">SPATIAL INTELLIGENCE</p>
     <section className="home-entry home-panorama-entry" aria-label="登录 CoSpace">{children}</section>
-    <div className="home-panorama-message"><p>空间底图建一次，具身智能体共用。</p><span>MAP ONCE. SHARE ACROSS AGENTS.</span></div>
+    <div className="home-panorama-message"><p>空间底图建一次　具身智能体共用</p><span>MAP ONCE. SHARE ACROSS AGENTS.</span></div>
+   </div>
    </div>
   </main>
-  <ShellLegalFooter className="home-footer" innerClassName="home-footer-inner" copyright="© 2026 Vxture · CoSpace" links={[]}/>
+  {footerTools&&<div className="home-preview-tools" aria-label="设计验证工具">{footerTools}</div>}<footer className="home-footer public-legal-footer"><div className="home-footer-inner"><span>© 2026 VXTURE · RUYIN</span><nav aria-label="法律信息"><a href="https://vxture.com/zh-CN/legal/terms" target="_blank" rel="noopener noreferrer">服务条款</a><a href="https://vxture.com/zh-CN/legal/privacy" target="_blank" rel="noopener noreferrer">隐私政策</a><a href="https://vxture.com/zh-CN/legal/copyright" target="_blank" rel="noopener noreferrer">版权声明</a></nav></div></footer>
  </div>;
  return <div className="cospace-home bg-background text-foreground" id="login-screen">
-  <ShellHeader className="home-header" height="xl" layout="centered" surface="transparent" leading={<><ShellHeaderMark src={brandMark} alt="Vxture"/><ShellProductTitle name="Vxture"/><ShellHeaderDivider className="home-brand-divider"/><ShellProductTitle name="CoSpace"/></>} trailing={tools}/>
+  <ShellHeader className="home-header" height="xl" layout="centered" surface="transparent" leading={<PlatformProductBrand/>} trailing={<PublicHeaderTools/>}/>
   <main className="home-main">
    <div className="home-grid">
     <section className="home-visual" aria-label="空间服务产品介绍">
-     <div className="home-intro"><p className="home-eyebrow">SPATIAL INTELLIGENCE</p><p className="home-tagline">空间底图建一次，<br/>具身智能体共用。</p></div>
+     <div className="home-intro"><p className="home-eyebrow">SPATIAL INTELLIGENCE</p><p className="home-tagline">空间底图建一次　具身智能体共用</p></div>
      <SpatialIllustration/>
      <div className="home-visual-caption" aria-hidden="true"><span className="home-caption-line"/>MAP ONCE. SHARE ACROSS AGENTS.</div>
     </section>
     <section className="home-entry" aria-label="登录 CoSpace">{children}</section>
    </div>
   </main>
-  <ShellLegalFooter className="home-footer" innerClassName="home-footer-inner" copyright="© 2026 Vxture · CoSpace" links={[]}/>
+  {footerTools&&<div className="home-preview-tools" aria-label="设计验证工具">{footerTools}</div>}<footer className="home-footer public-legal-footer"><div className="home-footer-inner"><span>© 2026 VXTURE · RUYIN</span><nav aria-label="法律信息"><a href="https://vxture.com/zh-CN/legal/terms" target="_blank" rel="noopener noreferrer">服务条款</a><a href="https://vxture.com/zh-CN/legal/privacy" target="_blank" rel="noopener noreferrer">隐私政策</a><a href="https://vxture.com/zh-CN/legal/copyright" target="_blank" rel="noopener noreferrer">版权声明</a></nav></div></footer>
  </div>;
 }

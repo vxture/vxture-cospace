@@ -1,3 +1,7 @@
+import {SignInContent} from './signin-content';
+
+import {HeaderSupportControls} from './header-support-controls';
+import {PlatformHeader as ShellHeader} from './platform-header';
 import {NavigationGuard} from './navigation-guard';
 /// <reference types="vite/client" />
 import React, { useEffect, useRef, useState } from 'react';
@@ -7,12 +11,12 @@ import {
  Table, TableHeader, TableHead, TableRow, TableBody, TableCell, StatusBadge, Badge,
  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
  Popover, PopoverTrigger, ShellPanelContent, ShellPanelSection, ShellPanelRow,
- ShellHeader, ShellHeaderMark, ShellHeaderTitle, ShellHeaderDivider, ShellProductTitle,
- ShellIconButton, ShellUserMenu, ShellPageContainer, ShellThemeToggle, ShellLegalFooter,
+  ShellHeaderMark, ShellHeaderTitle, ShellHeaderDivider, ShellProductTitle,
+ ShellIconGroup,ShellIconButton, ShellUserMenu, ShellPageContainer, ShellThemeToggle, ShellLegalFooter,
  Card, CardHeader, CardTitle, CardDescription, CardContent, Tabs, TabsList, TabsTrigger,
  Switch, Separator, ThemeProvider, Tooltip, TooltipTrigger, TooltipContent, TooltipProvider, useTheme,
 } from '@vxture/design-system';
-import brandMark from '@vxture/design-system/assets/brands/vx-brand/vxture-logo-icon.svg';
+import {CoSpaceBrand,LauncherPlatformBrand} from './product-brand';
 import { spaces } from './spaces';
 import spaceSvg from './space.svg?raw';
 import {recordLink,moduleLink,useRecordNavigation} from './record-navigation';
@@ -32,6 +36,7 @@ import {AuthBoundary,usePlatformSession,platformLogout} from './platform-auth';
 import { PreviewPublications } from './preview-publications';
 import './globals.css';
 import './home-panorama.css';
+import './public-entry.css';
 
 const BuildScan=React.lazy(()=>import('./build-scan').then(module=>({default:module.BuildScan})));
 const RealSpace=React.lazy(()=>import('./real-space').then(module=>({default:module.RealSpace})));
@@ -52,10 +57,8 @@ const rows = {
 };
 function DataRows({head,body}:{head:string[];body:string[][]}){return <div className="min-w-0 overflow-x-auto"><Table><TableHeader><TableRow>{head.map(h=><TableHead key={h}>{h}</TableHead>)}</TableRow></TableHeader><TableBody>{body.map((r,i)=><TableRow key={i}>{r.map((c,j)=><TableCell key={j}>{c}</TableCell>)}</TableRow>)}</TableBody></Table></div>;}
 function LoginPage({identity,tools,login,enter}:{identity:React.ReactNode;tools:React.ReactNode;login:()=>void;enter:()=>void}){
- return <HomeLayout tools={tools}>
-  <div className="home-entry-heading"><p className="home-welcome">欢迎使用</p><h1>空间态势服务</h1><p>连接空间与服务，<br/>开启你的工作。</p></div>
-  <Button size="xl" className="home-login-button" id="third-party-login" onClick={login}><span>登录</span><Icon name="arrow-right"/></Button>
-  <div className="home-preview-entry"><p className="home-entry-note">认证待接入，可先预览界面。</p><Button variant="link" id="enter-preview" onClick={enter}>预览界面<Icon name="arrow-right"/></Button></div>
+ return <HomeLayout tools={tools} footerTools={<Button variant="link" id="enter-preview" onClick={enter}>预览界面<Icon name="arrow-right"/></Button>}>
+  <SignInContent onLogin={login}/>
  </HomeLayout>;
 }
 
@@ -77,9 +80,9 @@ function App(){
  const enter=()=>{sessionStorage.setItem('cospace.ui.ds.preview','1');setPreview(true);};
  const exit=()=>{if(platform?.csrf){platformLogout(platform.csrf);return;}sessionStorage.removeItem('cospace.ui.ds.preview');setPreview(false);};
  const full=async()=>{try{if(document.fullscreenElement)await document.exitFullscreen();else await document.documentElement.requestFullscreen();}catch{setNotice('当前浏览器未允许全屏。');}};
- const identity=<><ShellHeaderMark href={recordLink('space',{})} src={brandMark} alt="Vxture"/><ShellProductTitle className="hidden sm:flex" name="Vxture"/><ShellHeaderDivider className="hidden sm:block"/><ShellProductTitle name="CoSpace" /></>;
- const launcherControl=<Popover open={launcher} onOpenChange={v=>{setLauncher(v);setAdmin(false);}}><PopoverTrigger asChild><ShellIconButton className="launcher-control" icon="app-grid" label="功能 Launcher" active={launcher}/></PopoverTrigger><ShellPanelContent align="start" sideOffset={12} className="w-auto max-w-content-narrow-lg"><div className="grid grid-cols-1 gap-xl md:grid-cols-2" aria-label="功能 Launcher">{groups.map(g=><ShellPanelSection key={g.title} title={g.title} divided={false} className="launcher-group">{g.items.map(i=><ShellPanelRow key={i.route} icon={i.icon} label={names[i.route]} description={i.description} href={moduleLink(i.route)} active={route===i.route} onClick={()=>setLauncher(false)}/>)}</ShellPanelSection>)}</div></ShellPanelContent></Popover>;
- const header=<ShellHeader height="md" leading={<>{launcherControl}{identity}</>} trailing={<div className="flex items-center gap-sm"><Badge variant="outline" className="hidden md:inline-flex">{platform?'平台工作区':'UI PREVIEW · DS 15'}</Badge><Popover open={admin} onOpenChange={v=>{setAdmin(v);setLauncher(false);}}><PopoverTrigger asChild><ShellIconButton icon="settings" label="配置与管理" active={admin}/></PopoverTrigger><ShellPanelContent align="end"><ShellPanelSection title="配置与管理">{adminRoutes.slice(0,3).map(r=><ShellPanelRow key={r} label={names[r]} href={r==='settings'?recordLink('settings',{}):`#${r}`} onClick={()=>setAdmin(false)}/>)}</ShellPanelSection></ShellPanelContent></Popover><ShellThemeToggle currentTheme={theme} onThemeChange={setTheme} buttonLabel="切换主题"/><ShellUserMenu openLabel="账户菜单" user={{displayName:platform?.user?.display_name||'交付工程师',avatarFallback:platform?'用':'工',uniqueLine:platform?.user?.subject||'设计预览身份 · 非真实登录',meta:platform?.user?.workspace_id||config.workspace}} links={[{key:'account',label:'个人账户',href:'#account',icon:'user'}]} actions={[{key:'logout',label:platform?'退出平台登录':'退出 UI 预览',icon:'sign-out',onClick:exit}]}/></div>}/>;
+ const identity=<CoSpaceBrand href="#space"/>;
+ const launcherControl=<Popover open={launcher} onOpenChange={v=>{setLauncher(v);setAdmin(false);}}><PopoverTrigger asChild><ShellIconButton className="launcher-control" icon="app-grid" label="功能 Launcher" active={launcher}/></PopoverTrigger><ShellPanelContent align="start" sideOffset={12} className="w-auto max-w-content-narrow-lg"><LauncherPlatformBrand/><div className="grid grid-cols-1 gap-xl md:grid-cols-2" aria-label="功能 Launcher">{groups.map(g=><ShellPanelSection key={g.title} title={g.title} divided={false} className="launcher-group">{g.items.map(i=><ShellPanelRow key={i.route} icon={i.icon} label={names[i.route]} description={i.description} href={moduleLink(i.route)} active={route===i.route} onClick={()=>setLauncher(false)}/>)}</ShellPanelSection>)}</div></ShellPanelContent></Popover>;
+ const header=<ShellHeader height="md" leading={<>{launcherControl}{identity}</>} trailing={<div className="platform-header-actions"><Badge variant="outline" className="hidden md:inline-flex">{platform?'平台工作区':'UI PREVIEW · DS 15'}</Badge><ShellIconGroup label="全局工具"><ShellThemeToggle currentTheme={theme} onThemeChange={setTheme} buttonLabel="切换主题"/><HeaderSupportControls/><Popover open={admin} onOpenChange={v=>{setAdmin(v);setLauncher(false);}}><PopoverTrigger asChild><ShellIconButton icon="settings" label="配置与管理" active={admin}/></PopoverTrigger><ShellPanelContent align="end"><ShellPanelSection title="配置与管理">{adminRoutes.slice(0,3).map(r=><ShellPanelRow key={r} label={names[r]} href={r==='settings'?recordLink('settings',{}):`#${r}`} onClick={()=>setAdmin(false)}/>)}</ShellPanelSection></ShellPanelContent></Popover></ShellIconGroup><ShellIconGroup label="账户"><ShellUserMenu openLabel="账户菜单" user={{displayName:platform?.user?.display_name||'交付工程师',avatarFallback:platform?'用':'工',uniqueLine:platform?.user?.subject||'设计预览身份 · 非真实登录',meta:platform?.user?.workspace_id||config.workspace}} links={[{key:'account',label:'个人账户',href:'#account',icon:'user'}]} actions={[{key:'logout',label:platform?'退出平台登录':'退出 UI 预览',icon:'sign-out',onClick:exit}]}/></ShellIconGroup></div>}/>;
  if(preview&&route==='build'&&new URLSearchParams(location.search).get('screen')==='build')return <React.Suspense fallback={<main className="dark h-dvh bg-background text-foreground" role="status">正在打开构建画布…</main>}><BuildScan/></React.Suspense>;
  const showLoginInfo=()=>setModal({title:'平台登录 · 独立接入验证',body:'已按 yucer 接通 OIDC + PKCE、中央会话与全局登出的独立验证入口。当前工程服务保持 UI 预览，尚未配置 CoSpace 平台客户端和业务空间授权。'});
  return <>

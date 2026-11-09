@@ -1,3 +1,5 @@
+import {SignInContent} from './signin-content';
+
 import {sessionScopeKey,sessionConfirmed} from './session-continuity';
 import React,{createContext,useContext,useEffect,useLayoutEffect,useRef,useState} from 'react';
 import {Button,Icon} from '@vxture/design-system';
@@ -50,7 +52,7 @@ export function PlatformIdentityPage({business=false}:{business?:boolean}){
  };window.addEventListener('pointerdown',activity);window.addEventListener('keydown',activity);return()=>{window.removeEventListener('pointerdown',activity);window.removeEventListener('keydown',activity);};},[]);
  const login=()=>{location.assign('/auth/login?returnTo='+encodeURIComponent(location.pathname+location.search+(location.hash||'#space')));};
  return <HomeLayout>
-    {session?.authenticated?<><h2 className="text-heading-1">{session.user?.display_name}</h2><p className="text-body-small text-muted-foreground">平台会话已建立。空间权限与业务接口正在接入。</p><dl className="grid grid-cols-[auto_1fr] gap-x-lg gap-y-md text-body-small"><dt>组织</dt><dd className="break-all">{session.user?.org_id}</dd><dt>工作区</dt><dd className="break-all">{session.user?.workspace_id}</dd><dt>会话状态</dt><dd>{session.authority_state==='unavailable'?'平台暂不可达，会话已保留':session.authority_state==='confirmed'?'平台已确认':'已保存平台会话'}</dd></dl><IdentitySubscription/><p className="text-label-small text-muted-foreground">此入口尚未开放空间数据，原工程预览服务独立运行。</p><div className="flex flex-wrap gap-md"><Button variant="outline" disabled={busy} onClick={async()=>{setBusy(true);try{const r=await fetch('/api/auth/session',{method:'POST',headers:{'X-CoSpace-CSRF':csrf.current}});if(!r.ok)throw new Error();const value:Session=await r.json();setSession(value);csrf.current=value.csrf||'';setError('');}catch{setError('平台状态暂不可用，会话已保留。');}finally{setBusy(false);}}}>检查平台会话</Button><Button variant="outline" onClick={login}>重新连接</Button></div><form action="/auth/logout" method="post"><input type="hidden" name="csrf" value={session.csrf||''}/><Button type="submit" variant="ghost"><Icon name="sign-out"/>退出平台登录</Button></form></>:<><div className="home-signin-core"><div className="home-entry-heading"><p className="home-welcome">欢迎使用</p><h1>空间态势服务</h1></div><Button size="xl" className="home-login-button" onClick={login}><span>登录</span><Icon name="arrow-right"/></Button></div><p className="home-entry-note home-entry-footnote">{business?'由 Vxture 统一管理账户与访问权限':'平台认证接入验证 · 业务数据暂未开放'}</p></>}
+    {session?.authenticated?<><h2 className="text-heading-1">{session.user?.display_name}</h2><p className="text-body-small text-muted-foreground">平台会话已建立。空间权限与业务接口正在接入。</p><dl className="grid grid-cols-[auto_1fr] gap-x-lg gap-y-md text-body-small"><dt>组织</dt><dd className="break-all">{session.user?.org_id}</dd><dt>工作区</dt><dd className="break-all">{session.user?.workspace_id}</dd><dt>会话状态</dt><dd>{session.authority_state==='unavailable'?'平台暂不可达，会话已保留':session.authority_state==='confirmed'?'平台已确认':'已保存平台会话'}</dd></dl><IdentitySubscription/><p className="text-label-small text-muted-foreground">此入口尚未开放空间数据，原工程预览服务独立运行。</p><div className="flex flex-wrap gap-md"><Button variant="outline" disabled={busy} onClick={async()=>{setBusy(true);try{const r=await fetch('/api/auth/session',{method:'POST',headers:{'X-CoSpace-CSRF':csrf.current}});if(!r.ok)throw new Error();const value:Session=await r.json();setSession(value);csrf.current=value.csrf||'';setError('');}catch{setError('平台状态暂不可用，会话已保留。');}finally{setBusy(false);}}}>检查平台会话</Button><Button variant="outline" onClick={login}>重新连接</Button></div><form action="/auth/logout" method="post"><input type="hidden" name="csrf" value={session.csrf||''}/><Button type="submit" variant="ghost"><Icon name="sign-out"/>退出平台登录</Button></form></>:<><SignInContent onLogin={login}/></>}
     {error&&<p className="text-body-small text-destructive" role="alert">{error}</p>}
  </HomeLayout>;
 }
@@ -115,8 +117,8 @@ function BusinessSession({children}:{children:React.ReactNode}){
   };bootstrap().catch(()=>{if(!stopped)setError('平台会话暂不可用，请刷新重试。');});
   return()=>{stopped=true;window.fetch=nativeFetch;window.removeEventListener('pointerdown',activity);window.removeEventListener('keydown',activity);window.removeEventListener('focus',resume);document.removeEventListener('visibilitychange',resume);window.removeEventListener('cospace:confirm-session',retry);};
  },[]);
- if(error&&!ready)return <main className="flex min-h-dvh items-center justify-center"><p role="alert">{error}</p></main>;
- if(!ready)return <main className="flex min-h-dvh items-center justify-center"><p role="status">正在确认平台会话…</p></main>;
+ if(error&&!ready)return <HomeLayout><p role="alert">{error}</p></HomeLayout>;
+ if(!ready)return <HomeLayout><p role="status">正在确认平台会话…</p></HomeLayout>;
  const authorized=sessionConfirmed(session)&&(!subscriptionRequired||!!subscription?.business_allowed&&!subscriptionUnavailable);
  if(session?.authenticated&&retained.current&&sessionScopeKey(session)!==sessionScopeKey(retained.current))retained.current=null;
  if(authorized)retained.current=session;

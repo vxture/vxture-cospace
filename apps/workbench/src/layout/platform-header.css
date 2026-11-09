@@ -1,0 +1,24 @@
+.platform-header{--platform-control-height:32px}
+.cospace-brand{display:inline-flex;align-items:center;gap:8px;height:32px;flex-shrink:0;color:var(--foreground);text-decoration:none;border-radius:var(--radius-sm,4px)}
+.cospace-brand img{display:block;width:28px;height:28px;flex-shrink:0}
+.cospace-brand span{font-size:18px;font-weight:600;line-height:24px;letter-spacing:-.3px}
+.cospace-brand:focus-visible{outline:2px solid var(--ring);outline-offset:4px}
+.platform-header button[aria-label="功能 Launcher"]{margin-right:8px}
+.launcher-platform-brand{display:flex;align-items:center;gap:8px;padding-bottom:16px;margin-bottom:16px;border-bottom:1px solid var(--border);font-size:14px;font-weight:600;letter-spacing:.08em;color:var(--foreground)}
+.launcher-platform-brand img{display:block;width:24px;height:24px}
+.platform-product-brand{display:inline-flex;align-items:center;height:32px;flex-shrink:0}
+.platform-brand{display:inline-flex;align-items:center;gap:8px;height:32px;color:var(--foreground);font-size:16px;font-weight:600;line-height:24px}
+.platform-brand img{display:block;width:24px;height:24px}
+.platform-product-divider{display:block;width:1px;height:20px;background:color-mix(in srgb,var(--muted-foreground) 55%,var(--border));margin-inline:16px;flex-shrink:0}
+@media(max-width:420px){.platform-product-divider{margin-inline:10px}.platform-brand{font-size:14px}.platform-product-brand .cospace-brand span{font-size:16px}}
+.platform-header button,.platform-header [data-slot=header-mark]{height:var(--platform-control-height);min-height:var(--platform-control-height);box-sizing:border-box}
+.platform-header button[aria-label],.platform-header [data-slot=header-mark]{width:32px;min-width:32px;padding:0}
+.platform-header button[aria-label] svg{width:16px;height:16px}
+.platform-header button[aria-label="功能 Launcher"] svg{width:24px;height:24px}
+.platform-header [data-slot=header-mark] img{width:24px;height:24px}
+.platform-header-actions{display:flex;align-items:center;gap:16px}
+.platform-header-actions>[role=group]{display:inline-flex;align-items:center;gap:4px}
+.platform-header-actions>.entry-sample-label{display:inline-flex;align-items:center;height:32px;margin-right:0}
+.platform-header-actions>span{align-items:center;min-height:32px}
+.header-support-copy{font-size:14px;line-height:1.6;color:var(--muted-foreground);max-width:280px}
+.header-support-copy p+p{margin-top:8px}
