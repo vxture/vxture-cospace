@@ -1,0 +1,10 @@
+/* DS surface/row components own interaction and typography. Product CSS
+   supplies the navigation composition and a restrained brand-blue wash. */
+.product-launcher-panel{width:760px;max-width:calc(100vw - 32px);padding:20px;max-height:calc(100dvh - 80px);overflow-y:auto;background:linear-gradient(135deg,color-mix(in srgb,var(--primary) 12%,var(--popover)) 0%,color-mix(in srgb,var(--primary) 4%,var(--popover)) 48%,var(--popover) 100%)}
+.product-launcher-grid{display:grid;grid-template-columns:minmax(0,.95fr) minmax(0,1.15fr) minmax(0,1fr);gap:20px}
+.product-launcher-group{min-width:0}
+.product-launcher-group+ .product-launcher-group{border-left:1px dashed color-mix(in srgb,var(--primary) 18%,transparent);padding-left:20px}
+.product-launcher-home-note{margin:16px 8px 0;font-family:var(--body-font-family);font-size:var(--body-small-font-size);line-height:var(--body-small-line-height);color:var(--muted-foreground);text-wrap:pretty}
+@media(max-width:700px){.product-launcher-panel{width:360px;padding:16px}.product-launcher-grid{grid-template-columns:minmax(0,1fr);gap:16px}.product-launcher-group+ .product-launcher-group{border-left:0;border-top:1px dashed color-mix(in srgb,var(--primary) 18%,transparent);padding-left:0;padding-top:16px}.product-launcher-home-note{display:none}}
+
+.product-launcher-section-title{display:flex;align-items:center;justify-content:space-between;gap:8px}.product-launcher-section-title small{font-size:var(--label-micro-font-size);font-weight:400;color:var(--primary-muted-foreground)}

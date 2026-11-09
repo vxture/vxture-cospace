@@ -155,8 +155,6 @@ button,input,select,textarea{font-family:inherit}
 
 @media(max-width:699px){.home-entry:has(.home-signin-core){min-height:330px}.home-signin-core{padding-block:var(--space-xl)}.home-entry .home-entry-footnote{margin-top:var(--space-xl)}}
 
-/* Launcher groups are columns: the divider belongs below each group title. */
-.launcher-group>p:first-child{padding-bottom:12px;margin-bottom:4px;border-bottom:1px dashed color-mix(in srgb,var(--primary) 12%,transparent)}
 
 /* Keep the DS header shadow above workspace surfaces and below popup portals. */
 #workbench-shell>header{position:relative;z-index:20}

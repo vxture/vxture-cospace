@@ -4,10 +4,10 @@ import {PlatformHeader as ShellHeader} from '../layout/platform-header';
 import React,{useEffect,useRef,useState} from 'react';
 import {createRoot} from 'react-dom/client';
 import {ShellHeaderMark,ShellProductTitle,ShellHeaderDivider,ShellIconGroup,ShellIconButton,ShellThemeToggle,ShellUserMenu,Popover,PopoverTrigger,ShellPanelContent,ShellPanelSection,ShellPanelRow,useTheme,ThemeProvider,Button,Input,NativeSelect,ViewHeader,DropdownMenu,DropdownMenuTrigger,DropdownMenuContent,DropdownMenuItem} from '@vxture/design-system';
-import {CoSpaceBrand,LauncherPlatformBrand} from '../layout/product-brand';
+import {CoSpaceBrand} from '../layout/product-brand';
 import {MapTrifold,SquaresFour,Cube,MapPin,Buildings,Plus,Minus,Crosshair,SlidersHorizontal,X,List,DotsThreeVertical,ArrowRight,Clock,CheckCircle,FileDashed,MagnifyingGlass,CaretUp,CaretDown} from '@phosphor-icons/react';
 import {SceneCover} from '../layout/scene-cover';
-import {moduleGroups,moduleNames} from '../layout/product-navigation';
+import {ProductLauncher} from '../layout/product-launcher';
 import * as maplibregl from 'maplibre-gl';
 import type {Map as GeoMap,StyleSpecification} from 'maplibre-gl';
 import mapWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
@@ -146,7 +146,7 @@ function SceneMap({scenes,onChoose,onGroup,selected,onStatus,onMap}:{scenes:Scen
 
 function EntryHeader(){
  const {theme,setTheme}=useTheme();
- return <ShellHeader height="md" className="entry-header" leading={<><Popover><PopoverTrigger asChild><ShellIconButton icon="app-grid" label="功能 Launcher"/></PopoverTrigger><ShellPanelContent align="start"><LauncherPlatformBrand/>{moduleGroups.map(group=><ShellPanelSection key={group.title} title={group.title}>{group.items.map(item=><ShellPanelRow key={item.route} label={moduleNames[item.route]} icon={item.icon} href={'/#'+item.route}/>)}</ShellPanelSection>)}</ShellPanelContent></Popover><CoSpaceBrand href="/workbench/map-lab.html"/></>} trailing={<div className="platform-header-actions"><span className="entry-sample-label">设计预览</span><ShellIconGroup label="全局工具"><ShellThemeToggle currentTheme={theme} onThemeChange={setTheme} buttonLabel="切换主题"/><HeaderSupportControls/><Popover><PopoverTrigger asChild><ShellIconButton icon="settings" label="配置与管理"/></PopoverTrigger><ShellPanelContent><ShellPanelSection title="配置与管理"><ShellPanelRow label="业务配置" href="/#settings"/></ShellPanelSection></ShellPanelContent></Popover></ShellIconGroup><ShellIconGroup label="账户"><ShellUserMenu openLabel="账户菜单" user={{displayName:'设计预览',avatarFallback:'预',uniqueLine:'合成场景',meta:'本机设计验证'}} links={[{key:'account',label:'个人账户',href:'/#account',icon:'user'}]} actions={[]}/></ShellIconGroup></div>}/>;
+ return <ShellHeader height="md" className="entry-header" leading={<><Popover><PopoverTrigger asChild><ShellIconButton icon="app-grid" label="功能 Launcher"/></PopoverTrigger><ShellPanelContent align="start" className="product-launcher-panel"><ProductLauncher route="space" hrefForRoute={route=>`/${route}`} onNavigate={()=>{}}/></ShellPanelContent></Popover><CoSpaceBrand href="/workbench/map-lab.html"/></>} trailing={<div className="platform-header-actions"><span className="entry-sample-label">设计预览</span><ShellIconGroup label="全局工具"><ShellThemeToggle currentTheme={theme} onThemeChange={setTheme} buttonLabel="切换主题"/><HeaderSupportControls/><Popover><PopoverTrigger asChild><ShellIconButton icon="settings" label="配置与管理"/></PopoverTrigger><ShellPanelContent><ShellPanelSection title="配置与管理"><ShellPanelRow label="业务配置" href="/#settings"/></ShellPanelSection></ShellPanelContent></Popover></ShellIconGroup><ShellIconGroup label="账户"><ShellUserMenu openLabel="账户菜单" user={{displayName:'设计预览',avatarFallback:'预',uniqueLine:'合成场景',meta:'本机设计验证'}} links={[{key:'account',label:'个人账户',href:'/#account',icon:'user'}]} actions={[]}/></ShellIconGroup></div>}/>;
 }
 function MapLab(){
  const [query,setQuery]=useState(''),[selectedId,setSelectedId]=useState(''),[status,setStatus]=useState('正在启动地图…'),[view,setView]=useState('cards'),[group,setGroup]=useState<string[]>([]),[entered,setEntered]=useState(''),[config,setConfig]=useState(false),[phase,setPhase]=useState('all'),[sort,setSort]=useState('phase'),[catalogLayout,setCatalogLayout]=useState('cards'),[mapRevision,setMapRevision]=useState(0),[directoryOpen,setDirectoryOpen]=useState(true);
