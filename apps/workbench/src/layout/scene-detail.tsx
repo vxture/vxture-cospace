@@ -21,9 +21,9 @@ export function SceneMoreMenu({scene,onDetails}:{scene:SceneSpace;onDetails:()=>
   </DropdownMenuContent>
  </DropdownMenu>;
 }
-export function SceneDetail({scene,onClose}:{scene?:SceneSpace;onClose:()=>void}){
+export function SceneDetail({scene,onClose,mapOverlay=false}:{scene?:SceneSpace;onClose:()=>void;mapOverlay?:boolean}){
  const release=scene&&currentRelease(scene),state=scene&&scenePhases[scenePhase(scene)];
- return <Drawer open={!!scene} onClose={onClose} side="right" width="md" title="场景详情" description={scene?.name} closeLabel="关闭场景详情" className="scene-detail-panel"
+ return <Drawer open={!!scene} onClose={onClose} side="right" width="md" title="场景详情" description={scene?.name} closeLabel="关闭场景详情" className={'scene-detail-panel'+(mapOverlay?' scene-map-detail-panel':'')}
   footer={scene&&<><Button size="xl" variant="secondary" onClick={onClose}>关闭</Button><Button asChild size="xl"><a href={sceneWorkspaceHref(scene.id)}>进入场景<ArrowRight size={16}/></a></Button></>}>
   {scene&&<div className="scene-detail-content" data-tone={state?.tone}>
    <div className="scene-detail-cover"><SceneCover name={scene.name} overviewUrl={scene.overview_url}/></div>

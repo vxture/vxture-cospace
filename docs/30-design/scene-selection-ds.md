@@ -41,3 +41,14 @@ and its boundary contrast follows the global DS theme. It defaults off.
 Turning it off removes the enhancement, not the built-in borders painted by
 the selected official base-map style. The UI states this limitation.
 Reference: <https://a.amap.com/jsapi/static/doc/20230922/index.html>.
+
+## Map surface transparency
+
+Every map overlay uses one surface recipe in both themes: 72% DS card color
+(28% transparency) and 12 px backdrop blur. This includes the directory heading,
+directory, phase tabs, mode switch, tool group, legend, status/group panels,
+settings popover and the map-only detail drawer. Portal surfaces declare the
+same variables explicitly. Nested controls use 12% card color, with 24% hover
+and 36% selected primary-muted tints, avoiding stacked opaque panels. Text,
+icons, semantic status tags and primary actions retain their DS contrast.
+Catalog detail drawers retain the standard DS surface.

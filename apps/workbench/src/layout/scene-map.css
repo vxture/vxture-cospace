@@ -1,7 +1,9 @@
-.scene-map-workspace{position:relative;flex:1;min-height:0;overflow:hidden;background:var(--background);color:var(--foreground);font-family:var(--body-font-family);font-size:var(--body-small-font-size);font-weight:400;line-height:1.5;--scene-tone:var(--primary);--scene-text:var(--primary-muted-foreground);--scene-soft:var(--primary-muted);--scene-border:var(--primary-border);--map-surface:color-mix(in srgb,var(--card) 88%,transparent);--map-panel:color-mix(in srgb,var(--card) 82%,transparent)}
-.scene-map-workspace[data-ui-theme=dark]{--map-surface:color-mix(in srgb,var(--card) 94%,transparent);--map-panel:color-mix(in srgb,var(--card) 90%,transparent)}
+.scene-map-workspace{position:relative;flex:1;min-height:0;overflow:hidden;background:var(--background);color:var(--foreground);font-family:var(--body-font-family);font-size:var(--body-small-font-size);font-weight:400;line-height:1.5;--scene-tone:var(--primary);--scene-text:var(--primary-muted-foreground);--scene-soft:var(--primary-muted);--scene-border:var(--primary-border)}
+/* Shared by portaled settings/detail panels as well as in-map overlays.
+   Only surfaces blend; text, icons and primary actions keep DS contrast. */
+.scene-map-workspace,.scene-map-settings,.scene-detail-panel.scene-map-detail-panel{--map-surface:color-mix(in srgb,var(--card) 72%,transparent);--map-control:color-mix(in srgb,var(--card) 12%,transparent);--map-hover:color-mix(in srgb,var(--primary-muted) 24%,transparent);--map-selected:color-mix(in srgb,var(--primary-muted) 36%,transparent);--map-blur:blur(12px)}
 .scene-map-canvas{position:absolute;inset:0}
-.scene-map-heading,.scene-map-directory,.scene-map-detail,.scene-map-legend,.scene-map-status,.scene-map-tools{background:var(--map-surface);backdrop-filter:blur(14px);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-raised)}
+.scene-map-heading,.scene-map-directory,.scene-map-detail,.scene-map-legend,.scene-map-status,.scene-map-tools{background:var(--map-surface);backdrop-filter:var(--map-blur);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-raised)}
 .scene-map-heading{position:absolute;top:16px;left:24px;width:304px;height:36px;display:flex;align-items:center;gap:8px;padding:3px 5px 3px 12px}
 .scene-map-heading>svg{flex:none;color:var(--muted-foreground)}
 .scene-map-heading h1{font-size:var(--label-font-size);font-weight:500;line-height:24px;margin:0}
@@ -9,23 +11,23 @@
 .scene-map-heading>button{margin-left:auto;width:26px;height:26px;min-height:26px;padding:0;border:0;background:transparent;box-shadow:none}
 .scene-map-heading>button svg{width:14px;height:14px}
 .scene-map-back{position:absolute;right:24px;top:18px;height:30px;min-height:30px;font-size:var(--body-small-font-size);font-weight:500;padding-inline:12px}
-.scene-map-back{background:var(--map-surface);color:var(--foreground);border:1px solid var(--border);box-shadow:var(--shadow-raised)}
-.scene-map-back:hover{background:var(--muted)}
+.scene-map-back{background:var(--map-surface);backdrop-filter:var(--map-blur);color:var(--foreground);border:1px solid var(--border);box-shadow:var(--shadow-raised)}
+.scene-map-back:hover{background:var(--map-hover)}
 .scene-map-back svg{width:14px;height:14px}
 .scene-map-phases{position:absolute;top:18px;left:calc(50% + 90px);transform:translateX(-50%);max-width:calc(100% - 48px)}
 /* One translucent DS tab surface; the map overlay has no nested frame. */
-.scene-map-phases [role=tablist]{display:flex;height:32px;padding:2px;background:color-mix(in srgb,var(--card) 66%,transparent);backdrop-filter:blur(12px);border:0;border-radius:var(--radius-md);box-shadow:none;gap:2px;overflow-x:auto;scrollbar-width:none}
+.scene-map-phases [role=tablist]{display:flex;height:32px;padding:2px;background:var(--map-surface);backdrop-filter:var(--map-blur);border:0;border-radius:var(--radius-md);box-shadow:none;gap:2px;overflow-x:auto;scrollbar-width:none}
 .scene-map-phases [role=tablist]::-webkit-scrollbar{display:none}
 .scene-map-phases [role=tab]{height:28px;min-height:28px;font-size:var(--body-small-font-size);font-weight:400;padding-inline:10px;border:0;border-radius:var(--radius-sm);color:var(--muted-foreground);box-shadow:none;background:transparent;white-space:nowrap}
-.scene-map-phases [role=tab][data-state=active]{background:color-mix(in srgb,var(--primary-muted) 70%,transparent);color:var(--primary-muted-foreground);box-shadow:none}
-.scene-map-directory{position:absolute;top:60px;bottom:68px;left:24px;width:304px;padding:10px;display:flex;flex-direction:column;gap:10px;background:var(--map-panel)}
+.scene-map-phases [role=tab][data-state=active]{background:var(--map-selected);color:var(--primary-muted-foreground);box-shadow:none}
+.scene-map-directory{position:absolute;top:60px;bottom:68px;left:24px;width:304px;padding:10px;display:flex;flex-direction:column;gap:10px;background:var(--map-surface)}
 .scene-map-search{position:relative}
 .scene-map-search>svg{position:absolute;left:9px;top:8px;width:14px;height:14px;color:var(--muted-foreground);pointer-events:none}
-.scene-map-search input{height:30px;min-height:30px;font-size:var(--body-small-font-size);line-height:18px;padding-left:29px;background:color-mix(in srgb,var(--card) 75%,transparent);border-color:var(--control-border);box-shadow:none}
+.scene-map-search input{height:30px;min-height:30px;font-size:var(--body-small-font-size);line-height:18px;padding-left:29px;background:var(--map-control);border-color:var(--control-border);box-shadow:none}
 .scene-map-items{min-height:0;overflow:auto;display:flex;flex-direction:column;gap:6px;flex:1}
-.scene-map-item{text-align:left;border:1px solid color-mix(in srgb,var(--border) 75%,transparent);border-radius:var(--radius-md);padding:10px 8px;display:flex;align-items:flex-start;gap:8px;background:color-mix(in srgb,var(--card) 52%,transparent);color:var(--foreground);cursor:pointer;flex:none;transition:background .15s,border-color .15s}
-.scene-map-item:hover{background:color-mix(in srgb,var(--primary-muted) 65%,var(--card));border-color:var(--primary-border)}
-.scene-map-item[aria-pressed=true]{background:color-mix(in srgb,var(--primary-muted) 80%,var(--card));border-color:var(--primary-border)}
+.scene-map-item{text-align:left;border:1px solid color-mix(in srgb,var(--border) 75%,transparent);border-radius:var(--radius-md);padding:10px 8px;display:flex;align-items:flex-start;gap:8px;background:var(--map-control);color:var(--foreground);cursor:pointer;flex:none;transition:background .15s,border-color .15s}
+.scene-map-item:hover{background:var(--map-hover);border-color:var(--primary-border)}
+.scene-map-item[aria-pressed=true]{background:var(--map-selected);border-color:var(--primary-border)}
 .scene-map-item-icon{display:flex;align-items:center;justify-content:center;width:28px;height:28px;flex:none;border-radius:var(--radius-md);background:var(--scene-soft);color:var(--scene-text)}
 .scene-map-item-copy{min-width:0;display:flex;flex:1;flex-direction:column;gap:3px}
 .scene-map-item-title{display:flex;align-items:center;gap:8px;min-width:0}
@@ -45,7 +47,7 @@
 .scene-map-marker[data-tone=warning] .scene-map-pin{color:var(--warning-foreground)}
 .scene-map-marker:hover .scene-pin-fill,.scene-map-marker:focus-visible .scene-pin-fill,.scene-map-marker[aria-pressed=true] .scene-pin-fill{fill:color-mix(in srgb,var(--scene-tone) 80%,var(--foreground))}
 .scene-map-marker-count{position:absolute;top:-4px;right:-8px;background:var(--card);color:var(--foreground);border:1px solid var(--border);padding:1px 5px;border-radius:var(--radius-sm);font-size:var(--body-small-font-size)}
-.scene-map-detail{position:absolute;right:68px;top:64px;width:min(320px,calc(100% - 40px));display:flex;flex-direction:column;gap:12px;padding-bottom:12px;max-height:calc(100% - 120px);overflow-y:auto;background:color-mix(in srgb,var(--card) 96%,transparent);box-shadow:var(--shadow-overlay)}
+.scene-map-detail{position:absolute;right:68px;top:64px;width:min(320px,calc(100% - 40px));display:flex;flex-direction:column;gap:12px;padding-bottom:12px;max-height:calc(100% - 120px);overflow-y:auto;background:var(--map-surface);box-shadow:var(--shadow-overlay)}
 .scene-map-detail header{display:flex;align-items:center;justify-content:space-between;padding:6px 10px;border-bottom:1px solid var(--border);gap:12px}
 .scene-map-detail h2{font-size:var(--label-font-size);font-weight:500;line-height:22px;margin:0;min-width:0;overflow-wrap:anywhere}
 .scene-map-detail header button{width:26px;height:26px;min-height:26px;padding:0;flex:none}
@@ -55,14 +57,14 @@
 .scene-map-status button{font-size:var(--body-small-font-size)}
 .scene-map-tools{position:absolute;right:24px;bottom:52px;display:flex;flex-direction:column;gap:0;padding:2px;width:32px;border-color:color-mix(in srgb,var(--border) 75%,transparent)}
 .scene-map-tools>button{width:26px;height:28px;min-height:28px;padding:0;border:0;background:transparent;box-shadow:none;border-radius:var(--radius-sm);color:var(--muted-foreground)}
-.scene-map-tools>button:hover,.scene-map-tools>button[aria-pressed=true]{background:var(--muted);color:var(--foreground)}
+.scene-map-tools>button:hover,.scene-map-tools>button[aria-pressed=true]{background:var(--map-hover);color:var(--foreground)}
 .scene-map-tools>button:last-child{border-top:1px solid var(--border);border-top-left-radius:0;border-top-right-radius:0}
 .scene-map-tools svg{height:14px;width:14px}
 .scene-map-legend{position:absolute;bottom:26px;left:24px;padding:6px 10px;display:flex;align-items:center;gap:12px;font-size:var(--body-small-font-size);color:var(--foreground);pointer-events:none}
 .scene-map-legend>span{display:flex;align-items:center;gap:4px}
 .scene-map-legend i{display:block}
 .scene-map-legend .scene-map-pin{width:16px;height:20px}
-.scene-map-settings{width:280px;padding:0;background:var(--popover);color:var(--popover-foreground);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-overlay);font-family:var(--body-font-family);font-size:var(--body-small-font-size);font-weight:400;max-height:min(600px,calc(100dvh - 100px));overflow-y:auto;overflow-x:hidden}
+.scene-map-settings{width:280px;padding:0;background:var(--map-surface);backdrop-filter:var(--map-blur);color:var(--popover-foreground);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-overlay);font-family:var(--body-font-family);font-size:var(--body-small-font-size);font-weight:400;max-height:min(600px,calc(100dvh - 100px));overflow-y:auto;overflow-x:hidden}
 .scene-map-settings header{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-bottom:1px solid var(--border)}
 .scene-map-settings h2{display:flex;align-items:center;gap:8px;font-size:var(--label-font-size);font-weight:500;margin:0}
 .scene-map-settings header button{width:24px;height:24px;min-height:24px;padding:0}
@@ -80,3 +82,11 @@
 
 
 .scene-map-setting-row [role=switch]{overflow:clip}
+
+/* The DS drawer is portaled outside the workspace; scope its glass surface
+   explicitly so catalog drawers keep their standard DS surface. */
+.scene-detail-panel.scene-map-detail-panel{background:var(--map-surface);backdrop-filter:var(--map-blur)}
+.scene-map-detail-panel>div,.scene-map-detail-panel .scene-detail-content{background:transparent}
+.scene-map-settings [role=radiogroup]{background:var(--map-control)}
+.scene-map-detail-panel .scene-detail-links [data-slot=button],.scene-map-detail-panel>div:last-child button,.scene-map-detail>button{background:var(--map-control)}
+.scene-map-detail-panel .scene-detail-links [data-slot=button]:hover,.scene-map-detail-panel>div:last-child button:hover,.scene-map-detail>button:hover{background:var(--map-hover)}
