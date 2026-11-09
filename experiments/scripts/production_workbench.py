@@ -16,7 +16,7 @@ from packages.service.space_access import SpaceAccessPolicy
 from experiments.scripts.serve_platform_workbench import assemble
 
 SECRETS=('COSPACE_OIDC_CLIENT_SECRET','COSPACE_SESSION_KEY','COSPACE_PLATFORM_WEBHOOK_SECRET',
-         'COSPACE_PLATFORM_WEBHOOK_PREVIOUS_SECRET')
+         'COSPACE_PLATFORM_WEBHOOK_PREVIOUS_SECRET','COSPACE_AMAP_WEB_KEY','COSPACE_AMAP_SECURITY_JS_CODE')
 
 
 def load_file_secrets():

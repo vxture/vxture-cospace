@@ -45,6 +45,21 @@ def test_concurrent_compare_and_swap_only_one_winner(tmp_path):
     assert len(d.settings.read(s['id'])['history'])==2
 
 
+def test_geographic_metadata_is_revisioned_and_preserved_by_older_clients(tmp_path):
+    d=PreviewSpaces(tmp_path/'directory');p=d.create('project','P');s=d.create('space','S',p['id'])
+    location={'longitude':116.39,'latitude':39.90,'crs':'WGS84'}
+    d.settings.change(SpaceSettingsChange.model_validate(body(s['id'],address='北京',location=location)),'manager',s)
+    assert d.read('space',s['id'])['location']==location
+    d.settings.change(SpaceSettingsChange.model_validate(body(s['id'],expected_revision=1,name='Renamed')),'manager',d.read('space',s['id']))
+    assert d.read('space',s['id'])['location']==location
+    assert d.settings.read(s['id'])['history'][0]['after']['address']=='北京'
+    d.settings.change(SpaceSettingsChange.model_validate(body(s['id'],expected_revision=2,location=None)),'manager',d.read('space',s['id']))
+    assert d.read('space',s['id'])['location'] is None
+    from pydantic import ValidationError
+    for invalid in ({'longitude':181,'latitude':0,'crs':'WGS84'},{'longitude':0,'latitude':91,'crs':'GCJ02'},{'longitude':0,'latitude':0,'crs':'unknown'}):
+        with pytest.raises(ValidationError):SpaceSettingsChange.model_validate(body(s['id'],location=invalid))
+
+
 @pytest.mark.parametrize('user,can_manage',[('usr_local_test',False),('usr_engineer',False),('usr_manager',True)])
 def test_settings_http_role_and_cross_space(secured,user,can_manage):
     _,c,_,_,_,directory,spaces,*_=secured;headers,_=sign_in(secured,user)
@@ -64,8 +79,11 @@ def test_manager_real_updates_appear_in_directory_keep_releases_fixed_and_confli
     _,c,_,_,jobs,directory,spaces,_,_,new=secured;headers,_=sign_in(secured,'usr_manager')
     def files():return {str(p):hashlib.sha256(p.read_bytes()).hexdigest() for p in jobs.root.rglob('*') if p.is_file()}
     before=files();identity=spaces[0]['id']
-    r=c.post('/api/space-settings',json=body(identity),headers=headers);assert r.status_code==200,r.text
+    location={'longitude':116.39,'latitude':39.90,'crs':'WGS84'}
+    r=c.post('/api/space-settings',json=body(identity,address='北京 · 实验室',location=location),headers=headers);assert r.status_code==200,r.text
     data=r.json();assert data['revision']==1 and data['history'][0]['actor']=='usr_manager'
+    assert data['space']['location']==location and data['space']['address']=='北京 · 实验室'
+    assert next(s for s in c.get('/api/spaces').json()['spaces'] if s['id']==identity)['location']==location
     assert c.get('/api/spaces/'+identity).json()['name']=='Updated equipment room'
     assert next(s for s in c.get('/api/spaces').json()['spaces'] if s['id']==identity)['name']=='Updated equipment room'
     assert c.post('/api/space-settings',json=body(identity,name='stale'),headers=headers).status_code==409

@@ -39,7 +39,7 @@ jobs:
       - name: Scene display planner, tile integrity and bounded cache tests
         run: node --experimental-strip-types --test tests/frontend/scene-cloud-data.test.mjs
       - name: Module navigation context and explicit business handoff tests
-        run: node --experimental-strip-types --test tests/frontend/navigation-contract.test.mjs tests/frontend/continuity-contract.test.mjs tests/frontend/scene-catalog.test.mjs
+        run: node --experimental-strip-types --test tests/frontend/navigation-contract.test.mjs tests/frontend/continuity-contract.test.mjs tests/frontend/scene-catalog.test.mjs tests/frontend/amap-sdk.test.mjs
       - name: Fixed ontology version comparison tests
         run: node --experimental-strip-types --test tests/frontend/ontology-diff.test.mjs
       - uses: actions/setup-python@v6

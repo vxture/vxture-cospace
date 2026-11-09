@@ -17,6 +17,9 @@ services:
       - "${APP_BIND_HOST:?set worker02 tailnet interface}:${APP_PUBLISH_PORT:?set port registry allocation}:8088"
     tmpfs:
       - /tmp:size=64m,mode=1777
+    env_file:
+      - path: ${STACK_ROOT:?set worker02 production stack root}/etc/amap.env
+        required: false
     environment:
       COSPACE_OIDC_ISSUER: https://accounts.vxture.com
       COSPACE_OIDC_BACKCHANNEL: https://accounts.vxture.com
