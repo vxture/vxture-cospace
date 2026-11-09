@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {displayPoints} from '../../apps/workbench/src/layout/amap-sdk.ts';
+import {displayPoints,createAdministrativeLayer} from '../../apps/workbench/src/layout/amap-sdk.ts';
 test('official JS conversion protocol batches at 40, preserves original and skips GCJ02',async()=>{
  const original=globalThis.fetch,calls=[];
  const input=Array.from({length:41},()=>({longitude:116,latitude:39,crs:'WGS84'}));input.push({longitude:120,latitude:30,crs:'GCJ02'});
@@ -16,7 +16,8 @@ test('invalid coordinates and upstream rejection never produce misplaced pins',a
 import {defaultMapPreferences,normalizeMapPreferences,mapIsDark,mapFeatures,readMapPreferences} from '../../apps/workbench/src/layout/map-preferences.ts';
 test('map preferences validate saved data and resolve follow mode against the current global theme',()=>{
  assert.deepEqual(normalizeMapPreferences(null),defaultMapPreferences);
- const saved=normalizeMapPreferences({appearance:'follow',roads:false,legend:false,scrollZoom:'false',directoryExpanded:false,unknown:'ignored'});
+ const saved=normalizeMapPreferences({appearance:'follow',roads:false,legend:false,administrative:true,scrollZoom:'false',directoryExpanded:false,unknown:'ignored'});
+ assert.equal(saved.administrative,true);assert.equal(normalizeMapPreferences({administrative:'true'}).administrative,false);
  assert.equal(saved.scrollZoom,true);assert.equal(saved.directoryExpanded,false);assert.equal(saved.legend,false);
  assert.equal(mapIsDark(saved,'light'),false);assert.equal(mapIsDark(saved,'dark'),true);
  assert.equal(mapIsDark({...saved,appearance:'light'},'dark'),false);
@@ -27,10 +28,19 @@ test('map preferences validate saved data and resolve follow mode against the cu
 test('persisted settings survive a fresh read and corrupt or blocked storage falls back safely',()=>{
  const previous=globalThis.localStorage;
  try{
-  const saved={...defaultMapPreferences,appearance:'dark',roads:false,autoFit:false,legend:false};
+  const saved={...defaultMapPreferences,appearance:'dark',roads:false,administrative:true,autoFit:false,legend:false};
   globalThis.localStorage={getItem:()=>JSON.stringify(saved)};
   assert.deepEqual(readMapPreferences(),saved);
   globalThis.localStorage={getItem:()=>'{broken'};assert.deepEqual(readMapPreferences(),defaultMapPreferences);
   globalThis.localStorage={getItem:()=>{throw Error('blocked');}};assert.deepEqual(readMapPreferences(),defaultMapPreferences);
  }finally{if(previous===undefined)delete globalThis.localStorage;else globalThis.localStorage=previous;}
+});
+
+test('administrative enhancement loads the official layer only when needed and rejects unavailable plugins',async()=>{
+ let options,plugins=0;const layer={setMap(){},setStyles(){}};
+ const sdk={plugin(name,done){assert.equal(name,'AMap.DistrictLayer');plugins++;sdk.DistrictLayer={Country:class{constructor(value){options=value;return layer;}}};done();}};
+ assert.equal(await createAdministrativeLayer(sdk),layer);
+ assert.equal(plugins,1);assert.equal(options.depth,1);assert.equal(options.styles.fill,'rgba(0,0,0,0)');
+ await createAdministrativeLayer(sdk);assert.equal(plugins,1);
+ await assert.rejects(createAdministrativeLayer({plugin:(_name,done)=>done()}),/行政区划图层暂不可用/);
 });
