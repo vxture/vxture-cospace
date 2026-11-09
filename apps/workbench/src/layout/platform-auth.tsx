@@ -1,3 +1,4 @@
+import {appNavigate,appRoute} from './app-router';
 import {SignInContent} from './signin-content';
 
 import {sessionScopeKey,sessionConfirmed} from './session-continuity';
@@ -50,7 +51,7 @@ export function PlatformIdentityPage({business=false}:{business?:boolean}){
    if(!r.ok)throw new Error();const value:Session=await r.json();setSession(value);csrf.current=value.csrf||'';
   }).catch(()=>setError('暂时无法确认平台状态，会话已保留。'));
  };window.addEventListener('pointerdown',activity);window.addEventListener('keydown',activity);return()=>{window.removeEventListener('pointerdown',activity);window.removeEventListener('keydown',activity);};},[]);
- const login=()=>{location.assign('/auth/login?returnTo='+encodeURIComponent(location.pathname+location.search+(location.hash||'#space')));};
+ const login=()=>{location.assign('/auth/login?returnTo='+encodeURIComponent((location.pathname==='/'?'/space':location.pathname+location.search)));};
  return <HomeLayout>
     {session?.authenticated?<><h2 className="text-heading-1">{session.user?.display_name}</h2><p className="text-body-small text-muted-foreground">平台会话已建立。空间权限与业务接口正在接入。</p><dl className="grid grid-cols-[auto_1fr] gap-x-lg gap-y-md text-body-small"><dt>组织</dt><dd className="break-all">{session.user?.org_id}</dd><dt>工作区</dt><dd className="break-all">{session.user?.workspace_id}</dd><dt>会话状态</dt><dd>{session.authority_state==='unavailable'?'平台暂不可达，会话已保留':session.authority_state==='confirmed'?'平台已确认':'已保存平台会话'}</dd></dl><IdentitySubscription/><p className="text-label-small text-muted-foreground">此入口尚未开放空间数据，原工程预览服务独立运行。</p><div className="flex flex-wrap gap-md"><Button variant="outline" disabled={busy} onClick={async()=>{setBusy(true);try{const r=await fetch('/api/auth/session',{method:'POST',headers:{'X-CoSpace-CSRF':csrf.current}});if(!r.ok)throw new Error();const value:Session=await r.json();setSession(value);csrf.current=value.csrf||'';setError('');}catch{setError('平台状态暂不可用，会话已保留。');}finally{setBusy(false);}}}>检查平台会话</Button><Button variant="outline" onClick={login}>重新连接</Button></div><form action="/auth/logout" method="post"><input type="hidden" name="csrf" value={session.csrf||''}/><Button type="submit" variant="ghost"><Icon name="sign-out"/>退出平台登录</Button></form></>:<><SignInContent onLogin={login}/></>}
     {error&&<p className="text-body-small text-destructive" role="alert">{error}</p>}
@@ -72,8 +73,8 @@ function BusinessSession({children}:{children:React.ReactNode}){
  useLayoutEffect(()=>{
   const key=sessionScopeKey(session);if(!key)return;
   if(lastScope.current&&lastScope.current!==key){
-   const route=location.hash.slice(1).split('?')[0]||'space';history.replaceState(null,'',`${location.pathname}${location.search}#${route}`);
-   window.dispatchEvent(new Event('cospace:scope-reset'));window.dispatchEvent(new HashChangeEvent('hashchange'));
+   window.dispatchEvent(new Event('cospace:scope-reset'));
+   appNavigate('/'+appRoute(),true);
   }
   lastScope.current=key;
  },[session]);

@@ -37,7 +37,7 @@ def test_protect_original_samples_and_validation_roots(tmp_path,changes):
 
 def test_release_changes_with_runtime_code_assets_or_config_not_business(tmp_path,monkeypatch):
     repo=tmp_path/'checkout';repo.mkdir();monkeypatch.setattr(trial,'REPO',repo)
-    for name in ('packages/example.py','experiments/scripts/example.py','contracts/schemas/example.json','apps/workbench/dist/layout.html',
+    for name in ('packages/example.py','experiments/scripts/example.py','contracts/schemas/example.json','apps/workbench/dist/index.html',
                  'pyproject.toml','uv.lock','apps/workbench/pnpm-lock.yaml','apps/workbench/package.json'):
         p=repo/name;p.parent.mkdir(parents=True,exist_ok=True);p.write_text('pinned bytes')
     cfg=config(tmp_path);baseline=trial.release(cfg)

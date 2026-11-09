@@ -12,5 +12,5 @@ export const spaces = [
  {id:'inspection',name:'巡检设备区',level:'二层',version:'V1.1.1',status:'disabled',updatedAt:'2026-10-25T14:10:00+08:00',objects:['检测柜 C-01','检测柜 C-02','检测柜 C-03'],types:'检测设备',variant:2},
 ] as const;
 export function screenHref(id='equipment') {
- return `?screen=space&preview=1&space=${encodeURIComponent(id)}#space`;
+ return `/space?screen=space&preview=1&space=${encodeURIComponent(id)}`;
 }

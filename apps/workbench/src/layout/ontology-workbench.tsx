@@ -1,3 +1,5 @@
+import {subscribeAppLocation} from './app-router';
+import {appNavigate} from './app-router';
 import {useRecordNavigation} from './record-navigation';
 import {businessEndpoint} from './business-endpoint';
 import {OntologyAuthoring,type RuleDocument} from './ontology-authoring';
@@ -14,7 +16,7 @@ type Loaded={record:Version;definition:Definition;integrity:string};
 type Result={ontology_ref:{ontology_id:string;version:string;sha256:string};status:'passed'|'failed';object_count:number;checked_at:string;issues:{code:string;path:string;object_id:string|null;message:string}[]};
 const key=(r:Pick<Version,'ontology_id'|'version'|'sha256'>)=>`${r.ontology_id}/${r.version}/${r.sha256}`;
 function readReference(){
- const p=new URLSearchParams(location.hash.split('?')[1]||'');
+ const p=new URLSearchParams(location.search);
  return {ontology_id:p.get('ontology_id')||'',version:p.get('ontology_version')||'',sha256:p.get('ontology_sha256')||''};
 }
 function message(code:string){
@@ -22,13 +24,13 @@ function message(code:string){
 }
 export function OntologyWorkbench(){
  const target=useRecordNavigation();
- const rules=target.tab==='rules'||!target.tab&&new URLSearchParams(location.hash.split('?')[1]||'').has('ontology_id');
+ const rules=target.tab==='rules'||!target.tab&&new URLSearchParams(location.search).has('ontology_id');
  const [versions,setVersions]=useState<Version[]>([]),[reference,setReference]=useState(readReference),[loaded,setLoaded]=useState<Loaded|null>(null);
  const [listing,setListing]=useState(false),[reading,setReading]=useState(false),[error,setError]=useState(''),[revision,setRevision]=useState(0);
  const [text,setText]=useState(''),[result,setResult]=useState<Result|null>(null),[checkError,setCheckError]=useState(''),[busy,setBusy]=useState(false);
  const validation=useRef<AbortController|null>(null);
  const referenceKey=key(reference);
- useEffect(()=>{const update=()=>setReference(readReference());window.addEventListener('hashchange',update);return()=>window.removeEventListener('hashchange',update);},[]);
+ useEffect(()=>{const update=()=>setReference(readReference());return subscribeAppLocation(update);},[]);
  useEffect(()=>{
   const controller=new AbortController();setListing(true);setVersions([]);setError('');
   fetch(`${endpoint}/api/ontologies`,{signal:controller.signal}).then(async r=>{const body=await r.json();if(!r.ok)throw Error(message(body.detail));return body.ontologies as Version[];}).then(items=>{if(!controller.signal.aborted)setVersions(items);}).catch(e=>{if(!controller.signal.aborted){setError(e.message);setLoaded(null);setResult(null);}}).finally(()=>{if(!controller.signal.aborted)setListing(false);});
@@ -46,10 +48,10 @@ export function OntologyWorkbench(){
   return()=>{controller.abort();validation.current?.abort();};
  },[referenceKey,revision,versions]);
  function choose(value:string){
-  const record=versions.find(v=>key(v)===value);const params=new URLSearchParams(location.hash.split('?')[1]||'');
+  const record=versions.find(v=>key(v)===value);const params=new URLSearchParams(location.search);
   for(const name of ['ontology_id','ontology_version','ontology_sha256'])params.delete(name);
   if(record){params.set('ontology_id',record.ontology_id);params.set('ontology_version',record.version);params.set('ontology_sha256',record.sha256);}
-  setError('');location.hash='ontology'+(params.size?'?'+params:'');
+  setError('');appNavigate('ontology'+(params.size?'?'+params:''));
  }
  function draft(value:string){validation.current?.abort();setBusy(false);setText(value);setResult(null);setCheckError('');}
  async function inspect(){
@@ -67,7 +69,7 @@ export function OntologyWorkbench(){
  }
  const current=loaded?.record;
  return <div className="flex flex-col gap-xl">
-  <div hidden={rules}><OntologyAuthoring endpoint={endpoint} source={loaded?.definition as unknown as RuleDocument||null} onSealed={record=>{setRevision(v=>v+1);const params=new URLSearchParams(location.hash.split('?')[1]||'');params.set('ontology_id',record.ontology_id);params.set('ontology_version',record.version);params.set('ontology_sha256',record.sha256);location.hash='ontology?'+params;}}/>
+  <div hidden={rules}><OntologyAuthoring endpoint={endpoint} source={loaded?.definition as unknown as RuleDocument||null} onSealed={record=>{setRevision(v=>v+1);const params=new URLSearchParams(location.search);params.set('ontology_id',record.ontology_id);params.set('ontology_version',record.version);params.set('ontology_sha256',record.sha256);appNavigate('ontology?'+params);}}/>
   </div><div hidden={!rules} className="flex flex-col gap-xl"><div className="flex flex-wrap items-center justify-between gap-md"><p className="text-body-small text-muted-foreground">查看固定版本的类型与关系规则，校验对象草稿。预置模板及当前 Workspace 的规则可供其多个场景引用。</p><Button variant="outline" disabled={listing||reading||busy} onClick={()=>setRevision(n=>n+1)}>刷新规则库</Button></div>
   <Card className="module-surface" aria-label="本体版本"><CardHeader><CardTitle>本体版本</CardTitle></CardHeader><CardContent className="flex flex-col gap-md">
    <NativeSelect aria-label="选择本体版本" value={versions.some(v=>key(v)===referenceKey)?referenceKey:''} onChange={e=>choose(e.target.value)} disabled={listing||busy}><option value="">{listing?'读取版本中…':'请选择固定本体版本'}</option>{versions.map(v=><option key={key(v)} value={key(v)}>{v.title} · V{v.version}</option>)}</NativeSelect>

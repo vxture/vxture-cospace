@@ -48,7 +48,7 @@ def main():
     p=argparse.ArgumentParser(description=__doc__);p.add_argument('--runtime',type=Path,required=True)
     p.add_argument('--port',type=int,default=8769);a=p.parse_args()
     accounts,rp,policies,sample,initial=setup(a.runtime,a.port)
-    print('LOCAL MOCK ONLY; copied sample; '+rp.config.origin+'/workbench/layout.html',flush=True)
+    print('LOCAL MOCK ONLY; copied sample; '+rp.config.origin+'/',flush=True)
     try:uvicorn.run(assemble(rp,policies,sample,initial),host='127.0.0.1',port=a.port,access_log=False)
     finally:accounts.stop()
 

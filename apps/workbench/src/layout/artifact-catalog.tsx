@@ -1,3 +1,4 @@
+import {appNavigate} from './app-router';
 import React,{useEffect,useState} from 'react';
 import {Button,Card,CardHeader,CardTitle,CardContent,Input,Select,SelectTrigger,SelectValue,SelectContent,SelectItem,StatusBadge} from '@vxture/design-system';
 import {previewEndpoint,realScreenHref} from './real-space-data';
@@ -36,7 +37,7 @@ export function ArtifactCatalog({revision,onOpenInput}:{revision:number;onOpenIn
  useEffect(()=>{if(context.artifact&&report)document.getElementById('artifact-details')?.scrollIntoView({block:'nearest'});},[context.artifact,report]);
  const selected=(report?.space_id||'')===context.space?report?.items.find(item=>item.key===context.artifact):undefined;
  const visible=report?.items.filter(item=>(kind==='all'||item.kind===kind)&&`${item.label} ${item.record_id} ${classifications[item.classification]||''}`.toLowerCase().includes(search.trim().toLowerCase()))||[];
- function select(item:Item){setSearch('');setKind('all');location.hash=recordLink('data',{artifact:item.key});}
+ function select(item:Item){setSearch('');setKind('all');appNavigate(recordLink('data',{artifact:item.key}));}
  function renderRelation(relation:Relation,direction:'source'|'dependent'){
   const key=direction==='source'?relation.to:relation.from;
   const item=report?.items.find(item=>item.key===key);

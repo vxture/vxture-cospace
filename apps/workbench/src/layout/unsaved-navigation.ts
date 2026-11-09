@@ -1,10 +1,7 @@
 import {useLayoutEffect,useRef} from 'react';
+import {appNavigate} from './app-router';
 import {DraftRegistry,type Draft} from './draft-registry';
 export const drafts=new DraftRegistry();
-let accepted=location.href,index=0;
-const marker='cospaceNavigationIndex';
-history.replaceState({...history.state,[marker]:index},'',accepted);
-let permitted='',restoring=false;
 type Prompt={labels:string[];canSave:boolean;resolve:(allow:boolean)=>void};
 let prompt:Prompt|null=null;
 const listeners=new Set<()=>void>();
@@ -26,31 +23,16 @@ export async function resolveNavigation(choice:'save'|'discard'|'cancel'){
  return allow;
 }
 export async function runGuarded(action:()=>void){if(await requestLeave())action();}
-export async function navigateSafely(href:string){
- if(href===location.hash||new URL(href,location.href).href===location.href)return;
- if(await requestLeave()){permitted=new URL(href,location.href).href;location.assign(href);}
-}
-// Back/forward keeps the original history entry: cancel returns to the accepted
-// index rather than replacing the destination and destroying it.
-window.addEventListener('hashchange',event=>{
- if(restoring&&location.href===accepted){restoring=false;return;}
- if(location.href===accepted)return;
- const destination=location.href;
- let next=history.state?.[marker];
- if(!Number.isInteger(next)){next=index+1;history.replaceState({...history.state,[marker]:next},'',destination);}
- if(drafts.entries.size&&permitted!==destination){
-  event.stopImmediatePropagation();const delta=next-index;restoring=true;history.go(-delta);
-  void requestLeave().then(allow=>{if(allow){permitted=destination;history.go(delta);}});
-  return;
- }
- permitted='';accepted=destination;index=next;
-});
+export async function navigateSafely(href:string){appNavigate(href);}
+// Native anchors share the same router as imperative actions. Modified clicks and
+// new tabs retain standard browser behavior; React Router blocks dirty transitions.
+const routes=new Set(['/', '/space','/data','/build','/delivery','/ontology','/association','/settings','/members','/identity','/account']);
 document.addEventListener('click',event=>{
  const anchor=(event.target instanceof Element?event.target:null)?.closest('a');
  if(!anchor||event.defaultPrevented||event.button!==0||event.ctrlKey||event.metaKey||event.shiftKey||event.altKey||anchor.target==='_blank'||anchor.hasAttribute('download'))return;
  const url=new URL(anchor.href,location.href);
- if(url.origin===location.origin&&url.pathname===location.pathname&&url.search===location.search&&url.hash!==location.hash){
-  event.preventDefault();void navigateSafely(url.href);
+ if(url.origin===location.origin&&routes.has(url.pathname)){
+  event.preventDefault();appNavigate(url.pathname+url.search+url.hash);
  }
 },true);
 window.addEventListener('beforeunload',event=>{if(drafts.entries.size){event.preventDefault();event.returnValue='';}});
@@ -61,7 +43,6 @@ export function useUnsavedNavigation(dirty:boolean,label:string,options:Omit<Dra
 }
 
 window.addEventListener('cospace:scope-reset',()=>{
- const previous=prompt;prompt=null;drafts.clear();permitted='';restoring=false;
- accepted=location.href;index=0;history.replaceState({...history.state,[marker]:0},'',accepted);
+ const previous=prompt;prompt=null;drafts.clear();
  changed();previous?.resolve(false);
 });

@@ -22,7 +22,7 @@ export function BuildScan(){
  },[space,job,input,retry]);
  if(mode==='process')return <BuildProcess key={job} space={space} job={job} input={input}/>;
  if(mode==='static')return <StaticBuildScan/>;
- return <main className="build-scan dark" aria-label="全屏构建画布"><div className="build-scan-message" role={mode==='error'?'alert':'status'}><p>{mode==='error'?error:'正在读取构建任务…'}</p>{mode==='error'&&<Button size="sm" variant="outline" onClick={()=>setRetry(n=>n+1)}>重新读取</Button>}<Button asChild size="sm" variant="ghost"><a href={`./layout.html#build?${new URLSearchParams({space,job,input,tab:'flow'})}`}>返回构建流程</a></Button></div></main>;
+ return <main className="build-scan dark" aria-label="全屏构建画布"><div className="build-scan-message" role={mode==='error'?'alert':'status'}><p>{mode==='error'?error:'正在读取构建任务…'}</p>{mode==='error'&&<Button size="sm" variant="outline" onClick={()=>setRetry(n=>n+1)}>重新读取</Button>}<Button asChild size="sm" variant="ghost"><a href={`/build?${new URLSearchParams({space,job,input,tab:'flow'})}`}>返回构建流程</a></Button></div></main>;
 }
 function StaticBuildScan(){
  const params=new URLSearchParams(location.search),space=params.get('space')||'',job=params.get('job')||'',input=params.get('input')||'';
@@ -50,7 +50,7 @@ function StaticBuildScan(){
   void poll();void read('/api/spaces/'+encodeURIComponent(space)).then(s=>{if(!controller.signal.aborted&&s.id===space)setName(s.name||s.label||'场景空间');}).catch(()=>{});
   return()=>{controller.abort();clearTimeout(timer);};
  },[space,job,input,retry]);
- const back=`./layout.html#build?${new URLSearchParams({space,job,input,tab:'flow'})}`;
+ const back=`/build?${new URLSearchParams({space,job,input,tab:'flow'})}`;
  return <main className="build-scan build-scan-static dark" aria-label="全屏构建画布">
   {ordered&&<Suspense fallback={<p className="build-scan-message" role="status">正在打开空间画布…</p>}><Canvas data={ordered} scan={playback}/></Suspense>}
   <div className="build-scan-top"><div className="build-scan-title"><Icon name="cube" size="sm"/><span>{name}</span><span className="build-scan-divider"/><span className="build-scan-mode">扫描效果演示</span></div><Button asChild size="sm" variant="ghost"><a href={back} aria-label="返回构建流程"><Icon name="arrow-left" size="sm"/>构建流程</a></Button></div>

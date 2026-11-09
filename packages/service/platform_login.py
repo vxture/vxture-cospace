@@ -133,6 +133,6 @@ class PlatformLogin:
             if not session: raise IdentityRejected('session_required')
             url = self.config.issuer+'/oidc/end_session?'+urlencode({
                 'id_token_hint': session['id_token'], 'client_id': self.config.client_id,
-                'post_logout_redirect_uri': self.config.origin+'/workbench/layout.html', 'state': opaque()})
+                'post_logout_redirect_uri': self.config.origin+'/', 'state': opaque()})
             self.store.delete('session', rpsid)
             return url

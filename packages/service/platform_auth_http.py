@@ -7,6 +7,7 @@ from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.concurrency import run_in_threadpool
 from starlette.middleware.trustedhost import TrustedHostMiddleware
+from packages.infrastructure.platform_rp import APP_ROUTES
 from packages.infrastructure.platform_identity import IdentityRejected, IdentityUnavailable
 from packages.infrastructure.platform_subscription import SubscriptionUnavailable, WebhookRejected, WebhookConflict
 
@@ -95,7 +96,7 @@ def create_auth_app(rp, workbench=Path('apps/workbench/dist'), business=None, ac
             except WebhookConflict:raise HTTPException(409,'webhook_id_payload_conflict') from None
 
     @app.get('/auth/login')
-    def login(request: Request, returnTo: str = '/#space'):
+    def login(request: Request, returnTo: str = '/space'):
         try: url, browser = rp.begin(returnTo, request.cookies.get(browser_cookie))
         except ValueError as exc: raise HTTPException(400, 'return_path_rejected') from exc
         response = RedirectResponse(url, status_code=302)
@@ -152,19 +153,18 @@ def create_auth_app(rp, workbench=Path('apps/workbench/dist'), business=None, ac
         response = RedirectResponse(url, status_code=303); clear_cookie(response, cookie)
         return response
 
-    @app.api_route('/', methods=['GET', 'HEAD'])
-    def index():
-        entry = Path(workbench) / 'layout.html'
+    def app_entry():
+        entry = Path(workbench) / 'index.html'
         if not entry.is_file(): raise HTTPException(404, 'workbench_not_built')
         return FileResponse(entry, media_type='text/html')
 
+    for route in APP_ROUTES:
+        app.add_api_route(route, app_entry, methods=['GET', 'HEAD'], include_in_schema=False)
+
+    @app.api_route('/workbench/{retired:path}', methods=['GET', 'HEAD'])
     @app.api_route('/workbench', methods=['GET', 'HEAD'])
-    @app.api_route('/workbench/', methods=['GET', 'HEAD'])
-    @app.api_route('/workbench/layout.html', methods=['GET', 'HEAD'])
-    @app.api_route('/workbench/index.html', methods=['GET', 'HEAD'])
-    def legacy_entry(request: Request):
-        # A redirect without a fragment preserves the browser's existing hash.
-        return RedirectResponse('/' + ('?' + request.url.query if request.url.query else ''), status_code=308)
+    @app.api_route('/index.html', methods=['GET', 'HEAD'])
+    def retired_entry(): raise HTTPException(404, 'page_not_found')
 
     if business is None:
         @app.api_route('/api/{remaining:path}', methods=['GET', 'POST', 'HEAD', 'PUT', 'DELETE', 'PATCH'])
@@ -175,7 +175,7 @@ def create_auth_app(rp, workbench=Path('apps/workbench/dist'), business=None, ac
 
     # Only generated assets are public; source/experimental HTML is never mounted.
     assets = Path(workbench) / 'assets'
-    if assets.is_dir(): app.mount('/workbench/assets', StaticFiles(directory=assets))
+    if assets.is_dir(): app.mount('/assets', StaticFiles(directory=assets))
     if business is not None:
         app.mount('/',business)
         app.middleware('http')(access.dispatch)

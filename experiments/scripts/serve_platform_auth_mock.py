@@ -24,7 +24,7 @@ def main():
         encryption_key=SecretStr(Fernet.generate_key().decode()))
     store=LocalRpStore(root,cfg.encryption_key.get_secret_value())
     app=create_auth_app(PlatformLogin(cfg,store))
-    print('LOCAL MOCK ONLY; no real accounts authentication; '+cfg.origin+'/workbench/layout.html',flush=True)
+    print('LOCAL MOCK ONLY; no real accounts authentication; '+cfg.origin+'/',flush=True)
     try: uvicorn.run(app,host='127.0.0.1',port=a.port,access_log=False)
     finally: accounts.stop()
 

@@ -70,7 +70,7 @@ def main():
                     marker.unlink();command=[command[0],'-c','raise SystemExit(23)']
                 return real_popen(command,*args,**kwargs)
             subprocess.Popen=launch
-            print('LOCAL MOCK empty journey: '+cfg.origin+'/workbench/layout.html',flush=True)
+            print('LOCAL MOCK empty journey: '+cfg.origin+'/',flush=True)
             uvicorn.run(app,host='127.0.0.1',port=a.port,access_log=False)
     finally:accounts.stop()
 

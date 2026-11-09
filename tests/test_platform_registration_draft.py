@@ -29,7 +29,7 @@ def test_registered_product_remains_draft_and_client_fields_match_actual_rp():
         assert client['clientId']=='cospace' and client['releaseChannel']=='stable'
         assert item['origin']=='https://cospace.ruyin.work'
         assert client['redirectUris']==[cfg.callback,'http://127.0.0.1:8791/auth/callback']
-        assert client['postLogoutRedirectUris']==[cfg.origin+'/workbench/layout.html','http://127.0.0.1:8791/workbench/layout.html']
+        assert client['postLogoutRedirectUris']==[cfg.origin+'/','http://127.0.0.1:8791/']
         assert cfg.cookie_name=='__Host-cospace_rp'
         assert client['allowedScopes']==list(LOGIN_SCOPES)
         assert client['pkceRequired'] and client['tokenEndpointAuthMethod']=='client_secret_basic'

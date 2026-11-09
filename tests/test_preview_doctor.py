@@ -17,7 +17,7 @@ def test_missing_files_fail_without_creating_state(tmp_path):
 def test_existing_inputs_checked_without_catalog_creation(tmp_path):
     config,_=configuration(tmp_path)
     model=tmp_path/'model'; model.mkdir(); make_preview(model)
-    front=tmp_path/'apps/workbench/dist'; front.mkdir(parents=True); (front/'layout.html').write_text('test')
+    front=tmp_path/'apps/workbench/dist'; front.mkdir(parents=True); (front/'index.html').write_text('test')
     before={str(p):p.read_bytes() for p in tmp_path.rglob('*') if p.is_file()}
     report=diagnose(tmp_path,Path('model'),config,True)
     states={c['name']:c for c in report['checks']}

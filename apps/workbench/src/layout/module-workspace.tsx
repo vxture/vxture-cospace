@@ -1,5 +1,6 @@
+import {appNavigate,appLocation} from './app-router';
 import {runGuarded} from './unsaved-navigation';
-import {sceneLinkFromHash} from './navigation-contract';
+import {sceneLinkFromUrl} from './navigation-contract';
 import {useSceneDirectory} from './use-scene-directory';
 import {CapabilityNavigation,SceneScope} from './capability-navigation';
 import React,{createContext,useContext,useEffect,useState} from 'react';
@@ -36,7 +37,7 @@ export function ModuleWorkspace({route,children}:{route:ModuleRoute;children:Rea
  return <main className="data-route-shell min-h-0 flex-1 overflow-hidden"><div className={`data-workspace module-workspace ${sidebar?'':'data-sidebar-hidden'}`}>
   <CapabilityNavigation route={route}/>
   <section className="data-main" aria-label={`${moduleNames[route]}工作区`}>
-   <SceneScope spaces={spaces} current={target.space} onChoose={id=>{location.hash=sceneLinkFromHash(route,id,location.hash);}} loading={loading} error={error} onRefresh={()=>setRevision(v=>v+1)}/>
+   <SceneScope spaces={spaces} current={target.space} onChoose={id=>{appNavigate(sceneLinkFromUrl(route,id,appLocation()));}} loading={loading} error={error} onRefresh={()=>setRevision(v=>v+1)}/>
    <header className="data-heading"><div className="data-heading-copy"><div className="data-breadcrumb"><Button variant="outline" size="sm" className="data-icon-button data-sidebar-toggle" aria-label={sidebar?'收起能力导航':'展开能力导航'} aria-expanded={sidebar} aria-controls="data-scene-sidebar" onClick={()=>setSidebar(v=>!v)}><SidebarSimple size={16}/></Button><span>{group?.title}</span><CaretRight size={12}/><span>{moduleNames[route]}</span><CaretRight size={12}/><span className="data-breadcrumb-scene">{common?'共用规则库':scene?.name||'选择场景空间'}</span></div><h1>{moduleNames[route]}</h1><p>{descriptions[route]}</p></div><div className="data-heading-actions"><Button variant="outline" size="sm" className="data-icon-button" aria-label="刷新场景空间目录" onClick={()=>{void runGuarded(()=>setRevision(v=>v+1));}} disabled={loading}><ArrowClockwise size={16}/></Button><Button asChild size="sm" variant="outline"><a href={recordLink('settings',{})}>场景配置</a></Button></div></header>
 
    <div className="module-body">

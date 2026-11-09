@@ -11,7 +11,7 @@ export type PublishedModel={id:string;label:string;space_id:string;frame_id:stri
  human_view:{appearance?:string;source_model_sha256:string};members:Record<string,{sha256:string;bytes:number}>;
  semantic_annotation?:{object_count:number};bounds_m:[XYZ,XYZ];limitations:string[]};
 export type SceneData={model:PublishedModel;positions:Float32Array;colors:Float32Array;agent_points:XYZ[];objects:ModelObject[];relations:ObjectRelation[]};
-export function realScreenHref(space:string,publication:string){return `./layout.html?screen=space&preview=1&space=${encodeURIComponent(space)}&publication=${encodeURIComponent(publication)}#space`;}
+export function realScreenHref(space:string,publication:string){return `/space?screen=space&preview=1&space=${encodeURIComponent(space)}&publication=${encodeURIComponent(publication)}`;}
 export async function getJSON<T>(path:string,signal?:AbortSignal):Promise<T>{const response=await fetch(`${previewEndpoint}${path}`,{signal});if(!response.ok)throw Error(`读取失败（${response.status}），请核对空间与发布记录。`);return response.json();}
 function xyz(value:unknown):value is XYZ{return Array.isArray(value)&&value.length===3&&value.every(v=>typeof v==='number'&&Number.isFinite(v));}
 export async function loadPublishedScene(space:string,publication:string,signal:AbortSignal):Promise<SceneData>{

@@ -1,3 +1,9 @@
+## Production application entry (2026-11-09)
+
+The product is one React application, built from `index.html` and routed by React Router's browser router. Public entry is `/`; modules use `/space`, `/data`, `/build`, `/delivery`, `/ontology`, `/association` and administrative routes. Record context is in query parameters. The server serves the application shell only for this explicit route set, so direct refresh and new tabs work without a broad catch-all. `/workbench/*.html` and `/index.html` return 404 with no redirect. Generated resources are served under `/assets/`. Authentication returns directly to an application route; platform logout returns to `/`.
+
+The notes below describe historical previews, not the current public routing contract.
+
 # 工程工作台
 
 2026-11-02 E1：空间关联新增稳定ID下的对象修订；构建中心“核对并选择”展示几何/表面、本体、坐标和对象差异。填写说明并确认限制后选择，序号变化须重新核对。态势服务新发布保存核对说明，旧发布不补造。见[操作手册](../../docs/guides/候选更新核对运行.md)。

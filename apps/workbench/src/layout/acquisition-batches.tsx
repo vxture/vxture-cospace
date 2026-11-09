@@ -1,3 +1,4 @@
+import {appNavigate} from './app-router';
 import {useUnsavedNavigation,runGuarded} from './unsaved-navigation';
 import {inputDisplayName} from './input-format';
 import React,{useEffect,useRef,useState} from 'react';
@@ -26,7 +27,7 @@ export function AcquisitionBatches({onChanged}:{onChanged?:()=>void}={}){
  const current=detail?.batch.id===target.batch&&detail.batch.space_id===target.space?detail.batch:null;
  useEffect(()=>{if(current)document.querySelector('[aria-label="批次详情"]')?.scrollIntoView({block:'start'});},[current?.id]);
  async function post(path:string,body:unknown){const response=await fetch(previewEndpoint+path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const data=await response.json();if(!response.ok)throw Error(response.status===409?'记录已变化、状态不允许或资料预检失败，请刷新后检查。原因：'+data.detail:'请求未完成，请检查输入。');return data;}
- async function create(event:React.FormEvent){event.preventDefault();if(busy)return;setBusy(true);setError('');try{const result=await post('/api/batches',{space_id:target.space,name,origin,note});if(!active.current)return;acknowledgeCreate();setDialog(false);setRevision(v=>v+1);onChanged?.();location.hash=recordLink('data',{space:target.space,tab:'batches',batch:result.id,...(target.input?{input:target.input}:{})});}catch(e){setError((e as Error).message);}finally{setBusy(false);}}
+ async function create(event:React.FormEvent){event.preventDefault();if(busy)return;setBusy(true);setError('');try{const result=await post('/api/batches',{space_id:target.space,name,origin,note});if(!active.current)return;acknowledgeCreate();setDialog(false);setRevision(v=>v+1);onChanged?.();appNavigate(recordLink('data',{space:target.space,tab:'batches',batch:result.id,...(target.input?{input:target.input}:{})}));}catch(e){setError((e as Error).message);}finally{setBusy(false);}}
  async function change(operation:string){if(!current||busy)return false;setBusy(true);setError('');try{await post(`/api/batches/${current.id}/transitions`,{space_id:target.space,expected_revision:current.revision,operation,reason,...(operation==='replace_members'?{input_ids:members}:{})});if(!active.current)return false;setReason('');setRevision(v=>v+1);onChanged?.();return true;}catch(e){if(active.current)setError((e as Error).message);return false;}finally{setBusy(false);}}
  const dirty=Boolean(current)&&JSON.stringify([...members].sort())!==JSON.stringify(current!.members.map(m=>m.input_id).sort());
  useUnsavedNavigation(dirty,'采集批次成员',{discard:()=>{setMembers(current?.members.map(m=>m.input_id)||[]);setReason('');},save:()=>change('replace_members'),canSave:!busy&&current?.state==='draft'&&!!reason.trim()});

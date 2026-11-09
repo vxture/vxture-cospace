@@ -41,7 +41,7 @@ def test_empty_authorized_runtime_creates_first_scene_without_fallback(empty_wor
     assert c.get('/api/workspace-model',params={'space_id':space}).status_code==404
     assert c.get('/api/selection',params={'space_id':space}).json()['candidate_id'] is None
     assert c.get('/api/input-uploads',params={'space_id':space}).status_code==200
-    home=c.get('/');assert home.status_code==(200 if Path('apps/workbench/dist/layout.html').is_file() else 404)
+    home=c.get('/');assert home.status_code==(200 if Path('apps/workbench/dist/index.html').is_file() else 404)
     assert 'location' not in home.headers
     for path in ('/spatial.npz','/model.json','/api/preview','/api/thumbnail'):
         assert c.get(path).status_code==403,path

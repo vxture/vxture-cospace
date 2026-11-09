@@ -61,7 +61,7 @@ def release(config):
                 files[path.relative_to(REPO).as_posix()]=hashlib.sha256(path.read_bytes()).hexdigest()
     for name in ('pyproject.toml','uv.lock','apps/workbench/pnpm-lock.yaml','apps/workbench/package.json'):
         path=REPO/name;files[name]=hashlib.sha256(path.read_bytes()).hexdigest()
-    if 'apps/workbench/dist/layout.html' not in files:raise ValueError('compiled_workbench_required')
+    if 'apps/workbench/dist/index.html' not in files:raise ValueError('compiled_workbench_required')
     versions={p:importlib.metadata.version(p) for p in ('fastapi','pydantic','uvicorn','rosbags','joserfc','cryptography')}
     # Some local NumPy wheel metadata lacks Version; pin the imported runtime.
     import numpy
@@ -142,7 +142,7 @@ def serve(config):
                             server.should_exit=True;return
                     except (OSError,ValueError):pass
             thread=threading.Thread(target=watch,daemon=True);thread.start()
-            print(('LOCAL MOCK ONLY ' if config.mode=='mock' else 'PLATFORM TRIAL ')+rp_config.origin+'/workbench/layout.html',flush=True)
+            print(('LOCAL MOCK ONLY ' if config.mode=='mock' else 'PLATFORM TRIAL ')+rp_config.origin+'/',flush=True)
             try:server.run()
             finally:done.set();thread.join(timeout=1);write(state/'run.json',record|{'status':'stopped','stopped_at':stamp()})
         finally:

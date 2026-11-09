@@ -170,7 +170,7 @@ def verify(args):
         print(json.dumps(report,ensure_ascii=False),flush=True)
         accounts.workspace='ws_mock';accounts.roles=['workspace:member']
         if args.stay_open:
-            print('LOCAL MOCK ONLY; isolated demo remains at '+accounts.rp_origin+'/workbench/layout.html#data?space='+space,flush=True)
+            print('LOCAL MOCK ONLY; isolated demo remains at '+accounts.rp_origin+'/data?space='+space,flush=True)
             while process.poll() is None:time.sleep(1)
     finally:
         stop();accounts.stop()

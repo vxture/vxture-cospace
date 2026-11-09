@@ -1,13 +1,15 @@
+import {subscribeAppLocation} from './app-router';
+import {appLocation} from './app-router';
 import React,{useEffect,useState,useSyncExternalStore} from 'react';
 import {Button} from '@vxture/design-system';
 import {recordLink,useRecordNavigation} from './record-navigation';
 
 type Check={input_id:string;sequence:number;checked_at:string;status:string;actor?:string;registration_matches:boolean;registration_sha256:string;notice?:string;issue?:{title:string;action:string}|null};
 type History={input_id:string;items:Check[];next_before_sequence:number|null;current_files_checked:false};
-const subscribe=(fn:()=>void)=>{window.addEventListener('hashchange',fn);return()=>window.removeEventListener('hashchange',fn);};
+const subscribe=subscribeAppLocation;
 
 export function PreflightHistory({endpoint,identity,revision}:{endpoint:string;identity:string;revision?:number}){
- const target=useRecordNavigation(),hash=useSyncExternalStore(subscribe,()=>location.hash);
+ const target=useRecordNavigation(),hash=useSyncExternalStore(subscribe,()=>appLocation());
  const requested=new URLSearchParams(hash.split('?')[1]||'').get('check')||'';
  const valid=!requested||/^[1-9]\d*$/.test(requested)&&Number.isSafeInteger(Number(requested));
  const [expanded,setExpanded]=useState(false),[cursor,setCursor]=useState<number|null>(null),[refresh,setRefresh]=useState(0);

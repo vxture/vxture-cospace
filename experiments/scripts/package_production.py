@@ -21,7 +21,7 @@ def package(root,target,identity):
         name=path.relative_to(root).as_posix()
         if '__pycache__' in path.parts or path.suffix=='.pyc':continue
         files[name]={'sha256':hashlib.sha256(path.read_bytes()).hexdigest(),'bytes':path.stat().st_size}
-    if 'apps/workbench/dist/layout.html' not in files or 'deploy/linux/requirements.lock' not in files:
+    if 'apps/workbench/dist/index.html' not in files or 'deploy/linux/requirements.lock' not in files:
         raise ValueError('compiled_ui_and_locked_requirements_required')
     manifest={'profile':'cospace.production-software/0.1','release':identity,'files':files,
               'secrets_included':False,'business_data_included':False}
