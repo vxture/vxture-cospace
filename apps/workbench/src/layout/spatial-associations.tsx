@@ -13,5 +13,5 @@ export function SpatialAssociations(){
  const view=['business','relations','ifc'].includes(target.tab)?target.tab:'objects';
  const [visited,setVisited]=useState<string[]>([view]);
  useEffect(()=>{setVisited(old=>old.includes(view)?old:[...old,view]);},[view]);
- return <><SpaceContext endpoint={previewEndpoint}/>{visited.map(id=><div key={id} className="module-subview" hidden={view!==id}>{id==='ifc'?<IfcCatalog key={'ifc-'+target.space}/>:id==='objects'?<ObjectAnnotations key={target.space}/>:id==='business'?<BusinessAssociations key={'business-'+target.space}/>:<ObjectRelations key={'relations-'+target.space}/>}</div>)}<p className="module-scope-note">关联变更形成当前场景的新候选。到构建中心核对，再到发布与服务发布；已有发布保持固定。</p></>;
+ return <><SpaceContext endpoint={previewEndpoint}/>{visited.map(id=><div key={id} className="module-subview" hidden={view!==id}>{id==='ifc'?<IfcCatalog key={'ifc-'+target.space}/>:id==='objects'?<ObjectAnnotations key={target.space}/>:id==='business'?<BusinessAssociations key={'business-'+target.space}/>:<ObjectRelations key={'relations-'+target.space}/>}</div>)}<p className="module-scope-note">关联变更形成当前场景的新候选。到构建中心核对，再到服务发布模块完成发布；已有发布保持固定。</p></>;
 }
