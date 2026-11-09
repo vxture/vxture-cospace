@@ -1,7 +1,19 @@
 export type Point=[number,number];
 export type AmapMarker={on:(event:string,callback:()=>void)=>void;setMap:(map:AmapMap|null)=>void;setContent:(content:HTMLElement)=>void};
+export type AmapDistrictLayer={setMap:(map:AmapMap|null)=>void;setStyles:(styles:Record<string,string>)=>void};
 export type AmapMap={destroy:()=>void;setFeatures:(features:string[])=>void;setStatus:(status:{scrollWheel:boolean})=>void;setMapStyle:(style:string)=>void;setZoomAndCenter:(zoom:number,point:Point)=>void;setFitView:(markers?:AmapMarker[],immediately?:boolean,padding?:number[],maxZoom?:number)=>void;zoomIn:()=>void;zoomOut:()=>void;on:(event:string,callback:()=>void)=>void;off:(event:string,callback:()=>void)=>void};
-export type AmapSDK={Map:new(host:HTMLElement,options:Record<string,unknown>)=>AmapMap;Marker:new(options:Record<string,unknown>)=>AmapMarker;convertFrom:(points:Point[],type:string,callback:(status:string,result:{locations?:{getLng:()=>number;getLat:()=>number}[]})=>void)=>void};
+export type AmapSDK={Map:new(host:HTMLElement,options:Record<string,unknown>)=>AmapMap;Marker:new(options:Record<string,unknown>)=>AmapMarker;DistrictLayer?:{Country:new(options:Record<string,unknown>)=>AmapDistrictLayer};plugin:(name:string,callback:()=>void)=>void;convertFrom:(points:Point[],type:string,callback:(status:string,result:{locations?:{getLng:()=>number;getLat:()=>number}[]})=>void)=>void};
+
+// Administrative enhancement is an official independent overlay. Base-map
+// boundary paint remains controlled by the selected official map style.
+export async function createAdministrativeLayer(sdk:AmapSDK):Promise<AmapDistrictLayer>{
+ if(!sdk.DistrictLayer?.Country)await new Promise<void>((resolve,reject)=>{
+  const timeout=setTimeout(()=>reject(Error('行政区划图层加载超时，请重新开启。')),15000);
+  sdk.plugin('AMap.DistrictLayer',()=>{clearTimeout(timeout);resolve();});
+ });
+ if(!sdk.DistrictLayer?.Country)throw Error('行政区划图层暂不可用，请稍后重试。');
+ return new sdk.DistrictLayer.Country({zIndex:80,depth:1,adcode:'100000',styles:{fill:'rgba(0,0,0,0)'}});
+}
 declare global{interface Window{AMap?:AmapSDK;_AMapSecurityConfig?:{serviceHost:string}}}
 let pending:Promise<AmapSDK>|undefined;
 export async function loadAmap():Promise<AmapSDK>{
