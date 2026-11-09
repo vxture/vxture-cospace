@@ -12,3 +12,25 @@ test('invalid coordinates and upstream rejection never produce misplaced pins',a
  const original=globalThis.fetch;globalThis.fetch=async()=>Response.json({status:'0',info:'REJECTED'});
  try{await assert.rejects(displayPoints({},[{longitude:116,latitude:39,crs:'WGS84'}]));}finally{globalThis.fetch=original;}
 });
+
+import {defaultMapPreferences,normalizeMapPreferences,mapIsDark,mapFeatures,readMapPreferences} from '../../apps/workbench/src/layout/map-preferences.ts';
+test('map preferences validate saved data and resolve follow mode against the current global theme',()=>{
+ assert.deepEqual(normalizeMapPreferences(null),defaultMapPreferences);
+ const saved=normalizeMapPreferences({appearance:'follow',roads:false,legend:false,scrollZoom:'false',directoryExpanded:false,unknown:'ignored'});
+ assert.equal(saved.scrollZoom,true);assert.equal(saved.directoryExpanded,false);assert.equal(saved.legend,false);
+ assert.equal(mapIsDark(saved,'light'),false);assert.equal(mapIsDark(saved,'dark'),true);
+ assert.equal(mapIsDark({...saved,appearance:'light'},'dark'),false);
+ assert.equal(mapIsDark({...saved,appearance:'dark'},'light'),true);
+ assert.deepEqual(mapFeatures(saved),['bg','building','point']);
+ assert.equal(normalizeMapPreferences({appearance:'invalid'}).appearance,'follow');
+});
+test('persisted settings survive a fresh read and corrupt or blocked storage falls back safely',()=>{
+ const previous=globalThis.localStorage;
+ try{
+  const saved={...defaultMapPreferences,appearance:'dark',roads:false,autoFit:false,legend:false};
+  globalThis.localStorage={getItem:()=>JSON.stringify(saved)};
+  assert.deepEqual(readMapPreferences(),saved);
+  globalThis.localStorage={getItem:()=>'{broken'};assert.deepEqual(readMapPreferences(),defaultMapPreferences);
+  globalThis.localStorage={getItem:()=>{throw Error('blocked');}};assert.deepEqual(readMapPreferences(),defaultMapPreferences);
+ }finally{if(previous===undefined)delete globalThis.localStorage;else globalThis.localStorage=previous;}
+});
