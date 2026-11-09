@@ -12,8 +12,8 @@ export function ProductLauncher({route,hasScene=false,hrefForRoute,onNavigate}:{
    <ShellPanelRow icon="app-grid" label="我的场景" description="查看、选择与创建场景" chevron={false} href="/space" active={route==='space'&&!hasScene} onClick={onNavigate}/>
    <p className="product-launcher-home-note">从场景开始，连接数据、构建与服务。</p>
   </ShellPanelSection>
-  {[work,resources].map(group=><ShellPanelSection key={group.title} title={group.title} divided={false} className="product-launcher-group">
-   {group.items.map(item=><ShellPanelRow key={item.route} icon={item.icon} label={moduleNames[item.route]} description={item.route==='space'&&!hasScene?'选择场景后浏览空间':item.description} href={item.route==='space'&&!hasScene?undefined:hrefForRoute(item.route)} disabled={item.route==='space'&&!hasScene} active={route===item.route&&(item.route!=='space'||hasScene)} onClick={onNavigate}/>)}
+  {[work,resources].map(group=><ShellPanelSection key={group.title} title={<span className="product-launcher-section-title">{group.title}</span>} divided={false} className="product-launcher-group">
+   {group.items.filter(item=>item.route!=='space').map(item=><ShellPanelRow key={item.route} icon={item.icon} label={moduleNames[item.route]} description={item.description} href={hrefForRoute(item.route)} active={route===item.route} onClick={onNavigate}/>)}
   </ShellPanelSection>)}
  </nav>;
 }

@@ -18,7 +18,7 @@ export const sceneHref=(route:string,id:string)=>`/${route}?${new URLSearchParam
 export const sceneDestinations=(scene:SceneSpace)=>[
  {key:'data',label:'数据管理',capability:'data.manage'},
  {key:'build',label:'构建中心',capability:'build.run'},
- {key:'delivery',label:'发布与服务',capability:'space.preview'},
+ {key:'delivery',label:'服务发布',capability:'space.preview'},
  {key:'settings',label:'场景配置',capability:'space.manage'},
 ].map(item=>({...item,href:sceneHref(item.key,scene.id),enabled:!!scene.capabilities?.includes(item.capability)}));
 export function scenePhase(scene:SceneSpace):ScenePhase{

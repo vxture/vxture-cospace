@@ -18,7 +18,7 @@ export function RealSpace({full,workspace}:{full:()=>void;workspace:string}){
    const directory=await getJSON<{spaces:DirectorySpace[]}>('/api/spaces',controller.signal);if(controller.signal.aborted)return;setSpaces(directory.spaces);
    const space=directory.spaces.find(s=>s.id===current.space);if(!space)throw Error('空间不存在，请返回空间预览重新选择。');
    const publication=space.publications.find(p=>p.id===current.publication);if(!publication)throw Error(current.publication?'所选发布不属于当前空间或已不可读。':'此入口未指定固定发布，请从空间预览打开。');
-   if((publication.lifecycle_state==='paused'||publication.lifecycle_state==='retired'))throw Error('此固定发布已暂停或退役，请前往发布与服务查看状态及替代版本。');
+   if((publication.lifecycle_state==='paused'||publication.lifecycle_state==='retired'))throw Error('此固定发布已暂停或退役，请前往服务发布查看状态及替代版本。');
    const result=await loadPublishedScene(space.id,publication.id,controller.signal);if(controller.signal.aborted)return;
    setData(result);document.title=`${space.name} · 空间态势`;
   }catch(e){if(!controller.signal.aborted)setError(e instanceof Error?e.message:'空间读取失败。');}})();
