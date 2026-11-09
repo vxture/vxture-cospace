@@ -9,7 +9,7 @@ export function PreviewRangeQuery({publication}:{publication:string}){
  const request=useRef<AbortController|null>(null);
  useEffect(()=>{const controller=new AbortController();getJSON<Model>(`/publications/${publication}/api/preview`,controller.signal).then(value=>{
   if(controller.signal.aborted)return;if(value.publication.id!==publication||typeof value.frame_id!=='string')throw Error('发布绑定不一致。');
-  setModel(value);const r=.1,b=value.bounds_m;if(b?.length===2&&b.every(row=>Array.isArray(row)&&row.length===3&&row.every(Number.isFinite)))setBounds([...b[0].map(v=>String(Math.floor((v-r)*100)/100)),...b[1].map(v=>String(Math.ceil((v+r)*100)/100))]);else setBounds(Array(6).fill(''));
+  setModel(value);const r=.1,b=value.bounds_m;if(b?.length===2&&b.every(row=>Array.isArray(row)&&row.length===3&&row.every(Number.isFinite)))setBounds([...b[0].map(v=>String(Math.floor((v-r)*100)/100)),...b[1].map(v=>String(Math.ceil((v+r)*100)/100))]);else setBounds(new Array(6).fill(''));
  }).catch(e=>{if(!controller.signal.aborted)setError(e.message);});return()=>{controller.abort();request.current?.abort();};},[publication]);
  function clear(){request.current?.abort();setResult(null);setError('');setBusy(false);}
  async function submit(event:React.FormEvent){event.preventDefault();if(!model)return;clear();

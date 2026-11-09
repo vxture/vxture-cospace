@@ -22,7 +22,8 @@ def test_spatial_services_is_an_internal_application_return(runtime, tmp_path):
     assert safe_return('/services') == '/services'
     with TestClient(create_auth_app(rp, tmp_path), base_url=rp.config.origin) as client:
         response = client.get('/services')
-        assert response.status_code == 200 and '<main>CoSpace</main>' in response.text
+        assert response.status_code == 200
+        assert '<main>CoSpace</main>' in response.text
         assert client.get('/services.html').status_code == 404
 
 
