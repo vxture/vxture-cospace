@@ -21,7 +21,8 @@ import {
  Card, CardHeader, CardTitle, CardDescription, CardContent, Tabs, TabsList, TabsTrigger,
  Switch, Separator, ThemeProvider, Tooltip, TooltipTrigger, TooltipContent, TooltipProvider, useTheme,
 } from '@vxture/design-system';
-import {CoSpaceBrand,LauncherPlatformBrand} from './product-brand';
+import {CoSpaceBrand} from './product-brand';
+import {ProductLauncher} from './product-launcher';
 import { spaces } from './spaces';
 import spaceSvg from './space.svg?raw';
 import {recordLink,moduleLink,useRecordNavigation} from './record-navigation';
@@ -34,7 +35,7 @@ import {SharedOntology} from './shared-ontology';
 import {ModuleWorkspace} from './module-workspace';
 import {OntologyWorkbench} from './ontology-workbench';
 import {SpatialAssociations} from './spatial-associations';
-import {moduleNames,moduleGroups} from './product-navigation';
+import {moduleNames} from './product-navigation';
 import {HomeLayout} from './home-layout';
 import {SpaceSettings} from './space-settings';
 import {AuthBoundary,usePlatformSession,platformLogout} from './platform-auth';
@@ -53,7 +54,6 @@ const defaults = {workspace:'内部工程空间',scene:'设备间与相连走廊
 type Config = typeof defaults;
 function loadDraft():Config {try{return {...defaults,...JSON.parse(localStorage.getItem('cospace.ui.ds.config')||'{}')};}catch{return defaults;}}
 function currentRoute():Route {const key=appRoute();return Object.hasOwn(names,key)?key as Route:'space';}
-const groups = moduleGroups;
 const rows = {
  data:[['设备间采集序列','传感器观测','待接入真实数据','尚无构建引用'],['独立检查参考','质量参考','待准备','独立于构建输入'],['合成发布样例','派生成果','演示样例','原功能演示可查看']],
  ontology:[['设备柜','Cabinet','标识、名称、空间归属','示例 v0.1'],['空间单元','Room','空间标识、边界引用','示例 v0.1'],['巡检点','InspectionPoint','点位标识、关联对象','待设计']],
@@ -86,7 +86,7 @@ function App(){
  const exit=()=>{if(platform?.csrf){return platformLogout(platform.csrf);}sessionStorage.removeItem('cospace.ui.ds.preview');setPreview(false);};
  const full=async()=>{try{if(document.fullscreenElement)await document.exitFullscreen();else await document.documentElement.requestFullscreen();}catch{setNotice('当前浏览器未允许全屏。');}};
  const identity=<CoSpaceBrand href="/space"/>;
- const launcherControl=<Popover open={launcher} onOpenChange={v=>{setLauncher(v);setAdmin(false);}}><PopoverTrigger asChild><ShellIconButton className="launcher-control" icon="app-grid" label="功能 Launcher" active={launcher}/></PopoverTrigger><ShellPanelContent align="start" sideOffset={12} className="w-auto max-w-content-narrow-lg"><LauncherPlatformBrand/><div className="grid grid-cols-1 gap-xl md:grid-cols-2" aria-label="功能 Launcher">{groups.map(g=><ShellPanelSection key={g.title} title={g.title} divided={false} className="launcher-group">{g.items.map(i=><ShellPanelRow key={i.route} icon={i.icon} label={names[i.route]} description={i.description} href={moduleLink(i.route)} active={route===i.route} onClick={()=>setLauncher(false)}/>)}</ShellPanelSection>)}</div></ShellPanelContent></Popover>;
+ const launcherControl=<Popover open={launcher} onOpenChange={v=>{setLauncher(v);setAdmin(false);}}><PopoverTrigger asChild><ShellIconButton className="launcher-control" icon="app-grid" label="功能 Launcher" active={launcher}/></PopoverTrigger><ShellPanelContent align="start" sideOffset={12} className="product-launcher-panel"><ProductLauncher route={route} hasScene={!!navigation.space} hrefForRoute={moduleLink} onNavigate={()=>setLauncher(false)}/></ShellPanelContent></Popover>;
  const header=<ShellHeader height="md" leading={<>{launcherControl}{identity}</>} trailing={<div className="platform-header-actions"><ShellIconGroup label="全局工具"><ShellThemeToggle currentTheme={theme} onThemeChange={setTheme} buttonLabel="切换主题"/><HeaderSupportControls/><Popover open={admin} onOpenChange={v=>{setAdmin(v);setLauncher(false);}}><PopoverTrigger asChild><ShellIconButton icon="settings" label="配置与管理" active={admin}/></PopoverTrigger><ShellPanelContent align="end"><ShellPanelSection title="配置与管理">{adminRoutes.slice(0,3).map(r=><ShellPanelRow key={r} label={names[r]} href={r==='settings'?recordLink('settings',{}):`/${r}`} onClick={()=>setAdmin(false)}/>)}</ShellPanelSection></ShellPanelContent></Popover></ShellIconGroup><ShellIconGroup label="账户"><ProductUserMenu onLogout={exit}/></ShellIconGroup></div>}/>;
  if(preview&&route==='build'&&new URLSearchParams(location.search).get('screen')==='build')return <React.Suspense fallback={<main className="dark h-dvh bg-background text-foreground" role="status">正在打开构建画布…</main>}><BuildScan/></React.Suspense>;
  const showLoginInfo=()=>setModal({title:'平台登录 · 独立接入验证',body:'已按 yucer 接通 OIDC + PKCE、中央会话与全局登出的独立验证入口。当前工程服务保持 UI 预览，尚未配置 CoSpace 平台客户端和业务空间授权。'});

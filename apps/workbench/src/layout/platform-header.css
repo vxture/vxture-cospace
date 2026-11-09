@@ -4,8 +4,6 @@
 .cospace-brand span{font-size:18px;font-weight:600;line-height:24px;letter-spacing:-.3px}
 .cospace-brand:focus-visible{outline:2px solid var(--ring);outline-offset:4px}
 .platform-header button[aria-label="功能 Launcher"]{margin-right:8px}
-.launcher-platform-brand{display:flex;align-items:center;gap:8px;padding-bottom:16px;margin-bottom:16px;border-bottom:1px solid var(--border);font-size:14px;font-weight:600;letter-spacing:.08em;color:var(--foreground)}
-.launcher-platform-brand img{display:block;width:24px;height:24px}
 .platform-product-brand{display:inline-flex;align-items:center;height:32px;flex-shrink:0}
 .platform-brand{display:inline-flex;align-items:center;gap:8px;height:32px;color:var(--foreground);font-size:16px;font-weight:600;line-height:24px}
 .platform-brand img{display:block;width:24px;height:24px}

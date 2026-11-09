@@ -7,6 +7,6 @@ export const moduleScopes:Record<ModuleRoute,'support'|'scene'>={
  data:'support',ontology:'support',space:'scene',delivery:'scene',build:'scene',association:'scene',
 };
 export const moduleGroups=[
- {title:'共用支撑',items:[{route:'data',icon:'database',description:'原始、过程与成果数据目录'},{route:'ontology',icon:'cube',description:'共用类型、属性与本体规则'}]},
- {title:'场景工作',items:[{route:'build',icon:'workflow',description:'构建、核对与选择模型候选'},{route:'association',icon:'link',description:'场景语义、几何与业务关联'},{route:'delivery',icon:'package',description:'固定发布、在线服务与离线交付'},{route:'space',icon:'cube',description:'浏览场景固定发布与双视图'}]},
+ {title:'公共资源',items:[{route:'data',icon:'database',description:'原始资料与成果目录'},{route:'ontology',icon:'cube',description:'共用类型与本体规则'}]},
+ {title:'场景作业',items:[{route:'build',icon:'workflow',description:'模型构建与候选核对'},{route:'association',icon:'link',description:'语义、几何与业务关联'},{route:'delivery',icon:'package',description:'版本发布与服务交付'},{route:'space',icon:'cube',description:'浏览空间与固定发布'}]},
 ] as const;
