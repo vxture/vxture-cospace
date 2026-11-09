@@ -77,11 +77,12 @@ def test_view_derivation_and_stage_permissions(secured,monkeypatch,user):
 
 
 def test_filtered_directory_and_direct_space_only_authorized(secured):
-    rp,c,_,_,jobs,_,spaces,_,_,new=secured
+    rp,c,_,_,jobs,directory,spaces,_,_,new=secured
     assert c.get('/api/spaces').status_code==401
     sign_in(secured)
     result=c.get('/api/spaces');assert result.status_code==200,result.text
     data=result.json();assert [s['id'] for s in data['spaces']]==[spaces[0]['id']]
+    assert data['spaces'][0]['project_name']==directory.read('project',spaces[0]['project_id'])['name']
     assert data['spaces'][0]['capabilities']==['space.preview','space.query']
     assert new['id'] in result.text and spaces[1]['id'] not in result.text
     assert c.get('/api/spaces/'+spaces[0]['id']).status_code==200
