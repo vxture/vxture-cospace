@@ -33,6 +33,7 @@ from packages.data.input_uploads import InputUploads,UploadRejected,MAX_UPLOAD,c
 from packages.ontology.workspace_authoring import WorkspaceOntologies,DraftChange,SealDraft
 from packages.ontology.scene_usage import usage as scene_ontology_usage, UsageQuery
 from packages.service.public_errors import public_error
+from packages.service.amap_gateway import AmapGateway
 from packages.data.workspace_catalog import catalog as workspace_catalog, CatalogQuery, CatalogUnavailable
 
 
@@ -49,6 +50,7 @@ class BusinessAccess:
     def __init__(self, rp, policies, directory, jobs, registration_sources=None,workspace_config=None,consumer_config=None,subscriptions=None,scene_pointcloud_config=None,scene_ifc_config=None):
         self.rp,self.policies,self.directory,self.jobs=rp,policies,directory,jobs
         self.subscriptions=subscriptions
+        self.amap=AmapGateway.from_env()
         self.scene_pointclouds=ScenePointcloudWorkspace(jobs.inputs,scene_pointcloud_config) if jobs.inputs else None
         self.scene_ifc=IfcWorkspace(directory,jobs,scene_ifc_config)
         self.attachments=SceneAttachments(jobs.inputs) if jobs.inputs else None
@@ -267,7 +269,7 @@ class BusinessAccess:
             # an unhandled auth-looking path fall through to the inner static mount.
             if path=='/workbench' or path.startswith('/workbench/') or path=='/index.html':
                 return deny(404,'page_not_found')
-            if path in ('/auth/login','/auth/callback','/auth/logout','/api/auth/config','/api/auth/session','/api/subscription','/api/webhooks/vxture') or path in APP_ROUTES or path.startswith('/assets/'):
+            if path in ('/auth/login','/auth/callback','/auth/logout','/api/auth/config','/api/auth/session','/api/auth/logout','/api/subscription','/api/webhooks/vxture') or path in APP_ROUTES or path.startswith('/assets/'):
                 return await call_next(request)
             if any(len(request.query_params.getlist(k))>1 for k in request.query_params):return deny(403,'space_access_denied')
             rpsid=request.cookies.get(self.rp.config.cookie_name)
@@ -277,6 +279,8 @@ class BusinessAccess:
                 if (request.headers.get('origin')!=self.rp.config.origin or request.headers.get('sec-fetch-site')=='cross-site'
                         or not self.rp.csrf_matches(rpsid,request.headers.get('x-cospace-csrf'))):return deny(403,'csrf_rejected')
             await run_in_threadpool(self.require_subscription,session)
+            if path=='/api/map/config' or path.startswith('/_AMapService/'):
+                return await self.amap.dispatch(request)
             if path=='/api/input-uploads' and request.method in ('GET','POST'):
                 revision,policy=await run_in_threadpool(self.policies.load)
                 context=await run_in_threadpool(self.authorize,request,session,policy,{})
@@ -648,10 +652,10 @@ class BusinessAccess:
                     saved=await run_in_threadpool(self.directory.settings.read,identity)
                 # Use one settings snapshot for both fields and revision. Another
                 # manager may save after this transaction has committed.
-                record=record|{key:saved[key] for key in ('name','description') if key in saved}
+                record=record|{key:saved[key] for key in ('name','description','address','location') if key in saved}
                 caps=sorted(policy.capabilities(context['principal'],identity))
                 payload={'space':record,'revision':saved['revision'],'can_manage':'space.manage' in caps,
-                         'editable_fields':['name','description'],
+                         'editable_fields':['name','description','address','location'],
                          'history':saved['history'] if 'space.manage' in caps else []}
                 return JSONResponse(payload,headers={'Cache-Control':'no-store'})
             if request.method in ('GET','HEAD') and path in ('/api/projects','/api/spaces'):

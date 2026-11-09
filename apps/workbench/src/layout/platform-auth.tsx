@@ -23,7 +23,13 @@ function IdentitySubscription(){
  useEffect(()=>{void read();},[]);
  return enabled?<SubscriptionNotice value={value} unavailable={unavailable} onRetry={()=>void read()}/>:null;
 }
-export function platformLogout(csrf:string){const form=document.createElement('form');form.method='POST';form.action='/auth/logout';const field=document.createElement('input');field.type='hidden';field.name='csrf';field.value=csrf;form.append(field);document.body.append(form);form.submit();}
+export async function platformLogout(csrf:string){
+ const response=await fetch('/api/auth/logout',{method:'POST',headers:{'X-CoSpace-CSRF':csrf}});
+ if(!response.ok)throw Error('logout_failed');
+ const result=await response.json();const destination=new URL(result.redirect_url);
+ if(destination.protocol!=='https:'&&destination.origin!==location.origin)throw Error('logout_destination_rejected');
+ location.assign(destination.href);
+}
 
 export function useAuthMode():AuthMode{
  const [mode,setMode]=useState<AuthMode>('checking');

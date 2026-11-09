@@ -22,7 +22,7 @@ class PreviewSpaces:
         if record['id']!=identity: raise ValueError('directory_record_invalid')
         if kind=='space':
             saved=self.settings.read(identity)
-            record.update({k:saved[k] for k in ('name','description') if k in saved})
+            record.update({k:saved[k] for k in ('name','description','address','location') if k in saved})
         return record
 
     def list(self,kind):

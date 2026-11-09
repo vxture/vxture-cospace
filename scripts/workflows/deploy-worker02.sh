@@ -37,11 +37,21 @@ login_registry() {
 # still fail closed if neither registry can supply the requested revision.
 login_registry ghcr.io "$GHCR_USERNAME" "$GHCR_TOKEN"
 login_registry "$ACR_REGISTRY" "$ACR_USERNAME" "$ACR_PASSWORD"
+if [[ -n "${COSPACE_AMAP_WEB_KEY:-}${COSPACE_AMAP_SECURITY_JS_CODE:-}" ]]; then
+  [[ "$COSPACE_AMAP_WEB_KEY" =~ ^[a-fA-F0-9]{32}$ ]]
+  [[ "$COSPACE_AMAP_SECURITY_JS_CODE" =~ ^[a-fA-F0-9]{32}$ ]]
+  test ! -L /srv/md0/cospace/etc
+  test ! -L /srv/md0/cospace/etc/amap.env
+  amap_config="$(mktemp /srv/md0/cospace/etc/.amap.XXXXXXXX)"
+  printf 'COSPACE_AMAP_WEB_KEY=%s\nCOSPACE_AMAP_SECURITY_JS_CODE=%s\n' "$COSPACE_AMAP_WEB_KEY" "$COSPACE_AMAP_SECURITY_JS_CODE" > "$amap_config"
+  chmod 600 "$amap_config"
+  mv -f -- "$amap_config" /srv/md0/cospace/etc/amap.env
+fi
 bash /srv/md0/cospace/deploy/deploy.sh
 REMOTE
 scp -i ~/.ssh/deploy_key -P "$port" -o StrictHostKeyChecking=yes "$RUNNER_TEMP/cospace-deploy.sh" "$remote:$helper"
 cmd=''
-for name in STACK_ROOT PROJECT_NAME IMAGE_TAG GHCR_NAMESPACE GHCR_USERNAME GHCR_TOKEN ACR_REGISTRY ACR_NAMESPACE ACR_USERNAME ACR_PASSWORD GITHUB_SHA; do
+for name in STACK_ROOT PROJECT_NAME IMAGE_TAG GHCR_NAMESPACE GHCR_USERNAME GHCR_TOKEN ACR_REGISTRY ACR_NAMESPACE ACR_USERNAME ACR_PASSWORD GITHUB_SHA COSPACE_AMAP_WEB_KEY COSPACE_AMAP_SECURITY_JS_CODE; do
   printf -v pair '%s=%q ' "$name" "${!name}"
   cmd+="$pair"
 done

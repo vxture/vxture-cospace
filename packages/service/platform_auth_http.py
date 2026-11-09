@@ -96,8 +96,8 @@ def create_auth_app(rp, workbench=Path('apps/workbench/dist'), business=None, ac
             except WebhookConflict:raise HTTPException(409,'webhook_id_payload_conflict') from None
 
     @app.get('/auth/login')
-    def login(request: Request, returnTo: str = '/space'):
-        try: url, browser = rp.begin(returnTo, request.cookies.get(browser_cookie))
+    def login(request: Request, returnTo: str = '/space', selectAccount: bool = False):
+        try: url, browser = rp.begin(returnTo, request.cookies.get(browser_cookie), select_account=selectAccount)
         except ValueError as exc: raise HTTPException(400, 'return_path_rejected') from exc
         response = RedirectResponse(url, status_code=302)
         set_cookie(response, browser_cookie, browser, max_age=600)
@@ -151,6 +151,17 @@ def create_auth_app(rp, workbench=Path('apps/workbench/dist'), business=None, ac
             raise HTTPException(403, 'csrf_rejected')
         url = await run_in_threadpool(rp.logout, session_id(request))
         response = RedirectResponse(url, status_code=303); clear_cookie(response, cookie)
+        return response
+
+    @app.post('/api/auth/logout')
+    async def logout_api(request: Request):
+        # Fetch POST retains Origin even when an ingress sets no-referrer on HTML.
+        # Keep the same strict Origin and session CSRF checks as the form endpoint.
+        require_origin(request)
+        if not rp.csrf_matches(session_id(request), request.headers.get('x-cospace-csrf')):
+            raise HTTPException(403, 'csrf_rejected')
+        url = await run_in_threadpool(rp.logout, session_id(request))
+        response = JSONResponse({'redirect_url': url}); clear_cookie(response, cookie)
         return response
 
     def app_entry():

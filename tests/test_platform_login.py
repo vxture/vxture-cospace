@@ -16,6 +16,18 @@ from packages.service.platform_auth_http import create_auth_app
 NOW = 1_800_000_000
 
 
+def test_fetch_logout_keeps_origin_and_csrf_protection(runtime):
+    rp,c,accounts,_=runtime
+    login(rp,c,accounts)
+    csrf=c.get('/api/auth/session').json()['csrf']
+    assert c.post('/api/auth/logout').status_code==403
+    assert c.post('/api/auth/logout',headers={'Origin':'https://foreign.example','X-CoSpace-CSRF':csrf}).status_code==403
+    assert c.post('/api/auth/logout',headers={'Origin':rp.config.origin,'X-CoSpace-CSRF':'wrong'}).status_code==403
+    response=c.post('/api/auth/logout',headers={'Origin':rp.config.origin,'X-CoSpace-CSRF':csrf})
+    assert response.status_code==200 and response.json()['redirect_url']
+    assert c.get('/api/auth/session').json()['authenticated'] is False
+
+
 @pytest.fixture
 def runtime(tmp_path):
     clock = [NOW]; accounts = MockAccounts(now=lambda:clock[0]).start()
@@ -318,3 +330,10 @@ def test_public_authority_readiness_tracks_server_confirmation_window(runtime):
     accounts.unavailable=False;clock[0]+=31
     recovered=activity(rp,client).json()
     assert recovered['authority_state']=='confirmed' and recovered['authority_ready'] is True
+
+
+def test_account_switch_uses_oidc_chooser(runtime):
+    from urllib.parse import urlsplit, parse_qs
+    rp = runtime[0]
+    url, _ = rp.begin('/space', select_account=True)
+    assert parse_qs(urlsplit(url).query)['prompt'] == ['select_account']

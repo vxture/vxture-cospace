@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 import json
 from pathlib import Path
 import sqlite3
+from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
@@ -15,12 +16,21 @@ class SettingsConflict(ValueError):
     pass
 
 
+class SceneLocation(BaseModel):
+    model_config = ConfigDict(extra='forbid', strict=True)
+    longitude: float = Field(ge=-180, le=180, allow_inf_nan=False)
+    latitude: float = Field(ge=-90, le=90, allow_inf_nan=False)
+    crs: Literal['WGS84', 'GCJ02']
+
+
 class SpaceSettingsChange(BaseModel):
     model_config = ConfigDict(extra='forbid', strict=True)
     space_id: str = Field(pattern=r'^space-[a-f0-9]{16}$')
     expected_revision: int = Field(ge=0)
     name: str = Field(min_length=1, max_length=100)
     description: str = Field(max_length=500)
+    address: str | None = Field(default=None, max_length=500)
+    location: SceneLocation | None = None
     reason: str = Field(min_length=1, max_length=500)
 
     @field_validator('name', 'reason')
@@ -57,6 +67,13 @@ class SpaceSettings:
                         raise SettingsConflict('space_settings_revision_changed')
                     before = {k: saved.get(k, original[k]) for k in ('name', 'description')}
                     after = {'name': change.name, 'description': change.description.strip()}
+                    # Older clients omit geographic metadata: preserve it rather than clear it.
+                    for key in ('address', 'location'):
+                        if key in saved or key in original or key in change.model_fields_set:
+                            before[key] = saved.get(key, original.get(key))
+                            after[key] = (change.model_dump()[key] if key in change.model_fields_set else before[key])
+                            if key == 'address' and after[key] is not None:
+                                after[key] = after[key].strip()
                     if before == after:
                         return saved
                     event = {'revision': saved['revision']+1, 'actor': actor,

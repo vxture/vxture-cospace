@@ -24,7 +24,7 @@ class PlatformLogin:
         self.transport = transport or PlatformHttp(config)
         self.verifier = verifier or PlatformTokenVerifier(config.verifier_config, now=now)
 
-    def begin(self, return_to, browser=None):
+    def begin(self, return_to, browser=None, *, select_account=False):
         return_to = safe_return(return_to)
         state, nonce, verifier = opaque(), opaque(), opaque()
         browser = browser if valid_opaque(browser) else opaque()
@@ -35,7 +35,8 @@ class PlatformLogin:
         url = self.config.issuer+'/oidc/authorize?'+urlencode({
             'response_type': 'code', 'client_id': self.config.client_id, 'redirect_uri': self.config.callback,
             'scope': ' '.join(LOGIN_SCOPES), 'state': state, 'nonce': nonce,
-            'code_challenge': challenge, 'code_challenge_method': 'S256'})
+            'code_challenge': challenge, 'code_challenge_method': 'S256',
+            **({'prompt': 'select_account'} if select_account else {})})
         return url, browser
 
     def _tokens(self, tokens, *, nonce=None, prior=None):
