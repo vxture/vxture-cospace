@@ -10,7 +10,7 @@ from pydantic import BaseModel, ConfigDict, SecretStr, model_validator
 from packages.infrastructure.platform_identity import PlatformVerifierConfig, NoRedirect, IdentityUnavailable
 
 
-APP_ROUTES=('/', '/space', '/data', '/build', '/delivery', '/ontology', '/association', '/settings', '/members', '/identity', '/account')
+APP_ROUTES=('/', '/space', '/services', '/data', '/build', '/delivery', '/ontology', '/association', '/settings', '/members', '/identity', '/account')
 
 
 def safe_return(value):

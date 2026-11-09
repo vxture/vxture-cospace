@@ -2,6 +2,8 @@
 
 The launcher has three groups: 场景中心, 场景作业, 公共资源.
 The default homepage entry always targets /space without scene/record parameters.
+空间服务 is the consumer entry beside 我的场景; it targets /services without
+carrying selected scene or record parameters.
 Module links retain only the selected scene through the existing navigation
 contract. Space preview is reached through scene center; build,
 association and delivery retain their existing scene selection guards.

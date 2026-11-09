@@ -2,14 +2,14 @@ import React,{useEffect,useRef,useState} from 'react';
 import {Button,Input,StatusBadge} from '@vxture/design-system';
 import {getJSON,previewEndpoint} from './real-space-data';
 
-type Model={id:string;frame_id:string;bounds_m:[number[],number[]];members:Record<string,{sha256:string}>;publication:{id:string;model_manifest_sha256:string}};
+type Model={id:string;frame_id:string;bounds_m?:[number[],number[]];members:Record<string,{sha256:string}>;publication:{id:string;model_manifest_sha256:string}};
 type Result={profile:string;status:'complete'|'limit_exceeded';result_complete:boolean;matched_cells:number;returned_cells:number;cell_indices:number[][];unlisted_state:'unknown'|null;publication_id:string;publication_model_manifest_sha256:string;source_model_sha256:string;frame_id:string};
 export function PreviewRangeQuery({publication}:{publication:string}){
  const [model,setModel]=useState<Model|null>(null),[bounds,setBounds]=useState<string[]>(Array(6).fill('')),[limit,setLimit]=useState('1024'),[error,setError]=useState(''),[busy,setBusy]=useState(false),[result,setResult]=useState<Result|null>(null);
  const request=useRef<AbortController|null>(null);
  useEffect(()=>{const controller=new AbortController();getJSON<Model>(`/publications/${publication}/api/preview`,controller.signal).then(value=>{
-  if(controller.signal.aborted)return;if(value.publication.id!==publication)throw Error('发布绑定不一致。');
-  setModel(value);const r=.1;setBounds([...value.bounds_m[0].map(v=>String(Math.floor((v-r)*100)/100)),...value.bounds_m[1].map(v=>String(Math.ceil((v+r)*100)/100))]);
+  if(controller.signal.aborted)return;if(value.publication.id!==publication||typeof value.frame_id!=='string')throw Error('发布绑定不一致。');
+  setModel(value);const r=.1,b=value.bounds_m;if(b?.length===2&&b.every(row=>Array.isArray(row)&&row.length===3&&row.every(Number.isFinite)))setBounds([...b[0].map(v=>String(Math.floor((v-r)*100)/100)),...b[1].map(v=>String(Math.ceil((v+r)*100)/100))]);else setBounds(new Array(6).fill(''));
  }).catch(e=>{if(!controller.signal.aborted)setError(e.message);});return()=>{controller.abort();request.current?.abort();};},[publication]);
  function clear(){request.current?.abort();setResult(null);setError('');setBusy(false);}
  async function submit(event:React.FormEvent){event.preventDefault();if(!model)return;clear();
