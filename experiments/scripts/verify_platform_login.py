@@ -67,7 +67,7 @@ def verify(output):
         raise RuntimeError('pilot_service_start_timeout')
     try:
         start()
-        check('login_page_served',request('/workbench/layout.html')[0]==200)
+        check('login_page_served',request('/')[0]==200)
         check('unauthenticated_business_denied',request('/api/spaces')[0]==401)
         status,html=request('/auth/login')
         check('top_level_redirect_reached_mock_accounts',status==200 and '本地模拟平台' in html.decode())

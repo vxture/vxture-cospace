@@ -12,5 +12,5 @@ export function LauncherPlatformBrand(){
 
 // Public entry pages identify both the platform and its product.
 export function PlatformProductBrand(){
- return <div className="platform-product-brand" aria-label="Ruyin · CoSpace"><span className="platform-brand"><img src={platformLogo} alt="" width={24} height={24}/><span>Ruyin</span></span><span className="platform-product-divider" aria-hidden="true"/><CoSpaceBrand href="/workbench/layout.html#space"/></div>;
+ return <div className="platform-product-brand" aria-label="Ruyin · CoSpace"><span className="platform-brand"><img src={platformLogo} alt="" width={24} height={24}/><span>Ruyin</span></span><span className="platform-product-divider" aria-hidden="true"/><CoSpaceBrand href="/#space"/></div>;
 }

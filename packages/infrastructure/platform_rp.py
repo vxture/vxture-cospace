@@ -4,7 +4,7 @@ import json
 import math
 import os
 from urllib.error import HTTPError
-from urllib.parse import urlencode, quote_plus, urlsplit, unquote
+from urllib.parse import urlencode, quote_plus, urlsplit, urlunsplit, unquote
 from urllib.request import Request, build_opener, ProxyHandler
 from pydantic import BaseModel, ConfigDict, SecretStr, model_validator
 from packages.infrastructure.platform_identity import PlatformVerifierConfig, NoRedirect, IdentityUnavailable
@@ -16,10 +16,14 @@ def safe_return(value):
     decoded = value
     for _ in range(3): decoded = unquote(decoded)
     parsed = urlsplit(decoded)
-    if (not decoded.startswith('/workbench/') or decoded.startswith('//') or parsed.scheme or parsed.netloc
+    if ((parsed.path != '/' and not parsed.path.startswith('/workbench/')) or decoded.startswith('//') or parsed.scheme or parsed.netloc
             or '\\' in decoded or any(ord(c) < 32 or ord(c) == 127 for c in decoded)
             or '..' in parsed.path.split('/')):
         raise ValueError('invalid_return_path')
+    # Old bookmarks and transactions return to the canonical app route.
+    if parsed.path in ('/', '/workbench/', '/workbench/layout.html', '/workbench/index.html'):
+        original = urlsplit(value)
+        return urlunsplit(('', '', '/', original.query, original.fragment))
     return value
 
 

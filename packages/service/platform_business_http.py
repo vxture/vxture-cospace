@@ -264,7 +264,7 @@ class BusinessAccess:
                 return await self.consumer.dispatch(request)
             # Public exceptions are exact auth routes. Prefix exemptions could let
             # an unhandled auth-looking path fall through to the inner static mount.
-            if path in ('/auth/login','/auth/callback','/auth/logout','/api/auth/config','/api/auth/session','/api/subscription','/api/webhooks/vxture','/') or path.startswith('/workbench/'):
+            if path in ('/auth/login','/auth/callback','/auth/logout','/api/auth/config','/api/auth/session','/api/subscription','/api/webhooks/vxture','/','/workbench') or path.startswith('/workbench/'):
                 return await call_next(request)
             if any(len(request.query_params.getlist(k))>1 for k in request.query_params):return deny(403,'space_access_denied')
             rpsid=request.cookies.get(self.rp.config.cookie_name)
