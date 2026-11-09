@@ -1,7 +1,7 @@
 .scene-map-workspace{position:relative;flex:1;min-height:0;overflow:hidden;background:var(--background);color:var(--foreground);font-family:var(--body-font-family);font-size:var(--body-small-font-size);font-weight:400;line-height:1.5;--scene-tone:var(--primary);--scene-text:var(--primary-muted-foreground);--scene-soft:var(--primary-muted);--scene-border:var(--primary-border)}
 /* Shared by portaled settings/detail panels as well as in-map overlays.
    Only surfaces blend; text, icons and primary actions keep DS contrast. */
-.scene-map-workspace,.scene-map-settings,.scene-detail-panel.scene-map-detail-panel{--map-surface:color-mix(in srgb,var(--card) 72%,transparent);--map-control:color-mix(in srgb,var(--card) 12%,transparent);--map-hover:color-mix(in srgb,var(--primary-muted) 24%,transparent);--map-selected:color-mix(in srgb,var(--primary-muted) 36%,transparent);--map-blur:blur(12px)}
+.scene-map-workspace,.scene-map-settings,.scene-detail-panel.scene-map-detail-panel{--map-surface:color-mix(in srgb,var(--card) 60%,transparent);--map-control:color-mix(in srgb,var(--card) 12%,transparent);--map-hover:color-mix(in srgb,var(--primary-muted) 24%,transparent);--map-selected:color-mix(in srgb,var(--primary-muted) 36%,transparent);--map-blur:blur(3px)}
 .scene-map-canvas{position:absolute;inset:0}
 .scene-map-heading,.scene-map-directory,.scene-map-detail,.scene-map-legend,.scene-map-status,.scene-map-tools{background:var(--map-surface);backdrop-filter:var(--map-blur);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-raised)}
 .scene-map-heading{position:absolute;top:16px;left:24px;width:304px;height:36px;display:flex;align-items:center;gap:8px;padding:3px 5px 3px 12px}
@@ -90,3 +90,6 @@
 .scene-map-settings [role=radiogroup]{background:var(--map-control)}
 .scene-map-detail-panel .scene-detail-links [data-slot=button],.scene-map-detail-panel>div:last-child button,.scene-map-detail>button{background:var(--map-control)}
 .scene-map-detail-panel .scene-detail-links [data-slot=button]:hover,.scene-map-detail-panel>div:last-child button:hover,.scene-map-detail>button:hover{background:var(--map-hover)}
+
+/* Neutralize official base-map accent lines only; scene markers stay semantic. */
+.scene-map-workspace[data-map-theme=dark] .scene-map-canvas canvas.amap-layer{filter:grayscale(1)}

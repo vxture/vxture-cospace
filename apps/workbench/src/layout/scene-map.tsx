@@ -24,17 +24,17 @@ export function SceneMap({spaces,loading,error,onBack,onRefresh}:{spaces:SceneSp
  function choose(id:string){setSelected(id);setGroup([]);const point=positions.current.get(id);if(point)map.current?.setZoomAndCenter(15,point);}
  choice.current=choose;
  useEffect(()=>{let alive=true;const timeout=setTimeout(()=>{if(alive)setStatus('地图加载超时，请检查网络后重试。');},25000);setReady(false);setStatus('正在加载高德地图…');
-  loadAmap().then(sdk=>{if(!alive||!host.current)return;const created=new sdk.Map(host.current,{center:[104,35],zoom:4,viewMode:'2D',mapStyle:dark?'amap://styles/darkblue':'amap://styles/normal',features:mapFeatures(preferences),scrollWheel:preferences.scrollZoom});map.current=created;
+  loadAmap().then(sdk=>{if(!alive||!host.current)return;const created=new sdk.Map(host.current,{center:[104,35],zoom:4,viewMode:'2D',mapStyle:dark?'amap://styles/dark':'amap://styles/normal',features:mapFeatures(preferences),scrollWheel:preferences.scrollZoom});map.current=created;
    created.on('complete',()=>{if(alive){clearTimeout(timeout);setReady(true);setStatus('');}});created.on('click',()=>{setSelected('');setGroup([]);});
   }).catch(e=>{if(alive)setStatus(e.message);});
   return()=>{alive=false;clearTimeout(timeout);markers.current=[];positions.current.clear();map.current?.destroy();map.current=null;};
  },[revision]);
- useEffect(()=>{map.current?.setMapStyle(dark?'amap://styles/darkblue':'amap://styles/normal');},[dark,ready]);
+ useEffect(()=>{map.current?.setMapStyle(dark?'amap://styles/dark':'amap://styles/normal');},[dark,ready]);
  useEffect(()=>{map.current?.setFeatures(mapFeatures(preferences));map.current?.setStatus({scrollWheel:preferences.scrollZoom});},[preferences.roads,preferences.buildings,preferences.points,preferences.scrollZoom,ready]);
  useEffect(()=>{if(ready&&preferences.autoFit&&markers.current.length)map.current?.setFitView(markers.current,false,(host.current?.clientWidth||0)>600?[100,100,360,80]:[100,100,30,30],16);},[preferences.autoFit,ready]);
  useEffect(()=>{let alive=true;let layer:AmapDistrictLayer|undefined;setAdministrativeError('');
   if(!ready||!preferences.administrative)return;
-  loadAmap().then(createAdministrativeLayer).then(created=>{layer=created;if(!alive)return;const colors=getComputedStyle(host.current!);created.setStyles({fill:'rgba(0,0,0,0)','nation-stroke':colors.getPropertyValue('--foreground').trim(),'province-stroke':colors.getPropertyValue('--primary-muted-foreground').trim(),'city-stroke':'rgba(0,0,0,0)'});created.setMap(map.current);}).catch(()=>{if(alive)setAdministrativeError('行政区划增强暂不可用，请关闭后重试。');});
+  loadAmap().then(createAdministrativeLayer).then(created=>{layer=created;if(!alive)return;const colors=getComputedStyle(host.current!);created.setStyles({fill:'rgba(0,0,0,0)','nation-stroke':dark?'#454545':colors.getPropertyValue('--foreground').trim(),'province-stroke':dark?'#383838':colors.getPropertyValue('--primary-muted-foreground').trim(),'city-stroke':'rgba(0,0,0,0)'});created.setMap(map.current);}).catch(()=>{if(alive)setAdministrativeError('行政区划增强暂不可用，请关闭后重试。');});
   return()=>{alive=false;layer?.setMap(null);};
  },[ready,preferences.administrative,dark]);
  const autoFit=useRef(preferences.autoFit);autoFit.current=preferences.autoFit;
@@ -51,7 +51,7 @@ export function SceneMap({spaces,loading,error,onBack,onRefresh}:{spaces:SceneSp
   return()=>{alive=false;created.forEach(marker=>marker.setMap(null));};
  },[visible,ready]);
  useEffect(()=>{host.current?.querySelectorAll<HTMLButtonElement>('.scene-map-marker').forEach(button=>button.setAttribute('aria-pressed',String(!!selected&&!!button.dataset.sceneIds?.split(',').includes(selected))));},[selected]);
- return <main className="scene-map-workspace" data-ui-theme={theme} aria-label="高德场景地图">
+ return <main className="scene-map-workspace" data-map-theme={dark?'dark':'light'} data-ui-theme={theme} aria-label="高德场景地图">
   <div ref={host} className="scene-map-canvas" role="region" aria-label="场景分布地图"/>
   <div className="scene-map-heading"><ListBullets size={16} aria-hidden="true"/><h1>场景目录</h1><span className="scene-map-total" aria-label="场景总数">{spaces.length}</span><Button size="icon-xl" variant="ghost" aria-label={collapsed?'展开场景清单':'收起场景清单'} aria-expanded={!collapsed} aria-controls="scene-map-directory" onClick={()=>updatePreference('directoryExpanded',collapsed)}>{collapsed?<CaretDown size={16}/>:<CaretUp size={16}/>}</Button></div>
   <Tabs className="scene-map-phases" value={phase} onValueChange={setPhase}><TabsList aria-label="地图场景状态"><TabsTrigger value="all">全部</TabsTrigger>{Object.entries(scenePhases).map(([value,state])=><TabsTrigger key={value} value={value}>{state.label}</TabsTrigger>)}</TabsList></Tabs>
