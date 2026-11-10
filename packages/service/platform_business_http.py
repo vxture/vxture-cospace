@@ -59,9 +59,11 @@ class BusinessAccess:
             platform_access=subscriptions is not None)
         self.registration=PreviewRegistration(jobs.inputs,{}) if jobs.inputs else None
         self.consumer=None
+        from packages.service.service_monitor import ServiceMonitor
+        self.service_monitor=ServiceMonitor(jobs.root)
         if consumer_config is not None:
             from packages.service.online_consumer import OnlineConsumer
-            self.consumer=OnlineConsumer(rp,policies,jobs,consumer_config,subscriptions=subscriptions)
+            self.consumer=OnlineConsumer(rp,policies,jobs,consumer_config,subscriptions=subscriptions,monitor=self.service_monitor)
 
     def require_subscription(self,session):
         if self.subscriptions is not None:
@@ -72,6 +74,9 @@ class BusinessAccess:
         principal=self.rp.verifier.verify(session['access_token'])
         access=PlatformResourceAccess(self.directory,self.jobs,policy)
         path=request.url.path; method=request.method; q=request.query_params
+        if path=='/api/service-monitor' and method=='GET':
+            access.space(principal,q.get('space_id'),PUBLICATION_MANAGE)
+            return {'principal':principal}
         if path=='/api/ontology-usage' and method in ('GET','HEAD'):
             access.space(principal,q.get('space_id'),DATA_MANAGE)
             access.space(principal,q.get('space_id'),SPACE_PREVIEW)
@@ -368,6 +373,19 @@ class BusinessAccess:
             revision,policy=await run_in_threadpool(self.policies.load)
             context=await run_in_threadpool(self.authorize,request,session,policy,body)
             request.state.platform_principal=context['principal'];request.state.policy_revision=revision
+            if path=='/api/service-monitor':
+                if set(request.query_params)!={'space_id'}:return deny(422,'monitor_query_invalid')
+                try:result=await run_in_threadpool(self.service_monitor.snapshot,context['principal'],request.query_params['space_id'])
+                except (OSError,sqlite3.Error):return deny(503,'service_monitor_unavailable')
+                configuration={'state':'not_configured','callers':[]}
+                if self.consumer is not None:
+                    try:
+                        config=await run_in_threadpool(self.consumer.load)
+                        callers=sorted(g.caller for g in config.grants if g.space_id==request.query_params['space_id'])
+                        configuration={'state':('configured' if callers else 'not_granted') if config.audience==self.consumer.audience else 'unavailable',
+                            'callers':callers if config.audience==self.consumer.audience else []}
+                    except IdentityUnavailable:configuration={'state':'unavailable','callers':[]}
+                return JSONResponse(result|{'configuration':configuration},headers={'Cache-Control':'no-store'})
             if path=='/api/data-catalog':
                 try:query=CatalogQuery.model_validate(dict(request.query_params))
                 except ValidationError:return deny(422,'catalog_query_invalid')
