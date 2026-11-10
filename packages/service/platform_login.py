@@ -10,6 +10,7 @@ from urllib.parse import urlencode
 from packages.infrastructure.platform_identity import PlatformTokenVerifier, IdentityRejected, IdentityUnavailable
 from packages.infrastructure.platform_rp import PlatformHttp, safe_return
 from packages.infrastructure.platform_session_store import key_of
+from packages.service.platform_profile import profile_claims
 
 LOGIN_SCOPES = ('openid', 'profile', 'email')
 
@@ -62,7 +63,7 @@ class PlatformLogin:
         refresh = tokens.get('refresh_token')
         if not isinstance(refresh, str) or not 1 <= len(refresh) <= 16384:
             raise IdentityRejected('rotated_refresh_token_required')
-        return {'principal': asdict(principal), 'access_token': access, 'id_token': id_token or prior['id_token'],
+        return {'principal': asdict(principal), 'profile': profile_claims(claims), 'access_token': access, 'id_token': id_token or prior['id_token'],
             'refresh_token': refresh, 'access_expires_at': min(principal.expires_at, self.now()+expires),
             'sid': sid, 'refresh_pending': False, 'refresh_blocked': False}
 
@@ -120,6 +121,14 @@ class PlatformLogin:
                         raise IdentityUnavailable('grant_reauthorization_required') from None
                     session.update(renewed); self.store.put('session', rpsid, session)
                 self.verifier.verify(session['access_token'])
+            # Upgrade existing encrypted sessions using a still-valid signed token.
+            # Optional display fields never affect session validity or permissions.
+            if 'profile' not in session and session['access_expires_at'] > self.now():
+                try:
+                    session['profile'] = profile_claims(self.verifier.verified_claims(session['access_token']))
+                    self.store.put('session', rpsid, session)
+                except (IdentityRejected, IdentityUnavailable):
+                    pass
             return session, state
 
     def csrf_matches(self, rpsid, value):

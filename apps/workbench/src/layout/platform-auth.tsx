@@ -6,8 +6,9 @@ import React,{createContext,useContext,useEffect,useLayoutEffect,useRef,useState
 import {Button,Icon} from '@vxture/design-system';
 import {HomeLayout} from './home-layout';
 import {productQuotaMessage} from './product-quota-messages';
+import type {AccountProfile} from './account-profile';
 
-type Session={authenticated:boolean;authority_state:string;authority_ready?:boolean;csrf?:string;access_ready?:boolean;user?:{subject:string;display_name:string;org_id:string;workspace_id:string}};
+type Session={authenticated:boolean;authority_state:string;authority_ready?:boolean;csrf?:string;access_ready?:boolean;user?:AccountProfile};
 export type AuthMode='checking'|'preview'|'platform'|'business'|'unavailable';
 export const PlatformSession=createContext<Session|null>(null);
 export const usePlatformSession=()=>useContext(PlatformSession);

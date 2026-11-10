@@ -22,6 +22,7 @@ class MockAccounts:
         self.subject='usr_local_test';self.roles=['workspace:owner'];self.workspace='ws_mock'
         self.identity_options=None
         self.identity_roles={}
+        self.profile_claims={}
         # Explicit test-only service clients; empty by default, no production fallback.
         self.service_clients={}
         parent = self
@@ -129,6 +130,7 @@ class MockAccounts:
                 'sid':sid,'userType':'tenant_user'}
         access = base | {'active_org':'org_mock','active_workspace':context['workspace'],'account_status':'active',
                          'roles':context['roles'],'name':self.identity_options.get(context['subject'],'模拟用户') if self.identity_options else '模拟用户'}
+        access.update(self.profile_claims)
         identity = base.copy()
         if nonce is not None: identity['nonce'] = 'wrong' if self.bad_nonce else nonce
         if self.bad_subject: identity['sub'] = 'usr_wrong'

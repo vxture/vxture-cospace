@@ -20,3 +20,14 @@
 .platform-header-actions>span{align-items:center;min-height:32px}
 .header-support-copy{font-size:14px;line-height:1.6;color:var(--muted-foreground);max-width:280px}
 .header-support-copy p+p{margin-top:8px}
+.header-context{display:flex;align-items:center;gap:12px;min-width:0;height:32px;margin-left:16px;font-family:var(--body-font-family);font-size:var(--body-small-font-size);line-height:var(--body-small-line-height);color:var(--muted-foreground)}
+.header-context-organization,.header-context-scene{display:inline-flex;align-items:center;gap:6px;min-width:0;max-width:200px}
+.header-context svg{flex:none}
+.header-context span>span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.header-context-scene{color:var(--foreground)}
+.header-context-divider{width:1px;height:12px;background:var(--border);flex:none}
+.account-contact-lines{display:flex;flex-direction:column;gap:4px;font-size:var(--body-small-font-size);line-height:var(--body-small-line-height);color:var(--muted-foreground);overflow-wrap:anywhere}
+.account-contact-lines:empty{display:none}
+.account-phone-prefix:not(:empty){margin-right:8px;color:var(--muted-foreground)}
+@media(max-width:760px){.header-context{gap:8px;margin-left:8px}.header-context-organization,.header-context-scene{max-width:120px}}
+@media(max-width:580px){.header-context{display:none}}
