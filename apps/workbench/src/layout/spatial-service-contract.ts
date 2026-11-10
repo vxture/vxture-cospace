@@ -1,6 +1,6 @@
 import type {SceneSpace,ScenePublication} from './scene-directory';
 
-export const serviceKinds={preview:{label:'空间预览',capability:'space.preview'},query:{label:'空间查询',capability:'space.query'},offline:{label:'离线交付',capability:'space.export'}} as const;
+export const serviceKinds={preview:{label:'态势预览',capability:'space.preview'},query:{label:'空间查询',capability:'space.query'},offline:{label:'离线交付',capability:'space.export'}} as const;
 export type ServiceKind=keyof typeof serviceKinds;
 export type SpatialService={id:string;scene:SceneSpace;release:ScenePublication;kind:ServiceKind;available:boolean;state:'active'|'paused'|'retired'|'unknown'};
 // Directory records have already been scoped by the server. Never invent an
@@ -17,3 +17,27 @@ export function filterSpatialServices(items:SpatialService[],query:string,kind:s
   .sort((a,b)=>(Date.parse(b.release.created_at)||0)-(Date.parse(a.release.created_at)||0)||a.id.localeCompare(b.id));
 }
 export const serviceResourcePath=(item:SpatialService)=>`/publications/${encodeURIComponent(item.release.id)}/${item.kind==='query'?'api/query-range':item.kind==='offline'?'offline.zip':'api/preview'}`;
+
+// A space is listed once. Every operation remains bound to an explicit publication.
+export type ServiceVersion={release:ScenePublication;services:SpatialService[];available:boolean;state:SpatialService['state']};
+export type ServiceSpace={scene:SceneSpace;versions:ServiceVersion[]};
+export function serviceSpaces(items:SpatialService[]):ServiceSpace[]{
+ const spaces=new Map<string,ServiceSpace>();
+ for(const item of items){
+  let group=spaces.get(item.scene.id);
+  if(!group){group={scene:item.scene,versions:[]};spaces.set(item.scene.id,group);}
+  let version=group.versions.find(v=>v.release.id===item.release.id);
+  if(!version){version={release:item.release,services:[],available:item.available,state:item.state};group.versions.push(version);}
+  version.services.push(item);
+ }
+ return [...spaces.values()].map(group=>({...group,versions:group.versions.sort((a,b)=>(Date.parse(b.release.created_at)||0)-(Date.parse(a.release.created_at)||0)||a.release.id.localeCompare(b.release.id))}));
+}
+export function selectedServiceVersion(group:ServiceSpace,publication?:string):ServiceVersion|undefined{
+ if(publication!==undefined)return group.versions.find(v=>v.release.id===publication);
+ return group.versions.find(v=>v.available)||group.versions[0];
+}
+export const serviceSections={directory:'服务目录',offline:'离线交付',online:'在线服务',feedback:'态势反馈',recipients:'服务对象'} as const;
+export type ServiceSection=keyof typeof serviceSections;
+export function sectionServices(version:ServiceVersion,section:ServiceSection){
+ return version.services.filter(item=>section==='directory'||section==='offline'&&item.kind==='offline'||section==='online'&&item.kind==='query');
+}
