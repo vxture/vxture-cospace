@@ -1,9 +1,29 @@
-/* DS owns typography, controls and card/drawer surfaces. These rules compose
-   the service grid, bounded descriptions and technical endpoint metadata. */
-.spatial-service-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr));gap:24px}
-.spatial-service-card{min-width:0}
-.spatial-service-symbol{display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:var(--radius-md);background:var(--primary-muted);color:var(--primary-muted-foreground)}
-.spatial-service-description{font-size:var(--body-small-font-size);line-height:var(--body-small-line-height);color:var(--muted-foreground);display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;min-height:calc(var(--body-small-line-height) * 2)}
+/* DS owns typography, controls, menus, badges and drawer surfaces. Custom CSS
+   composes the service-specific overview and responsive header/body/footer. */
+.spatial-service-card{min-width:0;display:flex;flex-direction:column;overflow:hidden;border:1px solid var(--border);border-radius:var(--radius-xl);background:var(--card);color:var(--card-foreground);box-shadow:var(--shadow-overlay);container-type:inline-size}
+.spatial-service-heading{display:flex;align-items:center;gap:8px;padding:12px 14px;min-width:0}
+.spatial-service-symbol{display:inline-flex;align-items:center;justify-content:center;flex:none;width:32px;height:32px;border-radius:var(--radius-md);background:var(--primary-muted);color:var(--primary-muted-foreground)}
+.spatial-service-title{flex:1;min-width:0}
+.spatial-service-title h2{font-size:var(--label-font-size);font-weight:600;line-height:var(--body-line-height);margin:0}
+.spatial-service-title h2 button{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left;font:inherit;color:inherit}
+.spatial-service-title p{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted-foreground);font-size:var(--body-small-font-size);line-height:var(--body-small-line-height);margin:0}
+.spatial-service-heading>[data-slot]{flex:none;font-size:var(--label-micro-font-size)}
+.spatial-service-cover{position:relative;display:flex;align-items:center;justify-content:center;min-height:112px;overflow:hidden;border:0;border-block:1px solid var(--border);background:linear-gradient(135deg,var(--primary-muted),var(--muted));color:var(--primary-muted-foreground);cursor:pointer}
+.spatial-service-cover img{width:100%;height:112px;object-fit:cover}
+.spatial-service-cover>span{position:absolute;left:12px;bottom:8px;padding:2px 6px;border-radius:var(--radius-sm);background:var(--card);color:var(--foreground);font-size:var(--label-small-font-size)}
+.spatial-service-body{padding:12px 14px;flex:1;min-width:0}
+.spatial-service-description{font-size:var(--body-small-font-size);line-height:var(--body-small-line-height);color:var(--muted-foreground);display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;min-height:calc(var(--body-small-line-height) * 2);margin:0;overflow-wrap:anywhere}
+.spatial-service-footer{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:0 14px 12px;min-width:0}
+.spatial-service-version{font-size:var(--label-small-font-size);color:var(--muted-foreground);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.spatial-service-actions{display:flex;align-items:center;gap:6px;flex:none}
+.spatial-service-actions [data-slot=button]{height:32px;min-height:32px;gap:6px;padding-inline:10px;font-size:var(--body-small-font-size)}
+.spatial-service-actions>button:first-child{width:32px;padding:0}
+.spatial-service-card button:focus-visible{outline:2px solid var(--ring);outline-offset:-2px}
+.spatial-service-list .spatial-service-card{display:grid;grid-template-columns:144px minmax(0,1fr);column-gap:20px;padding:14px}
+.spatial-service-list .spatial-service-cover{grid-column:1;grid-row:1/4;border:1px solid var(--border);border-radius:var(--radius-md)}
+.spatial-service-list .spatial-service-heading,.spatial-service-list .spatial-service-body,.spatial-service-list .spatial-service-footer{grid-column:2;padding:0}
+.spatial-service-list .spatial-service-body{padding-block:10px}
+@media(max-width:700px){.spatial-service-list .spatial-service-card{grid-template-columns:80px minmax(0,1fr);column-gap:12px}.spatial-service-list .spatial-service-cover{grid-row:1/3}.spatial-service-list .spatial-service-footer{grid-column:1/-1;padding-top:12px}.spatial-service-list .spatial-service-cover>span{left:4px;font-size:var(--label-micro-font-size)}}
 .spatial-service-metadata{display:grid;grid-template-columns:72px minmax(0,1fr);gap:12px;font-size:var(--body-small-font-size);line-height:var(--body-small-line-height)}
 .spatial-service-metadata dt{color:var(--muted-foreground)}
 .spatial-service-metadata dd{margin:0;overflow-wrap:anywhere}
