@@ -37,7 +37,8 @@ and ShellPanelRow for scene selection. Search matches scene and project names;
 the current scene has a circle check. Unselected or inaccessible context uses
 DS warning tokens. Scene selection is URL scoped, retains the current module
 or service section, and clears previous scene record IDs. Service navigation
-retains this context. No global last-scene storage is introduced.
+retains this context. The last scene is remembered per account, organization
+and workspace; explicit scene URLs take precedence over that preference.
 
 Service cards show three fixed capability badges: offline delivery, online
 service and situation feedback. DS status icons and tones reflect authorized,
