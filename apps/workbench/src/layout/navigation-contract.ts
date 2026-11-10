@@ -17,3 +17,15 @@ export function sceneLinkFromUrl(route:ModuleRoute,space:string,url:string){
  const tab=new URLSearchParams(url.split('?')[1]||'').get('tab')||'';
  return recordLinkFromUrl(route,{space,...(views[route]?.includes(tab)?{tab}:{})},url);
 }
+
+// The global picker also serves the service directory. Never transfer record IDs
+// from the previous scene; retain only the current service navigation section.
+export function headerSceneLinkFromUrl(space:string,url:string){
+ const [path,search='']=url.split('?');
+ const route=path.slice(1) as ModuleRoute;
+ if(['space','data','build','delivery','association','ontology'].includes(route))return sceneLinkFromUrl(route,space,url);
+ const params=new URLSearchParams({space});
+ const section=new URLSearchParams(search).get('section');
+ if(path==='/services'&&section&&['directory','offline','online','feedback','recipients'].includes(section))params.set('section',section);
+ return `${path}?${params}`;
+}
