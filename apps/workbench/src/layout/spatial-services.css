@@ -30,3 +30,16 @@
 .spatial-service-address,.spatial-service-example{min-width:0;overflow-wrap:anywhere;white-space:pre-wrap;font-size:var(--label-small-font-size);line-height:var(--body-small-line-height);padding:12px;border-radius:var(--radius-md);background:var(--muted);color:var(--foreground)}
 .spatial-service-address{flex:1}
 .spatial-service-example{max-height:320px;overflow:auto}
+
+/* Domain navigation composes published DS tabs; spacing and responsive overflow only. */
+.spatial-service-sections{margin-top:20px}
+.spatial-service-sections>[role=tablist]{max-width:100%;overflow-x:auto;overflow-y:hidden;justify-content:flex-start}
+.spatial-service-sections>[role=tablist] button{font-size:var(--body-small-font-size);white-space:nowrap;min-height:28px}
+.spatial-service-section-note{font-size:var(--body-small-font-size);line-height:var(--body-small-line-height);color:var(--muted-foreground);margin-block:12px}
+.spatial-service-capabilities{display:flex;flex-wrap:wrap;gap:6px;margin-block:10px}
+.spatial-service-capabilities span{font-size:var(--label-micro-font-size);padding:2px 6px;border-radius:var(--radius-sm);background:var(--muted);color:var(--muted-foreground)}
+.spatial-service-body select{height:32px;min-height:32px;font-size:var(--body-small-font-size);width:100%}
+.spatial-service-body>span{width:100%}
+.spatial-service-unavailable{display:flex;flex-direction:column;align-items:center;text-align:center;gap:16px;padding:64px 24px;border:1px solid var(--border);border-radius:var(--radius-xl);background:var(--card);color:var(--muted-foreground)}
+.spatial-service-unavailable h2{font-size:var(--heading-3-font-size);color:var(--foreground);font-weight:600}
+.spatial-service-unavailable p{max-width:520px;font-size:var(--body-small-font-size);line-height:var(--body-small-line-height)}

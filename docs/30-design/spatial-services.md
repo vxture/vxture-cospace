@@ -1,33 +1,27 @@
 # Spatial service center
 
-`/services` is the consumer entry under 场景中心, alongside 我的场景.
-It clears scene/record context and uses the History router and the platform
-application route allowlist. No standalone HTML entry is published.
+`/services` is the consumer entry under 场景中心. It uses the app router, never a standalone HTML page.
 
-The catalog derives fixed-version service entries from the existing authorized
-`/api/spaces` response. Each publication exposes only operations explicitly
-granted by the server: 空间预览 (`space.preview`), 空间查询 (`space.query`),
-离线交付 (`space.export`). Missing or unknown lifecycle metadata fails closed;
-paused and retired releases remain inspectable but cannot be consumed.
-The default filter shows active services, newest publication first. No automatic
-version switching occurs. Every actual resource request remains subject to the
-existing server authorization and publication lifecycle checks.
+The current domain design and roadmap are in [空间服务域](spatial-service-domain.md).
+Its five sections are 服务目录 / 离线交付 / 在线服务 / 态势反馈 / 服务对象.
+Offline delivery, online consumption and feedback are independent capabilities.
+Service recipients record service relationships, not device control or operation.
 
-The detail drawer supplies scope, fixed version, release date, the granted
-operation, a copyable resource address and capability-specific support.
-Preview opens the existing dual-view application. Query shows the real range
-query request contract and reuses the authorized interactive query form when
-preview metadata is accessible. Offline delivery reuses the verified package
-consumer guide. Cross-system service identities require administrator setup;
-browser sessions and cookies must not be copied into integrations.
+The first increment groups authorized `/api/spaces` publications by space. Each
+space appears once with an explicit version selector. The initial active version
+is pinned for the page lifetime; refreshing cannot silently select a newer release.
+Unavailable or removed versions do not fall back to a different publication.
+A capability drawer shares the selected fixed version across preview, query and
+export. Every request remains checked by the server. Unknown lifecycle fails closed.
 
-The published DS supplies ViewHeader, Card, StatusBadge, Input, NativeSelect,
-Button and Drawer, including theme and interaction states. Product CSS is limited
-to responsive grid composition, bounded descriptions and wrapping endpoint/version
-metadata. Typography and colors reference DS tokens; search/filter/description
-use 12px tokens, key controls 14px and headings 18/16/14px according to the DS.
-Existing scene catalog layout is reused to keep width and toolbar behavior aligned.
+Available operations remain `space.preview`, `space.query`, `space.export`.
+No feedback or recipient API exists yet: those sections explicitly show unavailable,
+without synthetic records, online counts, credentials or non-persistent save forms.
+The browser query uses the user session; machine service identity is separate.
+Existing S2S support is deployment/authorization dependent and is not inferred from
+browser access. Version synchronization and heartbeat are not claimed as available.
 
-This entry does not invent a public service marketplace, credentials, commercial
-limits, live device status or an alternative permission system. Platform
-subscriptions remain centrally owned. Runtime safety and precision are not certified.
+The official vendored DS 15.0.1 provides tabs, controls, menus, badges and drawers.
+Product CSS only composes the domain cover, card regions and responsive layout.
+Typography and colors use DS tokens; search/filter/description use 12px roles,
+key controls 14px, headings 18/16/14px and compact tags 10px.
