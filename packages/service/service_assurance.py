@@ -11,6 +11,8 @@ def version_status(jobs, space):
     versions = []
     for path in sorted(pubs.root.glob('preview-*/publication.json')):
         record = json.loads(path.read_bytes())
+        if not isinstance(record, dict):
+            raise ValueError('service_version_metadata_invalid')
         if record.get('space_id') != space:
             continue
         # An invalid ownership association never becomes a serviceable version.

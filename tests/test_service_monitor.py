@@ -127,6 +127,9 @@ def test_assurance_versions_follow_lifecycle_and_isolate_foreign_scene(consumer,
     from packages.service.preview_publications import PreviewPublications
     from test_preview_control import run
     client,route,body,headers,path,config,access,jobs,spaces,old,new,claims,accounts,clock=consumer
+    foreign=PreviewPublications(jobs).root/('preview-'+'f'*16)
+    foreign.mkdir()
+    (foreign/'publication.json').write_text(json.dumps({'id':foreign.name,'space_id':spaces[1]['id'],'project_id':spaces[1]['project_id']}))
     # Monitoring must not open full geometry or perform a synthetic query.
     original_read=PreviewPublications.read
     monkeypatch.setattr(PreviewPublications,'read',lambda *args:pytest.fail('geometry must not be read'))
@@ -136,6 +139,7 @@ def test_assurance_versions_follow_lifecycle_and_isolate_foreign_scene(consumer,
     releases=report['assurance']['releases']
     assert releases['state']=='observed' and releases['distributing_count']==2
     assert {v['publication_id'] for v in releases['versions']}=={old['id'],new['id']}
+    assert foreign.name not in json.dumps(report['assurance'])
     assert all(v['realtime']=='unverified' for v in releases['versions'])
     assert next(check for check in report['assurance']['checks'] if check['key']=='freshness')['state']=='attention'
     monkeypatch.setattr(PreviewPublications,'read',original_read)
