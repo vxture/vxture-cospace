@@ -10,8 +10,8 @@ const ServiceLink=React.forwardRef<HTMLAnchorElement,React.AnchorHTMLAttributes<
 ServiceLink.displayName='ServiceLink';
 const sections:ShellNavSection[]=[{title:'功能导航',items:[
  {href:'/services?section=directory',label:'服务目录',icon:'cube'},
- {href:'/services?section=offline',label:'离线交付',icon:'download'},
  {href:'/services?section=online',label:'在线服务',icon:'cloud'},
+ {href:'/services?section=offline',label:'离线交付',icon:'download'},
  {href:'/services?section=feedback',label:'态势反馈',icon:'upload'},
  {href:'/services?section=recipients',label:'服务对象',icon:'users'}
 ]}];

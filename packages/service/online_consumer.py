@@ -5,6 +5,7 @@ import math
 from pathlib import Path
 import re
 import sqlite3
+import time
 from pydantic import BaseModel,ConfigDict,Field,ValidationError
 from fastapi.responses import JSONResponse
 from starlette.concurrency import run_in_threadpool
@@ -56,9 +57,10 @@ class ServiceTokens:
 
 
 class OnlineConsumer:
-    def __init__(self,rp,policies,jobs,config_path,*,verifier=None,subscriptions=None):
+    def __init__(self,rp,policies,jobs,config_path,*,verifier=None,subscriptions=None,monitor=None):
         self.rp=rp;self.policies=policies;self.jobs=jobs;self.path=Path(config_path)
         self.subscriptions=subscriptions
+        self.monitor=monitor
         config=self.load();self.audience=config.audience
         cfg=rp.config.verifier_config.model_copy(update={'audience':self.audience})
         self.tokens=ServiceTokens(verifier or PlatformTokenVerifier(cfg))
@@ -75,6 +77,26 @@ class OnlineConsumer:
             raise IdentityUnavailable('consumer_configuration_unavailable') from exc
 
     def query(self,space,publication,token,body):
+        trusted=[];start=time.perf_counter();outcome='consumer_dependency_unavailable';code=503
+        try:
+            response=self._query(space,publication,token,body,trusted)
+            outcome=response.get('refusal') or response['status'];code=200
+            return response
+        except SubscriptionDenied:
+            outcome='subscription_required';code=403;raise
+        except PermissionError:
+            outcome='consumer_space_denied';code=403;raise
+        except FileNotFoundError:
+            outcome='consumer_publication_not_found';code=404;raise
+        except (ValidationError,ValueError,KeyError,TypeError,OverflowError) as exc:
+            outcome=public_error(exc,('publication_retired','publication_distribution_paused','consumer_version_mismatch','consumer_frame_mismatch'),'consumer_request_or_publication_invalid')
+            code=422 if outcome=='consumer_request_or_publication_invalid' else 409
+            raise
+        finally:
+            if trusted and self.monitor is not None:
+                self.monitor.record(trusted[0],publication,outcome,code,(time.perf_counter()-start)*1000)
+
+    def _query(self,space,publication,token,body,trusted):
         config=self.load()
         if config.audience!=self.audience:raise IdentityUnavailable('consumer_restart_required')
         claims=self.tokens.verify(token,config.audience)
@@ -84,6 +106,7 @@ class OnlineConsumer:
             not any(g.caller==claims['act']['sub'] and g.space_id==space for g in config.grants)):
             raise PermissionError('consumer_space_denied')
         principal=PlatformPrincipal(claims['iss'],'',claims['org_id'],claims['workspace_id'],(),'service',claims['exp'])
+        trusted.append((claims['iss'],claims['org_id'],claims['workspace_id'],space,claims['act']['sub']))
         if self.subscriptions is not None:self.subscriptions.require(principal)
         request=Query.model_validate(body)
         if not all(math.isfinite(v) for v in request.point_m):raise ValueError('consumer_point_invalid')
