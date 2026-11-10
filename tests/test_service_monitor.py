@@ -56,6 +56,10 @@ def test_only_verified_authorized_s2s_requests_are_recorded(consumer):
     assert report['request_count']==3 and report['counts']=={'historical_result':1,'refused':1,'rejected':1,'failed':0}
     assert report['configuration']=={'state':'configured','callers':['robot-product']}
     assert report['recent'][0]['outcome']=='consumer_frame_mismatch'
+    assert {item['outcome']:item['requests'] for item in report['outcomes']}=={'historical_result':1,'observation_time_unverified':1,'consumer_frame_mismatch':1}
+    assert report['callers'][0]['requests']==3 and report['callers'][0]['caller']=='robot-product'
+    assert report['assurance']['end_to_end_probe'] is False
+    assert all(version['publication_id'] in (old['id'],new['id']) for version in report['assurance']['releases']['versions'])
     assert client.get('/api/service-monitor',params={'space_id':spaces[1]['id']}).status_code==403
     assert client.get('/api/service-monitor',params={'space_id':spaces[0]['id'],'extra':'x'}).status_code==422
     raw=access.service_monitor.path.read_bytes()
@@ -106,3 +110,62 @@ def test_monitor_config_revocation_and_pause_are_distinct(consumer):
     report=client.get('/api/service-monitor',params={'space_id':spaces[0]['id']}).json()
     assert report['configuration']=={'state':'unavailable','callers':[]}
     assert report['request_count']==1
+
+
+def test_whole_window_diagnostics_include_events_outside_recent_page(tmp_path):
+    monitor=ServiceMonitor(tmp_path,now=lambda:1000000.)
+    p=principal();scope=(p.issuer,p.org_id,p.workspace_id,'space-a','robot-product')
+    monitor.record(scope,'preview-a','consumer_frame_mismatch',409,10)
+    for _ in range(25):monitor.record(scope,'preview-a','historical_result',200,20)
+    report=monitor.snapshot(p,'space-a')
+    assert len(report['recent'])==20 and all(row['outcome']=='historical_result' for row in report['recent'])
+    assert next(item for item in report['outcomes'] if item['outcome']=='consumer_frame_mismatch')['requests']==1
+    assert report['callers'][0]['requests']==26
+
+
+def test_assurance_versions_follow_lifecycle_and_isolate_foreign_scene(consumer,monkeypatch):
+    from packages.service.preview_publications import PreviewPublications
+    from test_preview_control import run
+    client,route,body,headers,path,config,access,jobs,spaces,old,new,claims,accounts,clock=consumer
+    # Monitoring must not open full geometry or perform a synthetic query.
+    original_read=PreviewPublications.read
+    monkeypatch.setattr(PreviewPublications,'read',lambda *args:pytest.fail('geometry must not be read'))
+    client.follow_redirects=False;accounts.subject='usr_manager';login(access.rp,client,accounts)
+    endpoint='/api/service-monitor?space_id='+spaces[0]['id']
+    report=client.get(endpoint).json()
+    releases=report['assurance']['releases']
+    assert releases['state']=='observed' and releases['distributing_count']==2
+    assert {v['publication_id'] for v in releases['versions']}=={old['id'],new['id']}
+    assert all(v['realtime']=='unverified' for v in releases['versions'])
+    assert next(check for check in report['assurance']['checks'] if check['key']=='freshness')['state']=='attention'
+    monkeypatch.setattr(PreviewPublications,'read',original_read)
+    run(jobs.controls,PreviewPublications(jobs),spaces[0]['id'],'publication:'+new['id'],'pause_distribution')
+    monkeypatch.setattr(PreviewPublications,'read',lambda *args:pytest.fail('geometry must not be read'))
+    report=client.get(endpoint).json()
+    assert report['assurance']['releases']['distributing_count']==1
+    assert next(v for v in report['assurance']['releases']['versions'] if v['publication_id']==new['id'])['state']=='paused'
+    # A broken current-scene manifest is exposed as unknown, never healthy.
+    (PreviewPublications(jobs).root/old['id']/'model.json').write_text('{}')
+    report=client.get(endpoint).json()
+    assert report['assurance']['releases']['distributing_count']==0
+    assert next(v for v in report['assurance']['releases']['versions'] if v['publication_id']==old['id'])['state']=='unavailable'
+    # A metadata read failure is explicit without removing request history.
+    def unavailable(*args):raise OSError('unavailable')
+    monkeypatch.setattr('packages.service.service_assurance.version_status',unavailable)
+    report=client.get(endpoint).json()
+    assert report['assurance']['releases']['state']=='unavailable'
+    assert report['assurance']['releases']['distributing_count'] is None
+    assert next(check for check in report['assurance']['checks'] if check['key']=='publication')['state']=='unknown'
+
+
+def test_assurance_retired_version_preserves_replacement(consumer):
+    from packages.service.preview_publications import PreviewPublications
+    from packages.service.service_assurance import version_status
+    from test_publication_retirement import request as retire
+    client,route,body,headers,path,config,access,jobs,spaces,old,new,*_=consumer
+    pubs=PreviewPublications(jobs)
+    jobs.controls.change(pubs,retire(jobs,pubs,spaces[0]['id'],old,new),'test')
+    result=version_status(jobs,spaces[0]['id'])
+    version=next(v for v in result['versions'] if v['publication_id']==old['id'])
+    assert version['state']=='retired' and version['replacement_publication_id']==new['id']
+    assert result['distributing_count']==1

@@ -385,7 +385,9 @@ class BusinessAccess:
                         configuration={'state':('configured' if callers else 'not_granted') if config.audience==self.consumer.audience else 'unavailable',
                             'callers':callers if config.audience==self.consumer.audience else []}
                     except IdentityUnavailable:configuration={'state':'unavailable','callers':[]}
-                return JSONResponse(result|{'configuration':configuration},headers={'Cache-Control':'no-store'})
+                from packages.service.service_assurance import assurance
+                diagnosis=await run_in_threadpool(assurance,self.jobs,request.query_params['space_id'],result,configuration)
+                return JSONResponse(result|{'configuration':configuration,'assurance':diagnosis},headers={'Cache-Control':'no-store'})
             if path=='/api/data-catalog':
                 try:query=CatalogQuery.model_validate(dict(request.query_params))
                 except ValidationError:return deny(422,'catalog_query_invalid')

@@ -75,10 +75,17 @@ class ServiceMonitor:
                               (*scope, now - WINDOW, now)).fetchall()
         counts = {'historical_result': 0, 'refused': 0, 'rejected': 0, 'failed': 0}
         versions = {}
+        outcomes = {}
+        callers = {}
         for row in rows:
             outcome = row['outcome']
             counts['historical_result' if outcome == 'historical_result' else 'refused' if outcome == 'observation_time_unverified' else 'failed' if row['http_status'] >= 500 else 'rejected'] += 1
             versions[row['publication']] = versions.get(row['publication'], 0) + 1
+            key = (outcome, row['http_status'])
+            item = outcomes.setdefault(key, {'outcome': outcome, 'http_status': row['http_status'], 'requests': 0, 'last_at': utc(row['at'])})
+            item['requests'] += 1
+            caller = callers.setdefault(row['caller'], {'caller': row['caller'], 'requests': 0, 'last_at': utc(row['at']), 'last_outcome': outcome})
+            caller['requests'] += 1
         durations = sorted(row['duration_ms'] for row in rows)
         return {
             'profile': 'cospace.service-monitor/0.1', 'space_id': space, 'generated_at': utc(now),
@@ -91,4 +98,6 @@ class ServiceMonitor:
             'p95_ms': durations[math.ceil(len(durations)*.95)-1] if durations else None,
             'versions': [{'publication_id': key, 'requests': value} for key, value in sorted(versions.items(), key=lambda item: (-item[1],item[0]))[:10]],
             'recent': [dict(row) | {'at': utc(row['at'])} for row in rows[:20]],
+            'outcomes': sorted(outcomes.values(), key=lambda item: (-item['requests'], item['outcome'])),
+            'callers': sorted(callers.values(), key=lambda item: (-item['requests'], item['caller']))[:100],
         }

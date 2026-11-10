@@ -4,8 +4,9 @@ import {ArrowsClockwise} from '@phosphor-icons/react';
 import {businessEndpoint} from './business-endpoint';
 import {recordLink} from './record-navigation';
 import type {SceneSpace} from './scene-directory';
+import {ServiceAssurancePanel,type Assurance,type Outcome,type Caller} from './service-assurance-panel';
 
-type Report={space_id:string;generated_at:string;window:{from:string;to:string};configuration:{state:'configured'|'not_configured'|'not_granted'|'unavailable';callers:string[]};coverage:{started_at:string;partial:boolean;write_failed_at:string|null;retention_days:number;max_events:number};request_count:number;counts:{historical_result:number;refused:number;rejected:number;failed:number};last_request_at:string|null;p95_ms:number|null;versions:{publication_id:string;requests:number}[];recent:{at:string;caller:string;publication:string;outcome:string;http_status:number;duration_ms:number}[]};
+type Report={assurance:Assurance;outcomes:Outcome[];callers:Caller[];space_id:string;generated_at:string;window:{from:string;to:string};configuration:{state:'configured'|'not_configured'|'not_granted'|'unavailable';callers:string[]};coverage:{started_at:string;partial:boolean;write_failed_at:string|null;retention_days:number;max_events:number};request_count:number;counts:{historical_result:number;refused:number;rejected:number;failed:number};last_request_at:string|null;p95_ms:number|null;versions:{publication_id:string;requests:number}[];recent:{at:string;caller:string;publication:string;outcome:string;http_status:number;duration_ms:number}[]};
 const configLabels={configured:'服务接入已配置',not_configured:'服务接入未配置',not_granted:'当前空间未授权接入',unavailable:'接入配置异常'};
 const time=(value:string|null)=>value?new Date(value).toLocaleString('zh-CN',{hour12:false}):'暂无记录';
 const reasons:Record<string,string>={historical_result:'返回历史结果',observation_time_unverified:'观测时效未核验',publication_distribution_paused:'版本已暂停',publication_retired:'版本已退役',consumer_version_mismatch:'版本摘要不匹配',consumer_frame_mismatch:'坐标系不匹配',consumer_space_denied:'空间授权拒绝',consumer_publication_not_found:'版本不存在',consumer_request_or_publication_invalid:'请求或成果无效',subscription_required:'订阅授权拒绝',consumer_dependency_unavailable:'依赖暂不可用'};
@@ -15,7 +16,7 @@ export function OnlineServiceMonitor({scene,space,revision}:{scene?:SceneSpace;s
  useEffect(()=>{if(!space||!allowed)return;const timer=window.setInterval(()=>{if(document.visibilityState==='visible')setRefresh(value=>value+1);},30000);return()=>window.clearInterval(timer);},[space,allowed]);
  useEffect(()=>{
   if(!space||!allowed)return;
-  const controller=new AbortController();setSaved(null);
+  const controller=new AbortController();
   fetch(`${businessEndpoint}/api/service-monitor?${new URLSearchParams({space_id:space})}`,{cache:'no-store',signal:controller.signal}).then(async response=>{
    if(!response.ok)throw Error(response.status===403?'监测权限已变化，请刷新空间目录。':'服务监测暂不可用，请重试。');
    const report:Report=await response.json();
@@ -38,6 +39,7 @@ export function OnlineServiceMonitor({scene,space,revision}:{scene?:SceneSpace;s
     <div><h3 className="text-body font-medium mb-sm">已授权调用身份</h3><div className="flex flex-wrap gap-sm">{report.configuration.callers.length?report.configuration.callers.map(caller=><StatusBadge key={caller} tone="neutral">{caller}</StatusBadge>):<p className="text-body-small text-muted-foreground">暂无已配置的空间调用身份</p>}</div><p className="text-label-small text-muted-foreground mt-sm">一个调用身份可代理多个具身智能体，不表示设备数量或在线状态。</p></div>
    </>}
   </CardContent></Card>
+  {report&&<ServiceAssurancePanel space={space} assurance={report.assurance} outcomes={report.outcomes} callers={report.callers}/>}
   {report&&<Card><CardHeader><CardTitle className="text-heading-3">调用与版本</CardTitle></CardHeader><CardContent className="flex flex-col gap-lg">
    <div className="flex flex-wrap gap-sm" aria-label="调用最多的前十个版本">{report.versions.map(version=><StatusBadge key={version.publication_id} tone="neutral">Ver: {version.publication_id.slice(-8)} · {version.requests} 次</StatusBadge>)}</div>
    {report.recent.length?<div className="overflow-x-auto"><Table><TableHeader><TableRow><TableHead>请求时间</TableHead><TableHead>调用身份</TableHead><TableHead>版本</TableHead><TableHead>结果</TableHead><TableHead>耗时</TableHead></TableRow></TableHeader><TableBody>{report.recent.map((row,index)=><TableRow key={index}><TableCell>{time(row.at)}</TableCell><TableCell>{row.caller}</TableCell><TableCell title={row.publication}>Ver: {row.publication.slice(-8)}</TableCell><TableCell>{reasons[row.outcome]||'服务异常'} · {row.http_status}</TableCell><TableCell>{row.duration_ms} ms</TableCell></TableRow>)}</TableBody></Table></div>:<p className="text-body-small text-muted-foreground">当前窗口暂无调用记录。未记录到请求不代表设备离线。</p>}
