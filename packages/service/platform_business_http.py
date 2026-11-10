@@ -381,8 +381,9 @@ class BusinessAccess:
                 if self.consumer is not None:
                     try:
                         config=await run_in_threadpool(self.consumer.load)
-                        configuration={'state':'configured' if config.audience==self.consumer.audience else 'unavailable',
-                            'callers':sorted(g.caller for g in config.grants if g.space_id==request.query_params['space_id']) if config.audience==self.consumer.audience else []}
+                        callers=sorted(g.caller for g in config.grants if g.space_id==request.query_params['space_id'])
+                        configuration={'state':('configured' if callers else 'not_granted') if config.audience==self.consumer.audience else 'unavailable',
+                            'callers':callers if config.audience==self.consumer.audience else []}
                     except IdentityUnavailable:configuration={'state':'unavailable','callers':[]}
                 return JSONResponse(result|{'configuration':configuration},headers={'Cache-Control':'no-store'})
             if path=='/api/data-catalog':

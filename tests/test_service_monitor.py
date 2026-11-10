@@ -99,6 +99,9 @@ def test_monitor_config_revocation_and_pause_are_distinct(consumer):
     report=client.get('/api/service-monitor',params={'space_id':spaces[0]['id']}).json()
     assert report['recent'][0]['outcome']=='publication_distribution_paused'
     assert report['counts']['rejected']==1 and report['counts']['refused']==0
+    path.write_text(json.dumps(config|{'grants':[]}))
+    report=client.get('/api/service-monitor',params={'space_id':spaces[0]['id']}).json()
+    assert report['configuration']=={'state':'not_granted','callers':[]}
     path.write_text('{broken')
     report=client.get('/api/service-monitor',params={'space_id':spaces[0]['id']}).json()
     assert report['configuration']=={'state':'unavailable','callers':[]}
