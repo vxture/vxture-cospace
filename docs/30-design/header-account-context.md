@@ -29,3 +29,27 @@ email/phone contact fields with its tenant identity claims.
 Custom CSS composes the bounded header context and two-line contact metadata.
 It uses DS typography/color/spacing surfaces; the DS owns panel controls,
 avatar, verification badge and external-link behavior.
+# Persistent scene and session context
+
+The app uses one persistent React Router parent layout. Authentication, theme
+and scene context remain mounted while functional child routes change. The
+services Launcher entry is handled by the same client router as other modules.
+Navigation alone does not bootstrap authentication again.
+
+Scene preference is stored per subject, organization and workspace. Explicit
+URL scene context wins; an explicit empty scene clears the preference. A bare
+functional URL restores remembered context, while `/space` remains the scene
+catalog with the remembered scene visible in the header. Unavailable stored
+scenes are shown honestly, never replaced automatically or treated as access.
+Storage contains only a scene identifier and grants no permission. Cross-tab
+live editing is independent; a newly opened page restores the saved preference.
+
+Initial load confirms the session. Existing trusted activity checks (30-second
+throttle), focus/visibility resume checks and server-side authorization remain.
+These checks use the central platform's validity schedule. API 401 hides the
+workspace immediately; transient authority failures retain drafts behind the
+session boundary. Successful local logout signals other same-origin tabs;
+other-product logout is detected through central confirmation on resume or
+normal activity. Cross-origin logout is not claimed to be an instant push.
+In-flight confirmations cannot restore a session after a logout invalidates
+its generation. No credentials are stored in browser scene preferences.

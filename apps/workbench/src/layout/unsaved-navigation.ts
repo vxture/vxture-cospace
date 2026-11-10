@@ -26,7 +26,7 @@ export async function runGuarded(action:()=>void){if(await requestLeave())action
 export async function navigateSafely(href:string){appNavigate(href);}
 // Native anchors share the same router as imperative actions. Modified clicks and
 // new tabs retain standard browser behavior; React Router blocks dirty transitions.
-const routes=new Set(['/', '/space','/data','/build','/delivery','/ontology','/association','/settings','/members','/identity','/account']);
+const routes=new Set(['/', '/space','/services','/data','/build','/delivery','/ontology','/association','/settings','/members','/identity','/account']);
 document.addEventListener('click',event=>{
  const anchor=(event.target instanceof Element?event.target:null)?.closest('a');
  if(!anchor||event.defaultPrevented||event.button!==0||event.ctrlKey||event.metaKey||event.shiftKey||event.altKey||anchor.target==='_blank'||anchor.hasAttribute('download'))return;
