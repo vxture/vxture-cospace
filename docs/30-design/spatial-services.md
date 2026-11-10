@@ -3,7 +3,7 @@
 `/services` is the consumer entry under 场景中心. It uses the app router, never a standalone HTML page.
 
 The current domain design and roadmap are in [空间服务域](spatial-service-domain.md).
-Its five sections are 服务目录 / 离线交付 / 在线服务 / 态势反馈 / 服务对象.
+Its five sections use the published DS ShellSidebarFrame + ShellSidebarNav, with a DS Drawer on phones. Its sections are 服务目录 / 离线交付 / 在线服务 / 态势反馈 / 服务对象.
 Offline delivery, online consumption and feedback are independent capabilities.
 Service recipients record service relationships, not device control or operation.
 
@@ -25,3 +25,8 @@ The official vendored DS 15.0.1 provides tabs, controls, menus, badges and drawe
 Product CSS only composes the domain cover, card regions and responsive layout.
 Typography and colors use DS tokens; search/filter/description use 12px roles,
 key controls 14px, headings 18/16/14px and compact tags 10px.
+
+The version control lives at the card footer left as a DS dropdown radio menu.
+The cover reuses SceneCover from scene selection, including authorized images and
+the explicitly labeled default spatial illustration. Product CSS only places
+the sidebar/content and adapts card columns to available content width.
