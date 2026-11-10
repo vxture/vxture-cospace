@@ -25,6 +25,13 @@
 .header-context svg{flex:none}
 .header-context span>span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .header-context-scene{color:var(--foreground)}
+.header-scene-trigger{gap:6px;min-width:0;max-width:240px;font-size:var(--body-small-font-size);font-weight:400}
+.header-scene-trigger[data-warning=true]{background:var(--warning-muted);color:var(--warning-muted-foreground)}
+.header-scene-trigger[data-warning=true] .header-context-scene{color:inherit}
+.header-scene-trigger[data-warning=true]:hover{background:var(--warning-muted)}
+.header-scene-trigger .header-context-scene>span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.header-scene-panel{width:360px;max-width:calc(100vw - 24px)}
+.header-scene-options{max-height:360px;overflow-y:auto;margin-top:var(--spacing-xs,4px)}
 .header-context-divider{width:1px;height:12px;background:var(--border);flex:none}
 .account-contact-lines{display:flex;flex-direction:column;gap:4px;font-size:var(--body-small-font-size);line-height:var(--body-small-line-height);color:var(--muted-foreground);overflow-wrap:anywhere}
 .account-contact-lines:empty{display:none}

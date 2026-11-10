@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {moduleLinkFromUrl,recordLinkFromUrl,sceneLinkFromUrl} from '../../apps/workbench/src/layout/navigation-contract.ts';
+import {moduleLinkFromUrl,recordLinkFromUrl,sceneLinkFromUrl,headerSceneLinkFromUrl} from '../../apps/workbench/src/layout/navigation-contract.ts';
 import {moduleNames,moduleScopes} from '../../apps/workbench/src/layout/product-navigation.ts';
 
 test('all module switches preserve only scene context, including shared support filters',()=>{
@@ -40,4 +40,11 @@ test('scene selection preserves valid capabilities and clears every old record',
  assert.equal(sceneLinkFromUrl('association','next',source),'/association?space=next');
  assert.equal(sceneLinkFromUrl('build','',source),'/build?space=&tab=tasks');
  assert.equal(sceneLinkFromUrl('data','next','/data?space=old&tab=lineage&artifact=old'),'/data?space=next&tab=lineage');
+});
+
+test('header selection keeps service section but never previous scene records',()=>{
+ assert.equal(headerSceneLinkFromUrl('next','/services?section=offline&space=old&publication=old&job=old'),'/services?space=next&section=offline');
+ assert.equal(headerSceneLinkFromUrl('next','/build?space=old&tab=tasks&job=old'),'/build?space=next&tab=tasks');
+ assert.equal(headerSceneLinkFromUrl('A&B','/space?screen=space&publication=old'),'/space?space=A%26B');
+ assert.equal(headerSceneLinkFromUrl('next','/services?section=invalid&artifact=old'),'/services?space=next');
 });

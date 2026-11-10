@@ -30,3 +30,23 @@ The version control lives at the card footer left as a DS dropdown radio menu.
 The cover reuses SceneCover from scene selection, including authorized images and
 the explicitly labeled default spatial illustration. Product CSS only places
 the sidebar/content and adapts card columns to available content width.
+# Header scene context and service card states
+
+The product header uses the published DS Popover, ShellPanelContent, Input,
+and ShellPanelRow for scene selection. Search matches scene and project names;
+the current scene has a circle check. Unselected or inaccessible context uses
+DS warning tokens. Scene selection is URL scoped, retains the current module
+or service section, and clears previous scene record IDs. Service navigation
+retains this context. No global last-scene storage is introduced.
+
+Service cards show three fixed capability badges: offline delivery, online
+service and situation feedback. DS status icons and tones reflect authorized,
+active capabilities; feedback remains unavailable until its integration exists.
+Each badge exposes its state through its accessible name and tooltip. Preview
+remains an operation, not a fourth capability badge. Version selection uses
+a persistent secondary button, 32px tall, labeled `Ver: <short version>`.
+Section headings reuse the same DS icon mapping as functional navigation.
+
+Custom CSS only supplies header truncation, popover width/scroll limits,
+warning token bindings and alignment with the existing 32px header/footer
+controls; DS owns control surfaces, typography, rows and badge states.

@@ -1,10 +1,10 @@
 import React,{useEffect,useMemo,useState} from 'react';
 import {useSearchParams} from 'react-router-dom';
-import {Button,Input,NativeSelect,ViewHeader,SegmentedControl,ShellSidebarFrame,Drawer,useMediaQuery,StatusBadge} from '@vxture/design-system';
+import {Button,Input,NativeSelect,ViewHeader,SegmentedControl,ShellSidebarFrame,Drawer,useMediaQuery,StatusBadge,Icon} from '@vxture/design-system';
 import {Cube,Robot,UploadSimple,MagnifyingGlass,ArrowsClockwise,List,SquaresFour,SidebarSimple} from '@phosphor-icons/react';
 import {useSceneDirectory} from './use-scene-directory';
 import {spatialServices,serviceSpaces,selectedServiceVersion,sectionServices,serviceSections,type ServiceSection,type SpatialService} from './spatial-service-contract';
-import {ServiceNavigation} from './service-navigation';
+import {ServiceNavigation,serviceSectionIcons} from './service-navigation';
 import {ServiceCard} from './spatial-service-card';
 import {ServiceDetail} from './spatial-service-detail';
 import './scene-catalog.css';
@@ -57,7 +57,7 @@ export function SpatialServices(){
   {!narrow&&<ShellSidebarFrame mode={collapsed?'collapsed':'expanded'}><ServiceNavigation section={section} collapsed={collapsed} onToggle={()=>setCollapsed(value=>!value)}/></ShellSidebarFrame>}
   <div className="spatial-service-content"><div className="scene-catalog-shell">
   {narrow&&<Button variant="ghost" size="sm" onClick={()=>setNavigationOpen(true)}><SidebarSimple size={16}/>功能导航</Button>}
-  <ViewHeader title={serviceSections[section]} secondary={catalog?<span className="scene-total" aria-label="空间总数">{groups.length}</span>:undefined} description={descriptions[section]}/>
+  <ViewHeader title={<span className="inline-flex items-center gap-sm"><Icon name={serviceSectionIcons[section]}/>{serviceSections[section]}</span>} secondary={catalog?<span className="scene-total" aria-label="空间总数">{groups.length}</span>:undefined} description={descriptions[section]}/>
    {catalog?<section aria-label={serviceSections[section]}>
     {missingVersion&&<p role="alert" className="spatial-service-section-note">已选版本不再可见，相关空间的操作已停止。请重新确认版本。<Button variant="link" size="sm" onClick={()=>setVersions(current=>Object.fromEntries(Object.entries(current).filter(([id,publication])=>{const group=groups.find(value=>value.scene.id===id);return !group||!!selectedServiceVersion(group,publication);}))) }>重新选择版本</Button></p>}
     <div className="scene-catalog-toolbar" aria-label="空间服务筛选"><SegmentedControl value={layout} onChange={setLayout} size="md" className="h-control-xl p-2xs" ariaLabel="服务布局" items={[{value:'list',label:<List size={20}/>,ariaLabel:'列表布局'},{value:'cards',label:<SquaresFour size={20}/>,ariaLabel:'卡片布局'}]}/><span className="scene-result-count" aria-live="polite">筛选 <strong>{visible.length}</strong> 个空间</span><div className="scene-catalog-filters"><div className="scene-catalog-search"><MagnifyingGlass size={16}/><Input aria-label="搜索空间服务" placeholder="搜索空间、项目或当前版本" value={query} onChange={event=>setQuery(event.target.value)}/></div><NativeSelect wrapperClassName="scene-catalog-select" aria-label="版本状态" value={state} onChange={event=>setState(event.target.value)}><option value="available">可用版本</option><option value="all">全部状态</option><option value="unavailable">不可用版本</option></NativeSelect><Button size="icon-xl" variant="outline" aria-label="刷新空间服务" onClick={()=>setRevision(value=>value+1)}><ArrowsClockwise size={16}/></Button></div></div>
