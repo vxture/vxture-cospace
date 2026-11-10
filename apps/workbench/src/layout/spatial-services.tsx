@@ -1,9 +1,10 @@
 import React,{useEffect,useMemo,useState} from 'react';
 import {useSearchParams} from 'react-router-dom';
-import {Button,Input,NativeSelect,ViewHeader,SegmentedControl,Tabs,TabsList,TabsTrigger,TabsContent,StatusBadge} from '@vxture/design-system';
-import {Cube,Robot,UploadSimple,MagnifyingGlass,ArrowsClockwise,List,SquaresFour} from '@phosphor-icons/react';
+import {Button,Input,NativeSelect,ViewHeader,SegmentedControl,ShellSidebarFrame,Drawer,useMediaQuery,StatusBadge} from '@vxture/design-system';
+import {Cube,Robot,UploadSimple,MagnifyingGlass,ArrowsClockwise,List,SquaresFour,SidebarSimple} from '@phosphor-icons/react';
 import {useSceneDirectory} from './use-scene-directory';
 import {spatialServices,serviceSpaces,selectedServiceVersion,sectionServices,serviceSections,type ServiceSection,type SpatialService} from './spatial-service-contract';
+import {ServiceNavigation} from './service-navigation';
 import {ServiceCard} from './spatial-service-card';
 import {ServiceDetail} from './spatial-service-detail';
 import './scene-catalog.css';
@@ -22,10 +23,13 @@ function UnavailableSection({section}:{section:'feedback'|'recipients'}){
  return <section className="spatial-service-unavailable" aria-label={serviceSections[section]}><SectionIcon size={32}/><h2>{feedback?'态势反馈接入尚未开放':'服务对象登记尚未开放'}</h2><p>{feedback?'态势反馈将提供接入配置、数据约定、接口接入与接收诊断。反馈处理和空间更新由其他板块承接。':'支持登记离线交付对象，识别在线接入对象，并查看各对象关联的空间与使用版本。'}</p><StatusBadge tone="neutral">尚未开放</StatusBadge></section>;
 }
 export function SpatialServices(){
- const [params,setParams]=useSearchParams();
+ const [params]=useSearchParams();
  const tab=params.get('section')||'directory';
  const section:ServiceSection=Object.hasOwn(serviceSections,tab)?tab as ServiceSection:'directory';
  const [revision,setRevision]=useState(0),[query,setQuery]=useState(''),[state,setState]=useState('available'),[selected,setSelected]=useState(''),[layout,setLayout]=useState('cards');
+ const [collapsed,setCollapsed]=useState(false),[navigationOpen,setNavigationOpen]=useState(false);
+ const narrow=useMediaQuery('(max-width:639px)');
+ useEffect(()=>{setSelected('');setQuery('');setState('available');setNavigationOpen(false);},[section]);
  const [versions,setVersions]=useState<Record<string,string>>({});
  const {spaces,loading,error}=useSceneDirectory(revision);
  const items=useMemo(()=>spatialServices(spaces),[spaces]);
@@ -47,18 +51,19 @@ export function SpatialServices(){
  });
  const detail=!error?items.find(item=>item.id===selected):undefined;
  const detailItems=detail?items.filter(item=>item.scene.id===detail.scene.id&&item.release.id===detail.release.id):[];
- function changeSection(value:string){setSelected('');setQuery('');setState('available');setParams({section:value},{replace:false});}
  function chooseVersion(space:string,publication:string){setVersions(current=>({...current,[space]:publication}));setState('all');setSelected('');}
  const catalog=section!=='feedback'&&section!=='recipients';
- return <main className="scene-catalog spatial-services" aria-label="空间服务"><div className="scene-catalog-shell">
-  <ViewHeader title="空间服务" secondary={<span className="scene-total" aria-label="空间总数">{groups.length}</span>} description="为具身智能体提供空间态势成果交付、在线服务与态势反馈接入。"/>
-  <Tabs value={section} onValueChange={changeSection} className="spatial-service-sections"><TabsList aria-label="空间服务模块">{Object.entries(serviceSections).map(([key,label])=><TabsTrigger value={key} key={key}>{label}</TabsTrigger>)}</TabsList>
-   <p className="spatial-service-section-note">{descriptions[section]}</p>
-   {catalog?<TabsContent value={section}>
+ return <main className="scene-catalog spatial-services" aria-label="空间服务">
+  {!narrow&&<ShellSidebarFrame mode={collapsed?'collapsed':'expanded'}><ServiceNavigation section={section} collapsed={collapsed} onToggle={()=>setCollapsed(value=>!value)}/></ShellSidebarFrame>}
+  <div className="spatial-service-content"><div className="scene-catalog-shell">
+  {narrow&&<Button variant="ghost" size="sm" onClick={()=>setNavigationOpen(true)}><SidebarSimple size={16}/>功能导航</Button>}
+  <ViewHeader title={serviceSections[section]} secondary={catalog?<span className="scene-total" aria-label="空间总数">{groups.length}</span>:undefined} description={descriptions[section]}/>
+   {catalog?<section aria-label={serviceSections[section]}>
     {missingVersion&&<p role="alert" className="spatial-service-section-note">已选版本不再可见，相关空间的操作已停止。请重新确认版本。<Button variant="link" size="sm" onClick={()=>setVersions(current=>Object.fromEntries(Object.entries(current).filter(([id,publication])=>{const group=groups.find(value=>value.scene.id===id);return !group||!!selectedServiceVersion(group,publication);}))) }>重新选择版本</Button></p>}
     <div className="scene-catalog-toolbar" aria-label="空间服务筛选"><SegmentedControl value={layout} onChange={setLayout} size="md" className="h-control-xl p-2xs" ariaLabel="服务布局" items={[{value:'list',label:<List size={20}/>,ariaLabel:'列表布局'},{value:'cards',label:<SquaresFour size={20}/>,ariaLabel:'卡片布局'}]}/><span className="scene-result-count" aria-live="polite">筛选 <strong>{visible.length}</strong> 个空间</span><div className="scene-catalog-filters"><div className="scene-catalog-search"><MagnifyingGlass size={16}/><Input aria-label="搜索空间服务" placeholder="搜索空间、项目或当前版本" value={query} onChange={event=>setQuery(event.target.value)}/></div><NativeSelect wrapperClassName="scene-catalog-select" aria-label="版本状态" value={state} onChange={event=>setState(event.target.value)}><option value="available">可用版本</option><option value="all">全部状态</option><option value="unavailable">不可用版本</option></NativeSelect><Button size="icon-xl" variant="outline" aria-label="刷新空间服务" onClick={()=>setRevision(value=>value+1)}><ArrowsClockwise size={16}/></Button></div></div>
     {loading?<p role="status" className="scene-catalog-empty">正在读取空间服务…</p>:error?<div role="alert" className="scene-catalog-empty"><p>{error}</p><Button size="xl" variant="secondary" onClick={()=>setRevision(value=>value+1)}>重新加载</Button></div>:<div className={'scene-catalog-items spatial-service-grid'+(layout==='list'?' spatial-service-list scene-catalog-list':'')}>{visible.map(group=><ServiceCard key={group.scene.id} group={group} version={selectedServiceVersion(group,versions[group.scene.id])!} section={section} onVersion={publication=>chooseVersion(group.scene.id,publication)} onDetails={(item:SpatialService)=>setSelected(item.id)}/>)}{!visible.length&&<div className="scene-catalog-empty"><Cube size={28}/><h2>{groups.length?'没有匹配的空间态势服务':'暂无已授权的空间态势成果'}</h2><p>{groups.length?'调整关键词或版本状态后重试。':'请联系空间提供方发布成果并分配使用权限。'}</p>{groups.length>0&&<Button size="xl" variant="secondary" onClick={()=>{setQuery('');setState('all');}}>清除筛选</Button>}</div>}</div>}
-   </TabsContent>:<TabsContent value={section}><UnavailableSection section={section}/></TabsContent>}
-  </Tabs>
- </div><ServiceDetail key={detail?`${detail.scene.id}:${detail.release.id}`:'closed'} item={detail} items={detailItems} onChoose={item=>setSelected(item.id)} onClose={()=>setSelected('')}/></main>;
+   </section>:<UnavailableSection section={section}/>}
+ </div></div>
+ <Drawer open={narrow&&navigationOpen} onClose={()=>setNavigationOpen(false)} side="left" width="sm" title="功能导航" closeLabel="关闭功能导航"><ServiceNavigation section={section} collapsed={false} onToggle={()=>setNavigationOpen(false)}/></Drawer>
+ <ServiceDetail key={detail?`${detail.scene.id}:${detail.release.id}`:'closed'} item={detail} items={detailItems} onChoose={item=>setSelected(item.id)} onClose={()=>setSelected('')}/></main>;
 }
