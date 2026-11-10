@@ -15,7 +15,7 @@ is a 135-degree gradient from 12% DS primary mixed into the DS popover color,
 through 4%, to the standard popover surface. It adapts to the DS theme without
 literal brand colors. No platform logo or Ruyin label appears inside the panel.
 
-The default homepage marker sits beside the first group heading. Entry labels,
+Group headings contain only their names, without a default-home marker or supplementary home note. Entry labels,
 icons, descriptions, focus/hover/active/disabled states remain DS components.
 Descriptions are concise to avoid clipping. Below 700 px the three groups stack
 vertically, with a bounded scrollable panel. Each title has one horizontal dashed underline;

@@ -125,6 +125,7 @@ def create_auth_app(rp, workbench=Path('apps/workbench/dist'), business=None, ac
                            csrf=session['csrf'], authority_ready=state in ('cached','confirmed')
                            and rp.now()<session['next_check_at'] and not session.get('retry_at',0), access_ready=session['access_expires_at'] > rp.now()
                            and not session.get('refresh_blocked') and not session.get('refresh_pending'))
+            payload['user'].update(session.get('profile', {}))
         response = JSONResponse(payload)
         if not session and session_id(request): clear_cookie(response, cookie)
         return response

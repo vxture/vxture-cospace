@@ -54,6 +54,8 @@ def main():
     try:
         accounts.rp_origin = f'http://127.0.0.1:{args.port}'
         accounts.roles = ['workspace:member']
+        accounts.profile_claims = {'email':'engineer@example.test','phone':'+8613800000000',
+            'phone_verified':True,'active_org_name':'示例组织','active_workspace_name':'验收工作区'}
         accounts.identity_options = {'usr_viewer':'N6 查看者', 'usr_engineer':'N6 工程师',
                                      'usr_manager':'N6 管理者', 'usr_owner':'N6 规则维护者'}
         accounts.identity_roles = {'usr_owner':['workspace:owner']}
