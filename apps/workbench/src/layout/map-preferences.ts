@@ -4,7 +4,7 @@ export type MapPreferences={
  roads:boolean; buildings:boolean; points:boolean; administrative:boolean; scrollZoom:boolean;
  legend:boolean; autoFit:boolean; directoryExpanded:boolean;
 };
-export const defaultMapPreferences:MapPreferences={appearance:'follow',roads:true,buildings:true,points:true,administrative:false,scrollZoom:true,legend:true,autoFit:true,directoryExpanded:true};
+export const defaultMapPreferences:MapPreferences={appearance:'dark',roads:true,buildings:true,points:false,administrative:true,scrollZoom:true,legend:true,autoFit:true,directoryExpanded:true};
 
 export function normalizeMapPreferences(value:unknown):MapPreferences{
  const result={...defaultMapPreferences};

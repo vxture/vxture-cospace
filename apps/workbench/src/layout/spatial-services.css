@@ -34,12 +34,13 @@
    Product layout only places the sidebar and its independently scrolling content. */
 .spatial-services{display:flex;overflow:hidden}
 .spatial-service-content{flex:1;min-width:0;overflow:auto;container-type:inline-size}
-.spatial-service-content .scene-catalog-shell{padding:24px 24px 64px}
+/* Match My Scenes: 1536px shell, including 48px gutters around 1440px content. */
+.spatial-service-content .scene-catalog-shell{width:100%;max-width:1536px;margin-inline:auto;padding:20px 48px 48px}
 .spatial-services .spatial-service-grid{grid-template-columns:1fr}
 @container(min-width:560px){.spatial-services .spatial-service-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @container(min-width:1000px){.spatial-services .spatial-service-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
 .spatial-services .spatial-service-list{grid-template-columns:1fr}
-@media(max-width:639px){.spatial-service-content .scene-catalog-shell{padding:16px 16px 64px}}
+
 .spatial-service-section-note{font-size:var(--body-small-font-size);line-height:var(--body-small-line-height);color:var(--muted-foreground);margin-block:12px}
 .spatial-service-capabilities{display:flex;flex-wrap:wrap;gap:6px;margin-block:10px}
 .spatial-service-capabilities>[data-slot]{font-size:var(--label-micro-font-size)}
@@ -53,6 +54,7 @@
 .service-monitor-metrics dd.text-body-small{font-size:var(--body-small-font-size);font-weight:400}
 
 /* Hybrid service workspace: keep catalogue cards and monitoring layouts. */
-.spatial-services{background:var(--card)}.spatial-service-content .scene-catalog-shell{max-width:none;padding:20px 48px 48px}.spatial-services .scene-total{font-size:12px;border:1px solid color-mix(in srgb,var(--primary) 20%,var(--border));background:var(--accent);color:var(--primary)}
+.spatial-services{background:var(--card)}.spatial-services .scene-total{font-size:12px;border:1px solid color-mix(in srgb,var(--primary) 20%,var(--border));background:var(--accent);color:var(--primary)}
 .spatial-services .scene-catalog-toolbar{margin-block:16px 24px}.spatial-services .scene-catalog-toolbar button:not([role=radio]){font-size:14px}.spatial-services .spatial-service-card{box-shadow:none;border-radius:var(--radius-lg)}
-@media(max-width:1099px){.spatial-service-content .scene-catalog-shell{padding:20px 32px 32px}}@media(max-width:700px){.spatial-service-content .scene-catalog-shell{padding:20px 24px 32px}}
+@container(max-width:1099px){.spatial-service-content .scene-catalog-shell{padding:20px 32px 32px}}
+@container(max-width:700px){.spatial-service-content .scene-catalog-shell{padding:20px 16px 32px}}

@@ -37,7 +37,7 @@ export function SharedDataCatalog(){
   }).catch(e=>{if(!controller.signal.aborted)setError(e.message);}).finally(()=>{if(!controller.signal.aborted)setBusy(false);});
   return()=>controller.abort();
  },[key]);
- return <div className="shared-support-layout"><DataNavigation category={category}/><section className="shared-data-catalog" aria-label="共用数据管理">
+ return <div className="shared-support-layout" data-layout="management"><DataNavigation category={category}/><section className="shared-data-catalog" aria-label="共用数据管理">
   <WorkspaceHeading icon={Database} title="数据管理" description="统一管理原始资料、过程记录与成果，按场景与生命周期查阅。" actions={<>{filter&&<Button asChild variant="secondary" size="sm"><a href={recordLink('data',{space:filter,tab:'inputs'})}><Files size={16}/>场景资料</a></Button>}<Button variant="secondary" size="sm" onClick={()=>setRevision(v=>v+1)} disabled={busy}><ArrowClockwise size={16}/>刷新目录</Button></>}/>
   <div className="shared-data-toolbar">
    <div className="shared-data-scope"><NativeSelect aria-label="筛选数据所属场景" value={filter} onChange={e=>navigate({filter_space:e.target.value})}><option value="">全部授权场景</option>{filter&&!report?.spaces.some(s=>s.id===filter)&&<option value={filter}>当前筛选场景</option>}{report?.spaces.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</NativeSelect></div>

@@ -1,0 +1,15 @@
+/* Product frame contract: responsive width never changes vertical insets. */
+:root{--workspace-content-top:20px;--workspace-content-bottom:48px;--workspace-content-gap:16px;--workspace-content-inline:48px;--workspace-display-width:1536px}
+@media(max-width:1099px){:root{--workspace-content-inline:32px}}
+@media(max-width:700px){:root{--workspace-content-inline:16px}}
+/* Display frames share the 1536 shell / 1440 content limit. */
+#workbench-shell .scene-catalog-shell{box-sizing:border-box;width:100%;max-width:var(--workspace-display-width);margin-inline:auto;padding:var(--workspace-content-top) var(--workspace-content-inline) calc(var(--workspace-content-bottom) + env(safe-area-inset-bottom,0px))}
+/* Task and management frames use all remaining width. Keep this scope out of map overlays. */
+#workbench-shell :is(.build-work-scroll,.publication-content,.shared-support-layout>.shared-data-catalog){box-sizing:border-box;min-width:0;padding:var(--workspace-content-top) var(--workspace-content-inline) var(--workspace-content-bottom)}
+#workbench-shell :is(.build-work-scroll,.publication-content){gap:var(--workspace-content-gap)}
+#workbench-shell .data-directory-workspace .data-main{padding:var(--workspace-content-top) var(--workspace-content-inline) 0;margin-left:0}
+#workbench-shell :is(.workspace-page-heading,.publication-page-header,.build-work-scroll>.build-work-header){padding-top:4px;padding-bottom:16px}
+#workbench-shell .shared-support-layout>.shared-data-catalog{max-width:none;width:auto;flex:1}
+/* Column width is based on the available content container; only horizontal gutters change. */
+@container(max-width:1099px){#workbench-shell .spatial-service-content .scene-catalog-shell{padding-inline:32px}}
+@container(max-width:700px){#workbench-shell .spatial-service-content .scene-catalog-shell{padding-inline:16px}}

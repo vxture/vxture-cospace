@@ -2,6 +2,7 @@
 @import "@vxture/design-system/styles/globals.css";
 @import "@vxture/design-system/styles/brands/vxture.css";
 @import "@vxture/design-system/styles/workbench.css";
+@import "./layout-framework.css";
 @source "../../node_modules/@vxture/design-system/dist";
 @source "../../node_modules/@vxture/design-ui/dist";
 @source "./**/*.tsx";

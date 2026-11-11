@@ -16,14 +16,17 @@ test('invalid coordinates and upstream rejection never produce misplaced pins',a
 import {defaultMapPreferences,normalizeMapPreferences,mapIsDark,mapFeatures,readMapPreferences} from '../../apps/workbench/src/layout/map-preferences.ts';
 test('map preferences validate saved data and resolve follow mode against the current global theme',()=>{
  assert.deepEqual(normalizeMapPreferences(null),defaultMapPreferences);
+ assert.equal(mapIsDark(defaultMapPreferences,'light'),true);
+ assert.equal(defaultMapPreferences.administrative,true);
+ assert.deepEqual(mapFeatures(defaultMapPreferences),['bg','road','building']);
  const saved=normalizeMapPreferences({appearance:'follow',roads:false,legend:false,administrative:true,scrollZoom:'false',directoryExpanded:false,unknown:'ignored'});
- assert.equal(saved.administrative,true);assert.equal(normalizeMapPreferences({administrative:'true'}).administrative,false);
+ assert.equal(saved.administrative,true);assert.equal(normalizeMapPreferences({administrative:'true'}).administrative,true);
  assert.equal(saved.scrollZoom,true);assert.equal(saved.directoryExpanded,false);assert.equal(saved.legend,false);
  assert.equal(mapIsDark(saved,'light'),false);assert.equal(mapIsDark(saved,'dark'),true);
  assert.equal(mapIsDark({...saved,appearance:'light'},'dark'),false);
  assert.equal(mapIsDark({...saved,appearance:'dark'},'light'),true);
- assert.deepEqual(mapFeatures(saved),['bg','building','point']);
- assert.equal(normalizeMapPreferences({appearance:'invalid'}).appearance,'follow');
+ assert.deepEqual(mapFeatures(saved),['bg','building']);
+ assert.equal(normalizeMapPreferences({appearance:'invalid'}).appearance,'dark');
 });
 test('persisted settings survive a fresh read and corrupt or blocked storage falls back safely',()=>{
  const previous=globalThis.localStorage;
