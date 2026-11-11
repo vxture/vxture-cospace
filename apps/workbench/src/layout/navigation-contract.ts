@@ -13,7 +13,7 @@ export function moduleLinkFromUrl(route:ModuleRoute,url:string){
 
 // Scene changes keep only a valid capability view; record IDs never cross scenes.
 export function sceneLinkFromUrl(route:ModuleRoute,space:string,url:string){
- const views:Partial<Record<ModuleRoute,string[]>>={build:['flow','tasks','candidate'],association:['objects','ifc','business','relations'],data:['inputs','references','pointcloud','batches','versions','lineage']};
+ const views:Partial<Record<ModuleRoute,string[]>>={build:['flow','tasks','candidate'],delivery:['overview','access','offline','manage'],association:['objects','ifc','business','relations'],data:['inputs','references','pointcloud','batches','versions','lineage']};
  const tab=new URLSearchParams(url.split('?')[1]||'').get('tab')||'';
  return recordLinkFromUrl(route,{space,...(views[route]?.includes(tab)?{tab}:{})},url);
 }

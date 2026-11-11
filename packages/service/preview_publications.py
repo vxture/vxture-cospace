@@ -54,8 +54,15 @@ class PreviewPublications:
         return result
 
     @serialized(lambda self:self.jobs.root.parent)
-    def publish(self,candidate_id,expected_revision,space_id=None):
+    def publish(self,candidate_id,expected_revision,space_id=None,*,request_id=None):
         ownership=scope(self.jobs.directory,space_id)
+        if request_id is not None:
+            if not re.fullmatch(r'[a-f0-9]{32}',request_id):raise ValueError('publication_request_invalid')
+            existing=next((r for r in self.list() if r.get('space_id')==space_id and r.get('request_id')==request_id),None)
+            if existing:
+                if existing['candidate_id']!=candidate_id or existing['selection_revision']!=expected_revision:
+                    raise ValueError('publication_request_conflict')
+                return existing
         source=self.jobs.model(candidate_id)
         match(source.manifest,ownership)
         self.jobs.controls.require_active(space_id,'candidate:'+candidate_id)
@@ -90,6 +97,7 @@ class PreviewPublications:
                 'files':{p.name:{'sha256':digest(p),'bytes':p.stat().st_size} for p in staging.iterdir() if p.is_file()}}
             if selection.get('selection_review'):
                 record['selection_review']=selection['selection_review']
+            if request_id is not None:record['request_id']=request_id
             if source.manifest.get('derivation'):
                 record['derivation']=source.manifest['derivation']
             (staging/'publication.json').write_text(json.dumps(record,indent=2),encoding='utf-8')

@@ -43,6 +43,7 @@ test('scene selection preserves valid capabilities and clears every old record',
 });
 
 test('header selection keeps service section but never previous scene records',()=>{
+ for(const tab of ['overview','access','offline','manage'])assert.equal(headerSceneLinkFromUrl('next',`/delivery?space=old&tab=${tab}&publication=old&job=old`),`/delivery?space=next&tab=${tab}`);
  assert.equal(headerSceneLinkFromUrl('next','/services?section=offline&space=old&publication=old&job=old'),'/services?space=next&section=offline');
  assert.equal(headerSceneLinkFromUrl('next','/build?space=old&tab=tasks&job=old'),'/build?space=next&tab=tasks');
  assert.equal(headerSceneLinkFromUrl('A&B','/space?screen=space&publication=old'),'/space?space=A%26B');

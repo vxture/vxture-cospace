@@ -9,7 +9,7 @@ import React,{useEffect,useRef,useState} from 'react';
 import {Button,Card,CardHeader,CardTitle,CardContent,NativeSelect,Textarea,StatusBadge,Table,TableHeader,TableBody,TableRow,TableHead,TableCell} from '@vxture/design-system';
 
 const endpoint=businessEndpoint;
-type Version={ontology_id:string;version:string;sha256:string;title:string;type_count:number;registered_at:string};
+type Version={version_code?:string;ontology_id:string;version:string;sha256:string;title:string;type_count:number;registered_at:string};
 type Rule={title:string;type:'string';required:boolean;min_length:number;max_length:number};
 type Definition={relations?:Record<string,{title:string;source_types:string[];target_types:string[];family:string;symmetric:boolean}>;title:string;description:string;types:Record<string,{title:string;description:string;properties:Record<string,Rule>}>};
 type Loaded={record:Version;definition:Definition;integrity:string};
@@ -72,10 +72,10 @@ export function OntologyWorkbench(){
   <div hidden={rules}><OntologyAuthoring endpoint={endpoint} source={loaded?.definition as unknown as RuleDocument||null} onSealed={record=>{setRevision(v=>v+1);const params=new URLSearchParams(location.search);params.set('ontology_id',record.ontology_id);params.set('ontology_version',record.version);params.set('ontology_sha256',record.sha256);appNavigate('ontology?'+params);}}/>
   </div><div hidden={!rules} className="flex flex-col gap-xl"><div className="flex flex-wrap items-center justify-between gap-md"><p className="text-body-small text-muted-foreground">查看固定版本的类型与关系规则，校验对象草稿。预置模板及当前 Workspace 的规则可供其多个场景引用。</p><Button variant="outline" disabled={listing||reading||busy} onClick={()=>setRevision(n=>n+1)}>刷新规则库</Button></div>
   <Card className="module-surface" aria-label="本体版本"><CardHeader><CardTitle>本体版本</CardTitle></CardHeader><CardContent className="flex flex-col gap-md">
-   <NativeSelect aria-label="选择本体版本" value={versions.some(v=>key(v)===referenceKey)?referenceKey:''} onChange={e=>choose(e.target.value)} disabled={listing||busy}><option value="">{listing?'读取版本中…':'请选择固定本体版本'}</option>{versions.map(v=><option key={key(v)} value={key(v)}>{v.title} · V{v.version}</option>)}</NativeSelect>
+   <NativeSelect aria-label="选择本体版本" value={versions.some(v=>key(v)===referenceKey)?referenceKey:''} onChange={e=>choose(e.target.value)} disabled={listing||busy}><option value="">{listing?'读取版本中…':'请选择固定本体版本'}</option>{versions.map(v=><option key={key(v)} value={key(v)}>{v.title} · {v.version_code||`V${v.version}`} </option>)}</NativeSelect>
    {error&&<p role="alert">{error}</p>}{!listing&&!error&&!versions.length&&<p role="status" className="text-body-small text-muted-foreground">尚无封存本体版本，请由工程师配置规则源后启动服务。</p>}
    {reading&&<p role="status">正在核对规则摘要…</p>}
-   {current&&!error&&<><div className="flex flex-wrap items-center gap-sm"><StatusBadge tone="success">规则完整性已核对</StatusBadge><span className="text-body-small">{current.ontology_id} · V{current.version} · {current.type_count} 种类型</span></div><p className="break-all text-label-small text-muted-foreground">SHA256：{current.sha256}</p><p className="text-label-small text-muted-foreground">封存于 {new Date(current.registered_at).toLocaleString('zh-CN',{hour12:false})} · 场景及模型显式引用固定版本</p></>}
+   {current&&!error&&<><div className="flex flex-wrap items-center gap-sm"><StatusBadge tone="success">规则完整性已核对</StatusBadge><span className="text-body-small">{current.ontology_id} · {current.version_code||`V${current.version}`}  · {current.type_count} 种类型</span></div><p className="break-all text-label-small text-muted-foreground">SHA256：{current.sha256}</p><p className="text-label-small text-muted-foreground">封存于 {new Date(current.registered_at).toLocaleString('zh-CN',{hour12:false})} · 场景及模型显式引用固定版本</p></>}
   </CardContent></Card>
   {loaded&&!error&&<OntologyUsage key={referenceKey} endpoint={endpoint} reference={loaded.record}/>}
   {loaded&&!error&&<OntologyComparison key={referenceKey} endpoint={endpoint} current={loaded as unknown as Parameters<typeof OntologyComparison>[0]['current']} versions={versions}/>}
