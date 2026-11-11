@@ -62,6 +62,10 @@ class Selection(BaseModel):
     expected_revision:int
 
 
+class PublicationRequest(Selection):
+    request_id:str|None=Field(default=None,pattern=r'^[a-f0-9]{32}$')
+
+
 class BuildInfo(BaseModel):
     model_config=ConfigDict(extra="forbid")
     name:str=Field(default='',max_length=100)
@@ -143,6 +147,13 @@ def create_app(root,jobs=None,update_evidence=None,registration_sources=None,sou
     if jobs and jobs.inputs and (jobs.batches is None or jobs.batches.inputs is not jobs.inputs):
         jobs.batches=PreviewBatches(jobs.inputs)
     publications=PreviewPublications(jobs) if jobs else None
+    from packages.lifecycle.business_versions import BusinessVersions
+    versions=BusinessVersions(jobs.root.parent) if jobs and space_directory else None
+    if versions:versions.sync()
+    def versioned(kind,record):
+        if not versions:return record
+        versions.sync()
+        return versions.enrich(kind,record)
     if root is not None and ((Path(root)/'publication.json').is_file() or publications and Path(root).resolve().is_relative_to(publications.root.resolve())):
         raise ValueError('publication_root_static_alias_not_supported')
     @app.middleware('http')
@@ -214,7 +225,10 @@ def create_app(root,jobs=None,update_evidence=None,registration_sources=None,sou
         return HTTPException(404 if code=='ontology_not_found' else 409,code)
     @app.get('/api/ontologies')
     def list_ontologies(request:Request):
-        try: return {'ontologies':ontology_store(request).list(),'scope':'shared_templates_and_current_workspace_rules'}
+        try:
+            records=ontology_store(request).list()
+            if versions:records=[versions.ontology(r) for r in sorted(records,key=lambda r:(r.get('registered_at',''),r['ontology_id'],r['version']))]
+            return {'ontologies':records,'scope':'shared_templates_and_current_workspace_rules'}
         except (ValueError,OSError,KeyError,TypeError) as exc: raise ontology_error(exc) from exc
     @app.get('/api/ontologies/{identity}/{version}')
     def read_ontology(identity:str,version:str,sha256:str,request:Request):
@@ -293,7 +307,9 @@ def create_app(root,jobs=None,update_evidence=None,registration_sources=None,sou
     def list_publications(space_id:str|None=None):
         return {'publications':filtered(distribution_entries(),space_id)}
     def distribution_entries():
-        try:return publications.directory_entries() if publications else []
+        try:
+            if versions:versions.sync()
+            return [versions.enrich('publication',r) if versions else r for r in publications.directory_entries()] if publications else []
         except (ValueError,OSError,KeyError,TypeError,sqlite3.Error) as exc:raise HTTPException(409,'publication_distribution_unavailable') from exc
     def space_entry(related):
         if not related:return {'publication_id':None,'state':'no_publication'}
@@ -301,10 +317,10 @@ def create_app(root,jobs=None,update_evidence=None,registration_sources=None,sou
         return {'publication_id':latest['id'] if latest['lifecycle_state']=='active' else None,
                 'state':'preview_published' if latest['lifecycle_state']=='active' else 'distribution_paused'}
     @app.post('/api/publications',status_code=201)
-    def publish(body:Selection,request:Request):
+    def publish(body:PublicationRequest,request:Request):
         check_origin(request)
         if publications is None: raise HTTPException(503,'builds_not_configured')
-        try: return publications.publish(body.candidate_id,body.expected_revision,body.space_id)
+        try: return versioned('publication',publications.publish(body.candidate_id,body.expected_revision,body.space_id,request_id=body.request_id))
         except (ValueError,OSError) as exc: raise HTTPException(409,str(exc)) from exc
     @app.post('/api/publication-comparisons')
     def publication_comparison(body:PublicationCompareRequest,request:Request):
@@ -441,6 +457,9 @@ def create_app(root,jobs=None,update_evidence=None,registration_sources=None,sou
                     fixed=entry['input_binding'].get('coordinate_revision',{}).get('revision',0)
                     if current!=fixed:entry['input_revision_status']='historical_requires_rebuild_for_current'
                 except (ValueError,RuntimeError,OSError,KeyError):entry['input_revision_status']='unavailable'
+        if versions:
+            versions.sync()
+            entries=[versions.enrich('build',r) for r in entries]
         return {'jobs':entries,'enabled':jobs is not None}
     @app.get('/api/artifacts')
     def artifacts(space_id:str|None=None):
@@ -481,7 +500,11 @@ def create_app(root,jobs=None,update_evidence=None,registration_sources=None,sou
         except (ValueError,OSError,KeyError,TypeError,sqlite3.Error) as exc:raise control_error(exc) from exc
     @app.get('/api/inputs')
     def inputs(space_id:str|None=None):
-        return {'inputs':controlled_entries(filtered(jobs.inputs.list() if jobs and jobs.inputs else [],space_id),space_id,'input'),
+        entries=controlled_entries(filtered(jobs.inputs.list() if jobs and jobs.inputs else [],space_id),space_id,'input')
+        if versions:
+            versions.sync()
+            entries=[versions.enrich('input',r) for r in entries]
+        return {'inputs':entries,
                 'selection_required':bool(jobs and jobs.inputs is not None)}
     def controlled_entries(entries,space_id,kind):
         if not space_id or jobs is None:return entries

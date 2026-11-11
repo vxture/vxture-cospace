@@ -13,7 +13,7 @@ export function spatialServices(spaces:SceneSpace[]):SpatialService[]{
 }
 export function filterSpatialServices(items:SpatialService[],query:string,kind:string,state:string){
  const match=query.trim().toLocaleLowerCase();
- return items.filter(item=>(kind==='all'||kind===item.kind)&&(state==='all'||(state==='available'?item.available:!item.available))&&`${item.scene.name} ${item.scene.project_name||''} ${item.scene.description||''} ${item.release.id} ${serviceKinds[item.kind].label}`.toLocaleLowerCase().includes(match))
+ return items.filter(item=>(kind==='all'||kind===item.kind)&&(state==='all'||(state==='available'?item.available:!item.available))&&`${item.scene.name} ${item.scene.project_name||''} ${item.scene.description||''} ${item.release.id} ${item.release.version_code||''} ${serviceKinds[item.kind].label}`.toLocaleLowerCase().includes(match))
   .sort((a,b)=>(Date.parse(b.release.created_at)||0)-(Date.parse(a.release.created_at)||0)||a.id.localeCompare(b.id));
 }
 export const serviceResourcePath=(item:SpatialService)=>`/publications/${encodeURIComponent(item.release.id)}/${item.kind==='query'?'api/query-range':item.kind==='offline'?'offline.zip':'api/preview'}`;

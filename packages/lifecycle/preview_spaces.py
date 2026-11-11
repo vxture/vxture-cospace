@@ -23,6 +23,8 @@ class PreviewSpaces:
         if kind=='space':
             saved=self.settings.read(identity)
             record.update({k:saved[k] for k in ('name','description','address','location') if k in saved})
+            from packages.lifecycle.business_versions import BusinessVersions
+            record['scene_code']=BusinessVersions(self.root.parent).allocate('scene','',identity,'S',random_scene=True)
         return record
 
     def list(self,kind):
@@ -41,4 +43,5 @@ class PreviewSpaces:
         pending=self.root/kind/(identity+'.pending')
         with pending.open('x',encoding='utf-8') as stream: json.dump(record,stream,ensure_ascii=False,indent=2)
         pending.rename(self.root/kind/(identity+'.json'))
+        if kind=='space':return self.read(kind,identity)
         return record

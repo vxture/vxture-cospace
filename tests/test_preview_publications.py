@@ -18,6 +18,19 @@ def fixture(tmp_path):
     return initial,PreviewJobs(root,tmp_path/'snapshot',tmp_path/'tracking')
 
 
+def test_publication_request_replay_is_idempotent(tmp_path):
+    _,jobs=fixture(tmp_path)
+    jobs.select('build-one',0)
+    store=PreviewPublications(jobs)
+    request='a'*32
+    first=store.publish('build-one',1,request_id=request)
+    jobs.select('build-two',1)
+    assert store.publish('build-one',1,request_id=request)['id']==first['id']
+    with pytest.raises(ValueError,match='publication_request_conflict'):
+        store.publish('build-two',2,request_id=request)
+    assert len(store.list())==1
+
+
 def test_publication_stays_fixed_after_selection_and_candidate_changes(tmp_path):
     initial,jobs=fixture(tmp_path); jobs.select('build-one',0)
     with TestClient(create_app(initial,jobs)) as client:

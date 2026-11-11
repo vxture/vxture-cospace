@@ -47,7 +47,7 @@ def business_member(name):
     parts=PurePosixPath(name).parts
     if (parts[0]=='setup' and name not in ('setup/sources.json','setup/workspace-scenes.json','setup/consumer-access.json','setup/scene-pointclouds.json','setup/scene-ifc.json')
             or parts[0]=='policy' and name not in ('policy/space-policy.sqlite3','policy/platform-events.sqlite3','policy/product-seats.sqlite3','policy/.workspace-scenes-required')
-            or parts[0]=='runtime' and not (name=='runtime/preview-lifecycle.sqlite3'
+            or parts[0]=='runtime' and not (name in ('runtime/preview-lifecycle.sqlite3','runtime/business-versions.sqlite3')
                 or len(parts)>2 and parts[1] in RUNTIME_DIRS)):
         raise ValueError('backup_business_layout_only_no_sessions_or_credentials')
 

@@ -689,6 +689,9 @@ class BusinessAccess:
                     result={'projects':[self.directory.read('project',p) for p in sorted({s['project_id'] for s in visible})]}
                 else:
                     values=[]
+                    from packages.lifecycle.business_versions import BusinessVersions
+                    versions=BusinessVersions(self.jobs.root.parent)
+                    await run_in_threadpool(versions.sync)
                     for record in visible:
                         # Only read metadata for this authorized space, before lifecycle
                         # inspection; unassigned/foreign releases never reach the renderer.
@@ -698,7 +701,7 @@ class BusinessAccess:
                             if saved.get('space_id')!=record['id']:continue
                             if saved.get('project_id')!=record['project_id']:raise PermissionError()
                             status=pubs.distribution(saved['id'])
-                            related.append(saved|status)
+                            related.append(versions.enrich('publication',saved)|status)
                         related.sort(key=lambda v:v['created_at'],reverse=True)
                         latest=related[0] if related else None
                         values.append(record|{'project_name':self.directory.read('project',record['project_id'])['name'],

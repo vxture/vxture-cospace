@@ -1,5 +1,10 @@
 # Product launcher layout
 
+Scene workflow design: [服务发布工作区](service-publication-workspace.md) and
+[版本编码与依赖快照](version-identification.md) define the shared basic-information
+entry, build-to-publication numbering, and immutable version context. These are
+design requirements; their implementation status is recorded in each document.
+
 The launcher has three groups: 场景中心, 场景作业, 公共资源.
 The default homepage entry always targets /space without scene/record parameters.
 空间服务 is the consumer entry beside 我的场景; it targets /services without
