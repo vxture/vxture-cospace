@@ -31,4 +31,4 @@
 本轮只调整框架、导航和视觉层次，不重设计各业务表单、不新增业务接口或商业限制，不改动场景中心展示页面。数据目录的旧 hash 记录链接规范化为实际路径，保证记录可进入相应工作台。空间关联保留已实现简版，不继续扩展集合修订能力。
 
 
-导航间距校正：以 Console 卡券页实际 DS 导航为对照，条目高 40px、条目间距 8px。产品的 32px 内容按钮规则必须限定在内容容器内，不能覆盖 ShellSidebarNav 的条目或分组标题；数据目录与场景数据沿用 DS 分组间距，不额外增加分隔线。问题同时涉及产品 CSS 作用域和 DS 15.0.1 对 Tokens 4.0.0 的导航尺寸适配：当前 control-xl 已从 40px 收紧至 32px、control-md 从 32px 收紧至 24px，但 ShellSidebarNav 仍使用旧映射。通过 pnpm patchedDependencies 对 DS 的 ESM/CJS 入口同步修正：条目使用 control-2xl（40px），分组标题使用 control-xl（32px）和 label-small（12px）。数据管理与空间服务共同生效；保留 DS 原有 hover、焦点、折叠和抽屉行为，不修改全局令牌或内容按钮尺寸。
+导航间距校正：以 Console 卡券页实际 DS 导航为对照，条目高 40px、条目间距 8px。产品的 32px 内容按钮规则必须限定在内容容器内，不能覆盖 ShellSidebarNav 的条目或分组标题；数据目录与场景数据沿用 DS 分组间距，不额外增加分隔线。问题同时涉及产品 CSS 作用域和 DS 15.0.1 对 Tokens 4.0.0 的导航尺寸适配：当前 control-xl 已从 40px 收紧至 32px、control-md 从 32px 收紧至 24px，但 ShellSidebarNav 仍使用旧映射。已在正式 DS 15.1.1 中修正：条目使用 control-2xl（40px），分组标题使用 control-xl（32px）和 label-small（12px），文字继承触发器的 text-muted-foreground 及交互态。数据管理与空间服务共同生效；保留 DS 原有 hover、焦点、折叠和抽屉行为，不修改全局令牌或内容按钮尺寸。当前项目使用正式归档并移除临时补丁。
