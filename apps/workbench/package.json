@@ -26,7 +26,8 @@
     "react-router-dom": "^7.18.5",
     "tailwindcss": "4.3.3",
     "tailwindcss-animate": "1.0.7",
-    "three": "0.186.1"
+    "three": "0.186.1",
+    "@vxture/globe": "file:../../packages/globe-sdk"
   },
   "pnpm": {
     "overrides": {

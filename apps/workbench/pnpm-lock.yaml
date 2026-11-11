@@ -27,6 +27,9 @@ importers:
       '@vxture/design-ui':
         specifier: file:vendor/vxture-design-ui-12.1.0.tgz
         version: file:vendor/vxture-design-ui-12.1.0.tgz(@phosphor-icons/react@2.1.10(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(tailwindcss@4.3.3)
+      '@vxture/globe':
+        specifier: file:../../packages/globe-sdk
+        version: file:../../packages/globe-sdk(cesium@1.147.0)(react@19.3.1)
       cesium:
         specifier: 1.147.0
         version: 1.147.0
@@ -1137,6 +1140,16 @@ packages:
       '@phosphor-icons/react': ^2.1.10
       react: ^19.0.0
       react-dom: ^19.0.0
+
+  '@vxture/globe@file:../../packages/globe-sdk':
+    resolution: {directory: ../../packages/globe-sdk, type: directory}
+    engines: {node: '>=24'}
+    peerDependencies:
+      cesium: 1.147.0
+      react: '>=19 <20'
+    peerDependenciesMeta:
+      react:
+        optional: true
 
   '@zip.js/zip.js@2.24.0':
     resolution: {integrity: sha512-WlaVKzdqBK+RF3bdiXZWbdCnvGB6PdO4IHC1mn/2Yfl3bASgqUNegnU3+PNg61iecwoPfUi5BgLUPqBukXpyWw==}
@@ -2708,6 +2721,12 @@ snapshots:
       - '@types/react'
       - '@types/react-dom'
       - tailwindcss
+
+  '@vxture/globe@file:../../packages/globe-sdk(cesium@1.147.0)(react@19.3.1)':
+    dependencies:
+      cesium: 1.147.0
+    optionalDependencies:
+      react: 19.3.1
 
   '@zip.js/zip.js@2.24.0': {}
 
