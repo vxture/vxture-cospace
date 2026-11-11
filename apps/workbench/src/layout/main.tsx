@@ -1,3 +1,4 @@
+import {ToastProvider} from '@vxture/design-system';
 import {ProductUserMenu} from './user-menu';
 import {HeaderContext} from './header-context';
 import {SceneSelection} from './scene-selection';
@@ -12,6 +13,7 @@ import {HeaderSupportControls} from './header-support-controls';
 import {PlatformHeader as ShellHeader} from './platform-header';
 import {NavigationGuard} from './navigation-guard';
 /// <reference types="vite/client" />
+import {Sparkle} from '@phosphor-icons/react';
 import React, { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import {
@@ -29,8 +31,6 @@ import {ProductLauncher} from './product-launcher';
 import { spaces } from './spaces';
 import spaceSvg from './space.svg?raw';
 import {recordLink,moduleLink,useRecordNavigation} from './record-navigation';
-import { RealPreview } from './real-preview';
-import { BuildJobs } from './build-jobs';
 import {ConstructionFlow} from './construction-flow';
 import {InputDirectory} from './input-directory';
 import {SharedDataCatalog} from './shared-data-catalog';
@@ -80,6 +80,8 @@ function App(){
  const [launcher,setLauncher]=useState(false),[admin,setAdmin]=useState(false);
  const [modal,setModal]=useState<{title:string;body:string}|null>(null);
  const [notice,setNotice]=useState('');
+ const [buildAssistantOpen,setBuildAssistantOpen]=useState(false);
+ useEffect(()=>{const sync=(event:Event)=>setBuildAssistantOpen(Boolean((event as CustomEvent).detail));window.addEventListener('cospace-build-assistant-state',sync);return()=>window.removeEventListener('cospace-build-assistant-state',sync);},[]);
  const [memberDialog,setMemberDialog]=useState(false),[members,setMembers]=useState<{name:string;role:string}[]>([]);
  const {theme,setTheme}=useTheme();
  useEffect(()=>{const fn=()=>{setRoute(currentRoute());setLauncher(false);setAdmin(false);};return subscribeAppLocation(fn);},[]);
@@ -90,7 +92,7 @@ function App(){
  const full=async()=>{try{if(document.fullscreenElement)await document.exitFullscreen();else await document.documentElement.requestFullscreen();}catch{setNotice('当前浏览器未允许全屏。');}};
  const identity=<CoSpaceBrand href="/space"/>;
  const launcherControl=<Popover open={launcher} onOpenChange={v=>{setLauncher(v);setAdmin(false);}}><PopoverTrigger asChild><ShellIconButton className="launcher-control" icon="app-grid" label="功能 Launcher" active={launcher}/></PopoverTrigger><ShellPanelContent align="start" sideOffset={12} className="product-launcher-panel"><ProductLauncher route={route} hasScene={!!new URLSearchParams(location.search).get('space')} hrefForRoute={target=>moduleLink(target,navigation.space)} onNavigate={()=>setLauncher(false)}/></ShellPanelContent></Popover>;
- const header=<ShellHeader height="md" leading={<>{launcherControl}{identity}<HeaderContext/></>} trailing={<div className="platform-header-actions"><ShellIconGroup label="全局工具"><ShellThemeToggle currentTheme={theme} onThemeChange={setTheme} buttonLabel="切换主题"/><HeaderSupportControls/><Popover open={admin} onOpenChange={v=>{setAdmin(v);setLauncher(false);}}><PopoverTrigger asChild><ShellIconButton icon="settings" label="配置与管理" active={admin}/></PopoverTrigger><ShellPanelContent align="end"><ShellPanelSection title="配置与管理">{adminRoutes.slice(0,3).map(r=><ShellPanelRow key={r} label={names[r]} href={r==='settings'?recordLink('settings',{}):`/${r}`} onClick={()=>setAdmin(false)}/>)}</ShellPanelSection></ShellPanelContent></Popover></ShellIconGroup><ShellIconGroup label="账户"><ProductUserMenu onLogout={exit}/></ShellIconGroup></div>}/>;
+ const header=<ShellHeader height="md" leading={<>{launcherControl}{identity}<HeaderContext/></>} trailing={<div className="platform-header-actions"><ShellIconGroup label="全局工具">{route==='build'&&<Button variant={buildAssistantOpen?'secondary':'ghost'} size="icon-sm" aria-label="构建智能助手" title="构建智能助手" disabled={!navigation.space} aria-expanded={buildAssistantOpen} onClick={()=>window.dispatchEvent(new Event('cospace-build-assistant-toggle'))}><Sparkle size={16}/></Button>}<ShellThemeToggle currentTheme={theme} onThemeChange={setTheme} buttonLabel="切换主题"/><HeaderSupportControls/><Popover open={admin} onOpenChange={v=>{setAdmin(v);setLauncher(false);}}><PopoverTrigger asChild><ShellIconButton icon="settings" label="配置与管理" active={admin}/></PopoverTrigger><ShellPanelContent align="end"><ShellPanelSection title="配置与管理">{adminRoutes.slice(0,3).map(r=><ShellPanelRow key={r} label={names[r]} href={r==='settings'?recordLink('settings',{}):`/${r}`} onClick={()=>setAdmin(false)}/>)}</ShellPanelSection></ShellPanelContent></Popover></ShellIconGroup><ShellIconGroup label="账户"><ProductUserMenu onLogout={exit}/></ShellIconGroup></div>}/>;
  if(preview&&route==='build'&&new URLSearchParams(location.search).get('screen')==='build')return <React.Suspense fallback={<main className="dark h-dvh bg-background text-foreground" role="status">正在打开构建画布…</main>}><BuildScan/></React.Suspense>;
  const showLoginInfo=()=>setModal({title:'平台登录 · 独立接入验证',body:'已按 yucer 接通 OIDC + PKCE、中央会话与全局登出的独立验证入口。当前工程服务保持 UI 预览，尚未配置 CoSpace 平台客户端和业务空间授权。'});
  return <>
@@ -117,14 +119,7 @@ function Business({route}:{route:keyof typeof rows|'association'}){
  if(route==='delivery')return <PreviewPublications key={`publications-${context.space}`}/>;
  return <BuildWorkspaceViews key={context.space}/>;
 }
-function BuildWorkspaceViews(){
- const context=useRecordNavigation();
- const view=context.tab==='candidate'?'candidate':context.tab==='tasks'?'tasks':'flow';
- const [visited,setVisited]=useState<string[]>([view]);
- useEffect(()=>{setVisited(old=>old.includes(view)?old:[...old,view]);},[view]);
- const records={...(context.input?{input:context.input}:{}),...(context.job?{job:context.job}:{}),...(context.batch?{batch:context.batch}:{})};
- return <>{visited.map(id=><div key={id} className="module-subview" hidden={view!==id}>{id==='flow'?<ConstructionFlow key={`flow-${context.space}`} active={view===id}/>:id==='tasks'?<BuildJobs key={`jobs-${context.space}`} active={view===id}/>:<RealPreview key={`preview-${context.space}`} mode="build"/>}</div>)}<div className="module-flow-links"><Button asChild variant="outline" size="sm"><a href={recordLink('data',{tab:'inputs',...(context.input?{input:context.input}:{}),...(context.batch?{batch:context.batch}:{})})}>场景资料</a></Button><Button asChild variant="outline" size="sm"><a href={recordLink('association',{})}>空间关联</a></Button><Button asChild variant="outline" size="sm"><a href={recordLink('delivery',context.job?{job:context.job}:{})}>服务发布</a></Button></div></>;
-}
+function BuildWorkspaceViews(){return <ConstructionFlow/>;}
 function RailHandle({side,open,toggle}:{side:'left'|'right';open:boolean;toggle:()=>void}){return <Button variant="ghost" className={`rail-handle rail-handle-${side}`} data-open={open} aria-label={side==='left'?'展开或收起左侧信息栏':'空间概览'} aria-expanded={open} title={open?'收起信息栏':'展开信息栏'} onClick={toggle}><img src="/assets/fold-bracket.png" alt="" aria-hidden="true" className="rail-handle-art"/></Button>;}
 function Space({config,full}:{config:Config;full:()=>void}){
  const [spaceId,setSpaceId]=useState(()=>new URLSearchParams(location.search).get('space')||'equipment');
@@ -178,4 +173,4 @@ function RoutedApplication(){return <ThemeProvider defaultMode="light"><TooltipP
 // changes must never remount the session boundary or re-bootstrap authentication.
 const router=createBrowserRouter([{element:<RoutedApplication/>,children:['/',...Object.keys(names).map(name=>'/'+name)].map(path=>({path,element:null}))}]);
 bindAppRouter(router);
-createRoot(document.getElementById('root')!).render(<RouterProvider router={router}/>);
+createRoot(document.getElementById('root')!).render(<ToastProvider><RouterProvider router={router}/></ToastProvider>);

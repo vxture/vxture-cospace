@@ -20,6 +20,7 @@ class SceneLocation(BaseModel):
     model_config = ConfigDict(extra='forbid', strict=True)
     longitude: float = Field(ge=-180, le=180, allow_inf_nan=False)
     latitude: float = Field(ge=-90, le=90, allow_inf_nan=False)
+    altitude: float | None = Field(default=None, allow_inf_nan=False)
     crs: Literal['WGS84', 'GCJ02']
 
 
@@ -71,7 +72,7 @@ class SpaceSettings:
                     for key in ('address', 'location'):
                         if key in saved or key in original or key in change.model_fields_set:
                             before[key] = saved.get(key, original.get(key))
-                            after[key] = (change.model_dump()[key] if key in change.model_fields_set else before[key])
+                            after[key] = ((change.location.model_dump(exclude_none=True) if key == 'location' and change.location else change.model_dump()[key]) if key in change.model_fields_set else before[key])
                             if key == 'address' and after[key] is not None:
                                 after[key] = after[key].strip()
                     if before == after:

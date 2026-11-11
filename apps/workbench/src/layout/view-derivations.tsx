@@ -1,14 +1,19 @@
 import {appNavigate} from './app-router';
 import React,{useEffect,useRef,useState} from 'react';
+import {Cube,Eye,Robot,ArrowUpRight} from '@phosphor-icons/react';
+import {buildScanHref} from './build-scan-data';
 import {Button,StatusBadge} from '@vxture/design-system';
 import {businessEndpoint as endpoint} from './business-endpoint';
 import {recordLink} from './record-navigation';
 
-export type BuildStages={job_id:string;space_id:string;legacy?:boolean;candidate_ready:boolean;frozen_model:null|{job_id:string;model_id:string;source_model_sha256:string;manifest_sha256:string};metadata?:{construction:{model_points:number;used_frames:number;input_frames:number}};views:Record<string,{id:string;job_id:string;state:string;error?:string;frozen_model:{source_model_sha256:string}}>};
+export type BuildStages={job_id:string;space_id:string;legacy?:boolean;candidate_ready:boolean;frozen_model:null|{job_id:string;model_id:string;source_model_sha256:string;manifest_sha256:string};metadata?:{construction:{model_points:number;used_frames:number;input_frames:number}};views:Record<string,{id:string;job_id:string;state:string;error?:string;finished_at?:string;frozen_model:{source_model_sha256:string}}>};
 const stateName:Record<string,string>={queued:'排队中',running:'派生中',succeeded:'已派生',failed:'派生失败',interrupted:'派生中断'};
 export const viewState=(state?:string)=>stateName[state||'']||'待派生';
 
-export function ViewDerivations({stages,state,input}:{stages:BuildStages;state:string;input?:string}){
+type ArtifactDetails=Record<string,{bytes?:number;completedAt?:string}>;
+const artifactSize=(value?:number)=>value===undefined?'大小待记录':value>=1024**3?`${(value/1024**3).toFixed(2)} GB`:value>=1024**2?`${(value/1024**2).toFixed(2)} MB`:value>=1024?`${(value/1024).toFixed(1)} KB`:`${value} B`;
+const completionTime=(value?:string)=>value?new Date(value).toLocaleString('zh-CN',{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}):'时间未记录';
+export function ViewDerivations({stages,state,input,modelPoints,surfaceCells,artifacts={}}:{stages:BuildStages;state:string;input?:string;modelPoints?:number;surfaceCells?:number;artifacts?:ArtifactDetails}){
  const [pending,setPending]=useState<Record<string,string>>({}),[busy,setBusy]=useState(''),[error,setError]=useState(''),[ready,setReady]=useState(false);
  const alive=useRef(true),latch=useRef(false);
  const key=(kind:string)=>`cospace:view:${endpoint}:${stages.space_id}:${stages.job_id}:${kind}`;
@@ -37,11 +42,11 @@ export function ViewDerivations({stages,state,input}:{stages:BuildStages;state:s
   finally{latch.current=false;if(alive.current)setBusy('');}
  }
  const running=['queued','running'].includes(state);
- return <div className="construction-view-tasks" aria-label="独立视图派生">
-  <div className="construction-flow-heading"><h3>独立视图任务</h3><StatusBadge tone={stages.candidate_ready?'success':'warning'}>{stages.candidate_ready?'可核对候选':'尚不可发布'}</StatusBadge></div>
-  <p className="construction-flow-note">模型已冻结。每次只重新派生所选视图，另一类视图保留原任务引用；完成后形成新候选，核对后再发布。</p>
-  <div className="construction-view-task-grid">{['human','agent'].map(kind=>{const task=stages.views[kind];return <article key={kind}><div><h4>{kind==='human'?'人视图':'智能体视图'}</h4><StatusBadge tone={task?.state==='succeeded'?'success':task?.state==='failed'?'danger':'warning'}>{viewState(task?.state)}</StatusBadge></div><code>{task?.id||'待创建'}</code>{task?.error&&<p role="alert">{task.state==='interrupted'?'服务中断，任务记录已保留。':'该视图未能完成，可以单独重试。'}</p>}<Button size="sm" variant="outline" disabled={!ready||!!busy||running} onClick={()=>start(kind)}>{busy===kind?'正在处理…':pending[kind]?'核对提交结果':task?.state==='succeeded'?`重新派生${kind==='human'?'人视图':'智能体视图'}`:`重试${kind==='human'?'人视图':'智能体视图'}`}</Button></article>;})}</div>
+ return <section className="build-artifact-section" aria-label="构建成果与表达派生">
+  <div className="build-result-grid build-artifact-grid">
+   <article><header><div className="build-artifact-title"><Cube size={20}/><h4>空间基准模型</h4></div><StatusBadge tone="info">已保存</StatusBadge></header><div className="build-artifact-metric"><strong>{modelPoints===undefined?'— 点':`${modelPoints.toLocaleString()} 点`}</strong><small>{artifactSize(artifacts.model?.bytes)}</small></div><footer><time dateTime={artifacts.model?.completedAt}>完成于 {completionTime(artifacts.model?.completedAt)}</time><Button asChild size="sm" variant="secondary"><a href={buildScanHref(stages.space_id,stages.job_id,input||'')} target="_blank" rel="noopener noreferrer">查看模型<ArrowUpRight size={14}/></a></Button></footer></article>
+   {['human','agent'].map(kind=>{const task=stages.views[kind],title=kind==='human'?'空间可视表达':'智能体空间表达',Glyph=kind==='human'?Eye:Robot;return <article key={kind}><header><div className="build-artifact-title"><Glyph size={20}/><h4>{title}</h4></div><StatusBadge tone={task?.state==='succeeded'?'success':task?.state==='failed'?'danger':'warning'}>{viewState(task?.state)}</StatusBadge></header><div className="build-artifact-metric"><strong>{task?.state==='succeeded'?(kind==='human'?(modelPoints===undefined?'— 点':`${modelPoints.toLocaleString()} 点`):(surfaceCells===undefined?'— 单元':`${surfaceCells.toLocaleString()} 单元`)):(kind==='human'?'— 点':'— 单元')}</strong><small>{task?.state==='succeeded'?artifactSize(artifacts[kind]?.bytes):'大小待生成'}</small></div>{task?.error&&<p role="alert">{task.state==='interrupted'?'任务中断，记录已保留。':'生成失败，可单独重试。'}</p>}<footer>{task?.state==='succeeded'&&<time dateTime={task.finished_at}>完成于 {completionTime(task.finished_at)}</time>}<Button size="sm" variant="secondary" aria-label={`${pending[kind]?'核对提交结果':task?.state==='succeeded'?'重新生成':'重试生成'}${title}`} disabled={!ready||!!busy||running} onClick={()=>start(kind)}>{busy===kind?'正在处理…':pending[kind]?'核对提交结果':task?.state==='succeeded'?'重新生成':'重试生成'}</Button></footer></article>;})}
+  </div>
   {error&&<p role="alert" className="construction-flow-message">{error}</p>}
-  <p className="construction-flow-note">固定模型：<a href={recordLink('build',{space:stages.space_id,tab:'flow',job:stages.frozen_model!.job_id})}>{stages.frozen_model!.model_id}</a> · SHA-256 {stages.frozen_model!.source_model_sha256.slice(0,16)}…</p>
- </div>;
+ </section>;
 }

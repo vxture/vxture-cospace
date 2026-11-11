@@ -1,4 +1,5 @@
 import {appNavigate,appRoute} from './app-router';
+import {Info,ArrowClockwise} from '@phosphor-icons/react';
 import {SignInContent} from './signin-content';
 
 import {sessionScopeKey,sessionConfirmed} from './session-continuity';
@@ -50,7 +51,7 @@ export function useAuthMode():AuthMode{
  return mode;
 }
 
-export function PlatformIdentityPage({business=false}:{business?:boolean}){
+export function PlatformIdentityPage({business=false,preserveWork=false}:{business?:boolean;preserveWork?:boolean}){
  const [session,setSession]=useState<Session|null>(null),[error,setError]=useState('');
  const [busy,setBusy]=useState(false);const csrf=useRef(''),activeAt=useRef(0);
  const read=async()=>{const r=await fetch('/api/auth/session',{cache:'no-store'});if(!r.ok)throw new Error();const value:Session=await r.json();setSession(value);csrf.current=value.csrf||'';setError('');};
@@ -61,7 +62,7 @@ export function PlatformIdentityPage({business=false}:{business?:boolean}){
    if(!r.ok)throw new Error();const value:Session=await r.json();setSession(value);csrf.current=value.csrf||'';
   }).catch(()=>setError('暂时无法确认平台状态，会话已保留。'));
  };window.addEventListener('pointerdown',activity);window.addEventListener('keydown',activity);return()=>{window.removeEventListener('pointerdown',activity);window.removeEventListener('keydown',activity);};},[]);
- const login=()=>{location.assign('/auth/login?returnTo='+encodeURIComponent((location.pathname==='/'?'/space':location.pathname+location.search)));};
+ const login=()=>{const url='/auth/login?returnTo='+encodeURIComponent((location.pathname==='/'?'/space':location.pathname+location.search));if(preserveWork)window.open(url,'_blank','noopener,noreferrer');else location.assign(url);};
  return <HomeLayout>
     {session?.authenticated?<><h2 className="text-heading-1">{session.user?.display_name}</h2><p className="text-body-small text-muted-foreground">平台会话已建立。空间权限与业务接口正在接入。</p><dl className="grid grid-cols-[auto_1fr] gap-x-lg gap-y-md text-body-small"><dt>组织</dt><dd className="break-all">{session.user?.org_id}</dd><dt>工作区</dt><dd className="break-all">{session.user?.workspace_id}</dd><dt>会话状态</dt><dd>{session.authority_state==='unavailable'?'平台暂不可达，会话已保留':session.authority_state==='confirmed'?'平台已确认':'已保存平台会话'}</dd></dl><IdentitySubscription/><p className="text-label-small text-muted-foreground">此入口尚未开放空间数据，原工程预览服务独立运行。</p><div className="flex flex-wrap gap-md"><Button variant="outline" disabled={busy} onClick={async()=>{setBusy(true);try{const r=await fetch('/api/auth/session',{method:'POST',headers:{'X-CoSpace-CSRF':csrf.current}});if(!r.ok)throw new Error();const value:Session=await r.json();setSession(value);csrf.current=value.csrf||'';setError('');}catch{setError('平台状态暂不可用，会话已保留。');}finally{setBusy(false);}}}>检查平台会话</Button><Button variant="outline" onClick={login}>重新连接</Button></div><form action="/auth/logout" method="post"><input type="hidden" name="csrf" value={session.csrf||''}/><Button type="submit" variant="ghost"><Icon name="sign-out"/>退出平台登录</Button></form></>:<><SignInContent onLogin={login}/></>}
     {error&&<p className="text-body-small text-destructive" role="alert">{error}</p>}
@@ -93,7 +94,7 @@ function BusinessSession({children}:{children:React.ReactNode}){
   const checkSubscription=async()=>{if(!needsSubscription){businessAllowed=true;return;}const subscriptionGeneration=generation;businessAllowed=false;try{const r=await nativeFetch('/api/subscription',{cache:'no-store'});if(!r.ok)throw Error();const value:Subscription=await r.json();if(stopped||subscriptionGeneration!==generation)return;businessAllowed=value.business_allowed;if(!stopped){setSubscription(value);setSubscriptionUnavailable(false);}}catch{if(!stopped&&subscriptionGeneration===generation){setSubscription(null);setSubscriptionUnavailable(true);}}};
   const confirm=async()=>{
    const confirmationGeneration=generation;
-   if(!csrf){const r=await nativeFetch('/api/auth/session',{cache:'no-store'});if(!r.ok)throw new Error('会话暂不可读');const saved:Session=await r.json();if(stopped||confirmationGeneration!==generation)return;csrf=saved.csrf||'';authority=saved;if(!saved.authenticated){setSession(saved);return;}}
+   {const r=await nativeFetch('/api/auth/session',{cache:'no-store'});if(!r.ok)throw new Error('会话暂不可读');const saved:Session=await r.json();if(stopped||confirmationGeneration!==generation)return;csrf=saved.csrf||'';authority=saved;if(!saved.authenticated){setSession(saved);return;}}
    const response=await nativeFetch('/api/auth/session',{method:'POST',headers:{'X-CoSpace-CSRF':csrf}});
    if(stopped||confirmationGeneration!==generation)return;
    if(!response.ok){authority=null;businessAllowed=false;generation++;setSession(old=>old?{...old,authority_state:'unavailable'}:old);throw new Error('会话确认暂不可用');}
@@ -144,7 +145,7 @@ function BusinessSession({children}:{children:React.ReactNode}){
  const suspended=!!retained.current&&!authorized;
  return <>
   {retained.current&&<div style={authorized?{display:'contents'}:{display:'none'}} aria-hidden={!authorized} inert={!authorized}><PlatformSession.Provider value={retained.current}><React.Fragment key={sessionScopeKey(retained.current)}>{children}</React.Fragment></PlatformSession.Provider></div>}
-  {!authorized&&(!session?.authenticated?<><PlatformIdentityPage business/>{suspended&&<section className="fixed bottom-lg left-lg right-lg rounded-md border bg-popover p-lg" aria-label="恢复当前工作"><p>会话已失效。未保存修改仅保留在当前标签页，刷新或关闭会丢失。可在其他标签页重新登录，再回来检查会话。</p><Button onClick={()=>window.dispatchEvent(new Event('cospace:confirm-session'))}>重新检查会话</Button></section>}</>:!sessionConfirmed(session)?<HomeLayout><h2>等待恢复平台会话</h2><p>工作面已遮挡，内存草稿保留。确认会话后可继续；不会重放保存、构建或发布操作。</p><Button onClick={()=>window.dispatchEvent(new Event('cospace:confirm-session'))}>重新检查会话</Button></HomeLayout>:<HomeLayout><p>{session.user?.display_name} · 当前工作区</p><SubscriptionNotice value={subscription} unavailable={subscriptionUnavailable} onRetry={()=>window.dispatchEvent(new Event('cospace:confirm-session'))}/><Button variant="ghost" onClick={()=>platformLogout(session.csrf||'')}>退出登录</Button></HomeLayout>)}
+  {!authorized&&(!session?.authenticated?<><PlatformIdentityPage business preserveWork={suspended}/>{suspended&&<section className="session-recovery-notice" role="status" aria-label="恢复当前工作"><Info size={20} aria-hidden="true"/><div><strong>会话已失效，当前工作已暂存</strong><p>点击“继续登录”将在新标签页登录，完成后回到此页。请勿刷新或关闭此页。</p><Button variant="ghost" size="sm" onClick={()=>window.dispatchEvent(new Event('cospace:confirm-session'))}><ArrowClockwise size={16}/>重新检查会话</Button></div></section>}</>:!sessionConfirmed(session)?<HomeLayout><h2>等待恢复平台会话</h2><p>工作面已遮挡，内存草稿保留。确认会话后可继续；不会重放保存、构建或发布操作。</p><Button onClick={()=>window.dispatchEvent(new Event('cospace:confirm-session'))}>重新检查会话</Button></HomeLayout>:<HomeLayout><p>{session.user?.display_name} · 当前工作区</p><SubscriptionNotice value={subscription} unavailable={subscriptionUnavailable} onRetry={()=>window.dispatchEvent(new Event('cospace:confirm-session'))}/><Button variant="ghost" onClick={()=>platformLogout(session.csrf||'')}>退出登录</Button></HomeLayout>)}
   {authorized&&(quotaError||error)&&<div role="alert" className="fixed bottom-lg left-lg right-lg z-notification flex flex-wrap items-center gap-md rounded-md border bg-popover p-lg text-body-small"><span>{quotaError||error}</span>{quotaError&&<Button variant="ghost" size="sm" onClick={()=>setQuotaError('')}>关闭提示</Button>}</div>}
  </>;
 }

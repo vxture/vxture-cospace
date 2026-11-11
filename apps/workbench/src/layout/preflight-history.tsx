@@ -8,13 +8,13 @@ type Check={input_id:string;sequence:number;checked_at:string;status:string;acto
 type History={input_id:string;items:Check[];next_before_sequence:number|null;current_files_checked:false};
 const subscribe=subscribeAppLocation;
 
-export function PreflightHistory({endpoint,identity,revision}:{endpoint:string;identity:string;revision?:number}){
+export function PreflightHistory({endpoint,identity,revision,embedded=false}:{endpoint:string;identity:string;revision?:number;embedded?:boolean}){
  const target=useRecordNavigation(),hash=useSyncExternalStore(subscribe,()=>appLocation());
  const requested=new URLSearchParams(hash.split('?')[1]||'').get('check')||'';
  const valid=!requested||/^[1-9]\d*$/.test(requested)&&Number.isSafeInteger(Number(requested));
  const [expanded,setExpanded]=useState(false),[cursor,setCursor]=useState<number|null>(null),[refresh,setRefresh]=useState(0);
  const [result,setResult]=useState<{key:string;data:History}|null>(null),[error,setError]=useState('');
- const open=expanded||!!requested,key=JSON.stringify([endpoint,identity,target.space,requested,cursor,refresh,revision]);
+ const open=embedded||expanded||!!requested,key=JSON.stringify([endpoint,identity,target.space,requested,cursor,refresh,revision]);
  const data=result?.key===key?result.data:null;
  useEffect(()=>{setCursor(null);if(requested)setExpanded(true);},[identity,target.space,requested]);
  useEffect(()=>{
@@ -32,7 +32,7 @@ export function PreflightHistory({endpoint,identity,revision}:{endpoint:string;i
  },[key,open,valid]);
  const listHref=recordLink('data',{space:target.space,tab:'inputs',input:identity});
  return <section aria-label="预检历史" className="flex flex-col gap-sm border-t border-border pt-md">
-  <div className="flex flex-wrap gap-sm items-center"><h3 className="text-body-small font-medium">预检历史</h3>{!requested&&<Button size="sm" variant="outline" onClick={()=>setExpanded(v=>!v)}>{open?'收起预检历史':'查看预检历史'}</Button>}{open&&<Button size="sm" variant="outline" onClick={()=>{setCursor(null);setRefresh(v=>v+1);}}>刷新历史</Button>}{requested&&<a href={listHref}>返回全部预检历史</a>}</div>
+  <div className="flex flex-wrap gap-sm items-center">{!embedded&&<h3 className="text-body-small font-medium">预检历史</h3>}{!requested&&!embedded&&<Button size="sm" variant="ghost" onClick={()=>setExpanded(v=>!v)}>{open?'收起预检历史':'查看预检历史'}</Button>}{open&&<Button size="sm" variant="ghost" onClick={()=>{setCursor(null);setRefresh(v=>v+1);}}>刷新历史</Button>}{requested&&<a href={listHref}>返回全部预检历史</a>}</div>
   {open&&<><p className="text-label-small text-muted-foreground">以下为历次保存记录，不重新检查文件，不替代最近预检或构建提交时的实时校验。</p>
    {error?<p role="alert">{error}</p>:!data?<p role="status">正在读取预检历史…</p>:<>
     {!data.items.length&&<p role="status">{requested?'指定预检记录不存在，不自动切换到最近记录。':'此范围暂无保存的预检记录。'}</p>}
@@ -43,7 +43,7 @@ export function PreflightHistory({endpoint,identity,revision}:{endpoint:string;i
      {item.issue&&<p>{item.issue.title} · {item.issue.action}</p>}
      {requested?<details><summary>记录依据</summary><p className="break-all text-label-small">操作者：{item.actor||'未记录'}<br/>登记摘要：{item.registration_sha256}</p><p>{item.notice}</p></details>:<a href={recordLink('data',{space:target.space,tab:'inputs',input:identity,check:String(item.sequence)})}>查看记录 #{item.sequence}</a>}
     </li>)}</ol>
-    {!requested&&<div className="flex gap-sm"><Button size="sm" variant="outline" disabled={cursor===null} onClick={()=>setCursor(null)}>返回最新历史</Button><Button size="sm" variant="outline" disabled={data.next_before_sequence===null} onClick={()=>setCursor(data.next_before_sequence)}>更早记录</Button></div>}
+    {!requested&&(cursor!==null||data.next_before_sequence!==null)&&<div className="flex gap-sm"><Button size="sm" variant="ghost" disabled={cursor===null} onClick={()=>setCursor(null)}>返回最新历史</Button><Button size="sm" variant="ghost" disabled={data.next_before_sequence===null} onClick={()=>setCursor(data.next_before_sequence)}>更早记录</Button></div>}
    </>}
   </>}
  </section>;

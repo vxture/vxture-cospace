@@ -227,6 +227,10 @@ class BusinessAccess:
                 artifact('input:'+str(previous.get('input_id','')),DATA_MANAGE,wanted)
                 if previous.get('frozen_model'):artifact('candidate:'+previous['frozen_model']['job_id'],'build.run',wanted)
                 return {'principal':principal}
+            if path=='/api/build-info':
+                wanted=body.get('space_id');space(wanted,'build.run')
+                artifact('candidate:'+str(body.get('candidate_id','')),'build.run',wanted)
+                return {'principal':principal}
             if path=='/api/build-retries':
                 wanted=body.get('space_id');space(wanted,'build.run')
                 artifact('candidate:'+str(body.get('retry_of','')),'build.run',wanted)
