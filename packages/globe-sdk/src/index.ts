@@ -1,4 +1,4 @@
-import {Viewer,HeightReference,BoundingSphere,Cartesian2,Cartesian3,HeadingPitchRange,Matrix4,Color,Math as CesiumMath,ImageryLayer,TileMapServiceImageryProvider,UrlTemplateImageryProvider,ArcGISTiledElevationTerrainProvider,ScreenSpaceEventHandler,ScreenSpaceEventType,Entity,buildModuleUrl} from 'cesium';
+import {Viewer,Credit,CreditDisplay,HeightReference,BoundingSphere,Cartesian2,Cartesian3,HeadingPitchRange,Matrix4,Color,Math as CesiumMath,ImageryLayer,TileMapServiceImageryProvider,UrlTemplateImageryProvider,ArcGISTiledElevationTerrainProvider,ScreenSpaceEventHandler,ScreenSpaceEventType,Entity,buildModuleUrl} from 'cesium';
 import {bindingKey,validateScenes,validateLayers,type GlobeConfiguration,type GlobeScene,type GlobeLayer,type GlobeSelection,type GlobeState,type CameraState,type CameraCommand,type Binding} from './contract';
 export * from './contract';
 export type GlobeCallbacks={onState?:(state:GlobeState)=>void;onCamera?:(state:CameraState)=>void;onSelect?:(value:GlobeSelection|null)=>void};
@@ -6,7 +6,12 @@ export type GlobeController={setScenes:(scenes:GlobeScene[])=>void;setLayers:(la
 export function createGlobe(host:HTMLElement,config:GlobeConfiguration,callbacks:GlobeCallbacks={}):GlobeController{
  if(config.profile!=='vxture.globe-config/0.1'||!config.assetsBaseUrl)throw Error('globe_configuration_invalid');
  (buildModuleUrl as typeof buildModuleUrl & {setBaseUrl:(url:string)=>void}).setBaseUrl(config.assetsBaseUrl);
+ // Engine branding is optional; provider attribution remains in CreditDisplay.
+ CreditDisplay.cesiumCredit=new Credit('');
  const viewer=new Viewer(host,{baseLayer:ImageryLayer.fromProviderAsync(TileMapServiceImageryProvider.fromUrl(config.assetsBaseUrl.replace(/\/?$/,'/')+'Assets/Textures/NaturalEarthII')),animation:false,timeline:false,baseLayerPicker:false,geocoder:false,homeButton:false,sceneModePicker:false,navigationHelpButton:false,fullscreenButton:false,infoBox:false,selectionIndicator:false,requestRenderMode:true});
+ if(viewer.scene.sun)viewer.scene.sun.show=false;if(viewer.scene.moon)viewer.scene.moon.show=false;
+ if(viewer.scene.skyBox)viewer.scene.skyBox.show=false;
+ viewer.scene.backgroundColor=Color.fromCssColorString('#050b17');
  let alive=true,scenes:GlobeScene[]=[],layers:GlobeLayer[]=[],satellite:ImageryLayer|undefined,displaySatellite=true,selected:Binding|null=null;
  const selections=new Map<string,GlobeSelection>();
  let state:GlobeState={ready:true,failure:false,imagery:config.imagery?'satellite':'base',terrain:config.terrain?'loading':'unavailable'};

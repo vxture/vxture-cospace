@@ -5,6 +5,8 @@ import {sessionScopeKey} from './session-continuity';
 import {preferredScene,sceneContextHref,scenePreferenceKey} from './scene-preference';
 
 const SelectedScene=createContext('');
+const SceneControls=createContext({selectScene:(_id:string)=>{},mapActive:false,setMapActive:(_active:boolean)=>{}});
+export const useSceneControls=()=>useContext(SceneControls);
 export const useSelectedScene=()=>useContext(SelectedScene);
 function read(key:string){try{return localStorage.getItem(key)||'';}catch{return '';}}
 export function SceneSelection({children}:{children:React.ReactNode}){
@@ -14,6 +16,8 @@ export function SceneSelection({children}:{children:React.ReactNode}){
 function ScopedSceneSelection({scope,children}:{scope:string;children:React.ReactNode}){
  const key=scenePreferenceKey(scope),location=useLocation(),navigate=useNavigate();
  const [remembered,setRemembered]=useState(()=>read(key));
+ const [mapActive,setMapActive]=useState(false);
+ function selectScene(id:string){setRemembered(id);try{if(id)localStorage.setItem(key,id);else localStorage.removeItem(key);}catch{/* Selection works without storage. */}}
  const explicit=new URLSearchParams(location.search).get('space');
  const scene=preferredScene(explicit,remembered);
  useLayoutEffect(()=>{
@@ -25,5 +29,5 @@ function ScopedSceneSelection({scope,children}:{scope:string;children:React.Reac
   const href=location.pathname+location.search,next=sceneContextHref(href,scene);
   if(next!==href)void navigate(next,{replace:true});
  },[location.pathname,location.search,scene,navigate]);
- return <SelectedScene.Provider value={scene}>{children}</SelectedScene.Provider>;
+ return <SceneControls.Provider value={{selectScene,mapActive,setMapActive}}><SelectedScene.Provider value={scene}>{children}</SelectedScene.Provider></SceneControls.Provider>;
 }
