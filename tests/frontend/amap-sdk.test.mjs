@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {displayPoints,createAdministrativeLayer} from '../../apps/workbench/src/layout/amap-sdk.ts';
+import {displayPoints,createAdministrativeLayer,createSatelliteLayers} from '../../apps/workbench/src/layout/amap-sdk.ts';
 test('official JS conversion protocol batches at 40, preserves original and skips GCJ02',async()=>{
  const original=globalThis.fetch,calls=[];
  const input=Array.from({length:41},()=>({longitude:116,latitude:39,crs:'WGS84'}));input.push({longitude:120,latitude:30,crs:'GCJ02'});
@@ -46,4 +46,21 @@ test('administrative enhancement loads the official layer only when needed and r
  assert.equal(plugins,1);assert.equal(options.depth,1);assert.equal(options.styles.fill,'rgba(0,0,0,0)');
  await createAdministrativeLayer(sdk);assert.equal(plugins,1);
  await assert.rejects(createAdministrativeLayer({plugin:(_name,done)=>done()}),/行政区划图层暂不可用/);
+});
+
+
+test('map modes validate persisted choices and migrate existing preferences without resetting them',()=>{
+ const saved=normalizeMapPreferences({appearance:'light',points:true,basemap:'satellite',viewMode:'3D'});
+ assert.equal(saved.basemap,'satellite');assert.equal(saved.viewMode,'3D');assert.equal(saved.points,true);
+ const old=normalizeMapPreferences({appearance:'light',roads:false});
+ assert.equal(old.basemap,'standard');assert.equal(old.viewMode,'2D');assert.equal(old.appearance,'light');assert.equal(old.roads,false);
+ const invalid=normalizeMapPreferences({basemap:'external',viewMode:'4D'});
+ assert.equal(invalid.basemap,'standard');assert.equal(invalid.viewMode,'2D');
+});
+test('satellite layers pair imagery with the road overlay only when enabled',()=>{
+ const satellite={setMap(){}},roads={setMap(){}};
+ const sdk={TileLayer:{Satellite:class{constructor(){return satellite;}},RoadNet:class{constructor(){return roads;}}}};
+ assert.deepEqual(createSatelliteLayers(sdk,true),[satellite,roads]);
+ assert.deepEqual(createSatelliteLayers(sdk,false),[satellite]);
+ assert.throws(()=>createSatelliteLayers({},true),/卫星影像暂不可用/);
 });

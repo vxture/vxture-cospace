@@ -92,7 +92,7 @@
 .scene-map-detail-panel .scene-detail-links [data-slot=button]:hover,.scene-map-detail-panel>div:last-child button:hover,.scene-map-detail>button:hover{background:var(--map-hover)}
 
 /* Neutralize official base-map accent lines only; scene markers stay semantic. */
-.scene-map-workspace[data-map-theme=dark] .scene-map-canvas canvas.amap-layer{filter:grayscale(1)}
+.scene-map-workspace[data-map-theme=dark][data-basemap=standard] .scene-map-canvas canvas.amap-layer{filter:grayscale(1)}
 
 .scene-map-settings-columns{display:grid;grid-template-columns:1fr 1fr}
 .scene-map-settings .scene-map-appearance{border-right:1px solid var(--border);border-bottom:0;gap:8px}
@@ -109,5 +109,3 @@
 .map-preview-grid{fill:none;stroke:currentColor;stroke-width:1;opacity:.4}
 .map-preview-building{fill:var(--background);stroke:var(--primary);stroke-width:1.5;stroke-linejoin:round}
 @media(max-width:560px){.scene-map-settings-columns{grid-template-columns:1fr}.scene-map-settings .scene-map-appearance{border-right:0;border-bottom:1px solid var(--border)}}
-
-.scene-map-choice:disabled:has(.scene-map-preview-imagery){opacity:1}.scene-map-choice:disabled .scene-map-preview-imagery{opacity:.7}.scene-map-choice:disabled:has(.scene-map-preview-imagery)>span{opacity:.45}
