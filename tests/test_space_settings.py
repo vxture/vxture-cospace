@@ -130,3 +130,15 @@ def test_response_fields_and_revision_are_one_committed_snapshot(secured,monkeyp
     assert saved['revision']==1 and saved['space']['name']=='Updated equipment room'
     latest=c.get('/api/space-settings',params={'space_id':spaces[0]['id']}).json()
     assert latest['revision']==2 and latest['space']['name']=='Later manager update'
+
+
+def test_altitude_round_trip_history_and_finite_validation(tmp_path):
+    from pydantic import ValidationError
+    d=PreviewSpaces(tmp_path/'directory');p=d.create('project','P');s=d.create('space','S',p['id'])
+    location={'longitude':116.39,'latitude':39.90,'altitude':-12.5,'crs':'WGS84'}
+    record=d.settings.change(SpaceSettingsChange.model_validate(body(s['id'],location=location)),'manager',s)
+    assert PreviewSpaces(d.root).read('space',s['id'])['location']==location
+    assert record['history'][0]['after']['location']['altitude']==-12.5
+    for invalid in (float('nan'),float('inf')):
+        with pytest.raises(ValidationError):
+            SpaceSettingsChange.model_validate(body(s['id'],location=location|{'altitude':invalid}))

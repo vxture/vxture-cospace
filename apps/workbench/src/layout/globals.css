@@ -159,3 +159,21 @@ button,input,select,textarea{font-family:inherit}
 /* Keep the DS header shadow above workspace surfaces and below popup portals. */
 #workbench-shell>header{position:relative;z-index:20}
 .home-entry-heading{text-align:center}.home-secure-note{display:flex;align-items:center;justify-content:center;gap:8px;text-align:center}.home-secure-note svg{flex-shrink:0}.home-preview-tools{display:flex;justify-content:flex-end;padding:0 var(--space-xl) var(--space-sm)}.home-preview-tools button{font-size:var(--label-small-font-size);color:var(--muted-foreground)}
+
+/* Preserve wheel, touch and keyboard scrolling without reserving scrollbar space. */
+html,body,body *{scrollbar-width:none!important}body::-webkit-scrollbar,html::-webkit-scrollbar,body *::-webkit-scrollbar{width:0!important;height:0!important;display:none}
+
+/* Shared content-section heading: separates the section identity from subordinate headings. */
+.workspace-section-heading{min-height:49px;box-sizing:border-box;padding-bottom:16px;border-bottom:1px dashed color-mix(in srgb,var(--border) 60%,transparent)}
+
+.workspace-section-heading-with-description{display:flex;align-items:center;justify-content:flex-start;gap:12px}
+.workspace-section-heading-with-description>svg{flex:none;align-self:center;color:var(--primary)}
+.workspace-section-heading-copy{display:flex;flex:1;min-width:0;flex-direction:column;gap:8px}
+.workspace-section-heading-copy>h3,.workspace-section-heading-copy>p{margin:0}
+.workspace-section-heading-copy>p{overflow-wrap:anywhere}
+
+.session-recovery-notice{position:fixed;right:24px;bottom:24px;z-index:1000;display:flex;align-items:flex-start;gap:12px;width:min(420px,calc(100vw - 32px));box-sizing:border-box;padding:16px;border:1px solid var(--border);border-radius:var(--radius-lg);background:var(--popover);color:var(--popover-foreground);box-shadow:0 4px 20px #0000000f}
+.session-recovery-notice>svg{flex:none;color:var(--muted-foreground)}
+.session-recovery-notice>div{display:flex;flex-direction:column;align-items:flex-start;gap:8px;min-width:0}
+.session-recovery-notice strong{font-size:14px;font-weight:500}
+.session-recovery-notice p{margin:0;font-size:12px;line-height:1.6;color:var(--muted-foreground)}

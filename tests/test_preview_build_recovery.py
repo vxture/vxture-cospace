@@ -92,3 +92,29 @@ def test_retry_api_rejects_bad_scope_fields_and_origin(tmp_path,monkeypatch):
         again=client.post('/api/build-retries',json=body);assert again.status_code==200
         assert response.json()['job']['id']==again.json()['job']['id']
         jobs.list()
+
+
+def test_build_description_is_saved_with_new_job(tmp_path,monkeypatch):
+    _,jobs,_,spaces,inputs,batch,previous=failed(tmp_path,monkeypatch)
+    info={'name':' 东侧更新 ','purpose':'导航验证','changes':'补充设备间点云'}
+    job=jobs.start(inputs[0]['id'],spaces[0]['id'],batch['id'],batch['revision'],build_info=info)
+    saved=json.loads((jobs.root/job['id']/'job.json').read_bytes())
+    assert saved['build_info']==dict(info,name='东侧更新')
+    assert 'build_info' not in json.loads((jobs.root/previous['id']/'job.json').read_bytes())
+    for bad in ({'name':'x'*101},{'purpose':7},{'unexpected':'value'}):
+        with pytest.raises(ValueError,match='build_info_invalid'):
+            jobs.start(build_info=bad)
+
+
+def test_edit_build_description_preserves_artifacts_and_checks_revision(tmp_path,monkeypatch):
+    _,jobs,_,spaces,_,_,job=failed(tmp_path,monkeypatch)
+    before=json.loads((jobs.root/job['id']/'job.json').read_bytes())
+    result=jobs.update_info(spaces[0]['id'],job['id'],{'name':'验证构建','purpose':'验证','changes':''},0)
+    assert result['revision']==1
+    after=json.loads((jobs.root/job['id']/'job.json').read_bytes())
+    assert {k:v for k,v in after.items() if not k.startswith('build_info')}==before
+    assert after['build_info_history'][0]['after']==result['build_info']
+    with pytest.raises(ValueError,match='build_info_revision_changed'):
+        jobs.update_info(spaces[0]['id'],job['id'],{},0)
+    with pytest.raises(ValueError):
+        jobs.update_info('space-other',job['id'],{},1)

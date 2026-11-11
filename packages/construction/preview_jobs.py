@@ -74,7 +74,11 @@ class PreviewJobs:
                           key=lambda r:r['created_at'],reverse=True)
 
     @serialized(lambda self:self.root.parent)
-    def start(self,input_id=None,space_id=None,batch_id=None,batch_revision=None,*,retry_ref=None,input_revision=None):
+    def start(self,input_id=None,space_id=None,batch_id=None,batch_revision=None,*,retry_ref=None,input_revision=None,build_info=None):
+        if build_info is not None:
+            if not isinstance(build_info,dict) or set(build_info)-{'name','purpose','changes'}:raise ValueError('build_info_invalid')
+            if any(not isinstance(v,str) or len(v)>({'name':100,'purpose':500,'changes':500}[k]) for k,v in build_info.items()):raise ValueError('build_info_invalid')
+            build_info={k:v.strip() for k,v in build_info.items()}
         ownership=scope(self.directory,space_id)
         with self.lock:
             self.poll()
@@ -101,7 +105,22 @@ class PreviewJobs:
                 snapshot=self.snapshot; tracking=self.tracking
             if self.batches is None and (batch_id is not None or batch_revision is not None):raise ValueError('batches_not_configured')
             guard=self.batches.admit(registered,ownership,batch_id,batch_revision) if self.batches else nullcontext(None)
-            with guard as batch_ref:return self._launch(registered,snapshot,tracking,ownership,input_id,batch_ref,retry_ref,admission_preflight)
+            with guard as batch_ref:return self._launch(registered,snapshot,tracking,ownership,input_id,batch_ref,retry_ref,admission_preflight,build_info)
+
+    @serialized(lambda self:self.root.parent)
+    def update_info(self,space_id,identity,build_info,expected_revision):
+        if not re.fullmatch(r'build-[A-Za-z0-9-]+',identity):raise ValueError('build_not_found')
+        ownership=scope(self.directory,space_id)
+        if not isinstance(build_info,dict) or set(build_info)-{'name','purpose','changes'}:raise ValueError('build_info_invalid')
+        if any(not isinstance(v,str) or len(v)>({'name':100,'purpose':500,'changes':500}[k]) for k,v in build_info.items()):raise ValueError('build_info_invalid')
+        with self.lock:
+            record=json.loads((self.root/identity/'job.json').read_bytes());match(record,ownership)
+            if type(expected_revision) is not int or expected_revision!=record.get('build_info_revision',0):raise ValueError('build_info_revision_changed')
+            value={k:v.strip() for k,v in build_info.items()}
+            record.setdefault('build_info_history',[]).append({'revision':expected_revision+1,'changed_at':now(),'before':record.get('build_info',{}),'after':value})
+            record.update(build_info=value,build_info_revision=expected_revision+1)
+            self.save(record)
+            return {'job_id':identity,'space_id':space_id,'build_info':value,'revision':record['build_info_revision']}
 
     @serialized(lambda self:self.root.parent)
     def retry(self,space_id,previous_id,request_id):
@@ -154,7 +173,7 @@ class PreviewJobs:
         if not lidar and not pointcloud and (not (snapshot/'report.json').is_file() or tracking is None or not tracking.is_file()):
             raise ValueError('configured_input_missing')
 
-    def _launch(self,registered,snapshot,tracking,ownership,input_id,batch_ref,retry_ref=None,admission_preflight=None):
+    def _launch(self,registered,snapshot,tracking,ownership,input_id,batch_ref,retry_ref=None,admission_preflight=None,build_info=None):
         mapping=registered is not None and registered['format']=='ros1_lidar_multiframe_icp'
         lidar=registered is not None and registered['format'] in ('ros1_lidar_single_frame','ros1_lidar_multiframe_icp')
         pointcloud=registered is not None and registered['format']=='ply_pointcloud'
@@ -168,6 +187,7 @@ class PreviewJobs:
         if registered and pointcloud:
             from packages.construction.build_admission import receipt
             record['build_admission']=receipt(identity,record['input_binding'],admission_preflight)
+        if build_info is not None:record['build_info']=build_info
         if batch_ref:record['batch_ref']=batch_ref
         if retry_ref:record.update(retry_ref)
         if registered:record.update(pipeline='model_then_views/0.1',stage='building_model')

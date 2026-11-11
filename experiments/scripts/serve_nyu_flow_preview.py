@@ -62,13 +62,29 @@ class Selection(BaseModel):
     expected_revision:int
 
 
+class BuildInfo(BaseModel):
+    model_config=ConfigDict(extra="forbid")
+    name:str=Field(default='',max_length=100)
+    purpose:str=Field(default='',max_length=500)
+    changes:str=Field(default='',max_length=500)
+
+
 class BuildRequest(BaseModel):
     model_config=ConfigDict(extra="forbid")
     space_id:str|None=None
     input_id:str|None=None
+    build_info:BuildInfo|None=None
     input_revision:StrictInt|None=Field(default=None,ge=0)
     batch_id:str|None=Field(default=None,pattern=r'^batch-[a-f0-9]{16}$')
     batch_revision:StrictInt|None=Field(default=None,ge=0)
+
+
+class BuildInfoUpdate(BaseModel):
+    model_config=ConfigDict(extra='forbid')
+    space_id:str
+    candidate_id:str
+    expected_revision:StrictInt=Field(ge=0)
+    build_info:BuildInfo
 
 
 class BuildRetryRequest(BaseModel):
@@ -543,8 +559,15 @@ def create_app(root,jobs=None,update_evidence=None,registration_sources=None,sou
         if jobs is None: raise HTTPException(503,'builds_not_configured')
         try: return jobs.start(body.input_id if body else None,body.space_id if body else None,
                                body.batch_id if body else None,body.batch_revision if body else None,
+                               **({'build_info':body.build_info.model_dump()} if body and body.build_info is not None else {}),
                                **({'input_revision':body.input_revision} if body and body.input_revision is not None else {}))
         except (ValueError,OSError,KeyError,TypeError,sqlite3.Error) as exc: raise HTTPException(409,'batch_store_unavailable' if isinstance(exc,sqlite3.Error) else str(exc)) from exc
+    @app.post('/api/build-info')
+    def update_build_info(request:Request,body:BuildInfoUpdate):
+        check_origin(request)
+        if jobs is None:raise HTTPException(503,'builds_not_configured')
+        try:return jobs.update_info(body.space_id,body.candidate_id,body.build_info.model_dump(),body.expected_revision)
+        except (ValueError,OSError,KeyError,TypeError) as exc:raise HTTPException(409,str(exc)) from exc
     @app.post('/api/build-retries')
     def retry_build(request:Request,body:BuildRetryRequest):
         check_origin(request)

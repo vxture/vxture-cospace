@@ -267,3 +267,20 @@ def test_manager_publish_pause_restore_and_viewer_still_cannot_export(secured):
     sign_in(secured)
     assert c.get('/publications/'+identity+'/human.ply').status_code==200
     assert c.get('/publications/'+identity+'/offline.zip').status_code==403
+
+
+@pytest.mark.parametrize('user',['usr_local_test','usr_other','usr_engineer','usr_manager'])
+def test_build_info_update_requires_scene_permission_and_csrf(secured,user):
+    _,client,_,_,jobs,_,spaces,*_=secured
+    headers,_=sign_in(secured,user)
+    body={'space_id':spaces[0]['id'],'candidate_id':'build-one','expected_revision':0,
+          'build_info':{'name':'','purpose':'Review navigation update','changes':''}}
+    assert client.post('/api/build-info',json=body).status_code==403
+    response=client.post('/api/build-info',json=body,headers=headers)
+    allowed=user in ('usr_engineer','usr_manager')
+    assert response.status_code==(200 if allowed else 403),response.text
+    for wrong in ({'space_id':spaces[1]['id']},{'candidate_id':'build-two'},{'candidate_id':'../outside'}):
+        assert client.post('/api/build-info',json=body|wrong,headers=headers).status_code==403
+    if allowed:
+        assert client.post('/api/build-info',json=body,headers=headers).status_code==409
+        assert client.post('/api/build-info',json=body|{'expected_revision':1,'build_info':{'purpose':'x'*501}},headers=headers).status_code==422
