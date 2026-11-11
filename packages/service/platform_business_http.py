@@ -34,6 +34,7 @@ from packages.ontology.workspace_authoring import WorkspaceOntologies,DraftChang
 from packages.ontology.scene_usage import usage as scene_ontology_usage, UsageQuery
 from packages.service.public_errors import public_error
 from packages.service.amap_gateway import AmapGateway
+from packages.service.globe_runtime import GlobeRuntime
 from packages.data.workspace_catalog import catalog as workspace_catalog, CatalogQuery, CatalogUnavailable
 
 
@@ -51,6 +52,7 @@ class BusinessAccess:
         self.rp,self.policies,self.directory,self.jobs=rp,policies,directory,jobs
         self.subscriptions=subscriptions
         self.amap=AmapGateway.from_env()
+        self.globe=GlobeRuntime.from_env()
         self.scene_pointclouds=ScenePointcloudWorkspace(jobs.inputs,scene_pointcloud_config) if jobs.inputs else None
         self.scene_ifc=IfcWorkspace(directory,jobs,scene_ifc_config)
         self.attachments=SceneAttachments(jobs.inputs) if jobs.inputs else None
@@ -288,6 +290,9 @@ class BusinessAccess:
                 if (request.headers.get('origin')!=self.rp.config.origin or request.headers.get('sec-fetch-site')=='cross-site'
                         or not self.rp.csrf_matches(rpsid,request.headers.get('x-cospace-csrf'))):return deny(403,'csrf_rejected')
             await run_in_threadpool(self.require_subscription,session)
+            if path=='/api/globe/config':
+                if request.method not in ('GET','HEAD') or request.query_params:return deny(403,'globe_config_request_rejected')
+                return JSONResponse(self.globe.public(self.rp.config.origin),headers={'Cache-Control':'no-store'})
             if path=='/api/map/config' or path.startswith('/_AMapService/'):
                 return await self.amap.dispatch(request)
             if path=='/api/input-uploads' and request.method in ('GET','POST'):

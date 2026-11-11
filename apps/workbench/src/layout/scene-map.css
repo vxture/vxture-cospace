@@ -55,11 +55,11 @@
 .scene-map-detail>a,.scene-map-detail>button{margin-inline:12px;height:32px;min-height:32px;font-size:var(--body-small-font-size);font-weight:500}
 .scene-map-status{position:absolute;top:50%;left:calc(50% + 152px);transform:translate(-50%,-50%);max-width:360px;padding:18px;display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center}
 .scene-map-status button{font-size:var(--body-small-font-size)}
-.scene-map-tools{position:absolute;right:24px;bottom:52px;display:flex;flex-direction:column;gap:0;padding:2px;width:32px;border-color:color-mix(in srgb,var(--border) 75%,transparent)}
-.scene-map-tools>button{width:26px;height:28px;min-height:28px;padding:0;border:0;background:transparent;box-shadow:none;border-radius:var(--radius-sm);color:var(--muted-foreground)}
+.scene-map-tools{position:absolute;right:24px;bottom:52px;display:flex;flex-direction:column;gap:0;padding:3px;width:40px;border-color:color-mix(in srgb,var(--border) 75%,transparent)}
+.scene-map-tools>button{width:32px;height:32px;min-height:32px;padding:0;border:0;background:transparent;box-shadow:none;border-radius:var(--radius-sm);color:var(--muted-foreground)}
 .scene-map-tools>button:hover,.scene-map-tools>button[aria-pressed=true]{background:var(--map-hover);color:var(--foreground)}
-.scene-map-tools>button:last-child{border-top:1px solid var(--border);border-top-left-radius:0;border-top-right-radius:0}
-.scene-map-tools svg{height:14px;width:14px}
+.scene-map-tools>button.scene-map-tool-divider,.scene-map-tools>button:last-child{border-top:1px solid var(--border);border-top-left-radius:0;border-top-right-radius:0}
+.scene-map-tools svg{height:16px;width:16px}.scene-map-tools>button:disabled{opacity:.4;cursor:default}.scene-map-tools>button:disabled:hover{background:transparent;color:var(--muted-foreground)}
 .scene-map-legend{position:absolute;bottom:26px;left:24px;padding:6px 10px;display:flex;align-items:center;gap:12px;font-size:var(--body-small-font-size);color:var(--foreground);pointer-events:none}
 .scene-map-legend>span{display:flex;align-items:center;gap:4px}
 .scene-map-legend i{display:block}
@@ -92,7 +92,7 @@
 .scene-map-detail-panel .scene-detail-links [data-slot=button]:hover,.scene-map-detail-panel>div:last-child button:hover,.scene-map-detail>button:hover{background:var(--map-hover)}
 
 /* Neutralize official base-map accent lines only; scene markers stay semantic. */
-.scene-map-workspace[data-map-theme=dark] .scene-map-canvas canvas.amap-layer{filter:grayscale(1)}
+.scene-map-workspace[data-map-theme=dark][data-basemap=standard] .scene-map-canvas canvas.amap-layer{filter:grayscale(1)}
 
 .scene-map-settings-columns{display:grid;grid-template-columns:1fr 1fr}
 .scene-map-settings .scene-map-appearance{border-right:1px solid var(--border);border-bottom:0;gap:8px}
@@ -110,4 +110,8 @@
 .map-preview-building{fill:var(--background);stroke:var(--primary);stroke-width:1.5;stroke-linejoin:round}
 @media(max-width:560px){.scene-map-settings-columns{grid-template-columns:1fr}.scene-map-settings .scene-map-appearance{border-right:0;border-bottom:1px solid var(--border)}}
 
-.scene-map-choice:disabled:has(.scene-map-preview-imagery){opacity:1}.scene-map-choice:disabled .scene-map-preview-imagery{opacity:.7}.scene-map-choice:disabled:has(.scene-map-preview-imagery)>span{opacity:.45}
+.scene-geographic-view{position:relative;display:flex;flex:1;min-height:0;min-width:0}.scene-globe{background:#050b17}.scene-globe .cesium-viewer,.scene-globe .cesium-viewer-cesiumWidgetContainer,.scene-globe .cesium-widget,.scene-globe .cesium-widget canvas{width:100%;height:100%}.scene-globe-status{position:absolute;bottom:58px;left:50%;transform:translateX(-50%);color:white;background:#101827b3;border-radius:4px;padding:3px 8px;font-size:12px;pointer-events:none}.scene-globe .cesium-viewer-bottom{left:auto;right:0;max-width:calc(100% - 350px)}
+
+.scene-globe{--map-surface:color-mix(in srgb,var(--card) 94%,transparent);--map-hover:var(--secondary);--map-selected:var(--primary-muted);--map-blur:blur(8px)}.scene-globe .scene-map-tools>button{color:var(--foreground)}
+
+.map-theme-fieldset{border:0;padding:0;margin:0;min-width:0}.map-theme-fieldset:disabled{opacity:.5}

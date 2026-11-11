@@ -1,8 +1,8 @@
 export type Point=[number,number];
 export type AmapMarker={on:(event:string,callback:()=>void)=>void;setMap:(map:AmapMap|null)=>void;setContent:(content:HTMLElement)=>void};
 export type AmapDistrictLayer={setMap:(map:AmapMap|null)=>void;setStyles:(styles:Record<string,string>)=>void};
-export type AmapMap={destroy:()=>void;setFeatures:(features:string[])=>void;setStatus:(status:{scrollWheel:boolean})=>void;setMapStyle:(style:string)=>void;setZoomAndCenter:(zoom:number,point:Point)=>void;setFitView:(markers?:AmapMarker[],immediately?:boolean,padding?:number[],maxZoom?:number)=>void;zoomIn:()=>void;zoomOut:()=>void;on:(event:string,callback:()=>void)=>void;off:(event:string,callback:()=>void)=>void};
-export type AmapSDK={Map:new(host:HTMLElement,options:Record<string,unknown>)=>AmapMap;Marker:new(options:Record<string,unknown>)=>AmapMarker;DistrictLayer?:{Country:new(options:Record<string,unknown>)=>AmapDistrictLayer};plugin:(name:string,callback:()=>void)=>void;convertFrom:(points:Point[],type:string,callback:(status:string,result:{locations?:{getLng:()=>number;getLat:()=>number}[]})=>void)=>void};
+export type AmapMap={getRotation:()=>number;getPitch:()=>number;setRotation:(rotation:number)=>void;setPitch:(pitch:number)=>void;getCenter:()=>{getLng:()=>number;getLat:()=>number};getZoom:()=>number;destroy:()=>void;setFeatures:(features:string[])=>void;setStatus:(status:{scrollWheel:boolean})=>void;setMapStyle:(style:string)=>void;setZoomAndCenter:(zoom:number,point:Point)=>void;setFitView:(markers?:AmapMarker[],immediately?:boolean,padding?:number[],maxZoom?:number)=>void;zoomIn:()=>void;zoomOut:()=>void;on:(event:string,callback:()=>void)=>void;off:(event:string,callback:()=>void)=>void};
+export type AmapSDK={Map:new(host:HTMLElement,options:Record<string,unknown>)=>AmapMap;Marker:new(options:Record<string,unknown>)=>AmapMarker;TileLayer?:{Satellite:new()=>AmapDistrictLayer;RoadNet:new()=>AmapDistrictLayer};DistrictLayer?:{Country:new(options:Record<string,unknown>)=>AmapDistrictLayer};plugin:(name:string,callback:()=>void)=>void;convertFrom:(points:Point[],type:string,callback:(status:string,result:{locations?:{getLng:()=>number;getLat:()=>number}[]})=>void)=>void};
 
 // Administrative enhancement is an official independent overlay. Base-map
 // boundary paint remains controlled by the selected official map style.
@@ -14,6 +14,14 @@ export async function createAdministrativeLayer(sdk:AmapSDK):Promise<AmapDistric
  if(!sdk.DistrictLayer?.Country)throw Error('行政区划图层暂不可用，请稍后重试。');
  return new sdk.DistrictLayer.Country({zIndex:80,depth:1,adcode:'100000',styles:{fill:'rgba(0,0,0,0)'}});
 }
+// Official satellite imagery with optional road overlay; ownership stays with the caller.
+export function createSatelliteLayers(sdk:AmapSDK,roads:boolean):AmapDistrictLayer[]{
+ if(!sdk.TileLayer?.Satellite)throw Error('卫星影像暂不可用，请切换标准地图后重试。');
+ const layers=[new sdk.TileLayer.Satellite()];
+ if(roads&&sdk.TileLayer.RoadNet)layers.push(new sdk.TileLayer.RoadNet());
+ return layers;
+}
+
 declare global{interface Window{AMap?:AmapSDK;_AMapSecurityConfig?:{serviceHost:string}}}
 let pending:Promise<AmapSDK>|undefined;
 export async function loadAmap():Promise<AmapSDK>{
@@ -54,4 +62,12 @@ export async function displayPoints(_sdk:AmapSDK,locations:{longitude:number;lat
   batch.forEach((index,i)=>{result[index]=converted[i];});
  }
  return result;
+}
+
+// Reset camera and framing together; keep the selected basemap and view mode.
+export function resetMapView(map:AmapMap,markers:AmapMarker[],viewMode:'2D'|'3D',wide:boolean){
+ map.setRotation(0);
+ map.setPitch(viewMode==='3D'?45:0);
+ if(markers.length)map.setFitView(markers,false,wide?[100,100,360,80]:[100,100,30,30],16);
+ else map.setZoomAndCenter(4,[104,35]);
 }

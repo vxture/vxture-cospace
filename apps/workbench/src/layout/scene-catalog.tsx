@@ -8,7 +8,7 @@ import {scenePhases,scenePhase,filterScenes,sceneWorkspaceHref} from './scene-ca
 import {SceneDetail,SceneMoreMenu} from './scene-detail';
 import {appNavigate} from './app-router';
 import './scene-catalog.css';
-const SceneMap=React.lazy(()=>import('./scene-map').then(m=>({default:m.SceneMap})));
+const SceneMap=React.lazy(()=>import('./scene-map-view').then(m=>({default:m.SceneMap})));
 
 export function SceneCatalog(){
  const [revision,setRevision]=useState(0),[query,setQuery]=useState(''),[phase,setPhase]=useState('all'),[sort,setSort]=useState('phase'),[layout,setLayout]=useState<'cards'|'list'>('cards'),[selected,setSelected]=useState(''),[mode,setMode]=useState<'catalog'|'map'>('catalog');

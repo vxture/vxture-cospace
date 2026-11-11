@@ -44,6 +44,11 @@ def create_auth_app(rp, workbench=Path('apps/workbench/dist'), business=None, ac
 
     @app.middleware('http')
     async def headers(request, call_next):
+        embed = request.url.path == '/space' and request.query_params.get('embed') == 'globe'
+        parent = request.query_params.get('parent_origin', rp.config.origin)
+        if embed and (access is None or not access.globe.allowed_parent(parent, rp.config.origin)
+                      or any(len(request.query_params.getlist(key)) > 1 for key in request.query_params)):
+            return JSONResponse({'detail':'globe_embed_origin_denied'},status_code=403)
         try: response = await call_next(request)
         except (OSError, ValueError) as exc:
             # Storage/key failures must not turn into a signed-out response.
@@ -54,6 +59,8 @@ def create_auth_app(rp, workbench=Path('apps/workbench/dist'), business=None, ac
         referrer = 'no-referrer' if request.url.path.startswith('/auth/') else 'same-origin'
         response.headers.update({'Cache-Control': 'no-store', 'Referrer-Policy': referrer,
                                  'X-Content-Type-Options': 'nosniff'})
+        if embed:
+            response.headers['Content-Security-Policy'] = "frame-ancestors 'self' " + parent
         return response
 
     @app.exception_handler(IdentityRejected)
