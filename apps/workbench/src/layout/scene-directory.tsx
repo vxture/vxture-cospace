@@ -2,7 +2,7 @@ import React from 'react';
 import {Input} from '@vxture/design-system';
 import {Database,Cube,MagnifyingGlass,CaretRight} from '@phosphor-icons/react';
 
-export type ScenePublication={version_code?:string;build_code?:string;id:string;created_at:string;preview_url:string;candidate_id:string;lifecycle_state?:string;model_manifest_sha256?:string};
+export type ScenePublication={display_code?:string;version_code?:string;build_code?:string;id:string;created_at:string;preview_url:string;candidate_id:string;lifecycle_state?:string;model_manifest_sha256?:string};
 export type SceneSpace={scene_code?:string;id:string;name:string;project_id:string;project_name?:string;description?:string;address?:string;overview_url?:string;created_at?:string;updated_at?:string;location?:{longitude:number;latitude:number;crs:'WGS84'|'GCJ02'};state?:string;publication_id?:string|null;capabilities?:string[];publications?:ScenePublication[]};
 export function SceneDirectory({spaces,current,workspace,search,onSearch,onChoose,loading,error,library=false}:{spaces:SceneSpace[];current:string;workspace:string;search:string;onSearch:(s:string)=>void;onChoose:(id:string)=>void;loading:boolean;error:string;library?:boolean}){
  const visible=spaces.filter(s=>s.name.toLocaleLowerCase().includes(search.trim().toLocaleLowerCase()));

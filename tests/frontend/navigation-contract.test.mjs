@@ -49,3 +49,8 @@ test('header selection keeps service section but never previous scene records',(
  assert.equal(headerSceneLinkFromUrl('A&B','/space?screen=space&publication=old'),'/space?space=A%26B');
  assert.equal(headerSceneLinkFromUrl('next','/services?section=invalid&artifact=old'),'/services?space=next');
 });
+
+
+test('data does not retain scene-only basic information as a data view',()=>{
+ assert.equal(headerSceneLinkFromUrl('next','/data?space=old&tab=info&input=old&publication=old'),'/data?space=next');
+});

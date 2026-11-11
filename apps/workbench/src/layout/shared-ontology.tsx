@@ -1,3 +1,6 @@
+import {Button} from '@vxture/design-system';
+import {WorkspaceNavigation,WorkspaceHeading} from './workspace-frame';
+import {Graph,PencilRuler,ShieldCheck,LinkSimple} from '@phosphor-icons/react';
 import React from 'react';
 import {OntologyWorkbench} from './ontology-workbench';
 import {recordLink,useRecordNavigation} from './record-navigation';
@@ -8,5 +11,5 @@ export function SharedOntology(){
  const params=new URLSearchParams(location.search);
  const view=target.tab==='rules'||!target.tab&&params.has('ontology_id')?'rules':'authoring';
  const refs=Object.fromEntries(['ontology_id','ontology_version','ontology_sha256'].filter(k=>params.has(k)).map(k=>[k,params.get(k)!]));
- return <div className="shared-support-layout"><aside className="support-capabilities"><strong>语义本体</strong><nav aria-label="语义本体能力导航"><a href={recordLink('ontology',{...refs,tab:'authoring'})} aria-current={view==='authoring'?'page':undefined}>规则编制与封存</a><a href={recordLink('ontology',{...refs,tab:'rules'})} aria-current={view==='rules'?'page':undefined}>固定版本与校验</a></nav></aside><main className="shared-data-catalog" aria-label="共用语义本体"><header><div><p>共用支撑 · {platform?.user?.workspace_id||'工程预览'}</p><h1>语义本体</h1><p>共享模板与当前 Workspace 的规则可被多个场景引用。场景应用固定版本，升级不自动迁移实例。</p></div></header>{target.space&&<p className="shared-data-note">场景返回上下文：{target.space} · <a href={recordLink('association',{})}>返回场景关联</a></p>}<OntologyWorkbench key={platform?.user?.workspace_id||'engineering'}/></main></div>;
+ return <div className="shared-support-layout"><WorkspaceNavigation title="语义本体" icon={Graph}><nav aria-label="语义本体能力导航"><a href={recordLink('ontology',{...refs,tab:'authoring'})} aria-current={view==='authoring'?'page':undefined}><PencilRuler size={18}/>规则编制与封存</a><a href={recordLink('ontology',{...refs,tab:'rules'})} aria-current={view==='rules'?'page':undefined}><ShieldCheck size={18}/>固定版本与校验</a></nav></WorkspaceNavigation><main className="shared-data-catalog" aria-label="共用语义本体"><WorkspaceHeading icon={Graph} title="语义本体" description="管理共用类型、属性与关系规则；场景引用固定版本，升级不自动迁移实例。" actions={target.space&&<Button asChild variant="secondary" size="sm"><a href={recordLink('association',{})}><LinkSimple size={16}/>空间关联</a></Button>}/><OntologyWorkbench key={platform?.user?.workspace_id||'engineering'}/></main></div>;
 }
