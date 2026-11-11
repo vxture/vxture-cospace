@@ -39,7 +39,7 @@ def main():
              'experiments/scripts/recovery_audit.py', 'packages/infrastructure/agent_audit.py',
              'tests/test_delivery_audit.py', 'packages/data/delivery_report.py',
              'packages/service/delivery.py', 'tests/test_delivery_context.py',
-             'tests/test_delivery_reading.py', 'apps/workbench/src/Delivery.tsx',
+             'tests/test_delivery_reading.py',
              'contracts/schemas/delivery-generation-v0.1.schema.json']
     (output / 'environment.json').write_text(json.dumps({'python': platform.python_version(),
         'platform': platform.platform(), 'source_sha256': {p: hashlib.sha256(Path(p).read_bytes()).hexdigest()
