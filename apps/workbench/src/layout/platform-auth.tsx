@@ -120,6 +120,9 @@ function BusinessSession({children}:{children:React.ReactNode}){
    window.fetch=async(input,init)=>{const url=new URL(typeof input==='string'?input:input instanceof URL?input.href:input.url,location.href);
     if(url.origin!==location.origin)return nativeFetch(input,init);
     const requestGeneration=generation;
+    // Lazy engine/config reads can start long after the last visible input.
+    // Confirm before sending them, rather than relying on pointer/focus events.
+    if(!url.pathname.startsWith('/api/auth/')&&Date.now()-activityAt>=30000)recheck();
     if(confirming&&!url.pathname.startsWith('/api/auth/'))await confirming;
     if(requestGeneration!==generation)return new Response(JSON.stringify({detail:'session_scope_changed'}),{status:409,headers:{'Content-Type':'application/json'}});
     if(!url.pathname.startsWith('/api/auth/')&&(!sessionConfirmed(authority)||!businessAllowed))return new Response(JSON.stringify({detail:'session_confirmation_required'}),{status:401,headers:{'Content-Type':'application/json'}});

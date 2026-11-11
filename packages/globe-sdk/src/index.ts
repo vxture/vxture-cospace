@@ -31,6 +31,7 @@ export function createGlobe(host:HTMLElement,config:GlobeConfiguration,callbacks
  setLayers(next){if(!alive)return;validateLayers(next,scenes);layers=structuredClone(next);redraw();},
  setDisplay(display){if(!alive)return;displaySatellite=display.satellite;if(satellite)satellite.show=display.satellite;viewer.scene.screenSpaceCameraController.enableZoom=display.scrollZoom;update({imagery:display.satellite&&satellite?'satellite':'base'});viewer.scene.requestRender();},
  command(command){if(!alive||state.failure)return;
+ viewer.camera.cancelFlight();
  if(command.type==='reset'){home(true);return;}
  if(command.type==='fit'){
   if(!scenes.length)throw new Error('globe_scene_not_available');
@@ -39,7 +40,9 @@ export function createGlobe(host:HTMLElement,config:GlobeConfiguration,callbacks
  }
  if(command.type==='focus'){const scene=scenes.find(item=>bindingKey(item)===bindingKey(command.binding));if(!scene)throw Error('globe_scene_not_available');viewer.camera.flyToBoundingSphere(new BoundingSphere(Cartesian3.fromDegrees(scene.position[0],scene.position[1],scene.position[2]||0),1),{offset:new HeadingPitchRange(0,CesiumMath.toRadians(-50),12000),duration:1.5});return;}
  if(command.type==='zoom-in'||command.type==='zoom-out'){const amount=Math.max(50,viewer.camera.positionCartographic.height*.4);if(command.type==='zoom-in')viewer.camera.zoomIn(amount);else viewer.camera.zoomOut(amount);viewer.scene.requestRender();return;}
- const center=new Cartesian2(viewer.canvas.clientWidth/2,viewer.canvas.clientHeight/2),ray=viewer.camera.getPickRay(center),target=ray?viewer.scene.globe.pick(ray,viewer.scene):undefined;if(!target)return;
+ // At the limb or with space in the centre, terrain picking can miss.
+ // Keep north/tilt usable by falling back to the ellipsoid, then nadir.
+ const center=new Cartesian2(viewer.canvas.clientWidth/2,viewer.canvas.clientHeight/2),ray=viewer.camera.getPickRay(center),target=(ray?viewer.scene.globe.pick(ray,viewer.scene):undefined)||viewer.camera.pickEllipsoid(center,viewer.scene.globe.ellipsoid)||viewer.scene.globe.ellipsoid.scaleToGeodeticSurface(viewer.camera.positionWC);if(!target)return;
  viewer.camera.lookAt(target,new HeadingPitchRange(command.type==='north'?0:viewer.camera.heading,command.type==='north'?viewer.camera.pitch:Math.abs(viewer.camera.pitch+Math.PI/2)>.05?-Math.PI/2:CesiumMath.toRadians(-45),Cartesian3.distance(viewer.camera.positionWC,target)));viewer.camera.lookAtTransform(Matrix4.IDENTITY);viewer.scene.requestRender();changed();},
  select(binding){if(alive){selected=binding;redraw();}},
  resize(){if(alive){viewer.resize();viewer.scene.requestRender();}},
