@@ -9,7 +9,7 @@ export function createGlobe(host:HTMLElement,config:GlobeConfiguration,callbacks
  // Engine branding is optional; provider attribution remains in CreditDisplay.
  CreditDisplay.cesiumCredit=new Credit('');
  const viewer=new Viewer(host,{baseLayer:ImageryLayer.fromProviderAsync(TileMapServiceImageryProvider.fromUrl(config.assetsBaseUrl.replace(/\/?$/,'/')+'Assets/Textures/NaturalEarthII')),animation:false,timeline:false,baseLayerPicker:false,geocoder:false,homeButton:false,sceneModePicker:false,navigationHelpButton:false,fullscreenButton:false,infoBox:false,selectionIndicator:false,requestRenderMode:true});
- viewer.scene.sun.show=false;viewer.scene.moon.show=false;
+ if(viewer.scene.sun)viewer.scene.sun.show=false;if(viewer.scene.moon)viewer.scene.moon.show=false;
  if(viewer.scene.skyBox)viewer.scene.skyBox.show=false;
  viewer.scene.backgroundColor=Color.fromCssColorString('#050b17');
  let alive=true,scenes:GlobeScene[]=[],layers:GlobeLayer[]=[],satellite:ImageryLayer|undefined,displaySatellite=true,selected:Binding|null=null;
