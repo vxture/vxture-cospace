@@ -1,7 +1,7 @@
 export type Point=[number,number];
 export type AmapMarker={on:(event:string,callback:()=>void)=>void;setMap:(map:AmapMap|null)=>void;setContent:(content:HTMLElement)=>void};
 export type AmapDistrictLayer={setMap:(map:AmapMap|null)=>void;setStyles:(styles:Record<string,string>)=>void};
-export type AmapMap={getCenter:()=>{getLng:()=>number;getLat:()=>number};getZoom:()=>number;destroy:()=>void;setFeatures:(features:string[])=>void;setStatus:(status:{scrollWheel:boolean})=>void;setMapStyle:(style:string)=>void;setZoomAndCenter:(zoom:number,point:Point)=>void;setFitView:(markers?:AmapMarker[],immediately?:boolean,padding?:number[],maxZoom?:number)=>void;zoomIn:()=>void;zoomOut:()=>void;on:(event:string,callback:()=>void)=>void;off:(event:string,callback:()=>void)=>void};
+export type AmapMap={getRotation:()=>number;getPitch:()=>number;setRotation:(rotation:number)=>void;setPitch:(pitch:number)=>void;getCenter:()=>{getLng:()=>number;getLat:()=>number};getZoom:()=>number;destroy:()=>void;setFeatures:(features:string[])=>void;setStatus:(status:{scrollWheel:boolean})=>void;setMapStyle:(style:string)=>void;setZoomAndCenter:(zoom:number,point:Point)=>void;setFitView:(markers?:AmapMarker[],immediately?:boolean,padding?:number[],maxZoom?:number)=>void;zoomIn:()=>void;zoomOut:()=>void;on:(event:string,callback:()=>void)=>void;off:(event:string,callback:()=>void)=>void};
 export type AmapSDK={Map:new(host:HTMLElement,options:Record<string,unknown>)=>AmapMap;Marker:new(options:Record<string,unknown>)=>AmapMarker;TileLayer?:{Satellite:new()=>AmapDistrictLayer;RoadNet:new()=>AmapDistrictLayer};DistrictLayer?:{Country:new(options:Record<string,unknown>)=>AmapDistrictLayer};plugin:(name:string,callback:()=>void)=>void;convertFrom:(points:Point[],type:string,callback:(status:string,result:{locations?:{getLng:()=>number;getLat:()=>number}[]})=>void)=>void};
 
 // Administrative enhancement is an official independent overlay. Base-map
@@ -62,4 +62,12 @@ export async function displayPoints(_sdk:AmapSDK,locations:{longitude:number;lat
   batch.forEach((index,i)=>{result[index]=converted[i];});
  }
  return result;
+}
+
+// Reset camera and framing together; keep the selected basemap and view mode.
+export function resetMapView(map:AmapMap,markers:AmapMarker[],viewMode:'2D'|'3D',wide:boolean){
+ map.setRotation(0);
+ map.setPitch(viewMode==='3D'?45:0);
+ if(markers.length)map.setFitView(markers,false,wide?[100,100,360,80]:[100,100,30,30],16);
+ else map.setZoomAndCenter(4,[104,35]);
 }

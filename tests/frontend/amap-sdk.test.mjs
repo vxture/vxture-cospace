@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {displayPoints,createAdministrativeLayer,createSatelliteLayers} from '../../apps/workbench/src/layout/amap-sdk.ts';
+import {displayPoints,createAdministrativeLayer,createSatelliteLayers,resetMapView} from '../../apps/workbench/src/layout/amap-sdk.ts';
 test('official JS conversion protocol batches at 40, preserves original and skips GCJ02',async()=>{
  const original=globalThis.fetch,calls=[];
  const input=Array.from({length:41},()=>({longitude:116,latitude:39,crs:'WGS84'}));input.push({longitude:120,latitude:30,crs:'GCJ02'});
@@ -63,4 +63,18 @@ test('satellite layers pair imagery with the road overlay only when enabled',()=
  assert.deepEqual(createSatelliteLayers(sdk,true),[satellite,roads]);
  assert.deepEqual(createSatelliteLayers(sdk,false),[satellite]);
  assert.throws(()=>createSatelliteLayers({},true),/卫星影像暂不可用/);
+});
+
+test('reset frames filtered scenes with north and default 3D pitch, falling back to national view without markers',()=>{
+ const calls=[];
+ const map={setRotation:value=>calls.push(['rotation',value]),setPitch:value=>calls.push(['pitch',value]),setFitView:(...args)=>calls.push(['fit',...args]),setZoomAndCenter:(...args)=>calls.push(['overview',...args])};
+ const markers=[{id:'filtered-scene'}];
+ resetMapView(map,markers,'3D',true);
+ assert.deepEqual(calls,[['rotation',0],['pitch',45],['fit',markers,false,[100,100,360,80],16]]);
+ calls.length=0;
+ resetMapView(map,markers,'2D',false);
+ assert.deepEqual(calls,[['rotation',0],['pitch',0],['fit',markers,false,[100,100,30,30],16]]);
+ calls.length=0;
+ resetMapView(map,[],'3D',false);
+ assert.deepEqual(calls,[['rotation',0],['pitch',45],['overview',4,[104,35]]]);
 });

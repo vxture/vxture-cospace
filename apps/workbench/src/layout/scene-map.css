@@ -55,11 +55,11 @@
 .scene-map-detail>a,.scene-map-detail>button{margin-inline:12px;height:32px;min-height:32px;font-size:var(--body-small-font-size);font-weight:500}
 .scene-map-status{position:absolute;top:50%;left:calc(50% + 152px);transform:translate(-50%,-50%);max-width:360px;padding:18px;display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center}
 .scene-map-status button{font-size:var(--body-small-font-size)}
-.scene-map-tools{position:absolute;right:24px;bottom:52px;display:flex;flex-direction:column;gap:0;padding:2px;width:32px;border-color:color-mix(in srgb,var(--border) 75%,transparent)}
-.scene-map-tools>button{width:26px;height:28px;min-height:28px;padding:0;border:0;background:transparent;box-shadow:none;border-radius:var(--radius-sm);color:var(--muted-foreground)}
+.scene-map-tools{position:absolute;right:24px;bottom:52px;display:flex;flex-direction:column;gap:0;padding:3px;width:40px;border-color:color-mix(in srgb,var(--border) 75%,transparent)}
+.scene-map-tools>button{width:32px;height:32px;min-height:32px;padding:0;border:0;background:transparent;box-shadow:none;border-radius:var(--radius-sm);color:var(--muted-foreground)}
 .scene-map-tools>button:hover,.scene-map-tools>button[aria-pressed=true]{background:var(--map-hover);color:var(--foreground)}
-.scene-map-tools>button:last-child{border-top:1px solid var(--border);border-top-left-radius:0;border-top-right-radius:0}
-.scene-map-tools svg{height:14px;width:14px}
+.scene-map-tools>button.scene-map-tool-divider,.scene-map-tools>button:last-child{border-top:1px solid var(--border);border-top-left-radius:0;border-top-right-radius:0}
+.scene-map-tools svg{height:16px;width:16px}.scene-map-tools>button:disabled{opacity:.4;cursor:default}.scene-map-tools>button:disabled:hover{background:transparent;color:var(--muted-foreground)}
 .scene-map-legend{position:absolute;bottom:26px;left:24px;padding:6px 10px;display:flex;align-items:center;gap:12px;font-size:var(--body-small-font-size);color:var(--foreground);pointer-events:none}
 .scene-map-legend>span{display:flex;align-items:center;gap:4px}
 .scene-map-legend i{display:block}
