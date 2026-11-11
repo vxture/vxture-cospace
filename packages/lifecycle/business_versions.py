@@ -26,9 +26,13 @@ def stamp(value):
 
 class BusinessVersions:
     def __init__(self, root):
-        self.root = Path(root)
-        self.root.mkdir(parents=True, exist_ok=True)
+        requested = Path(root)
+        if requested.is_symlink() or not requested.is_dir():
+            raise ValueError('existing_business_runtime_required')
+        self.root = requested.resolve(strict=True)
         self.path = self.root / 'business-versions.sqlite3'
+        if self.path.is_symlink():
+            raise ValueError('business_version_database_symlink_rejected')
         with closing(self.connect()) as db, db:
             db.executescript('''
                 CREATE TABLE IF NOT EXISTS identities (
@@ -42,7 +46,8 @@ class BusinessVersions:
             ''')
 
     def connect(self):
-        return sqlite3.connect(self.path, timeout=30)
+        # Fixed filename, not a caller-supplied SQLite URI or connection string.
+        return sqlite3.connect(database=self.path, timeout=30, uri=False)
 
     def allocate(self, kind, scope, identity, prefix, *, random_scene=False):
         with closing(self.connect()) as db, db:
