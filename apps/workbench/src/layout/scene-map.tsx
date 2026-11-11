@@ -1,3 +1,4 @@
+import {useSceneControls} from './scene-selection';
 import React,{useEffect,useMemo,useRef,useState} from 'react';
 import {Button,Input,SegmentedControl,Popover,PopoverTrigger,PopoverContent,Switch,Tabs,TabsList,TabsTrigger,Tooltip,TooltipTrigger,TooltipContent,useTheme} from '@vxture/design-system';
 import {SquaresFour,MagnifyingGlass,CaretUp,CaretDown,Crosshair,Plus,Minus,SlidersHorizontal,PaperPlaneIcon,Cube,ListBullets,ArrowCounterClockwise,X} from '@phosphor-icons/react';
@@ -15,6 +16,7 @@ function pinSvg(phase:ScenePhase){return `<svg class="scene-map-pin" viewBox="0 
 
 
 export function AmapSceneMap({spaces,loading,error,onBack,onRefresh,onViewChange}:{onViewChange:(value:'2D'|'3D')=>void;spaces:SceneSpace[];loading:boolean;error:string;onBack:()=>void;onRefresh:()=>void}){
+ const {selectScene}=useSceneControls();
  const {theme}=useTheme();const [preferences,setPreferences]=useState(readMapPreferences),[preferenceError,setPreferenceError]=useState(''),[administrativeError,setAdministrativeError]=useState(''),[layerError,setLayerError]=useState('');
  const dark=mapIsDark(preferences,theme),collapsed=!preferences.directoryExpanded;
  function updatePreference<K extends keyof MapPreferences>(key:K,value:MapPreferences[K]){setPreferences(previous=>({...previous,[key]:value}));}
@@ -27,7 +29,7 @@ export function AmapSceneMap({spaces,loading,error,onBack,onRefresh,onViewChange
  const host=useRef<HTMLDivElement>(null),map=useRef<AmapMap|null>(null),markers=useRef<AmapMarker[]>([]),positions=useRef(new Map<string,Point>()),choice=useRef<(id:string)=>void>(()=>{});
  const visible=useMemo(()=>filterScenes(spaces,query,phase,'phase'),[spaces,query,phase]);
  const scene=visible.find(s=>s.id===selected),located=visible.filter(s=>validLocation(s.location)).length;
- function choose(id:string){setSelected(id);setGroup([]);const point=positions.current.get(id);if(point)map.current?.setZoomAndCenter(15,point);}
+ function choose(id:string){selectScene(id);setSelected(id);setGroup([]);const point=positions.current.get(id);if(point)map.current?.setZoomAndCenter(15,point);}
  choice.current=choose;
  useEffect(()=>{let alive=true;const timeout=setTimeout(()=>{if(alive)setStatus('地图加载超时，请检查网络后重试。');},25000);setReady(null);setStatus('正在加载高德地图…');
   loadAmap().then(sdk=>{if(!alive||!host.current)return;const created=new sdk.Map(host.current,{center:viewpoint.current.center,zoom:viewpoint.current.zoom,rotation:viewpoint.current.rotation,viewMode:'2D',pitch:0,mapStyle:dark?'amap://styles/dark':'amap://styles/normal',features:mapFeatures(preferences),scrollWheel:preferences.scrollZoom});map.current=created;
