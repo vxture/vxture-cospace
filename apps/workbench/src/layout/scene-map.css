@@ -109,3 +109,7 @@
 .map-preview-grid{fill:none;stroke:currentColor;stroke-width:1;opacity:.4}
 .map-preview-building{fill:var(--background);stroke:var(--primary);stroke-width:1.5;stroke-linejoin:round}
 @media(max-width:560px){.scene-map-settings-columns{grid-template-columns:1fr}.scene-map-settings .scene-map-appearance{border-right:0;border-bottom:1px solid var(--border)}}
+
+.scene-geographic-view{position:relative;display:flex;flex:1;min-height:0;min-width:0}.scene-geographic-switch{position:absolute;bottom:20px;left:50%;transform:translateX(-50%);z-index:5;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:3px;box-shadow:var(--shadow-raised)}.scene-globe{background:#050b17}.scene-globe .cesium-viewer,.scene-globe .cesium-viewer-cesiumWidgetContainer,.scene-globe .cesium-widget,.scene-globe .cesium-widget canvas{width:100%;height:100%}.scene-globe-status{position:absolute;bottom:58px;left:50%;transform:translateX(-50%);color:white;background:#101827b3;border-radius:4px;padding:3px 8px;font-size:12px;pointer-events:none}.scene-globe .cesium-viewer-bottom{left:auto;right:0;max-width:calc(100% - 350px)}
+
+.scene-globe{--map-surface:color-mix(in srgb,var(--card) 94%,transparent);--map-hover:var(--secondary);--map-selected:var(--primary-muted);--map-blur:blur(8px)}.scene-globe .scene-map-tools>button{color:var(--foreground)}

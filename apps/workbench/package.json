@@ -18,6 +18,7 @@
     "@vxture/design-system": "file:vendor/vxture-design-system-15.1.1.tgz",
     "@vxture/design-tokens": "file:vendor/vxture-design-tokens-4.0.0.tgz",
     "@vxture/design-ui": "file:vendor/vxture-design-ui-12.1.0.tgz",
+    "cesium": "1.147.0",
     "maplibre-gl": "6.17.0",
     "next-themes": "0.4.6",
     "react": "19.3.1",
