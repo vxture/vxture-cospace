@@ -43,7 +43,12 @@ def source_set_digest(sources):
 def read_composition(root, doc):
     if not doc.get('composition_path'):
         return None
-    path = Path(root)/doc['composition_path']
+    if doc['composition_path'] != 'composition.json':
+        raise ValueError('composition_path_invalid')
+    base = Path(root).resolve()
+    path = base/'composition.json'
+    if path.is_symlink() or not path.resolve().is_relative_to(base):
+        raise ValueError('composition_path_invalid')
     with path.open('rb') as stream:
         raw = stream.read(64_001)
     if len(raw) > 64_000:

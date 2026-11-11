@@ -46,7 +46,7 @@ class GlobeRuntime:
 
     def public(self, origin):
         value = {'profile': 'vxture.globe-config/0.1', 'assetsBaseUrl': '/assets/cesium/',
-                 'sdkVersion': '0.1.0', 'cesiumVersion': '1.147.0', 'embedOrigins': [origin, *self.embed_origins]}
+                 'sdkVersion': '0.2.0', 'cesiumVersion': '1.147.0', 'embedOrigins': [origin, *self.embed_origins]}
         if self.imagery_url:
             value['imagery'] = {'url': self.imagery_url, 'maximumLevel': 19,
                                 'credit': os.environ.get('COSPACE_GLOBE_IMAGERY_CREDIT', 'Esri, Maxar, Earthstar Geographics, and the GIS User Community')}

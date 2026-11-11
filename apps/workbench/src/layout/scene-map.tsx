@@ -7,6 +7,7 @@ import {SceneDetail} from './scene-detail';
 import {loadAmap,displayPoints,createAdministrativeLayer,createSatelliteLayers,resetMapView,type AmapDistrictLayer,type AmapMap,type AmapMarker,type Point} from './amap-sdk';
 import {defaultMapPreferences,readMapPreferences,normalizeMapPreferences,mapPreferenceKey,mapIsDark,mapFeatures,type MapPreferences} from './map-preferences';
 import './scene-map.css';
+import {validLocation,locationLabel} from './geographic-location';
 import {MapSettings} from './map-settings';
 
 const glyphs:Record<ScenePhase,string>={published:'<path d="m12 3 8 4.5v9L12 21l-8-4.5v-9L12 3Zm-8 4.5 8 4.5 8-4.5M12 12v9"/>',building:'<path d="M20 12a8 8 0 1 1-3-6.25M20 4v5h-5"/>',review:'<path d="M12 5v9m0 4h.01"/>',unavailable:'<path d="m7 7 10 10M17 7 7 17"/>',paused:'<path d="M8 5v14M16 5v14"/>',archived:'<path d="M5 9v11h14V9M4 4h16v5H4zM9 13h6"/>'};
@@ -14,7 +15,7 @@ function pinSvg(phase:ScenePhase){return `<svg class="scene-map-pin" viewBox="0 
 
 
 export function AmapSceneMap({spaces,loading,error,onBack,onRefresh,onViewChange}:{onViewChange:(value:'2D'|'3D')=>void;spaces:SceneSpace[];loading:boolean;error:string;onBack:()=>void;onRefresh:()=>void}){
- const {theme}=useTheme();const [preferences,setPreferences]=useState(readMapPreferences),[settingsOpen,setSettingsOpen]=useState(false),[preferenceError,setPreferenceError]=useState(''),[administrativeError,setAdministrativeError]=useState(''),[layerError,setLayerError]=useState('');
+ const {theme}=useTheme();const [preferences,setPreferences]=useState(readMapPreferences),[preferenceError,setPreferenceError]=useState(''),[administrativeError,setAdministrativeError]=useState(''),[layerError,setLayerError]=useState('');
  const dark=mapIsDark(preferences,theme),collapsed=!preferences.directoryExpanded;
  function updatePreference<K extends keyof MapPreferences>(key:K,value:MapPreferences[K]){setPreferences(previous=>({...previous,[key]:value}));}
  useEffect(()=>{try{localStorage.setItem(mapPreferenceKey,JSON.stringify(preferences));setPreferenceError('');}catch{setPreferenceError('浏览器禁止保存偏好，本次设置仅在当前页面生效。');}},[preferences]);
@@ -25,7 +26,7 @@ export function AmapSceneMap({spaces,loading,error,onBack,onRefresh,onViewChange
  const fittedScenes=useRef<SceneSpace[]|null>(null);
  const host=useRef<HTMLDivElement>(null),map=useRef<AmapMap|null>(null),markers=useRef<AmapMarker[]>([]),positions=useRef(new Map<string,Point>()),choice=useRef<(id:string)=>void>(()=>{});
  const visible=useMemo(()=>filterScenes(spaces,query,phase,'phase'),[spaces,query,phase]);
- const scene=visible.find(s=>s.id===selected),located=visible.filter(s=>s.location).length;
+ const scene=visible.find(s=>s.id===selected),located=visible.filter(s=>validLocation(s.location)).length;
  function choose(id:string){setSelected(id);setGroup([]);const point=positions.current.get(id);if(point)map.current?.setZoomAndCenter(15,point);}
  choice.current=choose;
  useEffect(()=>{let alive=true;const timeout=setTimeout(()=>{if(alive)setStatus('地图加载超时，请检查网络后重试。');},25000);setReady(null);setStatus('正在加载高德地图…');
@@ -50,7 +51,7 @@ export function AmapSceneMap({spaces,loading,error,onBack,onRefresh,onViewChange
  },[ready,preferences.administrative,dark]);
  const autoFit=useRef(preferences.autoFit);autoFit.current=preferences.autoFit;
  useEffect(()=>{let alive=true;const created:AmapMarker[]=[];markers.current.forEach(marker=>marker.setMap(null));markers.current=[];positions.current.clear();setSelected('');setGroup([]);if(!ready||!map.current)return;
-  const locatedScenes=visible.filter(s=>s.location);
+  const locatedScenes=visible.filter(s=>validLocation(s.location));
   loadAmap().then(async sdk=>{const points=await displayPoints(sdk,locatedScenes.map(s=>s.location!));if(!alive||!map.current)return;
    setStatus('');const groups=new Map<string,{point:Point;scenes:SceneSpace[]}>();points.forEach((point,i)=>{const item=locatedScenes[i];positions.current.set(item.id,point);const key=point.join(',');const group=groups.get(key)||{point,scenes:[]};group.scenes.push(item);groups.set(key,group);});
    groups.forEach(({point,scenes})=>{const first=scenes[0],state=scenePhase(first);const button=document.createElement('button');button.type='button';button.className='scene-map-marker';button.dataset.tone=scenePhases[state].tone;button.dataset.sceneIds=scenes.map(s=>s.id).join(',');button.setAttribute('aria-pressed','false');button.setAttribute('aria-label',scenes.length>1?`${scenes.length} 个同址场景`:first.name+' · '+scenePhases[state].label);button.innerHTML=pinSvg(state);
@@ -69,7 +70,7 @@ export function AmapSceneMap({spaces,loading,error,onBack,onRefresh,onViewChange
   <Button className="scene-map-back" size="xl" variant="secondary" onClick={onBack}><SquaresFour size={16}/>清单模式</Button>
   {!collapsed&&<aside id="scene-map-directory" className="scene-map-directory" aria-label="场景清单"><div className="scene-map-search"><MagnifyingGlass size={16}/><Input value={query} aria-label="搜索地图场景" placeholder="搜索场景、项目或位置" onChange={e=>setQuery(e.target.value)}/></div><div className="scene-map-items">
    {loading&&<p role="status">正在读取场景…</p>}{error&&<div role="alert"><p>{error}</p><Button size="xl" variant="secondary" onClick={onRefresh}>重新读取</Button></div>}
-   {visible.map(item=><button key={item.id} className="scene-map-item" aria-pressed={selected===item.id} data-tone={scenePhases[scenePhase(item)].tone} onClick={()=>choose(item.id)}><span className="scene-map-item-icon"><Cube size={18} aria-hidden="true"/></span><span className="scene-map-item-copy"><span className="scene-map-item-title"><strong title={item.name}>{item.name}</strong><span className="scene-map-tag">{scenePhases[scenePhase(item)].label}</span></span><small>{item.project_name}</small><small>{item.address||'位置未登记'}</small></span></button>)}
+   {visible.map(item=><button key={item.id} className="scene-map-item" aria-pressed={selected===item.id} data-tone={scenePhases[scenePhase(item)].tone} onClick={()=>choose(item.id)}><span className="scene-map-item-icon"><Cube size={18} aria-hidden="true"/></span><span className="scene-map-item-copy"><span className="scene-map-item-title"><strong title={item.name}>{item.name}</strong><span className="scene-map-tag">{scenePhases[scenePhase(item)].label}</span></span><small>{item.project_name}</small><small>{item.address||locationLabel(item.location)}</small></span></button>)}
    {!loading&&!error&&!visible.length&&<p>没有匹配的场景</p>}</div><footer>{located} 个场景已定位 · {visible.length-located} 个位置待补充</footer></aside>}
   {status&&<div className="scene-map-status" role="status"><p>{status}</p>{!status.startsWith('正在')&&<Button size="xl" variant="secondary" onClick={()=>setRevision(v=>v+1)}>重新加载</Button>}</div>}
   {!!group.length&&<section className="scene-map-detail" aria-label="同址场景"><header><h2>同址场景 · {group.length}</h2><Button size="icon-xl" variant="ghost" aria-label="关闭同址场景" onClick={()=>setGroup([])}><X size={16}/></Button></header>{visible.filter(s=>group.includes(s.id)).map(s=><Button key={s.id} size="xl" variant="secondary" onClick={()=>choose(s.id)}>{s.name}</Button>)}</section>}

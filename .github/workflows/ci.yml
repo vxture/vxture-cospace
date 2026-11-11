@@ -34,6 +34,10 @@ jobs:
       - run: npm install --global pnpm@10.32.1
       - run: pnpm --dir apps/workbench install --frozen-lockfile
       - run: pnpm --dir apps/workbench build
+      - name: Build independent globe consumer
+        run: |
+          pnpm --dir packages/globe-sdk/examples/agent-viewer install --frozen-lockfile
+          pnpm --dir packages/globe-sdk/examples/agent-viewer build
       - name: Build isolated scene map lab and its worker without private map configuration
         run: pnpm --dir apps/workbench build:map-lab
       - name: Scene display planner, tile integrity and bounded cache tests
@@ -43,7 +47,7 @@ jobs:
       - name: Fixed ontology version comparison tests
         run: node --experimental-strip-types --test tests/frontend/ontology-diff.test.mjs
       - name: Globe SDK version isolation and embed message boundary
-        run: node --experimental-strip-types --test tests/frontend/globe-sdk.test.mjs tests/frontend/globe-coordinates.test.mjs
+        run: node --experimental-strip-types --test tests/frontend/globe-sdk.test.mjs tests/frontend/globe-coordinates.test.mjs tests/frontend/geographic-location.test.mjs
       - uses: actions/setup-python@v6
         with:
           python-version: '3.14'
@@ -94,4 +98,4 @@ jobs:
           curl -fsSL --retry 5 --retry-delay 5 --retry-all-errors --connect-timeout 20 --max-time 120 --proto '=https' --proto-redir '=https' --tlsv1.2 "$url" -o /tmp/osv-bin/osv-scanner
           echo "$sha256  /tmp/osv-bin/osv-scanner" | sha256sum -c -
           chmod +x /tmp/osv-bin/osv-scanner
-      - run: /tmp/osv-bin/osv-scanner scan -L apps/workbench/pnpm-lock.yaml -L uv.lock --config .osv-scanner.toml -L experiments/ifc-tool/uv.lock
+      - run: /tmp/osv-bin/osv-scanner scan -L apps/workbench/pnpm-lock.yaml -L uv.lock --config .osv-scanner.toml -L experiments/ifc-tool/uv.lock -L packages/globe-sdk/examples/agent-viewer/pnpm-lock.yaml

@@ -6,7 +6,15 @@ import type {SceneSpace} from './scene-directory';
 export function useSceneDirectory(revision=0){
  const platform=usePlatformSession(),workspace=platform?.user?.workspace_id||'engineering';
  const [sessionRevision,setSessionRevision]=useState(0);
- useEffect(()=>{const refresh=()=>setSessionRevision(v=>v+1);window.addEventListener('cospace:session-confirmed',refresh);return()=>window.removeEventListener('cospace:session-confirmed',refresh);},[]);
+ useEffect(()=>{
+  const refresh=()=>setSessionRevision(v=>v+1);
+  window.addEventListener('cospace:session-confirmed',refresh);
+  window.addEventListener('cospace:scene-information-saved',refresh);
+  return()=>{
+   window.removeEventListener('cospace:session-confirmed',refresh);
+   window.removeEventListener('cospace:scene-information-saved',refresh);
+  };
+ },[]);
  const [saved,setSaved]=useState<{workspace:string;spaces:SceneSpace[]}|null>(null),[loading,setLoading]=useState(true),[error,setError]=useState('');
  useEffect(()=>{const controller=new AbortController();setError('');
   fetch(`${businessEndpoint}/api/spaces`,{cache:'no-store',signal:controller.signal}).then(async r=>{

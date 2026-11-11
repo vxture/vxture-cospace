@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 import sqlite3
 from typing import Literal
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
 class SettingsUnavailable(RuntimeError):
@@ -20,8 +20,16 @@ class SceneLocation(BaseModel):
     model_config = ConfigDict(extra='forbid', strict=True)
     longitude: float = Field(ge=-180, le=180, allow_inf_nan=False)
     latitude: float = Field(ge=-90, le=90, allow_inf_nan=False)
-    altitude: float | None = Field(default=None, allow_inf_nan=False)
+    altitude: float | None = Field(default=None, ge=-12000, le=100000, allow_inf_nan=False)
     crs: Literal['WGS84', 'GCJ02']
+    altitude_reference: Literal['unknown', 'ellipsoid', 'orthometric'] | None = None
+    source: str | None = Field(default=None, max_length=160)
+
+    @model_validator(mode='after')
+    def require_height_for_datum(self):
+        if self.altitude_reference in ('ellipsoid', 'orthometric') and self.altitude is None:
+            raise ValueError('altitude_required_for_reference')
+        return self
 
 
 class SpaceSettingsChange(BaseModel):
