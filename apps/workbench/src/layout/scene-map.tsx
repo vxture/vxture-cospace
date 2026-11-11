@@ -1,6 +1,6 @@
 import React,{useEffect,useMemo,useRef,useState} from 'react';
 import {Button,Input,SegmentedControl,Popover,PopoverTrigger,PopoverContent,Switch,Tabs,TabsList,TabsTrigger,Tooltip,TooltipTrigger,TooltipContent,useTheme} from '@vxture/design-system';
-import {SquaresFour,MagnifyingGlass,CaretUp,CaretDown,Crosshair,Plus,Minus,SlidersHorizontal,Stack,Cube,ListBullets,ArrowCounterClockwise,X} from '@phosphor-icons/react';
+import {SquaresFour,MagnifyingGlass,CaretUp,CaretDown,Crosshair,Plus,Minus,SlidersHorizontal,PaperPlaneIcon,Stack,Cube,ListBullets,ArrowCounterClockwise,X} from '@phosphor-icons/react';
 import type {SceneSpace} from './scene-directory';
 import {scenePhases,scenePhase,filterScenes,type ScenePhase} from './scene-catalog-contract';
 import {SceneDetail} from './scene-detail';
@@ -100,7 +100,7 @@ export function SceneMap({spaces,loading,error,onBack,onRefresh}:{spaces:SceneSp
   {!!group.length&&<section className="scene-map-detail" aria-label="同址场景"><header><h2>同址场景 · {group.length}</h2><Button size="icon-xl" variant="ghost" aria-label="关闭同址场景" onClick={()=>setGroup([])}><X size={16}/></Button></header>{visible.filter(s=>group.includes(s.id)).map(s=><Button key={s.id} size="xl" variant="secondary" onClick={()=>choose(s.id)}>{s.name}</Button>)}</section>}
   <SceneDetail mapOverlay scene={scene} onClose={()=>setSelected('')}/>
   <div className="scene-map-tools" role="group" aria-label="地图操作">
-   <Tooltip><TooltipTrigger asChild><Button size="icon-xl" variant="ghost" disabled={!ready} aria-label="恢复正北" onClick={()=>ready?.setRotation(0)}><svg className="scene-map-north-icon" viewBox="0 0 24 24" aria-hidden="true"><text x="12" y="7" textAnchor="middle">N</text><g transform={`rotate(${camera.rotation} 12 16)`}><path className="scene-map-north-tip" d="m12 9 4 7h-8z"/><path className="scene-map-south-tip" d="m12 23-4-7h8z"/></g></svg></Button></TooltipTrigger><TooltipContent side="left">正北</TooltipContent></Tooltip>
+   <Tooltip><TooltipTrigger asChild><Button size="icon-xl" variant="ghost" disabled={!ready} aria-label="恢复正北" onClick={()=>ready?.setRotation(0)}><PaperPlaneIcon size={16} aria-hidden="true" style={{transform:`rotate(${camera.rotation}deg)`}}/></Button></TooltipTrigger><TooltipContent side="left">正北</TooltipContent></Tooltip>
    {preferences.viewMode==='3D'&&<Tooltip><TooltipTrigger asChild><Button size="icon-xl" variant="ghost" disabled={!ready} aria-label={camera.pitch>0?'切换俯视':'切换倾斜视角'} onClick={()=>ready?.setPitch(camera.pitch>0?0:45)}>{camera.pitch>0?<Stack size={16}/>:<Cube size={16}/>}</Button></TooltipTrigger><TooltipContent side="left">{camera.pitch>0?'俯视':'倾斜视角'}</TooltipContent></Tooltip>}
    <Tooltip><TooltipTrigger asChild><Button size="icon-xl" variant="ghost" disabled={!ready} aria-label="复位地图视图" onClick={()=>{if(ready)resetMapView(ready,markers.current,preferences.viewMode,(host.current?.clientWidth||0)>600);setSelected('');setGroup([]);}}><Crosshair size={16}/></Button></TooltipTrigger><TooltipContent side="left">复位视图</TooltipContent></Tooltip>
    <Tooltip><TooltipTrigger asChild><Button className="scene-map-tool-divider" size="icon-xl" variant="ghost" disabled={!ready} aria-label="放大地图" onClick={()=>ready?.zoomIn()}><Plus size={16}/></Button></TooltipTrigger><TooltipContent side="left">放大</TooltipContent></Tooltip>
