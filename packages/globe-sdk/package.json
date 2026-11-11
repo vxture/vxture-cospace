@@ -1,6 +1,6 @@
 {
   "name": "@vxture/globe",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Framework-neutral Cesium globe controller and optional React canvas",
   "type": "module",
   "exports": {".": "./src/index.ts", "./react": "./src/react.tsx", "./contract": "./src/contract.ts"},

@@ -142,3 +142,19 @@ def test_altitude_round_trip_history_and_finite_validation(tmp_path):
     for invalid in (float('nan'),float('inf')):
         with pytest.raises(ValidationError):
             SpaceSettingsChange.model_validate(body(s['id'],location=location|{'altitude':invalid}))
+
+
+def test_height_datum_source_and_old_height_semantics_are_preserved(tmp_path):
+    from pydantic import ValidationError
+    d=PreviewSpaces(tmp_path/'directory');p=d.create('project','P');s=d.create('space','S',p['id'])
+    location={'longitude':120.0,'latitude':30.0,'altitude':25.0,'crs':'WGS84',
+              'altitude_reference':'orthometric','source':'Survey A'}
+    change=SpaceSettingsChange.model_validate(body(s['id'],location=location))
+    d.settings.change(change,'manager',s)
+    assert PreviewSpaces(d.root).read('space',s['id'])['location']==location
+    d.settings.change(SpaceSettingsChange.model_validate(body(s['id'],expected_revision=1,name='Rename')),'manager',s)
+    assert d.read('space',s['id'])['location']==location
+    legacy=SpaceSettingsChange.model_validate(body(s['id'],location={k:v for k,v in location.items() if k not in ('altitude_reference','source')}))
+    assert legacy.location.altitude_reference is None
+    for patch in ({'altitude':None},{'altitude':100001.0},{'altitude_reference':'sea-level'},{'source':'x'*161}):
+        with pytest.raises(ValidationError):SpaceSettingsChange.model_validate(body(s['id'],location=location|patch))

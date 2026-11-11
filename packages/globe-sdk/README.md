@@ -1,4 +1,4 @@
-# @vxture/globe 0.1.0
+# @vxture/globe 0.2.0
 
 Shared CesiumJS globe engine for CoSpace and agent applications. This release is a
 TypeScript **source package** for TS-aware bundlers (Vite); it is not a browser
@@ -38,7 +38,12 @@ globe.command({type: 'focus', binding});
 
 Features are `{id, name?, geometry: {type:'point', position:[lon,lat,height?]}}`
 or `{id, name?, geometry: {type:'line', positions:[[lon,lat],...]}}`. Positions
-must be WGS84; heights are ellipsoid metres, and lines currently clamp to terrain.
+must be WGS84; heights are ellipsoid metres. Each feature can set
+`heightMode:'ground'|'absolute'`. Absolute lines retain their vertex heights;
+ground points and lines clamp to terrain. For 0.1 compatibility, unspecified
+point mode remains absolute and unspecified line mode remains ground.
+Scene positions `[lon,lat]` clamp their marker to ground; `[lon,lat,height]`
+explicitly use ellipsoid height. Do not supply unconverted sea-level heights.
 Layer IDs distinguish agents, while each layer binds to an available scene AND
 publication. Replacing scenes drops layers whose binding is no longer present.
 Limits per viewer: 10,000 scenes, 100 layers, 50,000 total feature vertices.
@@ -72,7 +77,7 @@ function reset() {
 }
 ```
 
-Commands: `reset`, `north`, `tilt`, `zoom-in`, `zoom-out`, or
+Commands: `reset`, `fit`, `north`, `tilt`, `zoom-in`, `zoom-out`, or
 `{type:'focus',binding:{spaceId,publicationId}}` matching the pinned publication.
 Messages with tokens, URLs, arbitrary coordinates, layers or unknown keys are
 discarded. The child checks both exact parent origin and frame identity. Replies
@@ -80,3 +85,18 @@ use the exact parent origin. Runtime command failures return
 `{type:'error',requestId,code:'command_unavailable'}`; accepted commands return
 `{type:'ack',requestId}` (acceptance, not animation completion). A scene without
 valid WGS84 coordinates remains visible in the directory but cannot be focused.
+
+## 0.2.0 additions and standalone example
+
+`command({type:'fit'})` frames all currently supplied scenes; empty scenes reject
+with `globe_scene_not_available`. `select(binding|null)` highlights the matching
+scene marker, allowing directory and globe selection to stay in sync. These are
+additive changes to protocol 0.1; a 0.1 runtime does not support the new fit command.
+Runtime configuration now reports SDK 0.2.0; hosts must update their package and
+configuration together. Cesium remains 1.147.0, with the same static asset paths.
+
+Run the repository's `examples/agent-viewer` for an independent Vite consumer with
+explicitly synthetic ground/air tracks. See its README for install/build steps.
+It is a repository example; the source tarball contains only src and this README.
+CoSpace is the first actual product consumer; the example is not evidence of an
+external real agent integration.

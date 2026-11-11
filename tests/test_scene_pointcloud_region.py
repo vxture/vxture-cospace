@@ -143,6 +143,18 @@ def test_composition_schema_matches_runtime():
     assert {k:v for k,v in schema.items() if k!='$schema'}==Composition.model_json_schema()
 
 
+def test_direct_composition_reader_rejects_paths_before_reading(tmp_path):
+    from packages.data.pointcloud_composition import read_composition
+    for path in ('../secret.json','/etc/passwd','C:\\private\\secret.json','other.json'):
+        with pytest.raises(ValueError,match='composition_path_invalid'):
+            read_composition(tmp_path,{'composition_path':path})
+    outside=tmp_path.parent/(tmp_path.name+'-outside.json');outside.write_text('{}')
+    try:(tmp_path/'composition.json').symlink_to(outside)
+    except OSError:pytest.skip('symlink creation unavailable')
+    with pytest.raises(ValueError,match='composition_path_invalid'):
+        read_composition(tmp_path,{'composition_path':'composition.json'})
+
+
 @pytest.mark.parametrize('case',['missing','undeclared','foreign_format'])
 def test_composition_zip_members_require_matching_declaration(tmp_path,case):
     import zipfile
