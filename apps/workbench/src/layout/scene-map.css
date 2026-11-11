@@ -109,3 +109,5 @@
 .map-preview-grid{fill:none;stroke:currentColor;stroke-width:1;opacity:.4}
 .map-preview-building{fill:var(--background);stroke:var(--primary);stroke-width:1.5;stroke-linejoin:round}
 @media(max-width:560px){.scene-map-settings-columns{grid-template-columns:1fr}.scene-map-settings .scene-map-appearance{border-right:0;border-bottom:1px solid var(--border)}}
+
+.scene-map-tools .scene-map-north-icon{width:24px;height:24px}.scene-map-north-icon text{fill:currentColor;font:600 8px system-ui,sans-serif}.scene-map-north-tip{fill:var(--primary)}.scene-map-south-tip{fill:currentColor;opacity:.45}
