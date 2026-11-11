@@ -20,11 +20,11 @@ import {InputRegistration} from './input-registration';
 import './construction-flow.css';
 
 type Input={cloud_sha256?:string;snapshot_sha256?:string;tracking_sha256?:string;registered_at?:string;registered_at_estimated?:boolean;id:string;space_id:string;label:string;format:string;input_frames:number;used_frames:number;verified_image_members?:number;verified_messages?:number;lifecycle_state?:string};
-type Job=RecoverableJob&{build_code?:string;demo_timeline?:{estimated:boolean;basis:string;stages:{start:string;end:string;estimated:boolean}[]};build_info?:BuildInfo;build_info_revision?:number;created_at:string;started_at?:string;finished_at?:string;candidate_url:string|null;pipeline?:string;view_parent_id?:string;stage?:string;input_binding?:{label:string}};
+type Job=RecoverableJob&{display_code?:string;build_code?:string;demo_timeline?:{estimated:boolean;basis:string;stages:{start:string;end:string;estimated:boolean}[]};build_info?:BuildInfo;build_info_revision?:number;created_at:string;started_at?:string;finished_at?:string;candidate_url:string|null;pipeline?:string;view_parent_id?:string;stage?:string;input_binding?:{label:string}};
 type Model={id:string;space_id:string;profile:string;frame_id:string;unit:string;axes:string[];bounds_m:number[][];data_kind:string;construction:{model_points:number;used_frames:number;input_frames:number};source:{input_binding?:{id:string}};human_view:{path:string;source_model_sha256:string};agent_view:{path:string;source_model_sha256:string;resolution_m:number;surface_cells:number;unlisted_state:string};members:Record<string,{bytes:number;sha256:string}>};
 type Release={id:string;candidate_id:string;source_model_sha256:string;lifecycle_state?:string;selection_review?:{reviewed_at?:string}};
 type Snapshot={inputs:Input[];jobs:Job[];job?:Job;model?:Model;stages?:BuildStages;modelIssue?:string;selection:{candidate_id:string|null;revision:number;selected_at?:string;selection_review?:{reviewed_at?:string}};releases:Release[]};
-const buildVersion=(job:Job)=>job.build_code||`历史记录 · ${job.id.slice(-8).toUpperCase()}`;
+const buildVersion=(job:Job)=>job.display_code||job.build_code||`历史记录 · ${job.id.slice(-8).toUpperCase()}`;
 const elapsed=(start?:string,end?:string)=>{if(!start||!end)return '待记录';const ms=Date.parse(end)-Date.parse(start);if(!Number.isFinite(ms)||ms<0)return '待记录';const minutes=Math.floor(ms/60000);if(ms>0&&minutes===0)return '不足1分钟';return `${Math.floor(minutes/60)}小时${minutes%60}分钟`;};
 const shortTime=(value?:string)=>value?new Date(value).toLocaleString('zh-CN',{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}):'待开始';
 const bytes=(value:number)=>value>=1024*1024?`${(value/1024/1024).toFixed(2)} MB`:`${(value/1024).toFixed(1)} KB`;

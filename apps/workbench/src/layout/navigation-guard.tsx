@@ -1,9 +1,10 @@
+import {keepsAssociationDrafts} from './association-context';
 import {useBlocker} from 'react-router-dom';
 import React,{useEffect,useState,useSyncExternalStore} from 'react';
 import {Button,Dialog,DialogContent,DialogHeader,DialogTitle,DialogDescription,DialogFooter} from '@vxture/design-system';
 import {subscribeNavigationPrompt,navigationPrompt,resolveNavigation,requestLeave,drafts} from './unsaved-navigation';
 export function NavigationGuard(){
- const blocker=useBlocker(()=>drafts.entries.size>0);
+ const blocker=useBlocker(({currentLocation,nextLocation})=>drafts.entries.size>0&&!keepsAssociationDrafts(currentLocation.pathname+currentLocation.search+currentLocation.hash,nextLocation.pathname+nextLocation.search+nextLocation.hash));
  useEffect(()=>{if(blocker.state!=='blocked')return;let active=true;
   void requestLeave().then(allow=>{if(active){if(allow)blocker.proceed();else blocker.reset();}});
   return()=>{active=false;};

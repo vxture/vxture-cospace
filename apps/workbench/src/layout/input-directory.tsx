@@ -1,3 +1,5 @@
+import {DataNavigation} from './data-navigation';
+import {WorkspaceHeading} from './workspace-frame';
 import {appNavigate} from './app-router';
 import {runGuarded,navigateSafely} from './unsaved-navigation';
 import {useSceneDirectory} from './use-scene-directory';
@@ -10,7 +12,6 @@ import {recordLink,useRecordNavigation} from './record-navigation';
 import {InputRegistration} from './input-registration';
 import {SampleLibrary} from './sample-library';
 import {SceneProgress} from './scene-progress';
-import {CapabilityNavigation,SceneScope} from './capability-navigation';
 import {InputDetails} from './input-details';
 import {InputDescription,InputPresentation} from './input-description';
 import {InputPreview} from './input-preview';
@@ -56,7 +57,7 @@ export function InputDirectory(){
  const [search,setSearch]=useState(''),[filter,setFilter]=useState('all'),[revision,setRevision]=useState(0),[directoryRevision,setDirectoryRevision]=useState(0),[notice,setNotice]=useState('');
  const {spaces,loading:directoryBusy,error:directoryError}=useSceneDirectory(directoryRevision);
  const [importOpen,setImportOpen]=useState(false),[intakeRevision,setIntakeRevision]=useState(0),[historyRevision,setHistoryRevision]=useState(0);
- const [sidebar,setSidebar]=useState(()=>window.innerWidth>620),[tools,setTools]=useState<'sources'|null>(null),[detailMode,setDetailMode]=useState<'summary'|'impact'|'control'>('summary');
+ const [tools,setTools]=useState<'sources'|null>(null),[detailMode,setDetailMode]=useState<'summary'|'impact'|'control'>('summary');
  const view:View=target.tab==='references'?'references':target.tab==='pointcloud'?'pointcloud':target.tab==='versions'||target.tab==='artifacts'?'versions':target.tab==='batches'||target.batch&&!target.tab?'batches':target.tab==='lineage'||target.artifact&&!target.input?'lineage':'inputs';
  const scene=spaces.find(s=>s.id===target.space);
  const catalog=savedCatalog?.space_id===target.space?savedCatalog:null;
@@ -88,7 +89,6 @@ export function InputDirectory(){
  },[target.space,scene?.id,revision,platform?.user?.workspace_id]);
  useEffect(()=>{setDetailMode('summary');},[selectionKey]);
  useEffect(()=>{setImportOpen(false);},[target.space]);
- useEffect(()=>{const media=window.matchMedia('(max-width:620px)');const change=()=>{if(media.matches)setSidebar(false);};media.addEventListener('change',change);return()=>media.removeEventListener('change',change);},[]);
  useEffect(()=>{if(target.tab==='sources')setTools('sources');},[target.tab,target.batch]);
  useEffect(()=>{if(!notice)return;const timer=setTimeout(()=>setNotice(''),5000);return()=>clearTimeout(timer);},[notice]);
 
@@ -107,7 +107,7 @@ export function InputDirectory(){
  function descriptionSaved(value:InputPresentation){const id=selectedEntry?.id;setEntries(old=>old.map(e=>e.id===id?{...e,presentation:value}:e));setCatalog(old=>old?{...old,items:old.items.map(a=>a.kind==='input'&&a.record_id===id?{...a,label:value.display_name}:a)}:old);setIntakeRevision(v=>v+1);}
  function registered(id:string,created:boolean){void runGuarded(()=>{setNotice(created?'资料已登记，请在右侧执行预检。':'已定位当前场景的已有资料。');setRevision(v=>v+1);appNavigate(recordLink('data',{space:target.space,tab:'inputs',input:id}));});}
 
- return <div className={`data-workspace ${sidebar?'':'data-sidebar-hidden'} ${hasSelection?'data-has-detail':''}`}>
+ return <div className={`data-workspace data-directory-workspace ${hasSelection?'data-has-detail':''}`}>
   <div className="data-workspace-decoration" aria-hidden="true">
    <svg className="data-space-lines" viewBox="0 0 640 400" fill="none">
     <g stroke="currentColor" strokeWidth="1">
@@ -120,11 +120,12 @@ export function InputDirectory(){
     <g fill="currentColor"><circle cx="150" cy="223" r="2.5"/><circle cx="381" cy="138" r="2.5"/><circle cx="443" cy="316" r="2.5"/><circle cx="85" cy="282" r="2.5"/></g>
    </svg>
   </div>
-  <CapabilityNavigation route="data" view={view}/>
+  <DataNavigation view={view}/>
 
   <section className="data-main" aria-label="数据管理工作区">
-   <SceneScope spaces={spaces} current={target.space} onChoose={chooseSpace} loading={directoryBusy} error={directoryError} onRefresh={()=>setDirectoryRevision(v=>v+1)}/>
-   <header className="data-heading"><div className="data-heading-copy"><div className="data-breadcrumb"><Button variant="outline" size="sm" className="data-icon-button data-sidebar-toggle" aria-label={sidebar?'收起能力导航':'展开能力导航'} title={sidebar?'收起能力导航':'展开能力导航'} aria-expanded={sidebar} aria-controls="data-scene-sidebar" onClick={()=>setSidebar(v=>!v)}><SidebarSimple size={16} weight="regular"/></Button><span>共用支撑</span><CaretRight size={12}/><span>数据管理</span>{scene&&<><CaretRight size={12}/><span className="data-breadcrumb-scene">{scene.name}</span></>}</div><h1>数据管理</h1><p>按场景空间管理资料、历史版本与发布成果。</p></div><div className="data-heading-actions"><Button asChild size="sm" variant="outline"><a href={recordLink('data',{scope:'all'})}>共用数据目录</a></Button><Button variant="outline" size="sm" className="data-icon-button" aria-label="刷新数据" title="刷新数据" disabled={busy} onClick={()=>{void runGuarded(refresh);}}><ArrowClockwise size={16} className={busy?'data-spin':''}/></Button><SampleLibrary key={`samples-${target.space}`} endpoint={endpoint} spaceId={scene?.id||''} spaceName={scene?.name||''} authorized={!!platform} onRegistered={registered} onManageSources={()=>setTools('sources')}/><InputRegistration key={target.space} spaceId={scene?.id||''} endpoint={endpoint} triggerLabel="导入资料" spaceName={scene?.name} open={importOpen} onOpenChange={setImportOpen} onManageSources={()=>setTools('sources')} onRegistered={registered}/></div></header>
+   {directoryError&&<p role="alert" className="data-notice">{directoryError}<Button variant="ghost" size="sm" onClick={()=>setDirectoryRevision(v=>v+1)}>重新读取</Button></p>}
+   <WorkspaceHeading icon={Database} title="数据管理" description="按当前场景维护资料、采集批次、模型版本与来源引用。" actions={<><Button asChild size="sm" variant="secondary"><a href={recordLink('data',{scope:'all'})}>共用数据目录</a></Button><Button variant="secondary" size="sm" className="data-icon-button" aria-label="刷新数据" title="刷新数据" disabled={busy} onClick={()=>{void runGuarded(refresh);}}><ArrowClockwise size={16} className={busy?'data-spin':''}/></Button><SampleLibrary key={`samples-${target.space}`} endpoint={endpoint} spaceId={scene?.id||''} spaceName={scene?.name||''} authorized={!!platform} onRegistered={registered} onManageSources={()=>setTools('sources')}/><InputRegistration key={target.space} spaceId={scene?.id||''} endpoint={endpoint} triggerLabel="导入资料" spaceName={scene?.name} open={importOpen} onOpenChange={setImportOpen} onManageSources={()=>setTools('sources')} onRegistered={registered}/></>}/>
+
 
    <div className="data-overview" aria-label="当前场景数据概览"><div><FolderOpen size={17}/><span>资料</span><strong>{catalog?entries.length:'—'}</strong></div><div><Stack size={17}/><span>模型版本</span><strong>{catalog?versions.length:'—'}</strong></div><div><Cube size={17}/><span>固定发布</span><strong>{catalog?releases.length:'—'}</strong></div><span className="data-overview-note">{issues>0?<><WarningCircle size={14}/>{issues} 项成果需核查</>:<><Info size={14}/>样本流程 · 质量尚未验收</>}</span></div>
    {scene&&view==='inputs'&&<DataIntake space={scene.id} batchId={target.batch||undefined} {...intake} onSources={()=>setTools('sources')} onImport={()=>setImportOpen(true)} onInspect={()=>{document.querySelector<HTMLElement>('.data-input-preflight')?.focus();document.querySelector('.data-input-preflight')?.scrollIntoView({block:'nearest'});}} onChoose={()=>{setNotice('请从资料列表选择本次要构建的资料。');document.querySelector<HTMLElement>('.data-record-name')?.focus();}}/>}
@@ -133,7 +134,7 @@ export function InputDirectory(){
    {notice&&<p className="data-notice" role="status">{notice}</p>}
    {!busy&&catalog&&selectionKey&&!selectedEntry&&!selectedArtifact&&<p className="data-notice" role="alert">所选记录不存在于当前场景，请重新选择资料或版本。</p>}
    <div className="data-content">
-    <section className="data-browser" id="data-view-panel" role="tabpanel" aria-labelledby={`data-tab-${view}`}>
+    <section className="data-browser" id="data-view-panel" role="region" aria-label={({inputs:'资料与预检',references:'配套资料',pointcloud:'场景点云',batches:'采集批次',versions:'场景版本',lineage:'来源追溯'})[view]}>
     {view==='references'?scene?<SceneAttachments key={scene.id+(platform?.user?.workspace_id||'engineering')} endpoint={endpoint} space={scene.id} revision={revision} onChanged={refresh} onSelect={setReference}/>:<div className="data-empty">请先选择有权限的场景空间。</div>:view==='pointcloud'?scene?<React.Suspense fallback={<p role="status">正在打开场景点云…</p>}><SceneCloudWorkspace key={scene.id+(platform?.user?.workspace_id||'engineering')} endpoint={endpoint} space={scene.id} onRegistered={()=>setRevision(v=>v+1)}/></React.Suspense>:<div className="data-empty">请先选择有权限的场景空间。</div>:<>
     {scene&&!directoryBusy&&!directoryError&&!busy&&!error&&<SceneProgress key={[scene.id,target.input,target.job,target.publication].join(':')} space={scene.id} name={scene.name} input={target.input} revision={revision+intakeRevision+historyRevision}/>}
      {view!=='batches'&&<div className="data-toolbar"><div className="data-search"><MagnifyingGlass size={16}/><Input aria-label="搜索当前数据" placeholder={view==='inputs'?'搜索资料名称、格式…':view==='versions'?'搜索模型版本…':'搜索成果或来源关系…'} value={search} onChange={e=>setSearch(e.target.value)}/>{search&&<button aria-label="清除搜索" onClick={()=>setSearch('')}><X size={13}/></button>}</div><NativeSelect aria-label="筛选当前数据" value={filter} onChange={e=>setFilter(e.target.value)}><option value="all">{view==='inputs'?'全部类别 / 格式':view==='versions'?'全部版本':'全部关系'}</option>{view==='inputs'?<><option value="acquisition">原始采集资料</option><option value="existing_product">已有空间成果</option>{Array.from(new Set(entries.map(e=>e.format))).map(f=><option key={f} value={f}>{formatShort(f)}</option>)}</>:view==='versions'?<><option value="selected">当前候选</option><option value="published">有关联发布</option><option value="issues">需核查</option></>:<><option value="issues">关系需核查</option>{Array.from(new Set(catalog?.relations.map(r=>r.relation))).map(r=><option key={r} value={r}>{relationNames[r]||r}</option>)}</>}</NativeSelect><span className="data-result-count">{busy?'读取中…':`${shown} 项`}</span></div>}

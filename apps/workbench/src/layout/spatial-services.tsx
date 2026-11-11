@@ -1,7 +1,8 @@
+import {WorkspaceHeading} from './workspace-frame';
 import React,{useEffect,useMemo,useState} from 'react';
 import {useSearchParams} from 'react-router-dom';
 import {Button,Input,NativeSelect,ViewHeader,SegmentedControl,ShellSidebarFrame,Drawer,useMediaQuery,StatusBadge,Icon} from '@vxture/design-system';
-import {Cube,Robot,UploadSimple,MagnifyingGlass,ArrowsClockwise,List,SquaresFour,SidebarSimple} from '@phosphor-icons/react';
+import {Cube,Robot,UploadSimple,MagnifyingGlass,ArrowsClockwise,List,SquaresFour,SidebarSimple,Cloud,DownloadSimple,Users} from '@phosphor-icons/react';
 import {useSceneDirectory} from './use-scene-directory';
 import {spatialServices,serviceSpaces,selectedServiceVersion,sectionServices,serviceSections,type ServiceSection,type SpatialService} from './spatial-service-contract';
 import {ServiceNavigation,serviceSectionIcons} from './service-navigation';
@@ -60,7 +61,8 @@ export function SpatialServices(){
   {!narrow&&<ShellSidebarFrame mode={collapsed?'collapsed':'expanded'}><ServiceNavigation section={section} collapsed={collapsed} onToggle={()=>setCollapsed(value=>!value)}/></ShellSidebarFrame>}
   <div className="spatial-service-content"><div className="scene-catalog-shell">
   {narrow&&<Button variant="ghost" size="sm" onClick={()=>setNavigationOpen(true)}><SidebarSimple size={16}/>功能导航</Button>}
-  <ViewHeader title={<span className="inline-flex items-center gap-sm"><Icon name={serviceSectionIcons[section]}/>{serviceSections[section]}</span>} secondary={catalog&&section!=='online'?<span className="scene-total" aria-label="空间总数">{groups.length}</span>:undefined} description={descriptions[section]}/>
+  <WorkspaceHeading icon={({directory:Cube,online:Cloud,offline:DownloadSimple,feedback:UploadSimple,recipients:Users})[section]} title={serviceSections[section]} secondary={catalog&&section!=='online'?<span className="scene-total" aria-label="空间总数">{groups.length}</span>:undefined} description={descriptions[section]}/>
+
    {section==='online'&&<OnlineServiceMonitor key={space} space={space} scene={!error?spaces.find(scene=>scene.id===space):undefined} revision={revision}/>}
    {catalog&&(section!=='online'||!!space)?<section aria-label={serviceSections[section]}>
     {missingVersion&&<p role="alert" className="spatial-service-section-note">已选版本不再可见，相关空间的操作已停止。请重新确认版本。<Button variant="link" size="sm" onClick={()=>setVersions(current=>Object.fromEntries(Object.entries(current).filter(([id,publication])=>{const group=groups.find(value=>value.scene.id===id);return !group||!!selectedServiceVersion(group,publication);}))) }>重新选择版本</Button></p>}

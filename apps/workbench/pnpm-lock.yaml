@@ -8,6 +8,11 @@ overrides:
   '@vxture/design-ui': file:vendor/vxture-design-ui-12.0.0.tgz
   '@vxture/design-tokens': file:vendor/vxture-design-tokens-4.0.0.tgz
 
+patchedDependencies:
+  '@vxture/design-system@15.0.1':
+    hash: d659023da9e81f65d4515a7af3b2b1cf541e647a262c4112b78a315528ba1371
+    path: patches/vxture-design-system-15.0.1-navigation.patch
+
 importers:
 
   .:
@@ -20,7 +25,7 @@ importers:
         version: 5.104.5(@types/react@19.3.0)(react@19.3.1)
       '@vxture/design-system':
         specifier: file:vendor/vxture-design-system-15.0.1.tgz
-        version: file:vendor/vxture-design-system-15.0.1.tgz(@phosphor-icons/react@2.1.10(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(next-themes@0.4.6(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(tailwindcss-animate@1.0.7(tailwindcss@4.3.3))(tailwindcss@4.3.3)
+        version: file:vendor/vxture-design-system-15.0.1.tgz(patch_hash=d659023da9e81f65d4515a7af3b2b1cf541e647a262c4112b78a315528ba1371)(@phosphor-icons/react@2.1.10(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(next-themes@0.4.6(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(tailwindcss-animate@1.0.7(tailwindcss@4.3.3))(tailwindcss@4.3.3)
       '@vxture/design-tokens':
         specifier: file:vendor/vxture-design-tokens-4.0.0.tgz
         version: file:vendor/vxture-design-tokens-4.0.0.tgz(tailwindcss@4.3.3)
@@ -2494,7 +2499,7 @@ snapshots:
   '@typescript/typescript-win32-x64@7.0.2':
     optional: true
 
-  '@vxture/design-system@file:vendor/vxture-design-system-15.0.1.tgz(@phosphor-icons/react@2.1.10(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(next-themes@0.4.6(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(tailwindcss-animate@1.0.7(tailwindcss@4.3.3))(tailwindcss@4.3.3)':
+  '@vxture/design-system@file:vendor/vxture-design-system-15.0.1.tgz(patch_hash=d659023da9e81f65d4515a7af3b2b1cf541e647a262c4112b78a315528ba1371)(@phosphor-icons/react@2.1.10(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(next-themes@0.4.6(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(tailwindcss-animate@1.0.7(tailwindcss@4.3.3))(tailwindcss@4.3.3)':
     dependencies:
       '@fontsource/funnel-display': 5.3.0
       '@fontsource/geist-mono': 5.3.0

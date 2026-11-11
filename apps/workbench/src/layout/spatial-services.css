@@ -51,3 +51,8 @@
 .service-monitor-metrics dt{font-size:var(--body-small-font-size);color:var(--muted-foreground)}
 .service-monitor-metrics dd{margin:4px 0 0;font-size:var(--heading-3-font-size);font-weight:600;color:var(--foreground)}
 .service-monitor-metrics dd.text-body-small{font-size:var(--body-small-font-size);font-weight:400}
+
+/* Hybrid service workspace: keep catalogue cards and monitoring layouts. */
+.spatial-services{background:var(--card)}.spatial-service-content .scene-catalog-shell{max-width:none;padding:20px 48px 48px}.spatial-services .scene-total{font-size:12px;border:1px solid color-mix(in srgb,var(--primary) 20%,var(--border));background:var(--accent);color:var(--primary)}
+.spatial-services .scene-catalog-toolbar{margin-block:16px 24px}.spatial-services .scene-catalog-toolbar button:not([role=radio]){font-size:14px}.spatial-services .spatial-service-card{box-shadow:none;border-radius:var(--radius-lg)}
+@media(max-width:1099px){.spatial-service-content .scene-catalog-shell{padding:20px 32px 32px}}@media(max-width:700px){.spatial-service-content .scene-catalog-shell{padding:20px 24px 32px}}

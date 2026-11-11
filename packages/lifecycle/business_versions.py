@@ -180,6 +180,13 @@ class BusinessVersions:
             code = self.build_code(space, record['candidate_id'])
             result['build_code'] = code
             result['version_code'] = self.lookup('publication', space+'/'+code, record['id']) if code else None
+        if kind in ('build', 'publication') and space:
+            scene_code = self.lookup('scene', '', space)
+            result['scene_code'] = scene_code
+            local_code = result.get('version_code') if kind == 'publication' else result.get('build_code')
+            result['display_code'] = f'{scene_code}-{local_code}' if scene_code and local_code else None
+            build_code = result.get('build_code')
+            result['build_display_code'] = f'{scene_code}-{build_code}' if scene_code and build_code else None
         return result
 
     def ontology(self, record):

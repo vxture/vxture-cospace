@@ -67,3 +67,19 @@ def test_rule_versions_keep_original_protocol_and_workspace_scope(tmp_path):
     assert store.ontology(base|{'version':'1.1.0','sha256':'b'*64})['version_code']=='O01-V02'
     private=base|{'authoring':{'workspace':{'workspace_id':'other'}}}
     assert store.ontology(private)['version_code']=='O02-V01'
+
+
+def test_display_codes_include_real_scene_prefix_without_replacing_local_codes(tmp_path):
+    store = BusinessVersions(tmp_path)
+    scene = store.allocate('scene', '', 'space-a', 'S', random_scene=True)
+    store.allocate('build', 'space-a', 'build-a', 'B')
+    store.allocate('publication', 'space-a/B01', 'pub-a', 'B01-P')
+    build = store.enrich('build', {'id': 'build-a', 'space_id': 'space-a'})
+    release = store.enrich('publication', {'id': 'pub-a', 'space_id': 'space-a', 'candidate_id': 'build-a'})
+    assert build['build_code'] == 'B01'
+    assert build['display_code'] == f'{scene}-B01'
+    assert release['version_code'] == 'B01-P01'
+    assert release['display_code'] == f'{scene}-B01-P01'
+    assert release['build_display_code'] == build['display_code']
+    unknown = store.enrich('build', {'id': 'unknown', 'space_id': 'unknown'})
+    assert unknown['display_code'] is None
