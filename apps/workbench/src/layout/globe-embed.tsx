@@ -1,5 +1,5 @@
 import React,{useEffect,useRef,useState} from 'react';
-import {bindingKey,GLOBE_PROTOCOL,parseEmbedCommand,trustedParent,type GlobeController,type GlobeSelection} from '@vxture/globe';
+import {bindingKey,GLOBE_PROTOCOL,parseEmbedCommand,type GlobeController,type GlobeSelection} from '@vxture/globe';
 import {SceneGlobe} from './scene-globe';
 import {businessEndpoint} from './business-endpoint';
 import type {SceneSpace} from './scene-directory';
@@ -31,7 +31,7 @@ export function GlobeEmbed(){
  useEffect(()=>{
   if(!configuration?.embedOrigins.includes(parentOrigin)||!scene)return;
   const receive=(event:MessageEvent)=>{
-   if(!trustedParent(event,window.parent,parentOrigin))return;
+   if(event.origin!==parentOrigin||event.source!==window.parent)return;
    const message=parseEmbedCommand(event.data);if(!message)return;
    try{
     if(!api.current)throw Error();
