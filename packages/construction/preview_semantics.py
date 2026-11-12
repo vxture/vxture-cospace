@@ -1,4 +1,5 @@
 """Create a semantic candidate over immutable geometry; no source re-estimation."""
+from packages.views.viewer_entry import write_viewer_entry
 from copy import deepcopy
 import json
 from pathlib import Path
@@ -99,7 +100,7 @@ def annotate(jobs,ontologies,request,*,business=None,relations=None):
                 path=output/'relations.json';manifest['members']['relations.json']={'sha256':digest(path),'bytes':path.stat().st_size}
                 manifest['object_relations']={'path':'relations.json','relation_count':len(saved_relations)}
             (output/'model.json').write_text(json.dumps(manifest,ensure_ascii=False,indent=2),encoding='utf-8')
-            shutil.copyfile('experiments/templates/nyu-flow-preview.html',output/'index.html')
+            write_viewer_entry(output,manifest)
             current=PreviewModel(output)
             cell=next(iter(current.cells));unknown=(max(c[0] for c in current.cells)+2,0,0)
             checks={'surface':current.query(((np.asarray(cell)+.5)*current.resolution).tolist()),

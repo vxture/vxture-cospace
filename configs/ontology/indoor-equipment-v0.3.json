@@ -1,0 +1,181 @@
+{
+  "profile": "cospace.preview-ontology/0.2",
+  "ontology_id": "indoor-equipment",
+  "version": "0.3.0",
+  "title": "设备间、泵组与检测设备词表",
+  "description": "延续设备间与走廊关系规则，增加泵组、控制柜和检测柜。用于人工标注模板；不表示设备已识别、楼层已核实或巡检任务已建立。",
+  "types": {
+    "room": {
+      "title": "设备间",
+      "description": "用于容纳设备的空间单元；本批不定义空间边界或建筑标准映射。",
+      "properties": {
+        "name": {
+          "title": "名称",
+          "type": "string",
+          "required": true,
+          "min_length": 1,
+          "max_length": 160
+        }
+      }
+    },
+    "corridor": {
+      "title": "走廊",
+      "description": "连接空间的通道类型；类型声明不表示可通行性已验证。",
+      "properties": {
+        "name": {
+          "title": "名称",
+          "type": "string",
+          "required": true,
+          "min_length": 1,
+          "max_length": 160
+        }
+      }
+    },
+    "cabinet": {
+      "title": "设备柜",
+      "description": "通用柜体类型；具体电气功能与台账关系需后续人工确认。",
+      "properties": {
+        "name": {
+          "title": "名称",
+          "type": "string",
+          "required": true,
+          "min_length": 1,
+          "max_length": 160
+        },
+        "asset_code": {
+          "title": "资产编号",
+          "type": "string",
+          "required": false,
+          "min_length": 1,
+          "max_length": 160
+        }
+      }
+    },
+    "inspection_point": {
+      "title": "巡检点",
+      "description": "人工指定的巡检对象类型；本批不包含任务、路径或到达性。",
+      "properties": {
+        "name": {
+          "title": "名称",
+          "type": "string",
+          "required": true,
+          "min_length": 1,
+          "max_length": 160
+        }
+      }
+    },
+    "pump": {
+      "title": "泵组",
+      "description": "人工声明的设备类型，位置与现场含义需独立核实。",
+      "properties": {
+        "name": {
+          "title": "名称",
+          "type": "string",
+          "required": true,
+          "min_length": 1,
+          "max_length": 160
+        },
+        "asset_code": {
+          "title": "资产编号",
+          "type": "string",
+          "required": false,
+          "min_length": 1,
+          "max_length": 160
+        }
+      }
+    },
+    "control_cabinet": {
+      "title": "控制柜",
+      "description": "人工声明的设备类型，位置与现场含义需独立核实。",
+      "properties": {
+        "name": {
+          "title": "名称",
+          "type": "string",
+          "required": true,
+          "min_length": 1,
+          "max_length": 160
+        },
+        "asset_code": {
+          "title": "资产编号",
+          "type": "string",
+          "required": false,
+          "min_length": 1,
+          "max_length": 160
+        }
+      }
+    },
+    "inspection_cabinet": {
+      "title": "检测柜",
+      "description": "人工声明的设备类型，位置与现场含义需独立核实。",
+      "properties": {
+        "name": {
+          "title": "名称",
+          "type": "string",
+          "required": true,
+          "min_length": 1,
+          "max_length": 160
+        },
+        "asset_code": {
+          "title": "资产编号",
+          "type": "string",
+          "required": false,
+          "min_length": 1,
+          "max_length": 160
+        }
+      }
+    }
+  },
+  "relations": {
+    "contains": {
+      "title": "包含",
+      "source_types": [
+        "room",
+        "corridor"
+      ],
+      "target_types": [
+        "room",
+        "corridor",
+        "cabinet",
+        "inspection_point",
+        "pump",
+        "control_cabinet",
+        "inspection_cabinet"
+      ],
+      "family": "containment",
+      "symmetric": false,
+      "parent_endpoint": "source"
+    },
+    "located_in": {
+      "title": "位于",
+      "source_types": [
+        "room",
+        "corridor",
+        "cabinet",
+        "inspection_point",
+        "pump",
+        "control_cabinet",
+        "inspection_cabinet"
+      ],
+      "target_types": [
+        "room",
+        "corridor"
+      ],
+      "family": "containment",
+      "symmetric": false,
+      "parent_endpoint": "target"
+    },
+    "connected_to": {
+      "title": "连接",
+      "source_types": [
+        "room",
+        "corridor"
+      ],
+      "target_types": [
+        "room",
+        "corridor"
+      ],
+      "family": "connection",
+      "symmetric": true
+    }
+  }
+}

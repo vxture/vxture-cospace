@@ -1,3 +1,4 @@
+import {legacyExampleHref,associationExample} from './association-examples';
 import React,{createContext,useContext,useLayoutEffect,useState} from 'react';
 import {useLocation,useNavigate} from 'react-router-dom';
 import {usePlatformSession} from './platform-auth';
@@ -15,10 +16,11 @@ export function SceneSelection({children}:{children:React.ReactNode}){
 }
 function ScopedSceneSelection({scope,children}:{scope:string;children:React.ReactNode}){
  const key=scenePreferenceKey(scope),location=useLocation(),navigate=useNavigate();
- const [remembered,setRemembered]=useState(()=>read(key));
+ const [remembered,setRemembered]=useState(()=>associationExample(read(key))?'':read(key));
  const [mapActive,setMapActive]=useState(false);
  function selectScene(id:string){setRemembered(id);try{if(id)localStorage.setItem(key,id);else localStorage.removeItem(key);}catch{/* Selection works without storage. */}}
- const explicit=new URLSearchParams(location.search).get('space');
+ const legacy=legacyExampleHref(location.pathname+location.search);
+ const explicit=legacy?'':new URLSearchParams(location.search).get('space');
  const scene=preferredScene(explicit,remembered);
  useLayoutEffect(()=>{
   if(explicit===null)return;
@@ -26,8 +28,9 @@ function ScopedSceneSelection({scope,children}:{scope:string;children:React.Reac
   try{if(explicit)localStorage.setItem(key,explicit);else localStorage.removeItem(key);}catch{/* The in-memory selection still works when storage is blocked. */}
  },[explicit,key]);
  useLayoutEffect(()=>{
+  if(legacy){void navigate(legacy,{replace:true});return;}
   const href=location.pathname+location.search,next=sceneContextHref(href,scene);
   if(next!==href)void navigate(next,{replace:true});
- },[location.pathname,location.search,scene,navigate]);
+ },[location.pathname,location.search,scene,navigate,legacy]);
  return <SceneControls.Provider value={{selectScene,mapActive,setMapActive}}><SelectedScene.Provider value={scene}>{children}</SelectedScene.Provider></SceneControls.Provider>;
 }

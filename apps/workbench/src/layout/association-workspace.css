@@ -67,3 +67,6 @@
 .association-object-name:hover,.association-object-name[aria-pressed=true]{color:var(--primary)}
 .association-editor tr[data-selected=true]{background:var(--accent)}
 @container (max-width:670px){.association-object-workspace{grid-template-columns:minmax(0,1fr)}}
+
+.association-example-templates,.association-example-queue{border:1px solid var(--border);border-radius:var(--radius-lg,8px);padding:16px;background:var(--card)}
+.association-example-templates{margin-bottom:16px}.association-example-templates>summary{cursor:pointer;font-weight:500}.association-example-templates[open]>div{padding-top:16px}.association-example-templates p{margin:0}.association-example-queue{display:flex;flex-direction:column;gap:8px}

@@ -3,8 +3,9 @@ import type {ModuleRoute} from './product-navigation';
 // Explicit business handoffs may carry record IDs. Ordinary module navigation
 // carries only the scene (a filter/return context for shared support modules).
 export function recordLinkFromUrl(route:ModuleRoute|'settings',values:Record<string,string>,url:string){
- const space=new URLSearchParams(url.split('?')[1]||'').get('space');
- return `/${route}?${new URLSearchParams({...space?{space}:{},...values})}`;
+ const params=new URLSearchParams(url.split('?')[1]||''),space=params.get('space');
+ const example=route==='association'&&['equipment','pump','inspection'].includes(params.get('example')||'')?params.get('example'):null;
+ return `/${route}?${new URLSearchParams({...space?{space}:{},...example?{example}:{},...values})}`;
 }
 
 export function moduleLinkFromUrl(route:ModuleRoute,url:string){

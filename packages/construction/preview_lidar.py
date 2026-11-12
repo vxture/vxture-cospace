@@ -1,4 +1,5 @@
 """Derive two preview views from one frozen sensor-local LiDAR frame."""
+from packages.views.viewer_entry import write_viewer_entry
 from datetime import datetime,timezone
 import json
 from pathlib import Path
@@ -74,5 +75,5 @@ def build(snapshot,output,identity,binding=None,*,freeze_only=False,batch_ref=No
             'unknown':current.query(((np.array([cells[:,0].max()+2,0,0])+.5)*.1).tolist()),'same_source_model':True}
     assert checks['surface']['state']=='surface_candidate' and checks['unknown']['state']=='unknown'
     (output/'offline-checks.json').write_text(json.dumps(checks,indent=2),encoding='utf-8')
-    shutil.copyfile('experiments/templates/nyu-flow-preview.html',output/'index.html')
+    write_viewer_entry(output,manifest)
     return manifest

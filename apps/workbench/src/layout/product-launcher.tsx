@@ -1,19 +1,10 @@
 import React from 'react';
-import {Button,Collapsible,CollapsibleContent,CollapsibleTrigger,ShellPanelSection,ShellPanelRow,StatusBadge} from '@vxture/design-system';
-import {CaretDown} from '@phosphor-icons/react';
-import {useRecordNavigation} from './record-navigation';
-import {businessEndpoint} from './business-endpoint';
+import {ShellPanelSection,ShellPanelRow} from '@vxture/design-system';
 import {moduleGroups,moduleNames,type ModuleRoute} from './product-navigation';
 import './product-launcher.css';
 
 /** Product navigation only; scene selection deliberately clears record scope. */
 export function ProductLauncher({route,hasScene=false,hrefForRoute,onNavigate}:{route?:string;hasScene?:boolean;hrefForRoute:(route:ModuleRoute)=>string;onNavigate:()=>void}){
- const context=useRecordNavigation();
- const migrationPages=[
-  ...[{id:'equipment',name:'设备间'},{id:'pump',name:'水泵设备间'},{id:'inspection',name:'巡检设备区'}].map(item=>({label:item.name+'示例',icon:'cube' as const,href:'/space?'+new URLSearchParams({screen:'space',preview:'1',space:item.id}),description:'待迁移 · 示例能力与源码核查'})),
-  {label:'旧版候选查看器',icon:'file',href:context.space&&context.job?businessEndpoint+'/candidates/'+encodeURIComponent(context.job)+'/':undefined,description:context.space&&context.job?'待迁移 · 当前构建 HTML 查看器':'待迁移 · 选择构建版本后可打开'},
-  {label:'旧版发布查看器',icon:'package',href:context.space&&context.publication?businessEndpoint+'/publications/'+encodeURIComponent(context.publication)+'/':undefined,description:context.space&&context.publication?'待迁移 · 当前发布 HTML 查看器':'待迁移 · 选择发布版本后可打开'},
- ] as const;
  const work=moduleGroups.find(group=>group.title==='场景作业')!;
  const resources=moduleGroups.find(group=>group.title==='公共资源')!;
  return <nav className="product-launcher-grid" aria-label="功能 Launcher">
@@ -24,9 +15,6 @@ export function ProductLauncher({route,hasScene=false,hrefForRoute,onNavigate}:{
   {[work,resources].map(group=><ShellPanelSection key={group.title} title={<span className="product-launcher-section-title">{group.title}</span>} divided={false} className="product-launcher-group">
    {group.items.filter(item=>item.route!=='space').map(item=><ShellPanelRow key={item.route} icon={item.icon} label={moduleNames[item.route]} description={item.description} href={hrefForRoute(item.route)} active={route===item.route} onClick={onNavigate}/>)}
   </ShellPanelSection>)}
-  <Collapsible className="product-launcher-migration">
-   <CollapsibleTrigger asChild><Button variant="ghost" className="product-launcher-migration-trigger" aria-label="待迁移页面"><span>待迁移<StatusBadge size="sm" tone="neutral">{migrationPages.length}</StatusBadge></span><CaretDown size={16}/></Button></CollapsibleTrigger>
-   <CollapsibleContent><div className="product-launcher-migration-items">{migrationPages.map(item=><ShellPanelRow key={item.label} label={item.label} icon={item.icon} description={item.description} href={item.href} disabled={!item.href} chevron={false} onClick={onNavigate}/>)}</div></CollapsibleContent>
-  </Collapsible>
+
  </nav>;
 }

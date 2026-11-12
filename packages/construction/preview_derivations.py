@@ -1,4 +1,5 @@
 """Frozen geometry and independently recorded preview views; no source reprocessing."""
+from packages.views.viewer_entry import write_viewer_entry
 from datetime import datetime,timezone
 import json
 from pathlib import Path
@@ -169,7 +170,7 @@ class SplitBuilds:
                 'derivation':{'profile':'cospace.model-view-composition/0.1','frozen_model':job['frozen_model'],'views':{k:v[1] for k,v in views.items()}},
                 'members':{name:{'sha256':digest(staging/name),'bytes':(staging/name).stat().st_size} for name in ('spatial.npz','human.ply','agent.npz','views.js')}}
             for kind,(_,view) in views.items():manifest[kind+'_view']={**view['view'],'source_model_sha256':job['frozen_model']['source_model_sha256']}
-            write(staging/'model.json',manifest);shutil.copyfile('experiments/templates/nyu-flow-preview.html',staging/'index.html')
+            write(staging/'model.json',manifest);write_viewer_entry(staging,manifest)
             from packages.construction.preview_model import PreviewModel
             PreviewModel(staging);staging.rename(root/'output')
         finally:
