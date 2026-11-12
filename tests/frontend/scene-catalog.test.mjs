@@ -1,6 +1,20 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {scenePhase,filterScenes,sceneWorkspaceHref,sceneDestinations,currentRelease,sceneEntryHref,publicationLabel,publicationAvailable} from '../../apps/workbench/src/layout/scene-catalog-contract.ts';
+import {hasPreviewModelSummary} from '../../apps/workbench/src/layout/preview-model-contract.ts';
+import {sceneBuildMode,sceneViewSummary} from '../../apps/workbench/src/layout/scene-overview-contract.ts';
+
+test('overview uses declared build mode and never invents independent view completion',()=>{
+ assert.equal(sceneBuildMode({input_binding:{format:'ply_pointcloud'}}),'已有点云 · 整理与表达派生');
+ assert.equal(sceneBuildMode({view_parent_id:'parent',input_binding:{format:'ply_pointcloud'}}),'沿用基准模型 · 视图派生');
+ assert.equal(sceneBuildMode({mode:'unknown'}),'构建模式未记录');
+ assert.equal(sceneViewSummary(null,'human'),'派生记录暂不可读');
+ assert.equal(sceneViewSummary({legacy:true,views:{}},'human'),'历史构建未记录独立派生状态');
+ const stages={views:{human:{state:'succeeded'},agent:{state:'failed'}}};
+ assert.equal(sceneViewSummary(stages,'human'),'已派生');
+ assert.equal(sceneViewSummary(stages,'agent'),'派生失败');
+ assert.equal(sceneViewSummary({views:{}},'agent'),'尚未派生');
+});
+import {scenePhase,filterScenes,sceneWorkspaceHref,sceneDestinations,currentRelease,sceneEntryHref,sceneEntryLabel,publicationLabel,publicationAvailable} from '../../apps/workbench/src/layout/scene-catalog-contract.ts';
 
 test('catalog reflects actual publication lifecycle without inventing published versions',()=>{
  assert.equal(scenePhase({state:'no_publication'}),'building');
@@ -9,6 +23,17 @@ test('catalog reflects actual publication lifecycle without inventing published 
  assert.equal(scenePhase({state:'distribution_paused',publications:[{lifecycle_state:'retired'}]}),'archived');
  assert.equal(scenePhase({state:'preview_published'}),'unavailable');
  assert.equal(scenePhase({state:'unrecognized'}),'unavailable');
+});
+
+test('scene handoff targets reject incomplete historical model summaries before rendering',()=>{
+ const model={construction:{model_points:0},human_view:{path:'human.ply'},agent_view:{path:'agent.json',surface_cells:0},
+  members:{'spatial.npz':{bytes:20},'human.ply':{bytes:40},'agent.json':{bytes:10}}};
+ assert.equal(hasPreviewModelSummary(model),true);
+ for(const incomplete of [null,{}, {...model,construction:undefined}, {...model,construction:{model_points:'100'}},
+  {...model,agent_view:{path:'agent.json'}},{...model,human_view:{path:'missing.ply'}},
+  {...model,members:undefined},{...model,construction:{model_points:-1}}]){
+  assert.equal(hasPreviewModelSummary(incomplete),false);
+ }
 });
 
 test('newest activity sorts across phases, with invalid or missing dates last',()=>{
@@ -23,9 +48,39 @@ test('newest activity sorts across phases, with invalid or missing dates last',(
 
 test('scene operation destinations retain disabled entries and explicit scene scope',()=>{
  const items=sceneDestinations({id:'scene A&B',capabilities:['space.preview','data.manage']});
- assert.deepEqual(items.map(s=>[s.key,s.enabled]),[['data',true],['build',false],['delivery',true],['settings',true]]);
+ assert.deepEqual(items.map(s=>[s.key,s.enabled]),[['data',true],['build',false],['association',false],['delivery',true]]);
  assert.equal(items[0].href,'/data?space=scene+A%26B');
  assert.ok(sceneDestinations({id:'none'}).every(s=>!s.enabled));
+});
+
+test('scene handoffs use only the selected scene and honor each operation permission',()=>{
+ const scene={id:'scene A&B',capabilities:['space.preview','data.manage','build.run','association.edit']};
+ const destinations=sceneDestinations(scene);
+ for(const item of destinations){
+  const url=new URL(item.href,'https://example.test');
+  assert.equal(url.searchParams.get('space'),scene.id);
+  assert.equal(url.searchParams.has('publication'),false);
+  assert.equal(url.searchParams.has('job'),false);
+  assert.equal(item.enabled,true);
+ }
+ assert.equal(destinations.find(item=>item.key==='association').href,'/association?space=scene+A%26B');
+ assert.equal(sceneDestinations({...scene,capabilities:['space.preview']}).find(item=>item.key==='association').enabled,false);
+});
+
+test('catalog status and entry agree with the explicitly current release, independent of history order',()=>{
+ const active={id:'current',lifecycle_state:'active'};
+ const scene={id:'scene',state:'preview_published',publication_id:active.id,
+  publications:[{id:'old',lifecycle_state:'retired'},active]};
+ assert.equal(scenePhase(scene),'published');
+ assert.equal(sceneEntryLabel(scene),'空间预览');
+ for(const lifecycle_state of ['paused','retired','unknown']){
+  const blocked={...scene,publications:[{id:'other',lifecycle_state:'active'},{...active,lifecycle_state}]};
+  assert.equal(scenePhase(blocked),lifecycle_state==='paused'?'paused':lifecycle_state==='retired'?'archived':'unavailable');
+  assert.equal(sceneEntryLabel(blocked),'场景概览');
+  assert.equal(sceneEntryHref(blocked),sceneWorkspaceHref(scene.id));
+ }
+ assert.equal(scenePhase({...scene,publications:[]}), 'unavailable');
+ assert.equal(sceneEntryLabel({id:'empty',state:'no_publication'}),'场景概览');
 });
 
 test('search and state filtering preserve source total and sort by progress',()=>{
@@ -60,8 +115,5 @@ test('scene entry opens only the explicit active current publication and preserv
  }
  assert.equal(sceneEntryHref({...scene,publication_id:'missing'}),sceneWorkspaceHref(scene.id));
  assert.equal(sceneEntryHref({id:'empty'}),'/space?space=empty');
- const info=sceneDestinations({id:scene.id,capabilities:['space.preview']}).find(d=>d.key==='settings');
- assert.equal(info.enabled,true);
- assert.equal(info.label,'基本信息');
- assert.equal(info.href,'/build?space=scene+A%26B&tab=info');
+ assert.equal(sceneDestinations({id:scene.id,capabilities:['space.preview']}).some(d=>d.key==='settings'),false);
 });

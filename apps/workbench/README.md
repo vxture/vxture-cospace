@@ -1,5 +1,7 @@
 ## Production application entry (2026-11-09)
 
+当前产品统一术语（2026-11-12）：**视觉表达**用于人观察、理解与核查，**计算表达**用于智能体及程序查询、计算与消费。工作台标题、预览切换、成果目录与交付说明统一使用这两个名称。接口与固定成果中的 `human_view` / `agent_view` 字段保持原契约。
+
 The product is one React application, built from `index.html` and routed by React Router's browser router. Public entry is `/`; modules use `/space`, `/data`, `/build`, `/delivery`, `/ontology`, `/association` and administrative routes. Record context is in query parameters. The server serves the application shell only for this explicit route set, so direct refresh and new tabs work without a broad catch-all. `/workbench/*.html` and `/index.html` return 404 with no redirect. Generated resources are served under `/assets/`. Authentication returns directly to an application route; platform logout returns to `/`.
 
 The notes below describe historical previews, not the current public routing contract.
