@@ -55,3 +55,15 @@
 @container (max-width:450px){.association-metrics,.association-source-card dl{grid-template-columns:1fr}.association-stage-heading{flex-wrap:wrap}.association-next li{align-items:flex-start;flex-direction:column;gap:8px}}
 
 .association-workspace .association-toolbar>div{flex:1;min-width:0}.association-workspace .association-toolbar input{width:220px;flex:none}.association-workspace .association-toolbar [data-slot=native-select]{width:160px}.association-workspace .association-more svg{width:24px!important;height:24px!important}
+
+.association-object-workspace{display:grid;grid-template-columns:minmax(0,1fr) minmax(240px,32%);align-items:start;gap:16px;min-width:0}
+.association-object-model,.association-object-properties{min-width:0;padding:16px;border:1px solid var(--border);border-radius:var(--radius-lg)}
+.association-object-model .geometry-canvas{height:clamp(300px,46vh,500px)}
+.association-object-properties{display:flex;flex-direction:column;gap:12px;overflow-wrap:anywhere}
+.association-object-properties h4,.association-object-properties p,.association-object-properties dl,.association-object-properties dd{margin:0}
+.association-object-properties dl{display:flex;flex-direction:column;gap:8px}
+.association-object-properties dt{color:var(--muted-foreground)}
+.association-object-name{text-align:left;font-weight:600;cursor:pointer}
+.association-object-name:hover,.association-object-name[aria-pressed=true]{color:var(--primary)}
+.association-editor tr[data-selected=true]{background:var(--accent)}
+@container (max-width:670px){.association-object-workspace{grid-template-columns:minmax(0,1fr)}}

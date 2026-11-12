@@ -64,7 +64,7 @@ function AssociationWorkspace(){
    {ready&&<RecordNavigationProvider value={{...target,job:current.id}}><section className="association-current" aria-label="关联功能内容">
     {view!=='info'&&<header className="workspace-section-heading association-stage-heading"><div><h3>{section&&React.createElement(section.icon,{size:20})}{section?.name}</h3><p>{view==='ifc'?'浏览本场景 IFC 构件资料；坐标对齐尚未确认。':section?.description}</p></div>{section?.id==='objects'&&<Button variant={view==='ifc'?'secondary':'ghost'} size="sm" onClick={()=>navigate(view==='ifc'?'objects':'ifc')}><Books size={16}/>{view==='ifc'?'返回对象':'参考资料'}</Button>}</header>}
     {visited.includes('overview')&&<div hidden={view!=='overview'} className="association-view"><AssociationOverview model={model} objects={objects} reading={reading} error={snapshotError} source={current} selected={selected} onNavigate={navigate}/></div>}
-    {visited.includes('objects')&&<div hidden={view!=='objects'} className="association-view"><ObjectAnnotations key={current.id} embedded/></div>}
+    {visited.includes('objects')&&<div hidden={view!=='objects'} className="association-view"><ObjectAnnotations key={current.id} embedded active={view==='objects'}/></div>}
     {visited.includes('relations')&&<div hidden={view!=='relations'} className="association-view"><ObjectRelations key={current.id} embedded/></div>}
     {visited.includes('business')&&<div hidden={view!=='business'} className="association-view"><BusinessAssociations key={current.id} embedded/></div>}
     {visited.includes('ifc')&&<div hidden={view!=='ifc'} className="association-view"><IfcCatalog/></div>}
