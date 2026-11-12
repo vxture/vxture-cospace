@@ -4,7 +4,7 @@ from contextlib import AsyncExitStack, asynccontextmanager
 from urllib.parse import parse_qs, urlsplit
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
-from fastapi.staticfiles import StaticFiles
+from packages.service.static_assets import WorkbenchAssets
 from starlette.concurrency import run_in_threadpool
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 from packages.infrastructure.platform_rp import APP_ROUTES
@@ -57,7 +57,9 @@ def create_auth_app(rp, workbench=Path('apps/workbench/dist'), business=None, ac
         # Callback material stays private; the app document must retain a same-origin
         # source so browser POSTs can pass the explicit Origin/CSRF checks.
         referrer = 'no-referrer' if request.url.path.startswith('/auth/') else 'same-origin'
-        response.headers.update({'Cache-Control': 'no-store', 'Referrer-Policy': referrer,
+        if not request.url.path.startswith('/assets/') or response.status_code not in (200, 206, 304):
+            response.headers['Cache-Control'] = 'no-store'
+        response.headers.update({'Referrer-Policy': referrer,
                                  'X-Content-Type-Options': 'nosniff'})
         if embed:
             response.headers['Content-Security-Policy'] = "frame-ancestors 'self' " + parent
@@ -194,7 +196,7 @@ def create_auth_app(rp, workbench=Path('apps/workbench/dist'), business=None, ac
 
     # Only generated assets are public; source/experimental HTML is never mounted.
     assets = Path(workbench) / 'assets'
-    if assets.is_dir(): app.mount('/assets', StaticFiles(directory=assets))
+    if assets.is_dir(): app.mount('/assets', WorkbenchAssets(directory=assets))
     if business is not None:
         app.mount('/',business)
         app.middleware('http')(access.dispatch)

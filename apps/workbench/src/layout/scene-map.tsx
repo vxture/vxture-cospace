@@ -1,7 +1,7 @@
 import {useSceneControls} from './scene-selection';
 import React,{useEffect,useMemo,useRef,useState} from 'react';
 import {Button,Input,SegmentedControl,Popover,PopoverTrigger,PopoverContent,Switch,Tabs,TabsList,TabsTrigger,Tooltip,TooltipTrigger,TooltipContent,useTheme} from '@vxture/design-system';
-import {SquaresFour,MagnifyingGlass,CaretUp,CaretDown,Crosshair,Plus,Minus,SlidersHorizontal,PaperPlaneIcon,Cube,ListBullets,ArrowCounterClockwise,X} from '@phosphor-icons/react';
+import {SquaresFour,MagnifyingGlass,CaretUp,CaretDown,Crosshair,Plus,Minus,SlidersHorizontal,InfoIcon,PaperPlaneIcon,Cube,ListBullets,ArrowCounterClockwise,X} from '@phosphor-icons/react';
 import type {SceneSpace} from './scene-directory';
 import {scenePhases,scenePhase,filterScenes,type ScenePhase} from './scene-catalog-contract';
 import {SceneDetail} from './scene-detail';
@@ -73,7 +73,7 @@ export function AmapSceneMap({spaces,loading,error,onBack,onRefresh,onViewChange
   {!collapsed&&<aside id="scene-map-directory" className="scene-map-directory" aria-label="场景清单"><div className="scene-map-search"><MagnifyingGlass size={16}/><Input value={query} aria-label="搜索地图场景" placeholder="搜索场景、项目或位置" onChange={e=>setQuery(e.target.value)}/></div><div className="scene-map-items">
    {loading&&<p role="status">正在读取场景…</p>}{error&&<div role="alert"><p>{error}</p><Button size="xl" variant="secondary" onClick={onRefresh}>重新读取</Button></div>}
    {visible.map(item=><button key={item.id} className="scene-map-item" aria-pressed={selected===item.id} data-tone={scenePhases[scenePhase(item)].tone} onClick={()=>choose(item.id)}><span className="scene-map-item-icon"><Cube size={18} aria-hidden="true"/></span><span className="scene-map-item-copy"><span className="scene-map-item-title"><strong title={item.name}>{item.name}</strong><span className="scene-map-tag">{scenePhases[scenePhase(item)].label}</span></span><small>{item.project_name}</small><small>{item.address||locationLabel(item.location)}</small></span></button>)}
-   {!loading&&!error&&!visible.length&&<p>没有匹配的场景</p>}</div><footer>{located} 个场景已定位 · {visible.length-located} 个位置待补充</footer></aside>}
+   {!loading&&!error&&!visible.length&&<p>没有匹配的场景</p>}</div><footer><InfoIcon size={14} aria-hidden="true"/>{located} 个场景已定位 · {visible.length-located} 个位置待补充</footer></aside>}
   {status&&<div className="scene-map-status" role="status"><p>{status}</p>{!status.startsWith('正在')&&<Button size="xl" variant="secondary" onClick={()=>setRevision(v=>v+1)}>重新加载</Button>}</div>}
   {!!group.length&&<section className="scene-map-detail" aria-label="同址场景"><header><h2>同址场景 · {group.length}</h2><Button size="icon-xl" variant="ghost" aria-label="关闭同址场景" onClick={()=>setGroup([])}><X size={16}/></Button></header>{visible.filter(s=>group.includes(s.id)).map(s=><Button key={s.id} size="xl" variant="secondary" onClick={()=>choose(s.id)}>{s.name}</Button>)}</section>}
   <SceneDetail mapOverlay scene={scene} onClose={()=>setSelected('')}/>

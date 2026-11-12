@@ -38,3 +38,9 @@
 .account-phone-prefix:not(:empty){margin-right:8px;color:var(--muted-foreground)}
 @media(max-width:760px){.header-context{gap:8px;margin-left:8px}.header-context-organization,.header-context-scene{max-width:120px}}
 @media(max-width:580px){.header-context{display:none}}
+
+.header-context-organization{font-size:var(--body-font-size);line-height:var(--body-line-height);color:var(--foreground)}
+.header-context-organization>svg{width:16px;height:16px}
+.platform-header a[aria-label="配置与管理"]{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:var(--radius-sm);color:var(--muted-foreground)}
+.platform-header a[aria-label="配置与管理"]:hover{background:var(--secondary);color:var(--foreground)}
+.platform-header a[aria-label="配置与管理"]:focus-visible{outline:2px solid var(--ring);outline-offset:2px}
