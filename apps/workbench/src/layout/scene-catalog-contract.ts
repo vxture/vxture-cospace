@@ -18,14 +18,14 @@ export const sceneHref=(route:string,id:string)=>`/${route}?${new URLSearchParam
 export const sceneDestinations=(scene:SceneSpace)=>[
  {key:'data',label:'数据管理',capability:'data.manage'},
  {key:'build',label:'构建中心',capability:'build.run'},
+ {key:'association',label:'空间关联',capability:'association.edit'},
  {key:'delivery',label:'服务发布',capability:'space.preview'},
- {key:'settings',label:'基本信息',capability:'space.preview'},
-].map(item=>({...item,href:item.key==='settings'?sceneHref('build',scene.id)+'&tab=info':sceneHref(item.key,scene.id),enabled:!!scene.capabilities?.includes(item.capability)}));
+].map(item=>({...item,href:sceneHref(item.key,scene.id),enabled:!!scene.capabilities?.includes(item.capability)}));
 export function scenePhase(scene:SceneSpace):ScenePhase{
- const latest=scene.publications?.[0];
+ const latest=scene.publications?.find(p=>p.id===scene.publication_id)||scene.publications?.[0];
  if(latest?.lifecycle_state==='retired')return 'archived';
  if(scene.state==='distribution_paused'||latest?.lifecycle_state==='paused')return 'paused';
- if(scene.state==='preview_published'&&scene.publication_id)return 'published';
+ if(scene.state==='preview_published'&&scene.publication_id&&(!scene.publications||currentRelease(scene)))return 'published';
  if(scene.state==='no_publication')return 'building';
  return 'unavailable';
 }
@@ -44,3 +44,4 @@ export function sceneEntryHref(scene:SceneSpace){
  const release=currentRelease(scene);
  return release?`/space?screen=space&preview=1&space=${encodeURIComponent(scene.id)}&publication=${encodeURIComponent(release.id)}`:sceneWorkspaceHref(scene.id);
 }
+export const sceneEntryLabel=(scene:SceneSpace)=>currentRelease(scene)?'空间预览':'场景概览';

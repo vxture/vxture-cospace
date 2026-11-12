@@ -23,10 +23,10 @@ function ScopedSceneSelection({scope,children}:{scope:string;children:React.Reac
  const explicit=legacy?'':new URLSearchParams(location.search).get('space');
  const scene=preferredScene(explicit,remembered);
  useLayoutEffect(()=>{
-  if(explicit===null)return;
+  if(explicit===null||location.pathname==='/services')return;
   setRemembered(explicit);
   try{if(explicit)localStorage.setItem(key,explicit);else localStorage.removeItem(key);}catch{/* The in-memory selection still works when storage is blocked. */}
- },[explicit,key]);
+ },[explicit,key,location.pathname]);
  useLayoutEffect(()=>{
   if(legacy){void navigate(legacy,{replace:true});return;}
   const href=location.pathname+location.search,next=sceneContextHref(href,scene);

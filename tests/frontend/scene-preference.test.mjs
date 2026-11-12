@@ -12,7 +12,8 @@ test('scene preference is isolated between account, organization and workspace',
  assert.equal(new Set(keys).size,4);
 });
 test('global context retains module queries and explicit scene, while catalog remains open',()=>{
- assert.equal(sceneContextHref('/services?section=offline','A&B'),'/services?section=offline&space=A%26B');
+ assert.equal(sceneContextHref('/services?section=offline','A&B'),'/services?section=offline');
+ assert.equal(sceneContextHref('/services?section=online&space=linked','saved'),'/services?section=online&space=linked');
  assert.equal(sceneContextHref('/build?tab=tasks','saved'),'/build?tab=tasks&space=saved');
  assert.equal(sceneContextHref('/build?space=linked','saved'),'/build?space=linked');
  assert.equal(sceneContextHref('/space','saved'),'/space');

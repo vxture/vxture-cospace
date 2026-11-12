@@ -1,6 +1,42 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {spatialServices,filterSpatialServices,serviceResourcePath} from '../../apps/workbench/src/layout/spatial-service-contract.ts';
+import {serviceListHref,servicePageHref,entryServiceTab} from '../../apps/workbench/src/layout/service-workspace-contract.ts';
+
+test('navigation opens global service lists, without scene or record context',()=>{
+ for(const section of ['directory','offline','online','feedback','recipients']){
+  assert.equal(serviceListHref(section),`/services?section=${section}`);
+  const list=new URL(serviceListHref(section,{query:'园区 A&B',state:'unavailable'}),'http://local');
+  assert.deepEqual([...list.searchParams.keys()],['section','q','status']);
+  assert.equal(list.searchParams.get('q'),'园区 A&B');
+  assert.equal(list.searchParams.has('space'),false);
+ }
+});
+
+test('each global list enters the corresponding dimension of a scene service page',()=>{
+ assert.equal(entryServiceTab('directory'),'overview');
+ for(const section of ['online','offline','feedback','recipients'])assert.equal(entryServiceTab(section),section);
+ const url=new URL(servicePageHref('offline','A&B / 空间','fixed&1'),'http://local');
+ assert.equal(url.searchParams.get('space'),'A&B / 空间');
+ assert.equal(url.searchParams.get('publication'),'fixed&1');
+ assert.equal(url.searchParams.get('tab'),'offline');
+});
+
+test('scene tab navigation keeps the pinned publication and list return context',()=>{
+ for(const tab of ['overview','online','offline','feedback','recipients']){
+  const url=new URL(servicePageHref('directory','scene-a','fixed-a',tab,{query:'园区',state:'available'}),'http://local');
+  assert.equal(url.searchParams.get('section'),'directory');
+  assert.equal(url.searchParams.get('space'),'scene-a');
+  assert.equal(url.searchParams.get('publication'),'fixed-a');
+  assert.equal(url.searchParams.get('tab'),tab);
+  assert.equal(url.searchParams.get('q'),'园区');
+  assert.equal(url.searchParams.get('status'),'available');
+  assert.equal(url.searchParams.has('job'),false);
+ }
+ const list=new URL(serviceListHref('directory',{query:'园区',state:'available'}),'http://local');
+ assert.equal(list.searchParams.has('publication'),false);
+ assert.equal(list.searchParams.has('space'),false);
+});
 
 const release=(id,state='active',date='2026-11-10T00:00:00Z')=>({id,created_at:date,lifecycle_state:state});
 const scene=(capabilities,publications)=>({id:'space-a',name:'园区',project_name:'北方项目',capabilities,publications});

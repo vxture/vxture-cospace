@@ -43,7 +43,7 @@ jobs:
       - name: Scene display planner, tile integrity and bounded cache tests
         run: node --experimental-strip-types --test tests/frontend/scene-cloud-data.test.mjs
       - name: Module navigation context and explicit business handoff tests
-        run: node --experimental-strip-types --test tests/frontend/management-navigation.test.mjs tests/frontend/navigation-contract.test.mjs tests/frontend/association-context.test.mjs tests/frontend/association-examples.test.mjs tests/frontend/continuity-contract.test.mjs tests/frontend/scene-catalog.test.mjs tests/frontend/spatial-services.test.mjs tests/frontend/service-diagnostics.test.mjs tests/frontend/account-profile.test.mjs tests/frontend/amap-sdk.test.mjs
+        run: node --experimental-strip-types --test tests/frontend/management-navigation.test.mjs tests/frontend/navigation-contract.test.mjs tests/frontend/association-context.test.mjs tests/frontend/association-examples.test.mjs tests/frontend/continuity-contract.test.mjs tests/frontend/scene-catalog.test.mjs tests/frontend/scene-preference.test.mjs tests/frontend/spatial-services.test.mjs tests/frontend/service-diagnostics.test.mjs tests/frontend/account-profile.test.mjs tests/frontend/amap-sdk.test.mjs
       - name: Fixed ontology version comparison tests
         run: node --experimental-strip-types --test tests/frontend/ontology-diff.test.mjs
       - name: Globe SDK version isolation and embed message boundary

@@ -40,9 +40,9 @@ async function loadModelScene(space:string,identity:string,kind:'candidate'|'pub
  const parsed=new PLYLoader().parse(ply),position=parsed.getAttribute('position'),color=parsed.getAttribute('color');
  const positions=new Float32Array(position.count*3),colors=new Float32Array(position.count*3);
  try{
-  if(position.count!==model.construction.model_points||!color||color.count!==position.count)throw Error('人视图点数与固定模型不一致。');
+  if(position.count!==model.construction.model_points||!color||color.count!==position.count)throw Error('视觉表达点数与固定模型不一致。');
   for(let i=0;i<position.count;i++){positions.set([position.getX(i),position.getY(i),position.getZ(i)],i*3);colors.set([color.getX(i),color.getY(i),color.getZ(i)],i*3);}
-  if(!positions.every(Number.isFinite)||!colors.every(v=>Number.isFinite(v)&&v>=0&&v<=1))throw Error('人视图坐标或颜色无效。');
+  if(!positions.every(Number.isFinite)||!colors.every(v=>Number.isFinite(v)&&v>=0&&v<=1))throw Error('视觉表达坐标或颜色无效。');
  }finally{parsed.dispose();}
  let objects:ModelObject[]=[],relations:ObjectRelation[]=[];
  if(model.semantic_annotation){

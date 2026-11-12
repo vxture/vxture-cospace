@@ -1,60 +1,71 @@
-/* DS owns typography, controls, menus, badges and drawer surfaces. Custom CSS
-   composes the service-specific overview and responsive header/body/footer. */
-.spatial-service-card{min-width:0;display:flex;flex-direction:column;overflow:hidden;border:1px solid var(--border);border-radius:var(--radius-xl);background:var(--card);color:var(--card-foreground);box-shadow:var(--shadow-overlay);container-type:inline-size}
-.spatial-service-heading{display:flex;align-items:center;gap:8px;padding:12px 14px;min-width:0}
-.spatial-service-symbol{display:inline-flex;align-items:center;justify-content:center;flex:none;width:32px;height:32px;border-radius:var(--radius-md);background:var(--primary-muted);color:var(--primary-muted-foreground)}
-.spatial-service-title{flex:1;min-width:0}
-.spatial-service-title h2{font-size:var(--label-font-size);font-weight:600;line-height:var(--body-line-height);margin:0}
-.spatial-service-title h2 button{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left;font:inherit;color:inherit}
-.spatial-service-title p{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted-foreground);font-size:var(--body-small-font-size);line-height:var(--body-small-line-height);margin:0}
-.spatial-service-heading>[data-slot]{flex:none;font-size:var(--label-micro-font-size)}
-.spatial-service-cover{display:block;width:100%;aspect-ratio:16/9;overflow:hidden;padding:0;border:0;border-block:1px solid var(--border);background:transparent;cursor:pointer}
-.spatial-service-cover .scene-cover{width:100%;height:100%}
-.spatial-service-body{padding:12px 14px;flex:1;min-width:0}
-.spatial-service-description{font-size:var(--body-small-font-size);line-height:var(--body-small-line-height);color:var(--muted-foreground);display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;min-height:calc(var(--body-small-line-height) * 2);margin:0;overflow-wrap:anywhere}
-.spatial-service-footer{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:0 14px 12px;min-width:0}
-.spatial-service-version{flex:0 1 auto;height:32px;min-height:32px;gap:8px;padding-inline:10px;font-size:var(--label-small-font-size);white-space:nowrap;min-width:0}
-.spatial-service-actions{display:flex;align-items:center;gap:6px;flex:none}
-.spatial-service-actions [data-slot=button]{height:32px;min-height:32px;gap:6px;padding-inline:10px;font-size:var(--body-small-font-size)}
-.spatial-service-actions>button:first-child{width:32px;padding:0}
-.spatial-service-card button:focus-visible{outline:2px solid var(--ring);outline-offset:-2px}
-.spatial-service-list .spatial-service-card{display:grid;grid-template-columns:144px minmax(0,1fr);column-gap:20px;padding:14px}
-.spatial-service-list .spatial-service-cover{grid-column:1;grid-row:1/4;border:1px solid var(--border);border-radius:var(--radius-md)}
-.spatial-service-list .spatial-service-heading,.spatial-service-list .spatial-service-body,.spatial-service-list .spatial-service-footer{grid-column:2;padding:0}
-.spatial-service-list .spatial-service-body{padding-block:10px}
-@media(max-width:700px){.spatial-service-list .spatial-service-card{grid-template-columns:80px minmax(0,1fr);column-gap:12px}.spatial-service-list .spatial-service-cover{grid-row:1/3}.spatial-service-list .spatial-service-footer{grid-column:1/-1;padding-top:12px}}
-.spatial-service-metadata{display:grid;grid-template-columns:72px minmax(0,1fr);gap:12px;font-size:var(--body-small-font-size);line-height:var(--body-small-line-height)}
-.spatial-service-metadata dt{color:var(--muted-foreground)}
-.spatial-service-metadata dd{margin:0;overflow-wrap:anywhere}
+/* DS supplies controls, tabs, badges and surfaces. Product CSS arranges the
+   service ledger and the single-scene workspace, without scene cover cards. */
+.spatial-services{display:flex;overflow:hidden;background:var(--card)}
+.spatial-service-content{flex:1;min-width:0;overflow:auto;container-type:inline-size}
+.service-workspace-shell{width:100%;max-width:1536px;margin-inline:auto;padding:20px 48px 48px}
+.service-list-toolbar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;margin-block:24px}
+.service-list-count{font-size:var(--body-small-font-size);color:var(--muted-foreground)}
+.service-list-filters{display:flex;align-items:center;gap:12px;min-width:0;flex:0 1 510px}
+.service-list-filters .service-list-state-select{width:160px;flex:0 0 160px}
+.service-list-search{position:relative;min-width:120px;flex:1}
+.service-list-search>svg{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--muted-foreground);pointer-events:none}
+.service-list-search input{padding-left:36px;width:100%}
+.service-directory-list{border-top:1px solid var(--border)}
+.service-list-columns,.service-list-row{display:grid;grid-template-columns:minmax(150px,1.25fr) minmax(120px,1fr) 116px 76px 88px;gap:16px;align-items:center}
+.service-list-columns{padding:12px 16px;background:var(--muted);color:var(--muted-foreground);font-size:var(--label-small-font-size)}
+.service-list-row{padding:22px 16px;border-bottom:1px solid var(--border);font-size:var(--body-small-font-size)}
+.service-list-row:hover{background:color-mix(in srgb,var(--muted) 45%,transparent)}
+.service-list-row>div{min-width:0}
+.service-list-identity>a{font-weight:600;color:var(--foreground);overflow-wrap:anywhere}
+.service-list-identity>a:hover{text-decoration:underline;color:var(--primary)}
+.service-list-identity p{margin:6px 0 0;color:var(--muted-foreground);overflow-wrap:anywhere}
+.service-list-capabilities{display:flex;flex-wrap:wrap;gap:6px 12px;color:var(--muted-foreground)}
+.service-list-version{display:flex;flex-direction:column;gap:6px;overflow-wrap:anywhere}
+.service-list-version small{color:var(--muted-foreground);font-size:var(--label-small-font-size)}
+.service-list-row>[data-slot=button]{justify-self:end;white-space:nowrap}
+.service-list-empty{padding:64px 20px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:16px;font-size:var(--body-small-font-size);color:var(--muted-foreground)}
+.service-list-empty h2{font-size:var(--heading-3-font-size);font-weight:600;color:var(--foreground)}
+/* Match the shell top gutter so the heading stays at its initial position. */
+.scene-service-top{position:sticky;top:20px;z-index:10;background:var(--card);box-shadow:0 -20px 0 var(--card)}
+.scene-service-heading-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.scene-service-heading-actions .scene-service-version-select{width:220px;max-width:100%;flex:0 1 220px}
+.scene-service-heading-actions select{height:32px;font-size:var(--body-small-font-size)}
+.scene-service-tab-scroll{max-width:100%;overflow-x:auto;border-bottom:1px solid var(--border)}
+.scene-service-tab-scroll [role=tablist]{display:flex;width:max-content;max-width:none;height:44px;gap:24px;padding:0;background:transparent;border-radius:0;justify-content:flex-start}
+.scene-service-tab-scroll [role=tab]{flex:none;height:44px;padding:0 4px;border:0;border-bottom:2px solid transparent;border-radius:0;background:transparent;box-shadow:none;color:var(--muted-foreground)}
+.scene-service-tab-scroll [role=tab][data-state=active]{border-bottom-color:var(--primary);color:var(--primary);background:transparent;box-shadow:none}
+.scene-service-page [role=tabpanel]{padding-block:24px 8px;min-width:0}
+.scene-service-overview{display:flex;flex-direction:column;gap:24px}
+.service-page-section,.service-access{padding:24px;border:1px solid var(--border);border-radius:var(--radius-lg);min-width:0}
+.service-page-section h2,.service-access h2,.service-unavailable h2{font-size:var(--heading-3-font-size);font-weight:600;margin:0;color:var(--foreground)}
+.service-section-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.service-capability-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px;margin-top:20px}
+.service-capability-summary>div{display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:var(--body-small-font-size)}
+.service-summary-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px;margin-top:20px}
+.service-summary-metrics dt{font-size:var(--body-small-font-size);color:var(--muted-foreground)}
+.service-summary-metrics dd{font-size:var(--body-font-size);font-weight:600;margin:8px 0 0;color:var(--foreground)}
+.service-attention{font-size:var(--body-small-font-size);margin-top:16px;display:flex;align-items:center;gap:8px}
+.service-attention:before{content:'';width:5px;height:5px;border-radius:50%;background:var(--muted-foreground);flex:none}
+.spatial-service-section-note{font-size:var(--body-small-font-size);line-height:var(--body-small-line-height);color:var(--muted-foreground);margin-block:12px}
+.service-tab-body{display:flex;flex-direction:column;gap:24px}
 .spatial-service-address,.spatial-service-example{min-width:0;overflow-wrap:anywhere;white-space:pre-wrap;font-size:var(--label-small-font-size);line-height:var(--body-small-line-height);padding:12px;border-radius:var(--radius-md);background:var(--muted);color:var(--foreground)}
 .spatial-service-address{flex:1}
 .spatial-service-example{max-height:320px;overflow:auto}
-
-/* Published DS owns sidebar widths, navigation, states and controls.
-   Product layout only places the sidebar and its independently scrolling content. */
-.spatial-services{display:flex;overflow:hidden}
-.spatial-service-content{flex:1;min-width:0;overflow:auto;container-type:inline-size}
-/* Match My Scenes: 1536px shell, including 48px gutters around 1440px content. */
-.spatial-service-content .scene-catalog-shell{width:100%;max-width:1536px;margin-inline:auto;padding:20px 48px 48px}
-.spatial-services .spatial-service-grid{grid-template-columns:1fr}
-@container(min-width:560px){.spatial-services .spatial-service-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@container(min-width:1000px){.spatial-services .spatial-service-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
-.spatial-services .spatial-service-list{grid-template-columns:1fr}
-
-.spatial-service-section-note{font-size:var(--body-small-font-size);line-height:var(--body-small-line-height);color:var(--muted-foreground);margin-block:12px}
-.spatial-service-capabilities{display:flex;flex-wrap:wrap;gap:6px;margin-block:10px}
-.spatial-service-capabilities>[data-slot]{font-size:var(--label-micro-font-size)}
-.spatial-service-unavailable{display:flex;flex-direction:column;align-items:center;text-align:center;gap:16px;padding:64px 24px;border:1px solid var(--border);border-radius:var(--radius-xl);background:var(--card);color:var(--muted-foreground)}
-.spatial-service-unavailable h2{font-size:var(--heading-3-font-size);color:var(--foreground);font-weight:600}
-.spatial-service-unavailable p{max-width:520px;font-size:var(--body-small-font-size);line-height:var(--body-small-line-height)}
-/* Composition only: metrics use DS typography and surface tokens. */
+.service-inline-details{padding-top:16px;margin-top:16px;border-top:1px solid var(--border);font-size:var(--body-small-font-size)}
+.service-inline-details>summary{cursor:pointer;font-weight:500;color:var(--foreground)}
+.service-inline-details[open]>summary{margin-bottom:20px}
+.service-unavailable{display:flex;flex-direction:column;align-items:flex-start;gap:16px;margin-top:24px;padding:32px;border:1px solid var(--border);border-radius:var(--radius-lg);font-size:var(--body-small-font-size);color:var(--muted-foreground)}
 .service-monitor-metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px;margin:0}
 .service-monitor-metrics dt{font-size:var(--body-small-font-size);color:var(--muted-foreground)}
 .service-monitor-metrics dd{margin:4px 0 0;font-size:var(--heading-3-font-size);font-weight:600;color:var(--foreground)}
 .service-monitor-metrics dd.text-body-small{font-size:var(--body-small-font-size);font-weight:400}
+@container(max-width:1099px){.service-workspace-shell{padding:20px 32px 32px}}
+@container(max-width:700px){.service-workspace-shell{padding:20px 16px 32px}.service-capability-summary{gap:16px;grid-template-columns:1fr}.service-capability-summary>div{justify-content:flex-start;gap:20px}.service-list-columns,.service-list-row{gap:12px;grid-template-columns:minmax(125px,1fr) minmax(90px,.8fr) 105px 66px 80px}}
+@container(max-width:580px){.service-list-toolbar{align-items:flex-start}.service-list-filters{width:100%;flex-wrap:wrap;flex-basis:100%}.service-list-columns{display:none}.service-list-row{grid-template-columns:minmax(0,1fr) auto;gap:14px;padding:20px 8px}.service-list-identity{grid-column:1;grid-row:1}.service-list-row>div:nth-child(4){grid-column:2;grid-row:1;justify-self:end}.service-list-capabilities{grid-column:1/-1;grid-row:2}.service-list-version{grid-column:1;grid-row:3;flex-direction:row;flex-wrap:wrap;gap:8px}.service-list-row>[data-slot=button]{grid-column:2;grid-row:3}.service-summary-metrics{grid-template-columns:1fr;gap:16px}.service-page-section,.service-access{padding:20px}.service-publication-date{flex-basis:100%}.scene-service-version-bar{gap:8px}.scene-service-version-bar .scene-service-version-select{flex:1;min-width:160px}.scene-service-top .workspace-page-heading{flex-wrap:wrap}.scene-service-top .workspace-page-actions{margin-left:auto}}
 
-/* Hybrid service workspace: keep catalogue cards and monitoring layouts. */
-.spatial-services{background:var(--card)}.spatial-services .scene-total{font-size:12px;border:1px solid color-mix(in srgb,var(--primary) 20%,var(--border));background:var(--accent);color:var(--primary)}
-.spatial-services .scene-catalog-toolbar{margin-block:16px 24px}.spatial-services .scene-catalog-toolbar button:not([role=radio]){font-size:14px}.spatial-services .spatial-service-card{box-shadow:none;border-radius:var(--radius-lg)}
-@container(max-width:1099px){.spatial-service-content .scene-catalog-shell{padding:20px 32px 32px}}
-@container(max-width:700px){.spatial-service-content .scene-catalog-shell{padding:20px 16px 32px}}
+
+@container(max-width:580px){.scene-service-heading-actions{width:100%;gap:8px}.scene-service-heading-actions .scene-service-version-select{width:auto;min-width:120px;flex:1}.scene-service-tab-scroll [role=tablist]{gap:20px}}
+
+.scene-service-top .workspace-page-heading{border-bottom:0;margin-bottom:8px}
+
+@media(max-width:639px){.service-mobile-navigation{position:sticky;top:20px;z-index:11;height:32px;min-height:32px;margin-bottom:8px;background:var(--card)}.scene-service-top{top:60px;box-shadow:0 -60px 0 var(--card)}}

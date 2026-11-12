@@ -6,11 +6,11 @@ import {recordLink} from './record-navigation';
 import type {SceneSpace} from './scene-directory';
 import {ServiceAssurancePanel,type Assurance,type Outcome,type Caller} from './service-assurance-panel';
 
-type Report={assurance:Assurance;outcomes:Outcome[];callers:Caller[];space_id:string;generated_at:string;window:{from:string;to:string};configuration:{state:'configured'|'not_configured'|'not_granted'|'unavailable';callers:string[]};coverage:{started_at:string;partial:boolean;write_failed_at:string|null;retention_days:number;max_events:number};request_count:number;counts:{historical_result:number;refused:number;rejected:number;failed:number};last_request_at:string|null;p95_ms:number|null;versions:{publication_id:string;requests:number}[];recent:{at:string;caller:string;publication:string;outcome:string;http_status:number;duration_ms:number}[]};
+export type Report={assurance:Assurance;outcomes:Outcome[];callers:Caller[];space_id:string;generated_at:string;window:{from:string;to:string};configuration:{state:'configured'|'not_configured'|'not_granted'|'unavailable';callers:string[]};coverage:{started_at:string;partial:boolean;write_failed_at:string|null;retention_days:number;max_events:number};request_count:number;counts:{historical_result:number;refused:number;rejected:number;failed:number};last_request_at:string|null;p95_ms:number|null;versions:{publication_id:string;requests:number}[];recent:{at:string;caller:string;publication:string;outcome:string;http_status:number;duration_ms:number}[]};
 const configLabels={configured:'服务接入已配置',not_configured:'服务接入未配置',not_granted:'当前空间未授权接入',unavailable:'接入配置异常'};
 const time=(value:string|null)=>value?new Date(value).toLocaleString('zh-CN',{hour12:false}):'暂无记录';
 const reasons:Record<string,string>={historical_result:'返回历史结果',observation_time_unverified:'观测时效未核验',publication_distribution_paused:'版本已暂停',publication_retired:'版本已退役',consumer_version_mismatch:'版本摘要不匹配',consumer_frame_mismatch:'坐标系不匹配',consumer_space_denied:'空间授权拒绝',consumer_publication_not_found:'版本不存在',consumer_request_or_publication_invalid:'请求或成果无效',subscription_required:'订阅授权拒绝',consumer_dependency_unavailable:'依赖暂不可用'};
-export function OnlineServiceMonitor({scene,space,revision}:{scene?:SceneSpace;space:string;revision:number}){
+export function useServiceReport(scene:SceneSpace|undefined,space:string,revision:number){
  const allowed=!!scene?.capabilities?.includes('publication.manage');
  const [refresh,setRefresh]=useState(0),[saved,setSaved]=useState<{space:string;report?:Report;error?:string}|null>(null);
  useEffect(()=>{if(!space||!allowed)return;const timer=window.setInterval(()=>{if(document.visibilityState==='visible')setRefresh(value=>value+1);},30000);return()=>window.clearInterval(timer);},[space,allowed]);
@@ -20,17 +20,21 @@ export function OnlineServiceMonitor({scene,space,revision}:{scene?:SceneSpace;s
   fetch(`${businessEndpoint}/api/service-monitor?${new URLSearchParams({space_id:space})}`,{cache:'no-store',signal:controller.signal}).then(async response=>{
    if(!response.ok)throw Error(response.status===403?'监测权限已变化，请刷新空间目录。':'服务监测暂不可用，请重试。');
    const report:Report=await response.json();
-   if(report.space_id!==space)throw Error('监测记录与当前空间不一致。');
+   if(report.space_id!==space||!Number.isSafeInteger(report.request_count)||report.request_count<0||!report.configuration||!report.counts||!['historical_result','refused','rejected','failed'].every(key=>Number.isSafeInteger(report.counts[key as keyof Report['counts']])&&report.counts[key as keyof Report['counts']]>=0)||!report.coverage||typeof report.coverage.partial!=='boolean'||!report.window||!Array.isArray(report.configuration.callers)||!Array.isArray(report.assurance?.checks)||!Array.isArray(report.assurance?.releases?.versions)||!Array.isArray(report.outcomes)||!Array.isArray(report.callers)||!Array.isArray(report.versions)||!Array.isArray(report.recent))throw Error('监测记录格式或场景绑定无效，请刷新重试。');
    if(!controller.signal.aborted)setSaved({space,report});
   }).catch(error=>{if(!controller.signal.aborted)setSaved({space,error:error.message});});
   return()=>controller.abort();
  },[space,allowed,revision,refresh]);
- if(!space)return <Card><CardContent className="pt-xl text-body-small text-muted-foreground">请通过顶部空间选择器选择空间，查看其在线服务与运行记录。</CardContent></Card>;
- if(!scene)return <Card><CardContent className="pt-xl text-body-small text-muted-foreground">正在核对当前空间授权，请稍候；若持续未显示，请刷新空间目录。</CardContent></Card>;
- if(!allowed)return <Card><CardContent className="pt-xl text-body-small text-muted-foreground">当前账号可使用下方已授权服务。调用监测与接入身份信息仅向空间发布管理员开放。</CardContent></Card>;
  const report=saved?.space===space?saved.report:undefined,error=saved?.space===space?saved.error:undefined;
+ return {allowed,report,error,refresh:()=>setRefresh(value=>value+1)};
+}
+export function OnlineServiceMonitor({scene,space,revision}:{scene?:SceneSpace;space:string;revision:number}){
+ const {allowed,report,error,refresh}=useServiceReport(scene,space,revision);
+ if(!space)return <Card><CardContent className="pt-xl text-body-small text-muted-foreground">请从服务清单进入具体场景服务。</CardContent></Card>;
+ if(!scene)return <Card><CardContent className="pt-xl text-body-small text-muted-foreground">正在核对当前空间授权，请稍候；若持续未显示，请刷新空间目录。</CardContent></Card>;
+ if(!allowed)return <Card><CardContent className="pt-xl text-body-small text-muted-foreground">当前账号可使用已授权服务。调用监测与接入身份信息仅向空间发布管理员开放。</CardContent></Card>;
  return <div className="flex flex-col gap-lg mb-xl" aria-label="在线服务监测">
-  <Card><CardHeader><div className="flex flex-wrap items-center justify-between gap-md"><CardTitle className="text-heading-3">运行概览 · {scene.name}</CardTitle><div className="flex gap-sm"><Button asChild variant="secondary" size="xl"><a href={recordLink('delivery',{space})}>发布管理</a></Button><Button variant="outline" size="icon-xl" aria-label="刷新在线监测" onClick={()=>setRefresh(value=>value+1)}><ArrowsClockwise size={16}/></Button></div></div></CardHeader><CardContent className="flex flex-col gap-lg">
+  <Card><CardHeader><div className="flex flex-wrap items-center justify-between gap-md"><CardTitle className="text-heading-3">场景运行概况 · 全部版本</CardTitle><div className="flex gap-sm"><Button asChild variant="secondary" size="xl"><a href={recordLink('delivery',{space})}>发布管理</a></Button><Button variant="outline" size="icon-xl" aria-label="刷新在线监测" onClick={refresh}><ArrowsClockwise size={16}/></Button></div></div></CardHeader><CardContent className="flex flex-col gap-lg">
    {error?<p role="alert" className="text-body-small">{error}</p>:!report?<p role="status" className="text-body-small text-muted-foreground">正在读取运行记录…</p>:<>
     <div className="flex flex-wrap items-center gap-sm"><StatusBadge tone={report.configuration.state==='configured'?'info':report.configuration.state==='unavailable'?'danger':'neutral'}>{configLabels[report.configuration.state]}</StatusBadge><span className="text-body-small text-muted-foreground">更新于 {time(report.generated_at)} · 前台每 30 秒刷新</span></div>
     <p className="text-body-small text-muted-foreground">{report.configuration.state==='configured'?'已配置服务票据与空间调用授权；实际消费仍需校验固定版本、发布状态与观测时效。':'当前无法提供此空间的正式服务接入。请由部署管理员核对平台服务身份与空间授权配置。'}</p>
@@ -39,11 +43,11 @@ export function OnlineServiceMonitor({scene,space,revision}:{scene?:SceneSpace;s
     <div><h3 className="text-body font-medium mb-sm">已授权调用身份</h3><div className="flex flex-wrap gap-sm">{report.configuration.callers.length?report.configuration.callers.map(caller=><StatusBadge key={caller} tone="neutral">{caller}</StatusBadge>):<p className="text-body-small text-muted-foreground">暂无已配置的空间调用身份</p>}</div><p className="text-label-small text-muted-foreground mt-sm">一个调用身份可代理多个具身智能体，不表示设备数量或在线状态。</p></div>
    </>}
   </CardContent></Card>
-  {report&&<ServiceAssurancePanel space={space} assurance={report.assurance} outcomes={report.outcomes} callers={report.callers}/>}
-  {report&&<Card><CardHeader><CardTitle className="text-heading-3">调用与版本</CardTitle></CardHeader><CardContent className="flex flex-col gap-lg">
+  {report&&<details className="service-inline-details"><summary>服务保障与异常诊断</summary><ServiceAssurancePanel space={space} assurance={report.assurance} outcomes={report.outcomes} callers={report.callers}/></details>}
+  {report&&<details className="service-inline-details"><summary>调用记录与版本分布</summary><Card><CardHeader><CardTitle className="text-heading-3">调用与版本</CardTitle></CardHeader><CardContent className="flex flex-col gap-lg">
    <div className="flex flex-wrap gap-sm" aria-label="调用最多的前十个版本">{report.versions.map(version=><StatusBadge key={version.publication_id} tone="neutral">Ver: {version.publication_id.slice(-8)} · {version.requests} 次</StatusBadge>)}</div>
    {report.recent.length?<div className="overflow-x-auto"><Table><TableHeader><TableRow><TableHead>请求时间</TableHead><TableHead>调用身份</TableHead><TableHead>版本</TableHead><TableHead>结果</TableHead><TableHead>耗时</TableHead></TableRow></TableHeader><TableBody>{report.recent.map((row,index)=><TableRow key={index}><TableCell>{time(row.at)}</TableCell><TableCell>{row.caller}</TableCell><TableCell title={row.publication}>Ver: {row.publication.slice(-8)}</TableCell><TableCell>{reasons[row.outcome]||'服务异常'} · {row.http_status}</TableCell><TableCell>{row.duration_ms} ms</TableCell></TableRow>)}</TableBody></Table></div>:<p className="text-body-small text-muted-foreground">当前窗口暂无调用记录。未记录到请求不代表设备离线。</p>}
-   <p className="text-label-small text-muted-foreground">显示最近 20 条；最多保留 {report.coverage.retention_days} 天，系统总量上限 {report.coverage.max_events.toLocaleString()} 条。不记录票据、查询坐标或返回内容。下方选择固定版本查看接入说明与查询能力。</p>
-  </CardContent></Card>}
+   <p className="text-label-small text-muted-foreground">显示最近 20 条；最多保留 {report.coverage.retention_days} 天，系统总量上限 {report.coverage.max_events.toLocaleString()} 条。不记录票据、查询坐标或返回内容。接入操作绑定页头所选版本，以上运行记录覆盖场景全部版本。</p>
+  </CardContent></Card></details>}
  </div>;
 }

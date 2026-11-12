@@ -4,6 +4,6 @@ export function preferredScene(explicit:string|null,remembered:string){return ex
 export function sceneContextHref(url:string,scene:string){
  const [path,search='']=url.split('?'),params=new URLSearchParams(search);
  // Catalog entry stays a catalog even when the header remembers a scene.
- if(!scene||path==='/'||path==='/space'||params.has('space'))return url;
+ if(!scene||path==='/'||path==='/space'||path==='/services'||params.has('space'))return url;
  params.set('space',scene);return `${path}?${params}`;
 }

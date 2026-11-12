@@ -7,8 +7,17 @@ import {useRecordNavigation} from './record-navigation';
 import {useSceneDirectory} from './use-scene-directory';
 import {appLocation,appNavigate} from './app-router';
 import {headerSceneLinkFromUrl} from './navigation-contract';
+import {useLocation} from 'react-router-dom';
 
 export function HeaderContext(){
+ const {pathname}=useLocation(),session=usePlatformSession();
+ if(pathname==='/'||pathname==='/space'||pathname==='/services'){
+  const user=session?.user,organization=user?.org_name||(user?.org_type==='personal'?'个人空间':'组织信息待补全');
+  return <div className="header-context" aria-label="组织"><span className="header-context-organization" title={organization}><Buildings size={14}/><span>{organization}</span></span></div>;
+ }
+ return <SceneHeaderContext/>;
+}
+function SceneHeaderContext(){
  const {selectScene,mapActive}=useSceneControls();
  const [open,setOpen]=useState(false),[query,setQuery]=useState(''),[revision,setRevision]=useState(0);
  const session=usePlatformSession(),navigation=useRecordNavigation(),{spaces,loading,error}=useSceneDirectory(revision);

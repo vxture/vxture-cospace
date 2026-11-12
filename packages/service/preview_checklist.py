@@ -24,7 +24,7 @@ def checklist(publications, identity, update_evidence=None):
     add('candidate', '空间模型', 'passed', f"发布快照模型 {manifest['id']}，成员摘要核对通过。", 'live_integrity')
     has_human = bool(manifest.get('human_view', {}).get('path') in manifest['members'])
     add('views', '双视图派生', 'passed' if has_human else 'missing',
-        '人视图、智能体视图成员摘要通过。' if has_human else '当前清单缺少人视图成员绑定。', 'live_integrity')
+        '视觉表达、计算表达成员摘要通过。' if has_human else '当前清单缺少视觉表达成员绑定。', 'live_integrity')
     add('publication', '固定发布', 'passed', f"{identity} · 选择修订 {record['selection_revision']}，独立快照核对通过。", 'live_integrity')
     if manifest.get('semantic_annotation'):
         objects=model.objects()
