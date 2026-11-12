@@ -1,4 +1,4 @@
-import type {SceneSpace} from './scene-directory';
+import type {ScenePublication,SceneSpace} from './scene-directory';
 
 export const scenePhases={
  published:{label:'已发布',tone:'brand'},
@@ -19,8 +19,8 @@ export const sceneDestinations=(scene:SceneSpace)=>[
  {key:'data',label:'数据管理',capability:'data.manage'},
  {key:'build',label:'构建中心',capability:'build.run'},
  {key:'delivery',label:'服务发布',capability:'space.preview'},
- {key:'settings',label:'场景配置',capability:'space.manage'},
-].map(item=>({...item,href:sceneHref(item.key,scene.id),enabled:!!scene.capabilities?.includes(item.capability)}));
+ {key:'settings',label:'基本信息',capability:'space.preview'},
+].map(item=>({...item,href:item.key==='settings'?sceneHref('build',scene.id)+'&tab=info':sceneHref(item.key,scene.id),enabled:!!scene.capabilities?.includes(item.capability)}));
 export function scenePhase(scene:SceneSpace):ScenePhase{
  const latest=scene.publications?.[0];
  if(latest?.lifecycle_state==='retired')return 'archived';
@@ -34,5 +34,13 @@ export function filterScenes(spaces:SceneSpace[],query:string,phase:string,sort:
  return spaces.filter(s=>(phase==='all'||scenePhase(s)===phase)&&`${s.name} ${s.project_name||''} ${s.description||''} ${s.address||''}`.toLocaleLowerCase().includes(match))
   .sort((a,b)=>(sort==='time'?sceneTimestamp(b)-sceneTimestamp(a):sort==='name'?0:order.indexOf(scenePhase(a))-order.indexOf(scenePhase(b)))||a.name.localeCompare(b.name,'zh-CN'));
 }
-// Entering a scene selects its workflow; opening a fixed release is a separate action.
+// A legacy scene-only bookmark opens details; entry uses only the explicitly current release.
 export const sceneWorkspaceHref=(id:string)=>'/space?'+new URLSearchParams({space:id});
+
+export const publicationAvailable=(release:ScenePublication)=>release.lifecycle_state==='active';
+export const publicationLabel=(release:ScenePublication)=>release.display_code||release.version_code||release.id;
+export const currentRelease=(scene:SceneSpace)=>scene.publications?.find(p=>p.id===scene.publication_id&&publicationAvailable(p));
+export function sceneEntryHref(scene:SceneSpace){
+ const release=currentRelease(scene);
+ return release?`/space?screen=space&preview=1&space=${encodeURIComponent(scene.id)}&publication=${encodeURIComponent(release.id)}`:sceneWorkspaceHref(scene.id);
+}

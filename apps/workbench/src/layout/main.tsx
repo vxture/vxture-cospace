@@ -73,7 +73,7 @@ function App(){
  useEffect(()=>{const sync=(event:Event)=>setBuildAssistantOpen(Boolean((event as CustomEvent).detail));window.addEventListener('cospace-build-assistant-state',sync);window.addEventListener('cospace-publication-assistant-state',sync);window.addEventListener('cospace-association-assistant-state',sync);return()=>{window.removeEventListener('cospace-build-assistant-state',sync);window.removeEventListener('cospace-publication-assistant-state',sync);window.removeEventListener('cospace-association-assistant-state',sync);};},[]);
  const {theme,setTheme}=useTheme();
  useEffect(()=>{const fn=()=>{setRoute(currentRoute());setLauncher(false);};return subscribeAppLocation(fn);},[]);
- useEffect(()=>{let title='登录';if(preview)title=route==='space'&&!new URLSearchParams(location.search).get('space')?'我的场景':names[route];document.title=`CoSpace · ${title}`;},[route,preview,navigation.space]);
+ useEffect(()=>{let title='登录';if(preview)title=route==='space'&&new URLSearchParams(location.search).get('screen')!=='space'?'我的场景':names[route];document.title=`CoSpace · ${title}`;},[route,preview,navigation.space]);
  useEffect(()=>{if(!notice)return;const t=setTimeout(()=>setNotice(''),3500);return()=>clearTimeout(t);},[notice]);
  const enter=()=>{sessionStorage.setItem('cospace.ui.ds.preview','1');setPreview(true);};
  const exit=()=>{if(platform?.csrf){return platformLogout(platform.csrf);}sessionStorage.removeItem('cospace.ui.ds.preview');setPreview(false);};
@@ -90,7 +90,6 @@ function App(){
     if(new URLSearchParams(location.search).has('publication')||!spaces.some(s=>s.id===new URLSearchParams(location.search).get('space')))return <React.Suspense fallback={<output className="dark flex flex-1 items-center justify-center bg-background text-foreground text-body-small">正在打开空间…</output>}><RealSpace full={full} workspace={config.workspace}/></React.Suspense>;
     return <Space config={config} full={full}/>;
    }
-   if(new URLSearchParams(location.search).get('space'))return <ModuleWorkspace route="space"><></></ModuleWorkspace>;
    return <SceneCatalog/>;
   }
   if(route==='services')return <SpatialServices/>;
@@ -149,7 +148,7 @@ function Space({config,full}:{config:Config;full:()=>void}){
    <div className="space-tools absolute right-lg top-lg z-30 flex items-center gap-md" role="toolbar" aria-label="空间显示工具">
     <div className="space-action-group flex items-center gap-2xs" role="group" aria-label="空间操作"><Button variant="ghost" size="sm" className="space-icon-control" aria-label={isFull?'退出全屏':'全屏'} title={isFull?'退出全屏':'全屏'} onClick={full}><Icon name={isFull?'corners-in':'corners-out'} size="sm"/></Button>
     <Tooltip><TooltipTrigger asChild><Button variant="ghost" size="sm" className="space-icon-control" aria-label={view==='human'?'当前人视图，切换到机视图':'当前机视图，切换到人视图'} onClick={()=>setView(view==='human'?'agent':'human')}><Icon name={view==='human'?'cube':'cpu'} size="sm"/></Button></TooltipTrigger><TooltipContent className="dark" side="bottom">{view==='human'?'人视图 · 点击切换机视图':'机视图 · 点击切换人视图'}</TooltipContent></Tooltip></div>
-    <ShellUserMenu triggerClassName="space-avatar-control" openLabel="用户账户" online={false} contentClassName="dark" user={{displayName:'交付工程师',avatarFallback:'工',uniqueLine:'设计预览身份 · 非真实登录',meta:config.workspace}} actions={[{key:'spaces',label:'空间预览',icon:'cube',onClick:()=>{window.open('/space','_blank','noopener,noreferrer');}},{key:'account',label:'账户与登录',icon:'user',onClick:()=>{window.open('/account','_blank','noopener,noreferrer');}}]}/>
+    <ShellUserMenu triggerClassName="space-avatar-control" openLabel="用户账户" online={false} contentClassName="dark" user={{displayName:'交付工程师',avatarFallback:'工',uniqueLine:'设计预览身份 · 非真实登录',meta:config.workspace}} actions={[{key:'spaces',label:'我的场景',icon:'cube',onClick:()=>{window.open('/space','_blank','noopener,noreferrer');}},{key:'account',label:'账户与登录',icon:'user',onClick:()=>{window.open('/account','_blank','noopener,noreferrer');}}]}/>
    </div>
    <div className="space-rail space-rail-left flex flex-col gap-lg overflow-auto" data-open={objects} inert={!objects}>
     <Collapsible open={deviceBlock} onOpenChange={setDeviceBlock} asChild><section className="space-block shrink-0 overflow-hidden rounded-lg border border-border bg-card text-card-foreground" aria-label="设备对象板块">
