@@ -1,0 +1,7 @@
+/* Console reference: 40px icon slots and rows, 32px controls, 16px item icons.
+   DS 15 still names its slots xl/md; tokens 4 maps these names to 32/24px.
+   Scope this compatibility mapping to navigation, never to product controls. */
+.cospace-shell-navigation{display:flex;flex-direction:column;flex:1;min-width:0;min-height:0;height:100%}
+.cospace-shell-navigation .size-control-xl{width:var(--space-control-2xl);height:var(--space-control-2xl)}
+.cospace-shell-navigation .size-control-md{width:var(--space-control-xl);height:var(--space-control-xl)}
+.cospace-shell-navigation .h-control-md{height:var(--space-control-xl)}

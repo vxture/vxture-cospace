@@ -1,6 +1,7 @@
+import {ShellSidebarNav} from './shell-navigation';
 import React from 'react';
 import {Link} from 'react-router-dom';
-import {ShellSidebarNav,type ShellNavSection} from '@vxture/design-system';
+import {type ShellNavSection} from '@vxture/design-system';
 import {serviceSections,type ServiceSection} from './spatial-service-contract';
 import {useRecordNavigation} from './record-navigation';
 
