@@ -1,3 +1,15 @@
 .management-page-content{display:flex;flex-direction:column;gap:var(--workspace-content-gap);min-width:0;margin-top:var(--workspace-content-gap)}
 .management-page-content>div,.management-page-content section{min-width:0}
 .management-page-content input,.management-page-content select,.management-page-content textarea{border-color:var(--border);box-shadow:none}
+
+.management-card{padding:24px;border:1px solid var(--border);border-radius:var(--radius-lg);background:var(--card);display:flex;flex-direction:column;gap:20px}
+.management-card h2{display:flex;align-items:center;gap:8px;font-size:16px;font-weight:600}
+.management-card-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.management-information{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px 24px;font-size:14px}
+.management-information>div{display:flex;flex-direction:column;gap:8px;min-width:0}
+.management-information dt{color:var(--muted-foreground)}
+.management-information dd{overflow-wrap:anywhere}
+.management-capabilities{display:flex;flex-wrap:wrap;gap:8px;min-width:160px}
+.management-scene-code{display:block;margin-top:4px;color:var(--muted-foreground);font-size:12px;overflow-wrap:anywhere}
+.management-card-actions{display:flex;justify-content:flex-end;gap:8px}
+@media(max-width:639px){.management-card{padding:16px}.management-information{grid-template-columns:minmax(0,1fr)}}

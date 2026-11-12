@@ -1,3 +1,5 @@
+import {usePlatformSession} from './platform-auth';
+import {useSceneCapabilities} from './scene-capabilities';
 import {WorkflowNavigationToggle} from './workflow-navigation';
 import {SpaceSettings} from './space-settings';
 import {runGuarded} from './unsaved-navigation';
@@ -33,6 +35,8 @@ const bytes=(value:number)=>value>=1024*1024?`${(value/1024/1024).toFixed(2)} MB
 /** Explain actual saved artifacts; reading this page never starts, selects or publishes a build. */
 export function ConstructionFlow({active=true}:{active?:boolean}={}){
  const target=useRecordNavigation();
+ const platform=usePlatformSession(),capabilities=useSceneCapabilities();
+ const canBuild=!platform||capabilities.includes('build.run');
  const [data,setData]=useState<Snapshot|null>(null),[error,setError]=useState(''),[busy,setBusy]=useState(true),[revision,setRevision]=useState(0);
  const [step,setStep]=useState('model'),[assistantOpen,setAssistantOpen]=useState(()=>innerWidth>=1200),[assistantWide,setAssistantWide]=useState(false),[restart,setRestart]=useState(false),[historyOpen,setHistoryOpen]=useState(()=>innerWidth>=1100);
  const draft=target.tab==='tasks';
@@ -40,12 +44,12 @@ export function ConstructionFlow({active=true}:{active?:boolean}={}){
  useEffect(()=>{setBuildInfo({name:'',purpose:'',changes:''});},[target.space,target.tab,target.job]);
  useEffect(()=>{const toggle=()=>setAssistantOpen(v=>!v);window.addEventListener('cospace-build-assistant-toggle',toggle);return()=>window.removeEventListener('cospace-build-assistant-toggle',toggle);},[]);
  useEffect(()=>{window.dispatchEvent(new CustomEvent('cospace-build-assistant-state',{detail:assistantOpen}));return()=>{window.dispatchEvent(new CustomEvent('cospace-build-assistant-state',{detail:false}));};},[assistantOpen]);
- useEffect(()=>{setStep(draft?'prepare':target.tab==='candidate'?'review':'model');},[target.job,target.space,target.tab,draft]);
+ useEffect(()=>{let next='model';if(target.tab==='info')next='info';else if(draft)next='prepare';else if(target.tab==='candidate')next='review';setStep(next);},[target.job,target.space,target.tab,draft]);
  const [preflightOpen,setPreflightOpen]=useState(false);
  const [review,setReview]=useState<{candidate:string;revision:number}|null>(null);
  useEffect(()=>{setReview(null);setPreflightOpen(false);setData(null);},[target.space,target.input,target.job,active]);
  useEffect(()=>{const refresh=()=>setRevision(n=>n+1);window.addEventListener('cospace-selection-changed',refresh);window.addEventListener('focus',refresh);return()=>{window.removeEventListener('cospace-selection-changed',refresh);window.removeEventListener('focus',refresh);};},[]);
- useEffect(()=>{if(!active)return;const controller=new AbortController();let timer:ReturnType<typeof setTimeout>|undefined;setBusy(true);setError('');
+ useEffect(()=>{if(!active)return;if(!canBuild){setBusy(false);return;}const controller=new AbortController();let timer:ReturnType<typeof setTimeout>|undefined;setBusy(true);setError('');
   const read=async(path:string)=>{const r=await fetch(`${endpoint}${path}`,{cache:'no-store',signal:controller.signal});if(!r.ok)throw Error(r.status===403?'当前场景或记录没有访问权限。':'构建流程暂时无法读取，请刷新重试。');return r.json();};
   const query='?'+new URLSearchParams({space_id:target.space});
   (async()=>{
@@ -73,7 +77,7 @@ export function ConstructionFlow({active=true}:{active?:boolean}={}){
    if(job&&['queued','running'].includes(job.state))timer=setTimeout(()=>setRevision(n=>n+1),3000);
   })().catch(e=>{if(!controller.signal.aborted)setError(e.message);}).finally(()=>{if(!controller.signal.aborted)setBusy(false);});
   return()=>{controller.abort();clearTimeout(timer);};
- },[target.space,target.input,target.job,target.tab,active,revision]);
+ },[target.space,target.input,target.job,target.tab,active,revision,canBuild]);
  const job=data?.job,model=data?.model,stages=data?.stages,input=data?.inputs.find(i=>i.id===(job?.input_id||target.input));
  const release=model&&data?.releases.find(r=>r.candidate_id===model.id&&r.source_model_sha256===model.members['spatial.npz'].sha256&&(!r.lifecycle_state||r.lifecycle_state==='active'));
  const selected=!!model&&data?.selection.candidate_id===model.id;
@@ -103,7 +107,7 @@ export function ConstructionFlow({active=true}:{active?:boolean}={}){
  const flowDone=!!(confirmedAt||job?.demo_timeline?.stages[3]?.end);
  const totalEnd=job?.demo_timeline?.stages[3]?.end||confirmedAt||(failed?job?.finished_at:job?clockNow:undefined);
  const totalEstimated=!!job?.demo_timeline?.estimated||!!input?.registered_at_estimated||reviewEstimated;
- const stepNavigation=<nav className="build-step-nav" aria-label="构建环节">{steps.map((s,i)=>{const timing=stageTimes[i];return <div className="build-step-entry" key={s.id}><Button variant={step===s.id?'secondary':'ghost'} aria-current={step===s.id?'step':undefined} onClick={()=>void runGuarded(()=>{setStep(s.id);if(innerWidth<1100)setHistoryOpen(false);})}><s.icon size={16}/><strong>{String(i+1).padStart(2,'0')} {s.title}</strong><span className={`build-step-state build-step-state-${s.tone}`}><s.mark size={12}/>{s.status}</span></Button><dl className="build-step-timing"><div><dt>开始时间：</dt><dd>{shortTime(timing.start)}{timing.estimated&&<small title={job?.demo_timeline?.basis}>估算</small>}</dd></div><div><dt>完成时间：</dt><dd>{timing.end?shortTime(timing.end):'待完成'}</dd></div><div><dt>总计耗时：</dt><dd title={timing.start&&timing.end?`${Math.max(0,(Date.parse(timing.end)-Date.parse(timing.start))/1000).toFixed(1)} 秒${timing.estimated?'；依据登记、提交或选定时间估算':''}`:undefined}>{elapsed(timing.start,timing.end)}{timing.estimated&&timing.start&&timing.end&&<small>估算</small>}</dd></div></dl></div>;})}</nav>;
+ const stepNavigation=<nav className="build-step-nav" aria-label="构建环节">{steps.map((s,i)=>{const timing=stageTimes[i];return <div className="build-step-entry" key={s.id}><Button disabled={!canBuild} variant={step===s.id?'secondary':'ghost'} aria-current={step===s.id?'step':undefined} onClick={()=>void runGuarded(()=>{setStep(s.id);if(innerWidth<1100)setHistoryOpen(false);})}><s.icon size={16}/><strong>{String(i+1).padStart(2,'0')} {s.title}</strong><span className={`build-step-state build-step-state-${s.tone}`}><s.mark size={12}/>{s.status}</span></Button><dl className="build-step-timing"><div><dt>开始时间：</dt><dd>{shortTime(timing.start)}{timing.estimated&&<small title={job?.demo_timeline?.basis}>估算</small>}</dd></div><div><dt>完成时间：</dt><dd>{timing.end?shortTime(timing.end):'待完成'}</dd></div><div><dt>总计耗时：</dt><dd title={timing.start&&timing.end?`${Math.max(0,(Date.parse(timing.end)-Date.parse(timing.start))/1000).toFixed(1)} 秒${timing.estimated?'；依据登记、提交或选定时间估算':''}`:undefined}>{elapsed(timing.start,timing.end)}{timing.estimated&&timing.start&&timing.end&&<small>估算</small>}</dd></div></dl></div>;})}</nav>;
  const materialPreparation=<BuildMaterials endpoint={endpoint} space={target.space} items={data?.inputs||[]} selectedId={job?.input_id||target.input} locked={!!job} onRegistered={id=>{setRevision(n=>n+1);if(draft)appNavigate(recordLink('build',{tab:'tasks',input:id}));}} onNext={()=>setStep('check')}/>;
  return <section className={`construction-flow build-desk ${historyOpen?'':'build-history-hidden'}`} aria-label="构建工作操作台">
   <aside className="build-history workflow-nav-panel" aria-label="构建导航与记录" id="build-navigation-panel">
@@ -119,10 +123,10 @@ export function ConstructionFlow({active=true}:{active?:boolean}={}){
   {!historyOpen&&<WorkflowNavigationToggle open={false} label="构建" panelId="build-navigation-panel" onToggle={()=>setHistoryOpen(true)}/>}
   <div className="build-work">
    <div className="build-work-scroll" tabIndex={0} aria-label="构建内容">
-   <header className="build-work-header"><div className="build-title-block"><Cube size={32} className="build-title-icon"/><div className="build-title-copy"><div className="build-title-line"><h2>{job?(job.build_info?.name||currentInput):'新建构建'}</h2><StatusBadge tone={model?'success':job?.state==='failed'?'danger':'info'}>{draft?'待准备':state}</StatusBadge></div><div className="build-work-meta">{job?<><span title={job.id}>{buildVersion(job)}</span><time dateTime={job.created_at}>{new Date(job.created_at).toLocaleString('zh-CN',{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false})}</time></>:null}<BuildContext endpoint={endpoint} space={target.space} draft={draft} value={draft?buildInfo:job?.build_info||{name:'',purpose:'',changes:''}} onChange={setBuildInfo} jobId={job?.id} revision={job?.build_info_revision||0} onSaved={()=>setRevision(n=>n+1)}/></div></div></div><div className="build-header-actions">{job&&<Button asChild variant="secondary" size="sm"><a href={buildScanHref(target.space,job.id,job.input_id||'')} target="_blank" rel="noopener noreferrer"><Eye size={16}/>{model?'查看成果':'查看过程'}</a></Button>}{job&&<Button size="sm" variant="secondary" onClick={()=>setRestart(true)}><ClockCounterClockwise size={16}/>重新构建</Button>}<Button size="sm" onClick={newBuild}><Plus size={16}/>新建构建</Button></div></header>
+   <header className="build-work-header"><div className="build-title-block"><Cube size={32} className="build-title-icon"/><div className="build-title-copy"><div className="build-title-line"><h2>{job?(job.build_info?.name||currentInput):'新建构建'}</h2><StatusBadge tone={model?'success':job?.state==='failed'?'danger':'info'}>{draft?'待准备':state}</StatusBadge></div><div className="build-work-meta">{job?<><span title={job.id}>{buildVersion(job)}</span><time dateTime={job.created_at}>{new Date(job.created_at).toLocaleString('zh-CN',{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false})}</time></>:null}<BuildContext endpoint={endpoint} space={target.space} draft={draft} value={draft?buildInfo:job?.build_info||{name:'',purpose:'',changes:''}} onChange={setBuildInfo} jobId={job?.id} revision={job?.build_info_revision||0} onSaved={()=>setRevision(n=>n+1)}/></div></div></div><div className="build-header-actions">{job&&<Button asChild variant="secondary" size="sm"><a href={buildScanHref(target.space,job.id,job.input_id||'')} target="_blank" rel="noopener noreferrer"><Eye size={16}/>{model?'查看成果':'查看过程'}</a></Button>}{job&&<Button size="sm" variant="secondary" onClick={()=>setRestart(true)}><ClockCounterClockwise size={16}/>重新构建</Button>}<Button size="sm" disabled={!canBuild} onClick={newBuild}><Plus size={16}/>新建构建</Button></div></header>
    {busy&&!data?<p role="status">正在读取构建工作…</p>:error?<div role="alert" className="construction-flow-message">{error}</div>:<>
 
-    {step==='info'?<section className="build-stage-content build-scene-information"><SpaceSettings embedded/></section>:<>
+    {step==='info'?<section className="build-stage-content build-scene-information"><SpaceSettings/></section>:<>
 
     <section className="build-stage-content" aria-label={steps.find(s=>s.id===step)?.title}>
 
