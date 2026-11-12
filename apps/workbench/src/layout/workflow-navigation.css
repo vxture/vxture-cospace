@@ -9,3 +9,4 @@
 #workbench-shell .workflow-nav-edge:hover,#workbench-shell .workflow-nav-edge:focus-visible{width:32px;background:color-mix(in srgb,var(--primary) 8%,var(--card));color:var(--primary);box-shadow:none}
 #workbench-shell .workflow-nav-edge:hover svg,#workbench-shell .workflow-nav-edge:focus-visible svg{opacity:1}
 @media(max-width:1099px){#workbench-shell .workflow-nav-panel{position:absolute;inset:0 auto 0 0;z-index:20;width:min(280px,85vw);box-shadow:8px 0 24px color-mix(in srgb,var(--foreground) 8%,transparent)}}
+#workbench-shell .build-history-hidden>.workflow-nav-panel{display:none}
