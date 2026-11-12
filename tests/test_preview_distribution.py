@@ -30,9 +30,12 @@ def test_pause_all_distribution_paths_and_restore_exact_bytes(tmp_path):
     record,model=pubs.read(new['id']);paths=endpoints(record,model);files={p.name:p.read_bytes() for p in model.root.iterdir() if p.is_file()}
     report=store.report(pubs,space,key);assert report['publication_control_supported'] and report['record']['revision']==0
     assert report['actions'][0]['operation']=='pause_distribution'
-    with TestClient(create_app(initial,jobs,space_directory=directory,ontologies=ontologies)) as client:
+    with TestClient(create_app(initial,jobs,space_directory=directory,ontologies=ontologies),follow_redirects=False) as client:
         before={(method,path):client.request(method,path,json=body).content for method,path,body in paths}
-        assert all(client.request(method,path,json=body).status_code==200 for method,path,body in paths)
+        def expected_status(path):return 307 if path.endswith(('/', '/index.html')) else 200
+        locations={path:client.request(method,path,json=body).headers.get('location') for method,path,body in paths if expected_status(path)==307}
+        assert all(client.request(method,path,json=body).status_code==expected_status(path) for method,path,body in paths)
+        assert all('/space?' in location and 'publication='+new['id'] in location for location in locations.values())
         zip_before=before['GET','/publications/'+new['id']+'/offline.zip'];offline=OfflinePreview(zip_before,new['id'],sha(zip_before));objects=offline.objects()
         paused=run(store,pubs,space,key,'pause_distribution');assert paused['lifecycle_state']=='paused' and paused['resume_state'] is None
         for method,path,body in paths:
@@ -43,7 +46,8 @@ def test_pause_all_distribution_paths_and_restore_exact_bytes(tmp_path):
         assert offline.objects()==objects # An already held package is not remotely invalidated.
         restored=run(store,pubs,space,key,'restore');assert restored['lifecycle_state']=='active' and restored['revision']==2
         for method,path,body in paths:
-            response=client.request(method,path,json=body);assert response.status_code==200
+            response=client.request(method,path,json=body);assert response.status_code==expected_status(path)
+            if path in locations:assert response.headers['location']==locations[path]
             # Checklist/lineage carry checked_at, unlike immutable assets and query records.
             if not path.endswith(('api/checklist','api/lineage')):assert response.content==before[method,path],path
             assert response.headers['Cache-Control']=='no-store'
