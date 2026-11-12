@@ -11,14 +11,10 @@ export function ProductLauncher({route,hasScene=false,hrefForRoute,onNavigate}:{
  const context=useRecordNavigation();
  const sceneQuery=context.space?'?'+new URLSearchParams({space:context.space}):'';
  const migrationPages=[
-  {label:'空间预览',icon:'cube',href:context.space?'/space'+sceneQuery:undefined,description:context.space?'旧版场景发布目录':'选择场景后可打开'},
-  {label:'业务配置',icon:'settings',href:'/settings'+sceneQuery,description:'旧版独立配置页'},
-  {label:'成员与角色',icon:'users',href:'/members',description:'旧版成员入口'},
-  {label:'登录集成',icon:'shield-check',href:'/identity',description:'旧版身份概览'},
-  {label:'个人账户',icon:'user',href:'/account',description:'旧版产品账户页'},
-  ...[{id:'equipment',name:'设备间'},{id:'pump',name:'水泵设备间'},{id:'inspection',name:'巡检设备区'}].map(item=>({label:item.name+'示例',icon:'cube' as const,href:'/space?'+new URLSearchParams({screen:'space',preview:'1',space:item.id}),description:'旧版合成示例大屏'})),
-  {label:'旧版候选查看器',icon:'file',href:context.space&&context.job?businessEndpoint+'/candidates/'+encodeURIComponent(context.job)+'/':undefined,description:context.space&&context.job?'当前构建的历史 HTML 入口':'选择构建版本后可打开'},
-  {label:'旧版发布查看器',icon:'package',href:context.space&&context.publication?businessEndpoint+'/publications/'+encodeURIComponent(context.publication)+'/':undefined,description:context.space&&context.publication?'当前发布的历史 HTML 入口':'选择发布版本后可打开'},
+  {label:'空间预览',icon:'cube',href:context.space?'/space'+sceneQuery:undefined,description:context.space?'待迁移 · 发布目录与场景入口整合':'待迁移 · 选择场景后可打开'},
+  ...[{id:'equipment',name:'设备间'},{id:'pump',name:'水泵设备间'},{id:'inspection',name:'巡检设备区'}].map(item=>({label:item.name+'示例',icon:'cube' as const,href:'/space?'+new URLSearchParams({screen:'space',preview:'1',space:item.id}),description:'待迁移 · 示例能力与源码核查'})),
+  {label:'旧版候选查看器',icon:'file',href:context.space&&context.job?businessEndpoint+'/candidates/'+encodeURIComponent(context.job)+'/':undefined,description:context.space&&context.job?'待迁移 · 当前构建 HTML 查看器':'待迁移 · 选择构建版本后可打开'},
+  {label:'旧版发布查看器',icon:'package',href:context.space&&context.publication?businessEndpoint+'/publications/'+encodeURIComponent(context.publication)+'/':undefined,description:context.space&&context.publication?'待迁移 · 当前发布 HTML 查看器':'待迁移 · 选择发布版本后可打开'},
  ] as const;
  const work=moduleGroups.find(group=>group.title==='场景作业')!;
  const resources=moduleGroups.find(group=>group.title==='公共资源')!;
