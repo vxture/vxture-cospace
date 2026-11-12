@@ -1,6 +1,7 @@
+import {ShellSidebarNav} from './shell-navigation';
 import React,{useEffect,useState} from 'react';
 import {Link,useLocation} from 'react-router-dom';
-import {Button,ShellSidebarFrame,ShellSidebarNav,Drawer,useMediaQuery,type ShellNavSection} from '@vxture/design-system';
+import {Button,ShellSidebarFrame,Drawer,useMediaQuery,type ShellNavSection} from '@vxture/design-system';
 import {SidebarSimple} from '@phosphor-icons/react';
 import {recordLink} from './record-navigation';
 
