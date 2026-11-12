@@ -1,5 +1,5 @@
 // Product terminology is independent of stable route keys and stored record IDs.
-export const moduleNames={space:'空间预览',delivery:'服务发布',data:'数据管理',build:'构建中心',ontology:'语义本体',association:'空间关联'};
+export const moduleNames={space:'我的场景',delivery:'服务发布',data:'数据管理',build:'构建中心',ontology:'语义本体',association:'空间关联'};
 export type ModuleRoute=keyof typeof moduleNames;
 // Business scope is independent of the current, transitional menu grouping.
 // Shared support does not grant cross-scene access or change record ownership.

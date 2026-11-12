@@ -87,3 +87,13 @@
 .scene-detail-panel>div:last-child button{font-size:var(--body-small-font-size)}
 .scene-catalog-shell>section h1{font-size:var(--heading-1-font-size)}
 .scene-catalog-shell>section p{font-size:var(--body-small-font-size)}
+
+.scene-publications{display:flex;flex-direction:column;gap:12px}
+.scene-publication-card{border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;background:var(--card);min-width:0}
+.scene-publication-cover{height:112px;overflow:hidden;position:relative}
+.scene-publication-cover .scene-cover{width:100%;height:100%}
+.scene-publication-copy{display:flex;flex-direction:column;gap:12px;padding:16px}
+.scene-publication-copy h4{margin:0;font-size:var(--label-font-size);font-weight:var(--label-font-weight);overflow-wrap:anywhere;min-width:0}
+.scene-publication-copy p,.scene-publication-footer time,.scene-publication-note{font-size:var(--body-small-font-size);color:var(--muted-foreground)}
+.scene-publication-footer{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.scene-publication-note{display:flex;align-items:center;justify-content:space-between;gap:8px}

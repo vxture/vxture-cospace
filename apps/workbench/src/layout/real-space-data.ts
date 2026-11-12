@@ -2,7 +2,7 @@ import {businessEndpoint} from './business-endpoint';
 // Fixed publication display data. Parse the saved JSON assignment; never execute views.js.
 export const previewEndpoint=businessEndpoint;
 export type XYZ=[number,number,number];
-export type FixedPublication={version_code?:string;build_code?:string;lifecycle_state?:string;id:string;candidate_id:string;space_id?:string;created_at:string;preview_url:string;model_manifest_sha256:string;source_model_sha256:string};
+export type FixedPublication={display_code?:string;version_code?:string;build_code?:string;lifecycle_state?:string;id:string;candidate_id:string;space_id?:string;created_at:string;preview_url:string;model_manifest_sha256:string;source_model_sha256:string};
 export type DirectorySpace={publication_id:string|null;state:string;id:string;name:string;project_id:string;publications:FixedPublication[]};
 export type ObjectRelation={relation_id:string;type_id:string;source_id:string;target_id:string;note:string;confirmation:string};
 export type ModelObject={object_id:string;type_id:string;properties:Record<string,string>;anchor_m:XYZ;confirmation:string;business_links?:{ref:{record_id:string;sha256:string};record:{title:string;source_system:string;external_id:string;version:string;fields:Record<string,string>}}[];evidence:{kind:string;member:string;sha256:string;point_index:number}};
