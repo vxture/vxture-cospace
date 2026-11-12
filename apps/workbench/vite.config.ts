@@ -1,7 +1,8 @@
+import {gzipSync} from 'node:zlib';
 import { defineConfig } from 'vite';
 import tailwindcss from '@tailwindcss/vite';
 import { fileURLToPath } from 'node:url';
-import {cpSync,mkdirSync,createReadStream,statSync} from 'node:fs';
+import {cpSync,mkdirSync,createReadStream,statSync,readdirSync,readFileSync,writeFileSync} from 'node:fs';
 import {resolve} from 'node:path';
 
 export default defineConfig(({mode})=>({
@@ -18,7 +19,11 @@ export default defineConfig(({mode})=>({
       const ext=file.split('.').pop();response.setHeader('Content-Type',ext==='js'?'text/javascript':ext==='json'?'application/json':ext==='png'?'image/png':ext==='jpg'?'image/jpeg':ext==='wasm'?'application/wasm':'application/octet-stream');
       createReadStream(file).pipe(response);
     });},
-    writeBundle(options){const dest=resolve(options.dir||'dist','assets/cesium');mkdirSync(dest,{recursive:true});for(const name of ['Assets','Workers','ThirdParty','Widgets'])cpSync(resolve('node_modules/cesium/Build/Cesium',name),resolve(dest,name),{recursive:true});},
+    writeBundle(options){const dest=resolve(options.dir||'dist','assets/cesium');mkdirSync(dest,{recursive:true});for(const name of ['Assets','Workers','ThirdParty','Widgets'])cpSync(resolve('node_modules/cesium/Build/Cesium',name),resolve(dest,name),{recursive:true});
+      // Public text assets are compressed once at build time, never per request.
+      function compress(dir:string){for(const entry of readdirSync(dir,{withFileTypes:true})){const path=resolve(dir,entry.name);if(entry.isDirectory())compress(path);else if(/\.(js|css|json|svg)$/.test(entry.name)){const raw=readFileSync(path);if(raw.length>=1024)writeFileSync(path+'.gz',gzipSync(raw,{level:9}));}}}
+      compress(resolve(options.dir||'dist','assets'));
+    },
   }],
   define:{CESIUM_BASE_URL:JSON.stringify('/assets/cesium/')},
   build: { rolldownOptions: { input: (mode==='map-lab'?{mapLab:fileURLToPath(new URL('./map-lab.html',import.meta.url))}:{ main: fileURLToPath(new URL('./index.html', import.meta.url)) }) as Record<string,string> } },

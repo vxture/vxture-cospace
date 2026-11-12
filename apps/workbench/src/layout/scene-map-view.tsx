@@ -1,10 +1,11 @@
+import {loadGlobe} from './globe-loader';
 import {useSceneControls} from './scene-selection';
 import React,{Suspense,useEffect,useState} from 'react';
 import {readMapPreferences,mapPreferenceKey} from './map-preferences';
 import type {SceneSpace} from './scene-directory';
 import './scene-map.css';
 const AmapView=React.lazy(()=>import('./scene-map').then(m=>({default:m.AmapSceneMap})));
-const Globe=React.lazy(()=>import('./scene-globe').then(m=>({default:m.SceneGlobe})));
+const Globe=React.lazy(()=>loadGlobe().then(m=>({default:m.SceneGlobe})));
 type Props={spaces:SceneSpace[];loading:boolean;error:string;onBack:()=>void;onRefresh:()=>void};
 export function SceneMap(props:Props){
  const {setMapActive}=useSceneControls();

@@ -1,3 +1,5 @@
+import {preloadGlobe} from './globe-loader';
+import {readMapPreferences} from './map-preferences';
 import {locationLabel} from './geographic-location';
 import React,{useMemo,useState} from 'react';
 import {Button,Input,NativeSelect,ViewHeader,SegmentedControl} from '@vxture/design-system';
@@ -19,7 +21,7 @@ export function SceneCatalog(){
  const reset=()=>{setQuery('');setPhase('all');};
  if(mode==='map')return <React.Suspense fallback={<div role="status">正在打开地图…</div>}><SceneMap spaces={spaces} loading={loading} error={error} onBack={()=>setMode('catalog')} onRefresh={()=>setRevision(v=>v+1)}/></React.Suspense>;
  return <main className="scene-catalog" aria-label="场景选择"><div className="scene-catalog-shell">
-  <ViewHeader title="我的场景" secondary={<span className="scene-total" aria-label="场景总数">{spaces.length}</span>} description="从场景开始，连接资料、模型与空间服务。" action={<div className="scene-catalog-heading-actions"><CreateSceneButton size="xl" onCreated={id=>appNavigate('/data?'+new URLSearchParams({space:id,tab:'inputs'}))}/><Button size="xl" variant="default" onClick={()=>{setSelected('');setMode('map');}}><MapTrifold size={16}/>地图模式</Button></div>}/>
+  <ViewHeader title="我的场景" secondary={<span className="scene-total" aria-label="场景总数">{spaces.length}</span>} description="从场景开始，连接资料、模型与空间服务。" action={<div className="scene-catalog-heading-actions"><CreateSceneButton size="xl" onCreated={id=>appNavigate('/data?'+new URLSearchParams({space:id,tab:'inputs'}))}/><Button size="xl" variant="default" onPointerEnter={()=>{if(readMapPreferences().viewMode==='3D')preloadGlobe();}} onFocus={()=>{if(readMapPreferences().viewMode==='3D')preloadGlobe();}} onClick={()=>{setSelected('');setMode('map');}}><MapTrifold size={16}/>地图模式</Button></div>}/>
   <div className="scene-catalog-toolbar" aria-label="场景清单操作区">
    <SegmentedControl value={layout} onChange={setLayout} size="md" className="h-control-xl p-2xs" ariaLabel="清单布局" items={[{value:"list",label:<List size={20}/>,ariaLabel:"列表布局"},{value:"cards",label:<SquaresFour size={20}/>,ariaLabel:"卡片布局"}]}/>
    <span className="scene-result-count" aria-live="polite">筛选 <strong>{visible.length}</strong> 项</span>

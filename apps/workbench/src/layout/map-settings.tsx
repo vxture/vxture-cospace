@@ -1,10 +1,11 @@
+import {preloadGlobe} from './globe-loader';
 import React,{useState} from 'react';
 import {Button,SegmentedControl,Popover,PopoverTrigger,PopoverContent,Switch,useTheme} from '@vxture/design-system';
 import {SlidersHorizontal,X,ArrowCounterClockwise} from '@phosphor-icons/react';
 import type {MapPreferences} from './map-preferences';
 function MapChoiceCards({kind,value,onChange}:{kind:'basemap'|'view';value:string;onChange:(value:string)=>void}){
  const items=kind==='basemap'?[{value:'standard',label:'标准地图'},{value:'satellite',label:'卫星影像'}]:[{value:'2D',label:'2D'},{value:'3D',label:'3D'}];
- return <div className="scene-map-choice-grid" role="radiogroup" aria-label={kind==='basemap'?'底图类型':'视图模式'}>{items.map(item=><button type="button" role="radio" aria-checked={item.value===value} tabIndex={item.value===value?0:-1} onClick={()=>onChange(item.value)} onKeyDown={event=>{if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Home','End'].includes(event.key)){event.preventDefault();const next=event.key==='Home'?items[0]:event.key==='End'?items[1]:items.find(option=>option.value!==item.value)!;onChange(next.value);const buttons=event.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>('[role=radio]');buttons?.[items.indexOf(next)]?.focus();}}} key={item.value} className="scene-map-choice">
+ return <div className="scene-map-choice-grid" role="radiogroup" aria-label={kind==='basemap'?'底图类型':'视图模式'}>{items.map(item=><button type="button" role="radio" onPointerEnter={()=>{if(item.value==='3D')preloadGlobe();}} onFocus={()=>{if(item.value==='3D')preloadGlobe();}} aria-checked={item.value===value} tabIndex={item.value===value?0:-1} onClick={()=>onChange(item.value)} onKeyDown={event=>{if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Home','End'].includes(event.key)){event.preventDefault();const next=event.key==='Home'?items[0]:event.key==='End'?items[1]:items.find(option=>option.value!==item.value)!;onChange(next.value);const buttons=event.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>('[role=radio]');buttons?.[items.indexOf(next)]?.focus();}}} key={item.value} className="scene-map-choice">
   <svg className={'scene-map-choice-preview scene-map-preview-'+item.value} viewBox="0 0 100 48" aria-hidden="true">
    {kind==='basemap'?(item.value==='standard'?<>
     <path fill="#e9eee6" d="M0 0h100v48H0z"/>
