@@ -48,8 +48,8 @@ def main():
         assert model.query([.05, .05, .05])['state'] == 'surface_candidate'
         assert model.query([10, 10, 10])['state'] == 'unknown'
         assert (model.root / 'index.html').is_file()
-        assert (model.root / 'index.html').read_bytes() == Path(
-            'experiments/templates/nyu-flow-preview.html').read_bytes()
+        assert b'CoSpace' in (model.root / 'index.html').read_bytes()
+        assert b'http-equiv="refresh"' in (model.root / 'index.html').read_bytes()
         assert set(model.manifest['derivation']['views']) == {'human', 'agent'}
         print('Production image: model freeze, real view subprocesses, composition and preview passed')
 

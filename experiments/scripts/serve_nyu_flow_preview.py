@@ -1,10 +1,11 @@
 """Fixed local candidate preview API. Deliberately separate from production releases."""
+from packages.views.viewer_entry import viewer_href
 import argparse
 import sqlite3
 from typing import Literal
 from pathlib import Path
 from fastapi import FastAPI,HTTPException,Response,Request
-from fastapi.responses import FileResponse,JSONResponse
+from fastapi.responses import FileResponse,JSONResponse,RedirectResponse
 from starlette.concurrency import run_in_threadpool
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -335,10 +336,13 @@ def create_app(root,jobs=None,update_evidence=None,registration_sources=None,sou
             if publications is None: raise ValueError('publication_not_found')
             return publications.read(identity)
         except (ValueError,OSError) as exc: raise HTTPException(409,str(exc)) from exc
+    def inspection_files(current):
+        names=['model.json','human.ply','agent.npz','offline-checks.json','objects.json','ontology.json','relations.json','business.json']
+        return [name for name in names if (name=='model.json' or name=='offline-checks.json' or name in current.manifest['members']) and (current.root/name).is_file()]
     @app.get('/publications/{identity}/api/preview')
     def publication_model(identity:str):
         record,current=publication(identity)
-        return {**current.manifest,'publication':record,'service_state':'preview_published'}
+        return {**current.manifest,'publication':record,'inspection_files':inspection_files(current),'service_state':'preview_published'}
     @app.get('/publications/{identity}/api/objects')
     @app.get('/publications/{identity}/api/objects/{object_id}')
     def publication_objects(identity:str,object_id:str|None=None):
@@ -375,7 +379,10 @@ def create_app(root,jobs=None,update_evidence=None,registration_sources=None,sou
         except ValueError as exc:raise HTTPException(422,str(exc)) from exc
         return {**result,'publication_id':identity,'publication_model_manifest_sha256':record['model_manifest_sha256'],**owned(record)}
     @app.get('/publications/{identity}/')
-    def publication_index(identity:str): return FileResponse(publication(identity)[1].root/'index.html')
+    @app.get('/publications/{identity}/index.html')
+    def publication_index(identity:str):
+        record,_=publication(identity)
+        return RedirectResponse(viewer_href(record.get('space_id',''),publication_id=identity),status_code=307)
     @app.get('/publications/{identity}/offline.zip')
     def publication_bundle(identity:str):
         record,current=publication(identity)
@@ -622,7 +629,9 @@ def create_app(root,jobs=None,update_evidence=None,registration_sources=None,sou
             return jobs.model(identity)
         except ValueError as exc: raise HTTPException(404,str(exc)) from exc
     @app.get('/candidates/{identity}/api/preview')
-    def candidate_manifest(identity:str): return {**candidate(identity).manifest,'service_state':'preview_served'}
+    def candidate_manifest(identity:str):
+        current=candidate(identity)
+        return {**current.manifest,'inspection_files':inspection_files(current),'service_state':'preview_served'}
     @app.get('/candidates/{identity}/api/anchor-preview')
     def candidate_anchor_preview(identity:str):
         from packages.data.input_preview import sample,bounded
@@ -656,7 +665,10 @@ def create_app(root,jobs=None,update_evidence=None,registration_sources=None,sou
         try: return candidate(identity).query(body.point_m)
         except ValueError as exc: raise HTTPException(422,str(exc)) from exc
     @app.get('/candidates/{identity}/')
-    def candidate_index(identity:str): return FileResponse(candidate(identity).root/'index.html')
+    @app.get('/candidates/{identity}/index.html')
+    def candidate_index(identity:str):
+        current=candidate(identity)
+        return RedirectResponse(viewer_href(current.manifest.get('space_id',''),candidate_id=identity),status_code=307)
     @app.get('/candidates/{identity}/{name}')
     def candidate_file(identity:str,name:str):
         m=candidate(identity)

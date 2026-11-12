@@ -34,7 +34,7 @@ export function RealSpaceCanvas({data,view,geometry,markers,selected,select,api}
    renderer=new THREE.WebGPURenderer({antialias:true});await renderer.init();initialized=true;
    if(cancelled){renderer.dispose();return;}
    renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.domElement.setAttribute('aria-label','真实空间三维画布');
-   renderer.domElement.dataset.publication=data.model.publication.id;renderer.domElement.dataset.model=data.model.id;renderer.domElement.dataset.cameraUp=camera.up.toArray().join(',');
+   renderer.domElement.dataset.publication=data.model.publication?.id||'';renderer.domElement.dataset.model=data.model.id;renderer.domElement.dataset.cameraUp=camera.up.toArray().join(',');
    renderer.domElement.dataset.humanPoints=String(data.positions.length/3);renderer.domElement.dataset.agentCells=String(data.agent_points.length);
    element.appendChild(renderer.domElement);controls=new OrbitControls(camera,renderer.domElement);controls.enableDamping=true;
    observer=new ResizeObserver(()=>{const w=element.clientWidth,h=Math.max(element.clientHeight,1);renderer!.setSize(w,h);camera.aspect=w/h;camera.updateProjectionMatrix();});observer.observe(element);

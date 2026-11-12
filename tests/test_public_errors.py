@@ -132,6 +132,8 @@ def test_local_idp_rejects_header_control_characters(control):
 def test_frontend_encodes_untrusted_path_segments():
     # React escapes text/attributes; path segments must also be URL encoded.
     source=Path('apps/workbench/src/layout/object-annotations.tsx').read_text(encoding='utf-8')
-    assert 'href={`${endpoint}/candidates/${encodeURIComponent(baseId)}/`}' in source
+    assert 'href={candidateScreenHref(target.space,baseId)}' in source
+    source=Path('apps/workbench/src/layout/real-space-data.ts').read_text(encoding='utf-8')
+    assert "new URLSearchParams({screen:'space',preview:'1',space,job})" in source
     source=Path('apps/workbench/src/layout/real-space.tsx').read_text(encoding='utf-8')
-    assert 'href={`${previewEndpoint}/publications/${encodeURIComponent(current.publication)}/model.json`}' in source
+    assert 'encodeURIComponent(candidate?current.job:current.publication)' in source

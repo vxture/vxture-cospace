@@ -1,4 +1,5 @@
 """Local immutable preview snapshots, separate from production release profiles."""
+from packages.views.viewer_entry import write_viewer_entry
 import json
 from pathlib import Path
 import re
@@ -77,14 +78,12 @@ class PreviewPublications:
                 raise ValueError('selected_model_integrity_changed')
             identity='preview-'+uuid.uuid4().hex[:16]
             staging=self.root/('.pending-'+identity); staging.mkdir()
-            for name in [*source.manifest['members'],'model.json','index.html']:
+            for name in [*source.manifest['members'],'model.json']:
                 if Path(name).name!=name: raise ValueError('invalid_member_name')
                 shutil.copyfile(source.root/name,staging/name)
             if (source.root/'offline-checks.json').exists():
                 shutil.copyfile(source.root/'offline-checks.json',staging/'offline-checks.json')
-            index=staging/'index.html'
-            index.write_text(index.read_text(encoding='utf-8').replace('模型候选 · 精度未验收',
-                             '固定预览发布 · 精度未验收'),encoding='utf-8')
+            write_viewer_entry(staging,source.manifest,publication_id=identity)
             PreviewModel(staging)
             if digest(staging/'model.json')!=selection['model_manifest_sha256']:
                 raise ValueError('copy_integrity_changed')

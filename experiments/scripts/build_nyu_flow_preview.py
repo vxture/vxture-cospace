@@ -1,4 +1,5 @@
 """Replay existing input/poses into one candidate and two derived preview views."""
+from packages.views.viewer_entry import write_viewer_entry
 import argparse
 from datetime import datetime,timezone
 import json
@@ -109,8 +110,7 @@ def main():
     if checks['surface']['state']!='surface_candidate' or checks['unknown']['state']!='unknown' or not checks['same_source_model']:
         raise ValueError('preview_flow_check')
     (a.output/'offline-checks.json').write_text(json.dumps(checks,indent=2),encoding='utf-8')
-    template=Path('experiments/templates/nyu-flow-preview.html')
-    shutil.copyfile(template,a.output/'index.html')
+    write_viewer_entry(a.output,manifest)
     print(json.dumps({'model_id':manifest['id'],**manifest['construction'],'agent_cells':len(cells)}))
 
 

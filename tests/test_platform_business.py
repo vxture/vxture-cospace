@@ -119,7 +119,9 @@ def test_second_user_and_workspace_have_independent_visibility(secured):
 def test_viewer_can_browse_fixed_geometry_and_metadata(secured,suffix):
     *_,new=secured;_,c,*_=secured;sign_in(secured)
     r=c.get('/publications/'+new['id']+suffix)
-    assert r.status_code==200,r.text[:200]
+    assert r.status_code==(307 if suffix=='/' else 200),r.text[:200]
+    if suffix=='/':
+        assert 'publication='+new['id'] in r.headers['location']
 
 
 @pytest.mark.parametrize('suffix',['/offline.zip','/offline.json','/partitions.zip','/partitions.json','/agent.npz','/spatial.npz','/publication.json','/offline-checks.json'])

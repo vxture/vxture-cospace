@@ -166,3 +166,7 @@ html,body,body *{scrollbar-width:none!important}body::-webkit-scrollbar,html::-w
 .session-recovery-notice>div{display:flex;flex-direction:column;align-items:flex-start;gap:8px;min-width:0}
 .session-recovery-notice strong{font-size:14px;font-weight:500}
 .session-recovery-notice p{margin:0;font-size:12px;line-height:1.6;color:var(--muted-foreground)}
+
+/* Reserve room for explicit record and inspection actions in the unified viewer. */
+.real-space .space-picker{max-width:calc(100% - 408px)}
+@media(max-width:640px){.real-space .space-picker{max-width:calc(100% - var(--space-lg) * 2)}.real-space .space-tools{top:calc(var(--space-lg) + var(--space-control-xl) + var(--space-md));gap:var(--space-sm)}.real-space .space-rail{top:calc(var(--space-lg) + var(--space-control-xl) * 2 + var(--space-md) * 2)}}
