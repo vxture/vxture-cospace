@@ -1,0 +1,11 @@
+/* Scene workflows share the build workspace navigation geometry. */
+#workbench-shell .workflow-nav-panel{box-sizing:border-box;width:280px;flex:none;display:flex;flex-direction:column;gap:16px;padding:20px 16px 16px;background:var(--card);border-right:0;min-height:0;overflow:hidden}
+#workbench-shell .workflow-nav-heading{display:flex;align-items:center;gap:8px;padding:0 4px;min-height:24px}
+#workbench-shell .workflow-nav-heading>svg{width:18px;height:18px;color:var(--muted-foreground)}
+#workbench-shell .workflow-nav-collapse{margin-left:auto;width:24px;min-width:24px;height:24px;min-height:24px;padding:0;background:transparent;color:var(--muted-foreground)}
+#workbench-shell .workflow-nav-collapse:hover,#workbench-shell .workflow-nav-collapse:focus-visible{background:color-mix(in srgb,var(--primary) 6%,var(--card));color:var(--primary)}
+#workbench-shell .workflow-nav-edge{position:absolute;left:0;top:20px;z-index:10;width:4px;min-width:4px;height:32px;min-height:32px;padding:0;border:0;border-radius:0 6px 6px 0;overflow:hidden;background:color-mix(in srgb,var(--primary) 45%,var(--card));color:var(--primary);transition:width 140ms ease}
+#workbench-shell .workflow-nav-edge svg{opacity:0;flex:none;transition:opacity 140ms ease}
+#workbench-shell .workflow-nav-edge:hover,#workbench-shell .workflow-nav-edge:focus-visible{width:32px;background:color-mix(in srgb,var(--primary) 8%,var(--card));color:var(--primary);box-shadow:none}
+#workbench-shell .workflow-nav-edge:hover svg,#workbench-shell .workflow-nav-edge:focus-visible svg{opacity:1}
+@media(max-width:1099px){#workbench-shell .workflow-nav-panel{position:absolute;inset:0 auto 0 0;z-index:20;width:min(280px,85vw);box-shadow:8px 0 24px color-mix(in srgb,var(--foreground) 8%,transparent)}}
