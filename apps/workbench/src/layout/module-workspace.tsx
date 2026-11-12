@@ -5,16 +5,13 @@ import {useSceneDirectory} from './use-scene-directory';
 import {CapabilityNavigation,SceneScope} from './capability-navigation';
 import React,{createContext,useContext,useEffect,useState} from 'react';
 import {Button} from '@vxture/design-system';
-import {SidebarSimple,CaretRight,ArrowClockwise,ArrowUpRight,Cube} from '@phosphor-icons/react';
+import {SidebarSimple,CaretRight,ArrowClockwise,Cube} from '@phosphor-icons/react';
 import {usePlatformSession} from './platform-auth';
 import {businessEndpoint as endpoint} from './business-endpoint';
 import {moduleNames,moduleGroups} from './product-navigation';
 import {recordLink,useRecordNavigation,RecordNavigationProvider} from './record-navigation';
-import {SceneSpace} from './scene-directory';
-import {realScreenHref} from './real-space-data';
 import {SceneCapabilities} from './scene-capabilities';
 import {SceneProgress} from './scene-progress';
-import {SceneCover} from './scene-cover';
 import './data-workspace.css';
 import './module-workspace.css';
 
@@ -28,7 +25,7 @@ export function ModuleWorkspace({route,children}:{route:ModuleRoute;children:Rea
  const platform=usePlatformSession(),target=useRecordNavigation();
  const [revision,setRevision]=useState(0);
  const {spaces,loading,error}=useSceneDirectory(revision);
- const [matched,setMatched]=useState<{space:string;ids:string[]}>({space:'',ids:[]});
+
  const [sidebar,setSidebar]=useState(()=>innerWidth>620);
  useEffect(()=>{const media=matchMedia('(max-width:620px)');const update=()=>{if(media.matches)setSidebar(false);};media.addEventListener('change',update);return()=>media.removeEventListener('change',update);},[]);
  const scene=spaces.find(s=>s.id===target.space),group=moduleGroups.find(g=>g.items.some(i=>i.route===route));
@@ -42,13 +39,8 @@ export function ModuleWorkspace({route,children}:{route:ModuleRoute;children:Rea
 
    <div className="module-body">
     {common&&<p className="module-scope-note">规则库为共用定义，不属于某个模型版本。{scene?`当前关联上下文：${scene.name}。`:''}应用到场景时固定本体版本与摘要。</p>}
-    {common?<RecordNavigationProvider value={target}><EmbeddedScene.Provider value>{children}</EmbeddedScene.Provider></RecordNavigationProvider>:loading?<p role="status" className="data-subtle">正在读取场景空间…</p>:error&&!scene?<div role="alert" className="data-empty"><p>{error}</p><Button variant="outline" onClick={()=>setRevision(v=>v+1)}>重试</Button></div>:!scene?<div className="data-empty"><Cube size={36}/><h2>选择场景空间</h2><p>{target.space?'所选场景无权访问或不存在，请重新选择。':'从上方选择操作场景，继续处理资料、模型与发布。'}</p></div>:!allowed?<div className="data-empty" role="alert"><h2>当前场景无此操作权限</h2><p>可切换有权限的场景空间，或返回空间预览。</p></div>:<RecordNavigationProvider value={target}><EmbeddedScene.Provider value><SceneCapabilities.Provider value={scene.capabilities||[]}>{route!=='build'&&route!=='delivery'&&route!=='association'&&<SceneProgress key={[scene.id,target.job,target.publication,target.input].join(':')} space={scene.id} name={scene.name} input={target.input} revision={revision} onRead={report=>setMatched(report?{space:report.space_id,ids:report.summary.publications.filter(p=>p.matches_current).map(p=>p.publication_id)}:{space:'',ids:[]})}/>} {route==='space'?<ScenePreview scene={scene} matching={matched.space===scene.id?matched.ids:[]}/>:children}</SceneCapabilities.Provider></EmbeddedScene.Provider></RecordNavigationProvider>}
+    {common?<RecordNavigationProvider value={target}><EmbeddedScene.Provider value>{children}</EmbeddedScene.Provider></RecordNavigationProvider>:loading?<p role="status" className="data-subtle">正在读取场景空间…</p>:error&&!scene?<div role="alert" className="data-empty"><p>{error}</p><Button variant="outline" onClick={()=>setRevision(v=>v+1)}>重试</Button></div>:!scene?<div className="data-empty"><Cube size={36}/><h2>选择场景空间</h2><p>{target.space?'所选场景无权访问或不存在，请重新选择。':'从上方选择操作场景，继续处理资料、模型与发布。'}</p></div>:!allowed?<div className="data-empty" role="alert"><h2>当前场景无此操作权限</h2><p>可切换有权限的场景空间，或返回我的场景。</p></div>:<RecordNavigationProvider value={target}><EmbeddedScene.Provider value><SceneCapabilities.Provider value={scene.capabilities||[]}>{route!=='build'&&route!=='delivery'&&route!=='association'&&<SceneProgress key={[scene.id,target.job,target.publication,target.input].join(':')} space={scene.id} name={scene.name} input={target.input} revision={revision}/>} {children}</SceneCapabilities.Provider></EmbeddedScene.Provider></RecordNavigationProvider>}
    </div>
   </section>
  </div></main>;
-}
-
-function ScenePreview({scene,matching}:{scene:SceneSpace;matching:string[]}){
- const releases=[...(scene.publications||[])].sort((a,b)=>Date.parse(b.created_at)-Date.parse(a.created_at));
- return <section aria-label="当前场景发布预览" className="module-preview"><div className="module-section-heading"><h2>{scene.name}</h2><span>{releases.length} 个固定发布</span></div>{scene.description&&<p className="module-scope-note">{scene.description}</p>}{!releases.length?<div className="data-empty"><Cube size={40}/><h2>此场景尚无固定发布</h2><p>资料构建并核对后，在服务发布中发布，随后可在这里打开。</p><Button asChild variant="outline"><a href={recordLink('data',{})}>查看场景资料</a></Button></div>:<div className="module-preview-grid">{releases.map(release=>{const active=!['paused','retired'].includes(release.lifecycle_state||'');return <article key={release.id} className="module-preview-card"><div className="module-preview-art"><SceneCover name={scene.name} overviewUrl={scene.overview_url}/></div><div className="module-preview-copy"><div className="module-section-heading"><h3>{scene.name}</h3><span className={active?'module-release-active':''}>{active?'已发布':release.lifecycle_state==='retired'?'已退役':'已暂停'}</span></div><p className="module-version-id">版本：{release.id}</p><p className="module-scope-note">{matching.includes(release.id)?'对应当前工作候选':'固定发布版本'}</p><div className="module-preview-footer"><time dateTime={release.created_at}>{new Date(release.created_at).toLocaleString('zh-CN',{hour12:false})}</time>{active?<Button asChild size="sm"><a href={realScreenHref(scene.id,release.id)} target="_blank" rel="noopener noreferrer">打开空间<ArrowUpRight size={14}/></a></Button>:<Button disabled size="sm">打开空间</Button>}</div></div></article>;})}</div>}</section>;
 }

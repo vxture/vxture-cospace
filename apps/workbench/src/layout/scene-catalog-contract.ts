@@ -34,5 +34,5 @@ export function filterScenes(spaces:SceneSpace[],query:string,phase:string,sort:
  return spaces.filter(s=>(phase==='all'||scenePhase(s)===phase)&&`${s.name} ${s.project_name||''} ${s.description||''} ${s.address||''}`.toLocaleLowerCase().includes(match))
   .sort((a,b)=>(sort==='time'?sceneTimestamp(b)-sceneTimestamp(a):sort==='name'?0:order.indexOf(scenePhase(a))-order.indexOf(scenePhase(b)))||a.name.localeCompare(b.name,'zh-CN'));
 }
-// Entering a scene selects its workflow; opening a fixed release is a separate action.
-export const sceneWorkspaceHref=(id:string)=>'/space?'+new URLSearchParams({space:id});
+// Enter through the current workflow basic information, never the retired preview directory.
+export const sceneWorkspaceHref=(id:string)=>'/build?'+new URLSearchParams({space:id,tab:'info'});

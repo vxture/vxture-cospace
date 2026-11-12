@@ -37,5 +37,5 @@ test('search and state filtering preserve source total and sort by progress',()=
  assert.deepEqual(filterScenes(spaces,'上海','published','phase').map(s=>s.id),['a']);
  assert.equal(filterScenes(spaces,'上海','building','phase').length,0);
  assert.deepEqual(spaces.map(s=>s.id),['b','a','c']);
- assert.equal(sceneWorkspaceHref('scene A&B'),'/space?space=scene+A%26B');
+ assert.equal(sceneWorkspaceHref('scene A&B'),'/build?space=scene+A%26B&tab=info');
 });
