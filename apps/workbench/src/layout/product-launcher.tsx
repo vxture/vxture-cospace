@@ -10,7 +10,6 @@ import './product-launcher.css';
 export function ProductLauncher({route,hasScene=false,hrefForRoute,onNavigate}:{route?:string;hasScene?:boolean;hrefForRoute:(route:ModuleRoute)=>string;onNavigate:()=>void}){
  const context=useRecordNavigation();
  const migrationPages=[
-  ...[{id:'equipment',name:'设备间'},{id:'pump',name:'水泵设备间'},{id:'inspection',name:'巡检设备区'}].map(item=>({label:item.name+'示例',icon:'cube' as const,href:'/space?'+new URLSearchParams({screen:'space',preview:'1',space:item.id}),description:'待迁移 · 示例能力与源码核查'})),
   {label:'旧版候选查看器',icon:'file',href:context.space&&context.job?businessEndpoint+'/candidates/'+encodeURIComponent(context.job)+'/':undefined,description:context.space&&context.job?'待迁移 · 当前构建 HTML 查看器':'待迁移 · 选择构建版本后可打开'},
   {label:'旧版发布查看器',icon:'package',href:context.space&&context.publication?businessEndpoint+'/publications/'+encodeURIComponent(context.publication)+'/':undefined,description:context.space&&context.publication?'待迁移 · 当前发布 HTML 查看器':'待迁移 · 选择发布版本后可打开'},
  ] as const;
