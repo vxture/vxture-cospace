@@ -72,7 +72,7 @@ function App(){
 
  const {theme,setTheme}=useTheme();
  useEffect(()=>{const fn=()=>{setRoute(currentRoute());setLauncher(false);};return subscribeAppLocation(fn);},[]);
- useEffect(()=>{document.title=`CoSpace · ${preview?(route==='space'?'我的场景':names[route]):'登录'}`;},[route,preview,navigation.space]);
+ useEffect(()=>{let title='登录';if(preview)title=route==='space'?'我的场景':names[route];document.title=`CoSpace · ${title}`;},[route,preview,navigation.space]);
  useEffect(()=>{if(!notice)return;const t=setTimeout(()=>setNotice(''),3500);return()=>clearTimeout(t);},[notice]);
  const enter=()=>{sessionStorage.setItem('cospace.ui.ds.preview','1');setPreview(true);};
  const exit=()=>{if(platform?.csrf){return platformLogout(platform.csrf);}sessionStorage.removeItem('cospace.ui.ds.preview');setPreview(false);};
@@ -83,9 +83,25 @@ function App(){
  if(preview&&route==='build'&&new URLSearchParams(location.search).get('screen')==='build')return <React.Suspense fallback={<main className="dark h-dvh bg-background text-foreground" role="status">正在打开构建画布…</main>}><BuildScan/></React.Suspense>;
  if(preview&&route==='space'&&new URLSearchParams(location.search).get('embed')==='globe')return <React.Suspense fallback={<main role="status">正在打开三维地球…</main>}><GlobeEmbed/></React.Suspense>;
  const showLoginInfo=()=>setModal({title:'平台登录 · 独立接入验证',body:'已按 yucer 接通 OIDC + PKCE、中央会话与全局登出的独立验证入口。当前工程服务保持 UI 预览，尚未配置 CoSpace 平台客户端和业务空间授权。'});
+ const realViewer=route==='space'&&new URLSearchParams(location.search).get('screen')==='space'&&!!navigation.publication;
+ const renderWorkspace=()=>{
+  if(route==='space'){
+   if(realViewer)return <React.Suspense fallback={<output>正在打开空间…</output>}><RealSpace full={full} workspace={platform?.user?.workspace_id||''}/></React.Suspense>;
+   return <SceneCatalog/>;
+  }
+  if(route==='services')return <SpatialServices/>;
+  if(route==='data'){
+   const catalog=navigation.tab==='info'||!navigation.space||new URLSearchParams(location.search).get('scope')==='all'||![navigation.tab,navigation.input,navigation.artifact,navigation.batch,navigation.job,navigation.publication].some(Boolean);
+   return <main className="data-route-shell min-h-0 flex-1 overflow-hidden">{catalog?<SharedDataCatalog/>:<InputDirectory/>}</main>;
+  }
+  if(route==='ontology')return <SharedOntology/>;
+  if(adminRoutes.includes(route))return <ManagementFrame route={route as 'settings'|'members'|'identity'|'account'}>{route==='settings'?<SpaceSettings/>:<PlatformAccount/>}</ManagementFrame>;
+  return <ModuleWorkspace route={route as keyof typeof moduleNames}><Business route={route as 'data'|'ontology'|'build'|'delivery'|'association'}/></ModuleWorkspace>;
+ };
+ let content=<LoginPage identity={identity} tools={<ShellThemeToggle currentTheme={theme} onThemeChange={setTheme} buttonLabel="切换主题"/>} login={showLoginInfo} enter={enter}/>;
+ if(preview)content=<div className="flex h-dvh flex-col overflow-hidden bg-background text-foreground" id="workbench-shell">{!realViewer&&header}{renderWorkspace()}</div>;
  return <>
- {!preview?<LoginPage identity={identity} tools={<ShellThemeToggle currentTheme={theme} onThemeChange={setTheme} buttonLabel="切换主题"/>} login={showLoginInfo} enter={enter}/> :
- <div className="flex h-dvh flex-col overflow-hidden bg-background text-foreground" id="workbench-shell">{route==='space'&&new URLSearchParams(location.search).get('screen')==='space'&&!!navigation.publication?null:header}{route==='space'?(new URLSearchParams(location.search).get('screen')==='space'&&!!navigation.publication?<React.Suspense fallback={<section role="status">正在打开空间…</section>}><RealSpace full={full} workspace={platform?.user?.workspace_id||''}/></React.Suspense>:<SceneCatalog/>):route==='services'?<SpatialServices/>:route==='data'?<main className="data-route-shell min-h-0 flex-1 overflow-hidden"><>{navigation.tab==='info'||!navigation.space||new URLSearchParams(location.search).get('scope')==='all'||![navigation.tab,navigation.input,navigation.artifact,navigation.batch,navigation.job,navigation.publication].some(Boolean)?<SharedDataCatalog/>:<InputDirectory/>}</></main>:route==='ontology'?<SharedOntology/>:!adminRoutes.includes(route)?<ModuleWorkspace route={route as keyof typeof moduleNames}><Business route={route as 'data'|'ontology'|'build'|'delivery'|'association'}/></ModuleWorkspace>:<ManagementFrame route={route as 'settings'|'members'|'identity'|'account'}>{route==='settings'?<SpaceSettings/>:<PlatformAccount/>}</ManagementFrame>}</div>}
+ {content}
  <Dialog open={Boolean(modal)} onOpenChange={v=>{if(!v)setModal(null);}}><DialogContent><DialogHeader><DialogTitle>{modal?.title}</DialogTitle><DialogDescription>{modal?.body}</DialogDescription></DialogHeader><DialogFooter><Button onClick={()=>setModal(null)}>知道了</Button></DialogFooter></DialogContent></Dialog>
 
  {notice&&<div role="status" className="fixed bottom-lg left-lg z-notification rounded-md border border-border bg-popover px-lg py-md text-body-small text-popover-foreground shadow-notification">{notice}</div>}
@@ -94,7 +110,7 @@ function App(){
 
 function PlatformAccount(){const platform=usePlatformSession();return <div className="flex flex-col gap-xl"><h2 className="text-heading-2">平台身份与空间授权</h2><DataRows head={['项目','当前状态']} body={[["账户",platform?.user?.display_name||''],["身份标识",platform?.user?.subject||''],["组织",platform?.user?.org_id||''],["平台工作区",platform?.user?.workspace_id||''],["产品权限","由服务端空间绑定与成员授权逐项判定"],["场景授权","按当前工作区的场景授权执行"]]}/><Button variant="outline" onClick={()=>platformLogout(platform?.csrf||'')}>退出平台登录</Button></div>;}
 
-function Business({route}:{route:'data'|'ontology'|'build'|'delivery'|'association'}){
+function Business({route}:Readonly<{route:'data'|'ontology'|'build'|'delivery'|'association'}>){
  const context=useRecordNavigation();
  if(route==='data')return <InputDirectory key={context.space}/>;
  if(route==='ontology')return <OntologyWorkbench/>;

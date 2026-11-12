@@ -3,7 +3,7 @@ import {runGuarded} from './unsaved-navigation';
 import {sceneLinkFromUrl} from './navigation-contract';
 import {useSceneDirectory} from './use-scene-directory';
 import {CapabilityNavigation,SceneScope} from './capability-navigation';
-import React,{createContext,useContext,useEffect,useState} from 'react';
+import React,{createContext,useContext,useEffect,useMemo,useState} from 'react';
 import {Button} from '@vxture/design-system';
 import {SidebarSimple,CaretRight,ArrowClockwise,Cube} from '@phosphor-icons/react';
 import {usePlatformSession} from './platform-auth';
@@ -31,7 +31,20 @@ export function ModuleWorkspace({route,children}:{route:ModuleRoute;children:Rea
  const scene=spaces.find(s=>s.id===target.space),group=moduleGroups.find(g=>g.items.some(i=>i.route===route));
  const cap=required[route],allowed=!!scene&&(!platform||!cap||!!scene.capabilities?.includes(cap));
  const common=route==='ontology';
- return <main className="data-route-shell min-h-0 flex-1 overflow-hidden"><div className={`data-workspace module-workspace ${route==='build'?'build-module':route==='delivery'?'publication-module':route==='association'?'association-module':''} ${sidebar?'':'data-sidebar-hidden'}`}>
+ const capabilities=useMemo(()=>scene?.capabilities||[],[scene?.capabilities]);
+ const renderContent=()=>{
+  if(common)return <RecordNavigationProvider value={target}><EmbeddedScene.Provider value>{children}</EmbeddedScene.Provider></RecordNavigationProvider>;
+  if(loading)return <output className="data-subtle">正在读取场景空间…</output>;
+  if(error&&!scene)return <div role="alert" className="data-empty"><p>{error}</p><Button variant="outline" onClick={()=>setRevision(v=>v+1)}>重试</Button></div>;
+  if(!scene)return <div className="data-empty"><Cube size={36}/><h2>选择场景空间</h2><p>{target.space?'所选场景无权访问或不存在，请重新选择。':'从上方选择操作场景，继续处理资料、模型与发布。'}</p></div>;
+  if(!allowed)return <div className="data-empty" role="alert"><h2>当前场景无此操作权限</h2><p>可切换有权限的场景空间，或返回我的场景。</p></div>;
+  return <RecordNavigationProvider value={target}><EmbeddedScene.Provider value><SceneCapabilities.Provider value={capabilities}>{route!=='build'&&route!=='delivery'&&route!=='association'&&<SceneProgress key={[scene.id,target.job,target.publication,target.input].join(':')} space={scene.id} name={scene.name} input={target.input} revision={revision}/>} {children}</SceneCapabilities.Provider></EmbeddedScene.Provider></RecordNavigationProvider>;
+ };
+ let moduleClass='';
+ if(route==='build')moduleClass='build-module';
+ else if(route==='delivery')moduleClass='publication-module';
+ else if(route==='association')moduleClass='association-module';
+ return <main className="data-route-shell min-h-0 flex-1 overflow-hidden"><div className={`data-workspace module-workspace ${moduleClass} ${sidebar?'':'data-sidebar-hidden'}`}>
   {route!=='build'&&route!=='delivery'&&route!=='association'&&<CapabilityNavigation route={route}/> }
   <section className="data-main" aria-label={`${moduleNames[route]}工作区`}>
    <SceneScope spaces={spaces} current={target.space} onChoose={id=>{appNavigate(sceneLinkFromUrl(route,id,appLocation()));}} loading={loading} error={error} onRefresh={()=>setRevision(v=>v+1)}/>
@@ -39,7 +52,7 @@ export function ModuleWorkspace({route,children}:{route:ModuleRoute;children:Rea
 
    <div className="module-body">
     {common&&<p className="module-scope-note">规则库为共用定义，不属于某个模型版本。{scene?`当前关联上下文：${scene.name}。`:''}应用到场景时固定本体版本与摘要。</p>}
-    {common?<RecordNavigationProvider value={target}><EmbeddedScene.Provider value>{children}</EmbeddedScene.Provider></RecordNavigationProvider>:loading?<p role="status" className="data-subtle">正在读取场景空间…</p>:error&&!scene?<div role="alert" className="data-empty"><p>{error}</p><Button variant="outline" onClick={()=>setRevision(v=>v+1)}>重试</Button></div>:!scene?<div className="data-empty"><Cube size={36}/><h2>选择场景空间</h2><p>{target.space?'所选场景无权访问或不存在，请重新选择。':'从上方选择操作场景，继续处理资料、模型与发布。'}</p></div>:!allowed?<div className="data-empty" role="alert"><h2>当前场景无此操作权限</h2><p>可切换有权限的场景空间，或返回我的场景。</p></div>:<RecordNavigationProvider value={target}><EmbeddedScene.Provider value><SceneCapabilities.Provider value={scene.capabilities||[]}>{route!=='build'&&route!=='delivery'&&route!=='association'&&<SceneProgress key={[scene.id,target.job,target.publication,target.input].join(':')} space={scene.id} name={scene.name} input={target.input} revision={revision}/>} {children}</SceneCapabilities.Provider></EmbeddedScene.Provider></RecordNavigationProvider>}
+    {renderContent()}
    </div>
   </section>
  </div></main>;

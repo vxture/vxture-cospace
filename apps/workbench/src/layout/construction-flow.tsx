@@ -40,7 +40,7 @@ export function ConstructionFlow({active=true}:{active?:boolean}={}){
  useEffect(()=>{setBuildInfo({name:'',purpose:'',changes:''});},[target.space,target.tab,target.job]);
  useEffect(()=>{const toggle=()=>setAssistantOpen(v=>!v);window.addEventListener('cospace-build-assistant-toggle',toggle);return()=>window.removeEventListener('cospace-build-assistant-toggle',toggle);},[]);
  useEffect(()=>{window.dispatchEvent(new CustomEvent('cospace-build-assistant-state',{detail:assistantOpen}));return()=>{window.dispatchEvent(new CustomEvent('cospace-build-assistant-state',{detail:false}));};},[assistantOpen]);
- useEffect(()=>{setStep(target.tab==='info'?'info':draft?'prepare':target.tab==='candidate'?'review':'model');},[target.job,target.space,target.tab,draft]);
+ useEffect(()=>{let next='model';if(target.tab==='info')next='info';else if(draft)next='prepare';else if(target.tab==='candidate')next='review';setStep(next);},[target.job,target.space,target.tab,draft]);
  const [preflightOpen,setPreflightOpen]=useState(false);
  const [review,setReview]=useState<{candidate:string;revision:number}|null>(null);
  useEffect(()=>{setReview(null);setPreflightOpen(false);setData(null);},[target.space,target.input,target.job,active]);
