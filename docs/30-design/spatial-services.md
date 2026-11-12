@@ -12,6 +12,11 @@ both the global lists and the scene service page.
 - Global list rows show service identity, granted capabilities, pinned version,
   publication state and one entry action. There are no covers, card/list toggles,
   scene editing menus or version dropdowns in the list.
+- Each outlined row distributes scene identity, capabilities, release information
+  and the entry action across the available width. The state badge follows the
+  scene title; the entry button aligns to the top. Release metadata uses two
+  lines, with the version above the date and version count. Narrow screens stack
+  these groups without horizontal overflow. The list has no table header.
 - A `space` parameter identifies one scene service page; it is not a list filter.
   Navigation links do not inherit this parameter. Scene service navigation does
   not update the production workspace's remembered scene.
