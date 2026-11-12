@@ -9,10 +9,10 @@
 | 项目 | 原入口和实现 | 承接方向 | 剩余工作 | 状态 |
 | --- | --- | --- | --- | --- |
 | 空间预览 | /space?space=…；module-workspace.tsx 的 ScenePreview | 我的场景、空间服务 | 对齐发布目录能力、场景进入和查看动作；验证无构建权限用户；替换所有调用与旧书签后删除旧分支 | 待迁移 |
-| 业务配置 | /settings；main.tsx Configuration、space-settings.tsx | 工作区与授权 /settings；场景作业基本信息 | 模拟表单已删除，真实基本信息只由共享 SpaceSettings 承接；原 URL 保留，进入工作区页 | 已合并，保留入口供验收 |
-| 成员与角色 | /members；main.tsx 模拟成员分支及 PlatformAccount | 工作区与授权 /settings | /members 兼容转向，当前用户场景权限来自授权目录；删除模拟成员状态及弹窗，不宣称提供完整成员管理 | 已合并，保留入口供验收 |
-| 登录集成 | /identity；main.tsx 演示身份分支及 PlatformAccount | 账户与登录 /account | /identity 兼容转向；真实登录状态替代认证待接入演示内容；不暴露凭据 | 已合并，保留入口供验收 |
-| 个人账户 | /account；main.tsx 模拟账户分支及 PlatformAccount | 账户与登录 /account、平台账号中心 | 删除重复 PlatformAccount 与模拟账户；账户菜单、成果查看器菜单保持有效入口 | 已合并，保留入口供验收 |
+| 业务配置 | /settings；main.tsx Configuration、space-settings.tsx | 工作区与授权 /settings；场景作业基本信息 | 模拟表单已删除，真实基本信息只由共享 SpaceSettings 承接；原 URL 保留，进入工作区页 | 已完成，已移出待迁移清单 |
+| 成员与角色 | /members；main.tsx 模拟成员分支及 PlatformAccount | 工作区与授权 /settings | /members 兼容转向，当前用户场景权限来自授权目录；删除模拟成员状态及弹窗，不宣称提供完整成员管理 | 已完成，已移出待迁移清单 |
+| 登录集成 | /identity；main.tsx 演示身份分支及 PlatformAccount | 账户与登录 /account | /identity 兼容转向；真实登录状态替代认证待接入演示内容；不暴露凭据 | 已完成，已移出待迁移清单 |
+| 个人账户 | /account；main.tsx 模拟账户分支及 PlatformAccount | 账户与登录 /account、平台账号中心 | 删除重复 PlatformAccount 与模拟账户；账户菜单、成果查看器菜单保持有效入口 | 已完成，已移出待迁移清单 |
 | 设备间示例 | /space?screen=space&preview=1&space=equipment；main.tsx Space、spaces.ts | 真实空间查看、示例策略待明确 | 盘点对象选择、属性、图层、侧栏能力，确认承接或弃用依据后删除 | 待迁移 |
 | 水泵设备间示例 | /space?screen=space&preview=1&space=pump；同上 | 同上 | 独立核对场景内容与书签兼容，不因共用组件直接遗漏 | 待迁移 |
 | 巡检设备区示例 | /space?screen=space&preview=1&space=inspection；同上 | 同上 | 独立核对场景内容与书签兼容，不因共用组件直接遗漏 | 待迁移 |
@@ -29,7 +29,7 @@
 
 ## 配置管理本轮清理记录
 
-- 保留 10 项 Launcher 迁移清单；四项配置管理条目明确标注已合并与承接去向，原 href 仍有效。
+- 四项配置管理逐项复核后移出 Launcher 待迁移清单，文档继续留档。其余 6 项仍保留入口；正式配置管理由全局齿轮进入。/members、/identity 旧书签保留兼容转向。
 - 两个正式页面：/settings 工作区与授权、/account 账户与登录；/members 与 /identity 只做客户端 replace 兼容转向，不挂载旧内容。
 - 配置管理仅保留必要场景参数；构建、资料、发布记录参数清除，账号页不携带场景参数。
 - 删除 main.tsx 内 Configuration、PlatformAccount、DataRows、模拟成员分支及弹窗、相关 state 和无引用的示例表格常量。
@@ -38,3 +38,13 @@
 - main.tsx 中合成示例仍需要的两个展示名称保留为固定示例值，随示例批次清理；本轮不删除示例页面、源码或真实业务数据。
 - 基本信息入口统一进入 /build?space=…&tab=info；查看按 space.preview，保存仍由服务端 space.manage 检查，未授予构建权限。
 - 验证：24 项前端导航与权限测试、89 项设置/身份/公开入口后端测试通过；生产构建通过；浏览器确认旧成员与登录入口转向、记录参数清除、真实权限目录、基本信息落点及 10 项迁移清单。
+
+## 完成项移出清单前的复核
+
+- 业务配置：确认模拟配置组件及本机配置读写代码已清理；基本信息三处调用复用同一个表单；全局齿轮仍可进入 /settings。
+- 成员与角色：确认模拟成员状态、表单、弹窗与重复身份组件已清理；/members 仅转向工作区与授权，展示当前用户权限，不冒充成员管理。
+- 登录集成：确认认证待接入演示内容已清理；/identity 仅转向账户与登录；真实会话与认证接口保留。
+- 个人账户：确认模拟账户与重复身份页面已清理；账户菜单保留平台账号中心，真实成果与示例菜单均可进入 /account。
+- 扩展检索发现地图设计预览页仍使用 /#settings、/#account，现已修正为正式 /settings、/account，均在新标签页打开。
+- 仅移除上述四项 Launcher 待迁移条目。兼容路由、认证允许列表和导航保护规则是仍在使用的兼容逻辑，不属于无引用旧页面。
+- 清单移除验证：生产构建、地图设计预览构建和 24 项前端测试通过；浏览器确认待迁移数量为 6、六项内容完整、全局齿轮与两页正式导航正常。源码检索未发现旧模拟管理组件及失效锚点。

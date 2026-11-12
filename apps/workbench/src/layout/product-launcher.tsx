@@ -12,10 +12,6 @@ export function ProductLauncher({route,hasScene=false,hrefForRoute,onNavigate}:{
  const sceneQuery=context.space?'?'+new URLSearchParams({space:context.space}):'';
  const migrationPages=[
   {label:'空间预览',icon:'cube',href:context.space?'/space'+sceneQuery:undefined,description:context.space?'待迁移 · 发布目录与场景入口整合':'待迁移 · 选择场景后可打开'},
-  {label:'业务配置',icon:'settings',href:'/settings'+sceneQuery,description:'已合并 · 工作区与授权'},
-  {label:'成员与角色',icon:'users',href:'/members',description:'已合并 · 当前用户场景权限'},
-  {label:'登录集成',icon:'shield-check',href:'/identity',description:'已合并 · 账户与登录'},
-  {label:'个人账户',icon:'user',href:'/account',description:'已合并 · 账户与登录'},
   ...[{id:'equipment',name:'设备间'},{id:'pump',name:'水泵设备间'},{id:'inspection',name:'巡检设备区'}].map(item=>({label:item.name+'示例',icon:'cube' as const,href:'/space?'+new URLSearchParams({screen:'space',preview:'1',space:item.id}),description:'待迁移 · 示例能力与源码核查'})),
   {label:'旧版候选查看器',icon:'file',href:context.space&&context.job?businessEndpoint+'/candidates/'+encodeURIComponent(context.job)+'/':undefined,description:context.space&&context.job?'待迁移 · 当前构建 HTML 查看器':'待迁移 · 选择构建版本后可打开'},
   {label:'旧版发布查看器',icon:'package',href:context.space&&context.publication?businessEndpoint+'/publications/'+encodeURIComponent(context.publication)+'/':undefined,description:context.space&&context.publication?'待迁移 · 当前发布 HTML 查看器':'待迁移 · 选择发布版本后可打开'},
@@ -31,7 +27,7 @@ export function ProductLauncher({route,hasScene=false,hrefForRoute,onNavigate}:{
    {group.items.filter(item=>item.route!=='space').map(item=><ShellPanelRow key={item.route} icon={item.icon} label={moduleNames[item.route]} description={item.description} href={hrefForRoute(item.route)} active={route===item.route} onClick={onNavigate}/>)}
   </ShellPanelSection>)}
   <Collapsible className="product-launcher-migration">
-   <CollapsibleTrigger asChild><Button variant="ghost" className="product-launcher-migration-trigger" aria-label="页面迁移清单"><span>迁移清单<StatusBadge size="sm" tone="neutral">{migrationPages.length}</StatusBadge></span><CaretDown size={16}/></Button></CollapsibleTrigger>
+   <CollapsibleTrigger asChild><Button variant="ghost" className="product-launcher-migration-trigger" aria-label="待迁移页面"><span>待迁移<StatusBadge size="sm" tone="neutral">{migrationPages.length}</StatusBadge></span><CaretDown size={16}/></Button></CollapsibleTrigger>
    <CollapsibleContent><div className="product-launcher-migration-items">{migrationPages.map(item=><ShellPanelRow key={item.label} label={item.label} icon={item.icon} description={item.description} href={item.href} disabled={!item.href} chevron={false} onClick={onNavigate}/>)}</div></CollapsibleContent>
   </Collapsible>
  </nav>;
