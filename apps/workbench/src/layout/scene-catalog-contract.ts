@@ -16,11 +16,12 @@ export function sceneTimestamp(scene:SceneSpace){
 }
 export const sceneHref=(route:string,id:string)=>`/${route}?${new URLSearchParams({space:id})}`;
 export const sceneDestinations=(scene:SceneSpace)=>[
- {key:'data',label:'数据管理',capability:'data.manage'},
+ {key:'services',label:'空间服务',capability:'space.preview'},
  {key:'build',label:'构建中心',capability:'build.run'},
  {key:'association',label:'空间关联',capability:'association.edit'},
  {key:'delivery',label:'服务发布',capability:'space.preview'},
-].map(item=>({...item,href:sceneHref(item.key,scene.id),enabled:!!scene.capabilities?.includes(item.capability)}));
+ {key:'data',label:'数据管理',capability:'data.manage'},
+].map(item=>({...item,href:item.key==='services'?'/services?'+new URLSearchParams({section:'directory',space:scene.id,...(scene.publication_id?{publication:scene.publication_id}:{}),tab:scene.publication_id?'overview':'recipients'}):sceneHref(item.key,scene.id),enabled:!!scene.capabilities?.includes(item.capability)}));
 export function scenePhase(scene:SceneSpace):ScenePhase{
  const latest=scene.publications?.find(p=>p.id===scene.publication_id)||scene.publications?.[0];
  if(latest?.lifecycle_state==='retired')return 'archived';

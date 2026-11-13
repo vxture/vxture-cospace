@@ -453,6 +453,11 @@ def create_app(root,jobs=None,update_evidence=None,registration_sources=None,sou
             raise HTTPException(409,'selected_model_integrity_changed')
         return {**current.manifest,'selection':selected,'preview_url':selected['candidate_url'],
                 'thumbnail_url':selected['candidate_url']+'api/thumbnail'}
+    @app.get('/api/scene-overview')
+    def scene_overview(space_id:str):
+        from packages.service.scene_overview import overview
+        try:return overview(jobs,space_id)
+        except (ValueError,OSError,KeyError,TypeError):raise HTTPException(409,'scene_overview_unavailable')
     @app.get('/api/builds')
     def builds(space_id:str|None=None):
         entries=controlled_entries(filtered(jobs.list() if jobs else [],space_id),space_id,'candidate')

@@ -48,8 +48,9 @@ test('newest activity sorts across phases, with invalid or missing dates last',(
 
 test('scene operation destinations retain disabled entries and explicit scene scope',()=>{
  const items=sceneDestinations({id:'scene A&B',capabilities:['space.preview','data.manage']});
- assert.deepEqual(items.map(s=>[s.key,s.enabled]),[['data',true],['build',false],['association',false],['delivery',true]]);
- assert.equal(items[0].href,'/data?space=scene+A%26B');
+ assert.deepEqual(items.map(s=>[s.key,s.enabled]),[['services',true],['build',false],['association',false],['delivery',true],['data',true]]);
+ assert.equal(items.find(item=>item.key==='data').href,'/data?space=scene+A%26B');
+ assert.equal(new URL(items[0].href,'https://example.test').pathname,'/services');
  assert.ok(sceneDestinations({id:'none'}).every(s=>!s.enabled));
 });
 
@@ -116,4 +117,17 @@ test('scene entry opens only the explicit active current publication and preserv
  assert.equal(sceneEntryHref({...scene,publication_id:'missing'}),sceneWorkspaceHref(scene.id));
  assert.equal(sceneEntryHref({id:'empty'}),'/space?space=empty');
  assert.equal(sceneDestinations({id:scene.id,capabilities:['space.preview']}).some(d=>d.key==='settings'),false);
+});
+
+
+test('scene services menu pins current release and routes unpublished scenes to recipients',()=>{
+ const scene={id:'space-123',publication_id:'fixed-1',capabilities:['space.preview']};
+ const url=new URL(sceneDestinations(scene)[0].href,'https://example.test');
+ assert.equal(url.pathname,'/services');
+ assert.equal(url.searchParams.get('space'),scene.id);
+ assert.equal(url.searchParams.get('publication'),'fixed-1');
+ assert.equal(url.searchParams.get('tab'),'overview');
+ const empty=new URL(sceneDestinations({...scene,publication_id:undefined})[0].href,'https://example.test');
+ assert.equal(empty.searchParams.get('tab'),'recipients');
+ assert.equal(empty.searchParams.has('publication'),false);
 });

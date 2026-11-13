@@ -97,5 +97,9 @@
 .scene-overview-release-heading{display:flex;align-items:center;justify-content:space-between;gap:12px}
 .scene-overview-release-heading strong{min-width:0;overflow-wrap:anywhere;font-weight:500}
 .scene-overview-release-meta{display:flex;align-items:center;gap:12px;color:var(--muted-foreground);font-size:var(--label-small-font-size);flex-wrap:wrap}
-.scene-detail-content .scene-overview-footnote{font-size:var(--label-small-font-size);line-height:1.6}
 .scene-overview-note{display:flex;align-items:center;justify-content:space-between;gap:8px;color:var(--muted-foreground)}
+
+.scene-overview-release-status{display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-shrink:0}.scene-overview-release-status>span{font-size:var(--label-small-font-size);color:var(--muted-foreground)}
+.scene-detail-content dd{min-height:1.5em}
+
+.scene-detail-section-heading{min-height:24px}
