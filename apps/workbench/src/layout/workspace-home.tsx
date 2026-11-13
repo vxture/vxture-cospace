@@ -2,12 +2,11 @@ import {useState} from 'react';
 import {Button,StatusBadge} from '@vxture/design-system';
 import {ArrowRight,Cube,ArrowsClockwise,Broadcast,UploadSimple,Stack} from '@phosphor-icons/react';
 import {appNavigate} from './app-router';
-import {filterScenes,scenePhase,scenePhases,sceneTimestamp,sceneWorkspaceHref} from './scene-catalog-contract';
+import {filterScenes,scenePhase,scenePhases,sceneTimestamp,sceneWorkspaceHref,homeSceneEntry} from './scene-catalog-contract';
 import {useSceneDirectory} from './use-scene-directory';
 import {useSelectedScene} from './scene-selection';
 import {useHomeMonitor} from './use-home-monitor';
 import {homeMonitorStatus} from './home-monitor-status';
-import {homeSceneEntry} from './scene-catalog-contract';
 import {SceneMoreMenu} from './scene-detail';
 import './workspace-home.css';
 
