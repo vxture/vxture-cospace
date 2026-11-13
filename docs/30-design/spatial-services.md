@@ -53,10 +53,16 @@ visible. Read failures and lack of permission are distinct from zero recorded
 calls. Counts do not claim device online status or SLA.
 
 Available consumer capabilities remain `space.preview`, `space.query`,
-`space.export`. Feedback and recipient APIs do not exist yet. Their list and
-tab views explicitly say 尚未开放, without synthetic records or save forms.
-Future feedback and recipient records must display their own version bindings;
-they must not be implicitly assigned the header's selected version.
+`space.export`. Feedback is not open yet. Recipient registration now uses
+`/api/service-recipients`, with independent `recipient.read` and
+`recipient.manage` permissions. The global page lists actual device instances;
+the scene tab reads the same records filtered by scene, even without a release.
+Registration includes morphology and independent 空间数据采集 / 空间服务使用
+purposes per scene. It grants no service access. Vendor integration and instance
+activity remain unverified; there are no synthetic device events or online states.
+Any future usage record must retain its own version binding rather than inheriting
+the header's selected version. See `embodied-agent-service-recipients.md` and
+`../../contracts/schemas/service-recipients-v0.1.md` for the registration contract.
 
 The vendored DS supplies navigation, controls, tabs, badges and the mobile
 navigation drawer. Product CSS composes the service ledger and responsive scene

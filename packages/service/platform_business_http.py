@@ -33,6 +33,7 @@ from packages.data.input_uploads import InputUploads,UploadRejected,MAX_UPLOAD,c
 from packages.ontology.workspace_authoring import WorkspaceOntologies,DraftChange,SealDraft
 from packages.ontology.scene_usage import usage as scene_ontology_usage, UsageQuery
 from packages.service.public_errors import public_error
+from packages.service.service_recipients import ServiceRecipients, RecipientChange, RecipientConflict, RecipientsUnavailable
 from packages.service.amap_gateway import AmapGateway
 from packages.service.globe_runtime import GlobeRuntime
 from packages.data.workspace_catalog import catalog as workspace_catalog, CatalogQuery, CatalogUnavailable
@@ -57,6 +58,7 @@ class BusinessAccess:
         self.scene_ifc=IfcWorkspace(directory,jobs,scene_ifc_config)
         self.attachments=SceneAttachments(jobs.inputs) if jobs.inputs else None
         self.sources=SpaceSources(directory.root,registration_sources or {})
+        self.recipients=ServiceRecipients(directory.root)
         self.workspace_scenes=WorkspaceScenes(directory,policies,self.sources,workspace_config,
             platform_access=subscriptions is not None)
         self.registration=PreviewRegistration(jobs.inputs,{}) if jobs.inputs else None
@@ -76,6 +78,8 @@ class BusinessAccess:
         principal=self.rp.verifier.verify(session['access_token'])
         access=PlatformResourceAccess(self.directory,self.jobs,policy)
         path=request.url.path; method=request.method; q=request.query_params
+        if path=='/api/service-recipients' and method in ('GET','POST') or re.fullmatch(r'/api/service-recipients/agent-[a-f0-9]{32}',path) and method=='PATCH':
+            return {'principal':principal}
         if path=='/api/service-monitor' and method=='GET':
             access.space(principal,q.get('space_id'),PUBLICATION_MANAGE)
             return {'principal':principal}
@@ -382,6 +386,25 @@ class BusinessAccess:
             revision,policy=await run_in_threadpool(self.policies.load)
             context=await run_in_threadpool(self.authorize,request,session,policy,body)
             request.state.platform_principal=context['principal'];request.state.policy_revision=revision
+            if path=='/api/service-recipients' or path.startswith('/api/service-recipients/'):
+                if request.method=='GET':
+                    if set(request.query_params)-{'space_id','offset','limit','q','morphology','purpose'}:return deny(422,'recipient_query_invalid')
+                    try:
+                        offset=int(request.query_params.get('offset','0'));limit=int(request.query_params.get('limit','50'))
+                    except ValueError:return deny(422,'recipient_query_invalid')
+                    if offset<0 or not 1<=limit<=100:return deny(422,'recipient_query_invalid')
+                    if request.query_params.get('morphology','') not in ('','aerial','quadruped','wheeled','tracked','humanoid','other') or request.query_params.get('purpose','') not in ('','collect','use') or len(request.query_params.get('q',''))>160:return deny(422,'recipient_query_invalid')
+                    result=await run_in_threadpool(self.recipients.list,context['principal'],policy,self.directory.list('space'),
+                        space_id=request.query_params.get('space_id'),offset=offset,limit=limit,query=request.query_params.get('q',''),
+                        morphology=request.query_params.get('morphology',''),purpose=request.query_params.get('purpose',''))
+                    return JSONResponse(result,headers={'Cache-Control':'no-store'})
+                if request.query_params:return deny(422,'recipient_query_invalid')
+                try:change=RecipientChange.model_validate(body)
+                except ValidationError:return deny(422,'recipient_registration_invalid')
+                result=await run_in_threadpool(self.recipients.save,context['principal'],policy,self.directory.list('space'),change,
+                    None if path=='/api/service-recipients' else path.rsplit('/',1)[1])
+                payload={k:v for k,v in result.items() if k not in ('request_id','expected_revision','created_by')}
+                return JSONResponse(payload|{'can_manage':True,'integration_state':'pending','external_identity_verified':False},status_code=201 if request.method=='POST' else 200,headers={'Cache-Control':'no-store'})
             if path=='/api/service-monitor':
                 if set(request.query_params)!={'space_id'}:return deny(422,'monitor_query_invalid')
                 try:result=await run_in_threadpool(self.service_monitor.snapshot,context['principal'],request.query_params['space_id'])
@@ -731,6 +754,9 @@ class BusinessAccess:
                 'upload_member_integrity','upload_members_mismatch','upload_package_invalid','upload_scene_storage_budget',
                 'upload_size_budget','upload_unexpected_member','upload_unsafe_member',
             ),'upload_package_invalid'))
+        except RecipientConflict as exc:
+            return deny(409,public_error(exc,('recipient_request_reused','recipient_revision_changed'),'recipient_conflict'))
+        except RecipientsUnavailable:return deny(503,'service_recipients_unavailable')
         except CoordinatesConflict as exc:
             return deny(409,public_error(exc,('coordinate_request_conflict','coordinate_revision_changed'),'input_coordinates_unavailable'))
         except CoordinatesUnavailable:return deny(503,'input_coordinates_unavailable')

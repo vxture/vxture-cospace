@@ -83,7 +83,7 @@ def test_filtered_directory_and_direct_space_only_authorized(secured):
     result=c.get('/api/spaces');assert result.status_code==200,result.text
     data=result.json();assert [s['id'] for s in data['spaces']]==[spaces[0]['id']]
     assert data['spaces'][0]['project_name']==directory.read('project',spaces[0]['project_id'])['name']
-    assert data['spaces'][0]['capabilities']==['space.preview','space.query']
+    assert data['spaces'][0]['capabilities']==['recipient.read','space.preview','space.query']
     assert new['id'] in result.text and spaces[1]['id'] not in result.text
     assert c.get('/api/spaces/'+spaces[0]['id']).status_code==200
     assert c.get('/api/spaces/'+spaces[1]['id']).status_code==403

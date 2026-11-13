@@ -8,6 +8,7 @@ import {spatialServices,serviceSpaces,selectedServiceVersion,sectionServices,ser
 import {ServiceNavigation} from './service-navigation';
 import {ServiceListEntry} from './spatial-service-list';
 import {SceneServicePage,UnavailableServiceSection} from './scene-service-page';
+import {ServiceRecipients} from './service-recipients';
 import {appNavigate} from './app-router';
 import {sceneServiceTabs,entryServiceTab,servicePageHref,type SceneServiceTab} from './service-workspace-contract';
 import './scene-catalog.css';
@@ -18,7 +19,7 @@ const descriptions:Record<ServiceSection,string>={
  offline:'浏览各场景的离线成果，进入服务页获取固定版本的交付包。',
  online:'浏览各场景的在线服务，进入服务页查看接入与运行情况。',
  feedback:'汇总各场景的态势反馈与处理情况。',
- recipients:'查看服务对象使用的场景、服务方式与关联版本。'
+ recipients:'管理具身智能体的设备形态、接入用途与空间服务关联。'
 };
 export function SpatialServices(){
  const [params,setParams]=useSearchParams();
@@ -46,7 +47,8 @@ export function SpatialServices(){
   }
   return changed?next:current;
  });},[groups]);
- const group=groups.find(value=>value.scene.id===space);
+ const sceneWithoutRelease=tab==='recipients'?spaces.find(value=>value.id===space):undefined;
+ const group=groups.find(value=>value.scene.id===space)||(sceneWithoutRelease?{scene:sceneWithoutRelease,versions:[]}:undefined);
  const version=group?selectedServiceVersion(group,publication??versions[space]):undefined;
  // Legacy scene-only links become explicit fixed-version detail links once loaded.
  useEffect(()=>{if(space&&version&&publication===null)appNavigate(servicePageHref(section,space,version.release.id,tab,filter),true);},[space,version?.release.id,publication,section,tab,query,state]);
@@ -65,7 +67,7 @@ export function SpatialServices(){
     {loading?<p role="status" className="service-list-empty">正在读取场景服务…</p>:error?<div role="alert" className="service-list-empty"><p>{error}</p><Button variant="secondary" onClick={()=>setRevision(value=>value+1)}>重新加载</Button></div>:group?<SceneServicePage group={group} version={version} tab={tab} revision={revision} onTab={value=>appNavigate(servicePageHref(section,space,publication||version?.release.id||'',value,filter))} onVersion={changeVersion} onRefresh={()=>setRevision(value=>value+1)}/>:<div className="service-list-empty" role="alert"><h2>此场景服务不可访问</h2><p>场景已不可访问，或暂无已授权的发布服务。</p><Button variant="secondary" onClick={()=>appNavigate('/services?section='+section)}>返回服务清单</Button></div>}
    </>:<>
     <WorkspaceHeading icon={({directory:Cube,online:Cloud,offline:DownloadSimple,feedback:UploadSimple,recipients:Users})[section]} title={serviceSections[section]} description={descriptions[section]} actions={<Button size="icon-sm" variant="ghost" aria-label="刷新服务清单" onClick={()=>setRevision(value=>value+1)}><ArrowsClockwise size={16}/></Button>}/>
-    {section==='feedback'||section==='recipients'?<UnavailableServiceSection section={section}/>:<section aria-label={`${serviceSections[section]}清单`}>
+    {section==='recipients'?<ServiceRecipients revision={revision}/>:section==='feedback'?<UnavailableServiceSection section={section}/>:<section aria-label={`${serviceSections[section]}清单`}>
      <div className="service-list-toolbar"><span className="service-list-count" aria-live="polite">{loading?'读取中…':error?'暂不可读':`${visible.length} 项场景服务`}</span><div className="service-list-filters"><div className="service-list-search"><MagnifyingGlass size={16}/><Input aria-label="搜索服务清单" placeholder="搜索场景、项目或版本" value={query} onChange={event=>updateFilter('q',event.target.value)}/></div><NativeSelect wrapperClassName="service-list-state-select" aria-label="发布状态" value={state} onChange={event=>updateFilter('status',event.target.value)}><option value="all">全部发布状态</option><option value="available">已发布</option><option value="unavailable">暂停 / 退役 / 待核对</option></NativeSelect></div></div>
      {missingVersion&&<p role="alert" className="spatial-service-section-note">部分已选版本不再可见，相关操作已停止。<Button variant="link" size="sm" onClick={()=>setVersions(current=>Object.fromEntries(Object.entries(current).filter(([id,pin])=>{const value=groups.find(item=>item.scene.id===id);return !value||!!selectedServiceVersion(value,pin);}))) }>重新确认版本</Button></p>}
      {loading?<p role="status" className="service-list-empty">正在读取服务清单…</p>:error?<div role="alert" className="service-list-empty"><p>{error}</p><Button variant="secondary" onClick={()=>setRevision(value=>value+1)}>重新加载</Button></div>:<div className="service-directory-list">{visible.map(value=><ServiceListEntry key={value.scene.id} group={value} version={selectedServiceVersion(value,versions[value.scene.id])!} section={section} filter={filter}/>)}{!visible.length&&<div className="service-list-empty"><h2>{groups.length?'没有匹配的服务':'暂无已授权的场景服务'}</h2><p>{groups.length?'调整关键词或发布状态后重试。':'场景发布成果并授权后，服务会显示在这里。'}</p>{(query||state!=='all')&&<Button variant="secondary" onClick={()=>setParams({section},{replace:true})}>清除筛选</Button>}</div>}</div>}
