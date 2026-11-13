@@ -34,6 +34,7 @@ from packages.ontology.workspace_authoring import WorkspaceOntologies,DraftChang
 from packages.ontology.scene_usage import usage as scene_ontology_usage, UsageQuery
 from packages.service.public_errors import public_error
 from packages.service.service_recipients import ServiceRecipients, RecipientChange, RecipientConflict, RecipientsUnavailable
+from packages.service.scene_overview import overview as scene_overview
 from packages.service.amap_gateway import AmapGateway
 from packages.service.globe_runtime import GlobeRuntime
 from packages.data.workspace_catalog import catalog as workspace_catalog, CatalogQuery, CatalogUnavailable
@@ -160,6 +161,8 @@ class BusinessAccess:
             space(q.get('space_id'),DATA_MANAGE);return {'principal':principal}
         if path=='/api/source-settings' and method=='POST':
             space(body.get('space_id'),'space.manage');return {'principal':principal}
+        if path=='/api/scene-overview' and method in ('GET','HEAD'):
+            space(q.get('space_id'));return {'principal':principal}
         if path=='/api/workflow' and method in ('GET','HEAD'):
             space(q.get('space_id'))
             if q.get('input_id'):artifact('input:'+q['input_id'],DATA_MANAGE,q.get('space_id'))
@@ -619,6 +622,14 @@ class BusinessAccess:
                     return JSONResponse(report,headers={'Cache-Control':'no-store'})
                 report=await run_in_threadpool(store.latest,check_path[1])
                 return JSONResponse({'last_check':report,'current_files_checked':False},headers={'Cache-Control':'no-store'})
+            if path=='/api/scene-overview':
+                if set(request.query_params)!={'space_id'}:return deny(422,'scene_overview_query_invalid')
+                identity=request.query_params['space_id']
+                if 'build.run' not in policy.capabilities(context['principal'],identity):
+                    return JSONResponse({'space_id':identity,'candidate_ref':None,'job':None,'stages':None,'counts':None},headers={'Cache-Control':'no-store'})
+                try:result=await run_in_threadpool(scene_overview,self.jobs,identity)
+                except (ValueError,OSError,KeyError,TypeError):return deny(409,'scene_overview_unavailable')
+                return JSONResponse(result,headers={'Cache-Control':'no-store'})
             if path=='/api/workflow':
                 from packages.service.preview_workflow import workflow
                 from packages.service.preview_publications import PreviewPublications
