@@ -10,6 +10,7 @@ import {ServiceAccess} from './spatial-service-detail';
 import {OnlineServiceMonitor,useServiceReport} from './online-service-monitor';
 import {realScreenHref} from './real-space-data';
 import {locationLabel} from './geographic-location';
+import {ServiceRecipients} from './service-recipients';
 
 export function UnavailableServiceSection({section}:{section:'feedback'|'recipients'}){
  return <section className="service-unavailable" aria-label={sceneServiceTabs[section]}><StatusBadge size="sm" icon={false} tone="neutral">尚未开放</StatusBadge><h2>{section==='feedback'?'态势反馈接入尚未开放':'服务对象登记尚未开放'}</h2><p>{section==='feedback'?'开放后可在此查看反馈接入、反馈记录与处理状态。':'开放后可在此查看服务对象、使用方式及关联版本。'}</p></section>;
@@ -35,16 +36,16 @@ export function SceneServicePage({group,version,tab,revision,onTab,onVersion,onR
  const scene=group.scene;
  return <Tabs value={tab} onValueChange={value=>onTab(value as SceneServiceTab)} className="scene-service-page">
   <div className="scene-service-top">
-   <WorkspaceHeading icon={Cube} title={`${scene.name} · 场景服务`} description={`${scene.project_name||'未指定项目'} · ${scene.address||locationLabel(scene.location)}`} secondary={version&&<StatusBadge size="sm" icon={false} tone={version.available?'success':'neutral'}>{serviceStateLabels[version.state]}</StatusBadge>} actions={<div className="scene-service-heading-actions"><NativeSelect wrapperClassName="scene-service-version-select" id="scene-service-version" aria-label="查看服务版本" value={version?.release.id||''} onChange={event=>onVersion(event.target.value)}>{!version&&<option value="" disabled>所选版本不可用，请重新选择</option>}{group.versions.map(value=><option key={value.release.id} value={value.release.id}>Ver: {serviceVersionLabel(value)} · {serviceStateLabels[value.state]}</option>)}</NativeSelect>
+   <WorkspaceHeading icon={Cube} title={`${scene.name} · 场景服务`} description={`${scene.project_name||'未指定项目'} · ${scene.address||locationLabel(scene.location)}`} secondary={version&&<StatusBadge size="sm" icon={false} tone={version.available?'success':'neutral'}>{serviceStateLabels[version.state]}</StatusBadge>} actions={<div className="scene-service-heading-actions"><NativeSelect wrapperClassName="scene-service-version-select" id="scene-service-version" aria-label="查看服务版本" value={version?.release.id||''} disabled={!group.versions.length} onChange={event=>onVersion(event.target.value)}>{!version&&<option value="" disabled>{group.versions.length?'所选版本不可用，请重新选择':'暂无发布成果'}</option>}{group.versions.map(value=><option key={value.release.id} value={value.release.id}>Ver: {serviceVersionLabel(value)} · {serviceStateLabels[value.state]}</option>)}</NativeSelect>
     {preview?.available?<Button size="xl" variant="outline" asChild><a href={realScreenHref(scene.id,preview.release.id)} target="_blank" rel="noopener noreferrer">空间预览<ArrowSquareOut size={16}/></a></Button>:<Button size="xl" variant="outline" disabled>空间预览<ArrowSquareOut size={16}/></Button>}<Button size="icon-xl" variant="outline" aria-label="刷新场景服务" onClick={onRefresh}><ArrowsClockwise size={16}/></Button></div>}/>
-   <div className="scene-service-tab-scroll"><TabsList aria-label="场景服务维度">{Object.entries(sceneServiceTabs).map(([key,label])=><TabsTrigger key={key} value={key}>{label}</TabsTrigger>)}</TabsList></div>
+   <div className="scene-service-tab-scroll"><TabsList aria-label="场景服务维度">{Object.entries(sceneServiceTabs).map(([key,label])=><TabsTrigger key={key} value={key} disabled={!group.versions.length&&key!=='recipients'}>{label}</TabsTrigger>)}</TabsList></div>
   </div>
-  {!version?<p className="spatial-service-section-note" role="alert">所选发布版本已不可访问，操作已停止。请明确选择其他版本。</p>:<>
+  {!version?tab!=='recipients'&&<p className="spatial-service-section-note" role="alert">所选发布版本已不可访问，操作已停止。请明确选择其他版本。</p>:<>
    <TabsContent value="overview"><ServiceOverview group={group} version={version} revision={revision}/></TabsContent>
    <TabsContent value="online"><div className="service-tab-body">{query?<ServiceAccess key={query.id} item={query}/>:<p className="spatial-service-section-note">当前账号未获此版本的在线查询权限。</p>}<OnlineServiceMonitor scene={scene} space={scene.id} revision={revision}/></div></TabsContent>
    <TabsContent value="offline">{offline?<ServiceAccess key={offline.id} item={offline}/>:<p className="spatial-service-section-note">当前账号未获此版本的离线交付权限。</p>}</TabsContent>
    <TabsContent value="feedback"><UnavailableServiceSection section="feedback"/></TabsContent>
-   <TabsContent value="recipients"><UnavailableServiceSection section="recipients"/></TabsContent>
   </>}
+  <TabsContent value="recipients"><ServiceRecipients spaceId={scene.id} revision={revision}/></TabsContent>
  </Tabs>;
 }

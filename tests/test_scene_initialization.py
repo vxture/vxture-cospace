@@ -52,7 +52,7 @@ def test_readonly_plan_then_idempotent_initialization_and_restart(setup):
     assert len(PreviewSpaces(service.runtime/'preview-directory').list('space'))==1
     assert len(PreviewInputs(service.runtime/'preview-inputs').list())==1
     _,policy=service.policies.load()
-    assert policy.capabilities(principal(),first['space_id'])==frozenset({'space.preview','space.query','space.export','data.manage','build.run','association.edit','publication.manage','space.manage'})
+    assert policy.capabilities(principal(),first['space_id'])==frozenset({'space.preview','space.query','space.export','data.manage','build.run','association.edit','publication.manage','space.manage','recipient.read','recipient.manage'})
     assert not (service.runtime/'preview-builds').exists()
 
 

@@ -1,5 +1,7 @@
 # 空间访问策略 v0.1
 
+2026-11-13：服务对象登记新增 `recipient.read`、`recipient.manage` 两个独立能力。viewer、engineer 可读，manager 及工作区 owner 的已绑定空间基线可管理；登记用途不授予调用或采集权限，详见 `service-recipients-v0.1.md`。
+
 结构定义见 `space-access-policy-v0.1.schema.json`，由 `packages.service.space_access.SpaceAccessPolicy.model_json_schema()` 生成。
 
 `profile` 固定为 `cospace.space-access-policy/0.1`。`bindings` 将每个物理 `space_id` 显式绑定到 `(issuer, org_id, workspace_id)`；`grants` 将 `(issuer, subject, space_id)` 映射到一个产品角色 `viewer/engineer/manager`。subject 保存完整 `usr_...`。禁止额外字段、通配角色或通配空间。

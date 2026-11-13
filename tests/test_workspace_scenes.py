@@ -41,7 +41,7 @@ def test_create_binds_current_workspace_without_model_or_input_and_reuses_after_
     result=service.create(user,request(service,user));space=result['space_id']
     assert result['created'] and result['actor']==user.subject
     assert directory.read('space',space)['name']=='Equipment room'
-    _,policy=policies.load();assert policy.capabilities(user,space)==frozenset(('space.preview','space.query','space.export','data.manage','build.run','association.edit','publication.manage','space.manage'))
+    _,policy=policies.load();assert policy.capabilities(user,space)==frozenset(('space.preview','space.query','space.export','data.manage','build.run','association.edit','publication.manage','space.manage','recipient.read','recipient.manage'))
     assert not policy.capabilities(replace(user,workspace_id='ws_other'),space)
     restored=WorkspaceScenes(directory,policies,service.sources)
     assert restored.create(user,request(restored,user))==result|{'created':False}

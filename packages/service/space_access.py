@@ -7,10 +7,11 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from packages.infrastructure.platform_identity import PlatformPrincipal
 
 CAPABILITIES = frozenset(('space.preview', 'space.query', 'space.export', 'data.manage',
-                         'build.run', 'association.edit', 'publication.manage', 'space.manage'))
+                         'build.run', 'association.edit', 'publication.manage', 'space.manage',
+                         'recipient.read', 'recipient.manage'))
 ROLE_CAPABILITIES = {
-    'viewer': frozenset(('space.preview', 'space.query')),
-    'engineer': frozenset(('space.preview', 'space.query', 'space.export', 'data.manage', 'build.run', 'association.edit')),
+    'viewer': frozenset(('space.preview', 'space.query', 'recipient.read')),
+    'engineer': frozenset(('space.preview', 'space.query', 'space.export', 'data.manage', 'build.run', 'association.edit', 'recipient.read')),
     'manager': CAPABILITIES,
 }
 
