@@ -25,19 +25,26 @@ class PlatformLogin:
         self.transport = transport or PlatformHttp(config)
         self.verifier = verifier or PlatformTokenVerifier(config.verifier_config, now=now)
 
-    def begin(self, return_to, browser=None, *, select_account=False):
+    def begin(self, return_to, browser=None, *, select_account=False, tenant_hint=None, workspace_hint=None):
         return_to = safe_return(return_to)
+        hints = {}
+        for name, value in (('tenant_hint', tenant_hint), ('workspace_hint', workspace_hint)):
+            if value is not None:
+                if not isinstance(value, str) or not re.fullmatch(r'[0-9a-fA-F]{8}(?:-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}', value):
+                    raise ValueError('login_context_rejected')
+                hints[name] = value.lower()
+        if workspace_hint and not tenant_hint: raise ValueError('tenant_hint_required')
         state, nonce, verifier = opaque(), opaque(), opaque()
         browser = browser if valid_opaque(browser) else opaque()
         self.store.put('state', state, {'browser': key_of(browser), 'nonce': nonce,
             'verifier': verifier, 'return_to': return_to, 'expires_at': self.now()+600,
-            'issuer': self.config.issuer, 'client_id': self.config.client_id})
+            'issuer': self.config.issuer, 'client_id': self.config.client_id, 'hints': hints})
         challenge = base64.urlsafe_b64encode(hashlib.sha256(verifier.encode()).digest()).rstrip(b'=').decode()
         url = self.config.issuer+'/oidc/authorize?'+urlencode({
             'response_type': 'code', 'client_id': self.config.client_id, 'redirect_uri': self.config.callback,
             'scope': ' '.join(LOGIN_SCOPES), 'state': state, 'nonce': nonce,
             'code_challenge': challenge, 'code_challenge_method': 'S256',
-            **({'prompt': 'select_account'} if select_account else {})})
+            **({'prompt': 'select_account'} if select_account else {}), **hints})
         return url, browser
 
     def _tokens(self, tokens, *, nonce=None, prior=None):
@@ -74,6 +81,11 @@ class PlatformLogin:
                 or (pending['issuer'], pending['client_id']) != (self.config.issuer, self.config.client_id)):
             raise IdentityRejected('login_callback_rejected')
         session = self._tokens(self.transport.exchange(code, pending['verifier']), nonce=pending['nonce'])
+        # Hints select context; only the verified IdP token can authorize it.
+        hints = pending.get('hints', {})
+        if any(session['principal'][claim] != hints[name] for name, claim in
+               (('tenant_hint', 'org_id'), ('workspace_hint', 'workspace_id')) if name in hints):
+            raise IdentityRejected('login_context_mismatch')
         status = self.transport.status(session['sid'], True, self.now())
         if not status['valid']: raise IdentityRejected('accounts_session_ended')
         session.update(next_check_at=status['next_check_at'], retry_at=0, csrf=opaque(),

@@ -13,11 +13,14 @@ type Session={authenticated:boolean;authority_state:string;authority_ready?:bool
 export type AuthMode='checking'|'preview'|'platform'|'business'|'unavailable';
 export const PlatformSession=createContext<Session|null>(null);
 export const usePlatformSession=()=>useContext(PlatformSession);
-type Subscription={business_allowed:boolean;data_allowed:boolean;status:string|null;tier:string|null;bundled:boolean;pricing_url:string};
+type Subscription={application_authorized?:boolean|null;access_reason?:string|null;business_allowed:boolean;data_allowed:boolean;status:string|null;tier:string|null;bundled:boolean;pricing_url:string};
 function SubscriptionNotice({value,unavailable=false,onRetry}:{value:Subscription|null;unavailable?:boolean;onRetry:()=>void}){
- if(!value&&!unavailable)return <p role="status" className="text-body-small text-muted-foreground">正在检查工作区订阅…</p>;
- const lapsed=value?.status!=null&&!value?.business_allowed;
- return <section className="grid gap-lg" aria-label="Workspace 订阅"><div><h2 className="text-heading-2">{unavailable?'订阅状态暂不可用':value?.business_allowed?'工作区已开通 CoSpace':lapsed?'工作区订阅需要续订':'工作区尚未开通 CoSpace'}</h2><p className="mt-md text-body-small text-muted-foreground">{unavailable?'平台会话已保留，请稍后重新检查。':value?.business_allowed?'空间访问仍按当前工作区的场景权限执行。':lapsed?'请检查当前工作区的订阅状态。已有空间与历史成果会保留。':'请为当前工作区开通订阅后使用空间服务。已有空间与历史成果会保留。'}</p></div><div className="flex flex-wrap gap-md"><Button variant="outline" onClick={onRetry}>重新检查</Button>{!unavailable&&!value?.business_allowed&&<Button onClick={()=>location.assign(value?.pricing_url||'https://vxture.com/pricing?product=cospace')}>查看套餐与权益<Icon name="arrow-right"/></Button>}</div></section>;
+ if(!value&&!unavailable)return <p role="status" className="text-body-small text-muted-foreground">正在检查工作区订阅与应用授权…</p>;
+ const unassigned=value?.application_authorized===false;
+ const lapsed=!unassigned&&value?.status!=null&&!value?.business_allowed;
+ const title=unavailable?'订阅与授权状态暂不可用':unassigned?'尚未获得 CoSpace 使用授权':value?.business_allowed?'工作区已开通 CoSpace':lapsed?'工作区订阅需要续订':'当前工作区尚未开通 CoSpace';
+ const description=unavailable?'平台会话已保留，请稍后重新检查。':unassigned?'请联系组织管理员，在 Console 的订阅管理或成员管理中为你授权 CoSpace。授权后点击重新检查；场景访问仍由场景权限决定。':value?.business_allowed?'空间访问仍按当前工作区的场景权限执行。':'如果组织已经订阅，请先前往工作台切换到该组织和工作空间，再进入 CoSpace。已有空间与历史成果会保留。';
+ return <section className="grid gap-lg" aria-label="工作区订阅与应用授权"><div><h2 className="text-heading-2">{title}</h2><p className="mt-md text-body-small text-muted-foreground">{description}</p></div><div className="flex flex-wrap gap-md"><Button variant="outline" onClick={onRetry}>重新检查</Button>{!value?.business_allowed&&<Button onClick={()=>location.assign('https://ruyin.work/')}>前往工作台<Icon name="arrow-right"/></Button>}{!unavailable&&!unassigned&&!value?.business_allowed&&<Button variant="outline" onClick={()=>location.assign(value?.pricing_url||'https://vxture.com/pricing?product=cospace')}>查看套餐与权益</Button>}</div></section>;
 }
 function IdentitySubscription(){
  const [value,setValue]=useState<Subscription|null>(null),[enabled,setEnabled]=useState(false),[unavailable,setUnavailable]=useState(false);
@@ -62,7 +65,7 @@ export function PlatformIdentityPage({business=false,preserveWork=false}:{busine
    if(!r.ok)throw new Error();const value:Session=await r.json();setSession(value);csrf.current=value.csrf||'';
   }).catch(()=>setError('暂时无法确认平台状态，会话已保留。'));
  };window.addEventListener('pointerdown',activity);window.addEventListener('keydown',activity);return()=>{window.removeEventListener('pointerdown',activity);window.removeEventListener('keydown',activity);};},[]);
- const login=()=>{const url='/auth/login?returnTo='+encodeURIComponent((location.pathname==='/'?'/space':location.pathname+location.search));if(preserveWork)window.open(url,'_blank','noopener,noreferrer');else location.assign(url);};
+ const login=()=>{const url='/auth/login?returnTo='+encodeURIComponent(location.pathname+location.search);if(preserveWork)window.open(url,'_blank','noopener,noreferrer');else location.assign(url);};
  return <HomeLayout>
     {session?.authenticated?<><h2 className="text-heading-1">{session.user?.display_name}</h2><p className="text-body-small text-muted-foreground">平台会话已建立。空间权限与业务接口正在接入。</p><dl className="grid grid-cols-[auto_1fr] gap-x-lg gap-y-md text-body-small"><dt>组织</dt><dd className="break-all">{session.user?.org_id}</dd><dt>工作区</dt><dd className="break-all">{session.user?.workspace_id}</dd><dt>会话状态</dt><dd>{session.authority_state==='unavailable'?'平台暂不可达，会话已保留':session.authority_state==='confirmed'?'平台已确认':'已保存平台会话'}</dd></dl><IdentitySubscription/><p className="text-label-small text-muted-foreground">此入口尚未开放空间数据，原工程预览服务独立运行。</p><div className="flex flex-wrap gap-md"><Button variant="outline" disabled={busy} onClick={async()=>{setBusy(true);try{const r=await fetch('/api/auth/session',{method:'POST',headers:{'X-CoSpace-CSRF':csrf.current}});if(!r.ok)throw new Error();const value:Session=await r.json();setSession(value);csrf.current=value.csrf||'';setError('');}catch{setError('平台状态暂不可用，会话已保留。');}finally{setBusy(false);}}}>检查平台会话</Button><Button variant="outline" onClick={login}>重新连接</Button></div><form action="/auth/logout" method="post"><input type="hidden" name="csrf" value={session.csrf||''}/><Button type="submit" variant="ghost"><Icon name="sign-out"/>退出平台登录</Button></form></>:<><SignInContent onLogin={login}/></>}
     {error&&<p className="text-body-small text-destructive" role="alert">{error}</p>}
@@ -131,7 +134,7 @@ function BusinessSession({children}:{children:React.ReactNode}){
     if(!['GET','HEAD'].includes(method)&&csrf)headers.set('X-CoSpace-CSRF',csrf);
     const result=await nativeFetch(input,{...init,headers});
     if(requestGeneration!==generation)return new Response(JSON.stringify({detail:'session_scope_changed'}),{status:409,headers:{'Content-Type':'application/json'}});
-    if(needsSubscription&&[403,409,503].includes(result.status)){const body=await result.clone().json().catch(()=>({}));const quotaMessage=productQuotaMessage(body.code||body.detail);if(quotaMessage)setQuotaError(quotaMessage);if(body.detail==='subscription_required'||body.detail==='subscription_unavailable')await checkSubscription();}
+    if(needsSubscription&&[403,409,503].includes(result.status)){const body=await result.clone().json().catch(()=>({}));const quotaMessage=productQuotaMessage(body.code||body.detail);if(quotaMessage)setQuotaError(quotaMessage);if(body.detail==='subscription_required'||body.detail==='subscription_unavailable'||body.detail==='application_access_required')await checkSubscription();}
     if(result.status===401&&!url.pathname.startsWith('/api/auth/')){authority=null;businessAllowed=false;csrf='';generation++;setSession({authenticated:false,authority_state:'signed_out'});setError('');}
     if(result.ok&&!['GET','HEAD'].includes(method)&&url.pathname.startsWith('/api/')&&!url.pathname.startsWith('/api/auth/')&&!/comparisons|\/query(?:-range)?$/.test(url.pathname))window.dispatchEvent(new Event('cospace:records-changed'));
     return result;

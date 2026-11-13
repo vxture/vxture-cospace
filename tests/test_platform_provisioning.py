@@ -1,3 +1,4 @@
+from test_platform_subscription import authorized_access
 import json
 import sqlite3
 import threading
@@ -186,7 +187,7 @@ def test_401_refreshes_reader_ticket_once_without_user_context(monkeypatch):
 def test_production_lifespan_starts_scan_and_shuts_down_without_affecting_login(runtime,tmp_path):
     from packages.infrastructure.platform_subscription import PlatformSubscriptions
     rp,_,accounts,_=runtime;production_client(rp,accounts)
-    obj=PlatformSubscriptions(rp,config(),tmp_path/'policy',fetch=lambda *_:facts())
+    obj=PlatformSubscriptions(rp,config(),tmp_path/'policy',fetch_access=authorized_access,fetch=lambda *_:facts())
     worker=ProvisioningReconciler(obj,page=lambda _:dict(items=[item()],nextCursor=None))
     completed=threading.Event();original=worker.run_once
     def observed():
@@ -203,7 +204,7 @@ def test_production_lifespan_starts_scan_and_shuts_down_without_affecting_login(
 def test_periodic_retry_recovers_from_failure_without_revoking_access(runtime,tmp_path):
     from packages.infrastructure.platform_subscription import PlatformSubscriptions
     rp,_,accounts,_=runtime;production_client(rp,accounts)
-    obj=PlatformSubscriptions(rp,config(),tmp_path/'policy',fetch=lambda *_:facts())
+    obj=PlatformSubscriptions(rp,config(),tmp_path/'policy',fetch_access=authorized_access,fetch=lambda *_:facts())
     attempts=[];recovered=threading.Event()
     def page(cursor):
         attempts.append(cursor)

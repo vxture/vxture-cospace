@@ -25,6 +25,7 @@ IDENTIFIER=re.compile(r'^[A-Za-z0-9_-]{1,160}$')
 
 
 class SubscriptionDenied(PermissionError): pass
+class ApplicationAccessDenied(SubscriptionDenied): pass
 class SubscriptionUnavailable(IdentityUnavailable): pass
 class WebhookRejected(ValueError): pass
 class WebhookConflict(ValueError): pass
@@ -202,11 +203,28 @@ class EntitlementTransport:
         except (IdentityRejected,IdentityUnavailable,OSError,ValueError,TypeError,KeyError) as exc:
             raise SubscriptionUnavailable('platform_subscription_unavailable') from None
 
+    def access(self, principal, user_token):
+        if not user_token: raise SubscriptionUnavailable('user_bound_access_required')
+        try:
+            bearer = self.token(principal, user_token)
+            opener = build_opener(ProxyHandler({}), NoRedirect())
+            request = Request(self.config.api_base+'/platform/product-access',
+                headers={'Authorization': 'Bearer '+bearer, 'Accept': 'application/json'})
+            with opener.open(request, timeout=5) as response:
+                if response.status != 200: raise ValueError('access_response_status')
+                raw = response.read(16385)
+                if len(raw) > 16384: raise ValueError('access_response_budget')
+                return unique_json(raw)
+        except (IdentityRejected, IdentityUnavailable, OSError, ValueError, TypeError, KeyError):
+            raise SubscriptionUnavailable('platform_application_access_unavailable') from None
+
+
 class PlatformSubscriptions:
-    def __init__(self,rp,config,root,*,fetch=None,now=time.monotonic,wall=time.time):
+    def __init__(self,rp,config,root,*,fetch=None,fetch_access=None,now=time.monotonic,wall=time.time):
         if rp.config.client_id!=PRODUCT:raise ValueError('cospace_subscription_client_required')
         self.rp,self.config=rp,config;self.events=SubscriptionEvents(root)
         self.fetch=fetch or EntitlementTransport(rp,config).fetch
+        self.fetch_access=fetch_access or (lambda principal, token: EntitlementTransport(rp,config).access(principal, token))
         self.now,self.wall=now,wall;self.cache={};self.lock=threading.RLock()
 
     def view(self,principal,user_token=None):
@@ -231,16 +249,35 @@ class PlatformSubscriptions:
         except (ValueError,TypeError,KeyError,OSError,sqlite3.Error) as exc:
             raise SubscriptionUnavailable('platform_subscription_unavailable') from None
 
+    def assigned(self, principal, user_token):
+        # Never reuse a workspace entitlement cache as user authorization. A
+        # revocation must affect the next request, including an existing session.
+        try:
+            value = self.fetch_access(principal, user_token)
+            if (not isinstance(value, dict) or type(value.get('allowed')) is not bool
+                    or (value.get('product'), value.get('subject'), value.get('org_id'), value.get('workspace_id'))
+                    != (PRODUCT, principal.subject, principal.org_id, principal.workspace_id)):
+                raise ValueError('application_access_scope_mismatch')
+            return value['allowed']
+        except SubscriptionUnavailable: raise
+        except (ValueError, TypeError, KeyError, OSError):
+            raise SubscriptionUnavailable('platform_application_access_unavailable') from None
+
     def require(self,principal,user_token=None,*,ui=False):
         value=self.view(principal,user_token)
         if not value.allowed(ui=ui):raise SubscriptionDenied('subscription_required')
+        if user_token and not self.assigned(principal,user_token):raise ApplicationAccessDenied('application_access_required')
         return value
 
     def summary(self,principal,user_token=None):
         value=self.view(principal,user_token)
+        assigned = self.assigned(principal,user_token) if user_token and value.allowed() else None
+        permitted = assigned is not False
         return {'profile':'cospace.subscription-access/0.1','product':PRODUCT,
+            'application_authorized':assigned,
+            'access_reason':'application_access_required' if assigned is False else None,
             'status':value.status,'tier':value.tier,'bundled':value.bundled,
-            'business_allowed':value.allowed(ui=True),'data_allowed':value.allowed(),'ui_available':value.allowed(ui=True),
+            'business_allowed':value.allowed(ui=True) and permitted,'data_allowed':value.allowed() and permitted,'ui_available':value.allowed(ui=True) and permitted,
             'pricing_url':self.config.website_base+'/pricing?'+urlencode({'product':PRODUCT}),
             'cache_max_age_s':self.config.cache_seconds}
 
