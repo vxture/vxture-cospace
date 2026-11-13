@@ -1,10 +1,12 @@
 import {appNavigate,appRoute} from './app-router';
-import {Info,ArrowClockwise} from '@phosphor-icons/react';
 import {SignInContent} from './signin-content';
+import {EntryStatus} from './entry-status';
+import {identityEntryState,subscriptionEntryState} from './entry-state';
+import './entry-status.css';
 
 import {sessionScopeKey,sessionConfirmed} from './session-continuity';
 import React,{createContext,useContext,useEffect,useLayoutEffect,useRef,useState} from 'react';
-import {Button,Icon} from '@vxture/design-system';
+import {Button} from '@vxture/design-system';
 import {HomeLayout} from './home-layout';
 import {productQuotaMessage} from './product-quota-messages';
 import type {AccountProfile} from './account-profile';
@@ -14,19 +16,16 @@ export type AuthMode='checking'|'preview'|'platform'|'business'|'unavailable';
 export const PlatformSession=createContext<Session|null>(null);
 export const usePlatformSession=()=>useContext(PlatformSession);
 type Subscription={application_authorized?:boolean|null;access_reason?:string|null;business_allowed:boolean;data_allowed:boolean;status:string|null;tier:string|null;bundled:boolean;pricing_url:string};
-function SubscriptionNotice({value,unavailable=false,onRetry}:{value:Subscription|null;unavailable?:boolean;onRetry:()=>void}){
- if(!value&&!unavailable)return <p role="status" className="text-body-small text-muted-foreground">正在检查工作区订阅与应用授权…</p>;
- const unassigned=value?.application_authorized===false;
- const lapsed=!unassigned&&value?.status!=null&&!value?.business_allowed;
- const title=unavailable?'订阅与授权状态暂不可用':unassigned?'尚未获得 CoSpace 使用授权':value?.business_allowed?'工作区已开通 CoSpace':lapsed?'工作区订阅需要续订':'当前工作区尚未开通 CoSpace';
- const description=unavailable?'平台会话已保留，请稍后重新检查。':unassigned?'请联系组织管理员，在 Console 的订阅管理或成员管理中为你授权 CoSpace。授权后点击重新检查；场景访问仍由场景权限决定。':value?.business_allowed?'空间访问仍按当前工作区的场景权限执行。':'如果组织已经订阅，请先前往工作台切换到该组织和工作空间，再进入 CoSpace。已有空间与历史成果会保留。';
- return <section className="grid gap-lg" aria-label="工作区订阅与应用授权"><div><h2 className="text-heading-2">{title}</h2><p className="mt-md text-body-small text-muted-foreground">{description}</p></div><div className="flex flex-wrap gap-md"><Button variant="outline" onClick={onRetry}>重新检查</Button>{!value?.business_allowed&&<Button onClick={()=>location.assign('https://ruyin.work/')}>前往工作台<Icon name="arrow-right"/></Button>}{!unavailable&&!unassigned&&!value?.business_allowed&&<Button variant="outline" onClick={()=>location.assign(value?.pricing_url||'https://vxture.com/pricing?product=cospace')}>查看套餐与权益</Button>}</div></section>;
+function SubscriptionNotice({value,unavailable=false,onRetry,user}:{value:Subscription|null;unavailable?:boolean;onRetry:()=>void;user?:AccountProfile}){
+ const state=subscriptionEntryState(value,unavailable);
+ return <EntryStatus state={state} user={user} onRetry={onRetry}/>;
 }
-function IdentitySubscription(){
- const [value,setValue]=useState<Subscription|null>(null),[enabled,setEnabled]=useState(false),[unavailable,setUnavailable]=useState(false);
- const read=async()=>{try{const config=await fetch('/api/auth/config').then(r=>r.json());setEnabled(config.subscription_authorization===true);if(config.subscription_authorization!==true)return;const session=await fetch('/api/auth/session',{cache:'no-store'}).then(r=>r.json());if(!session.authenticated)throw Error();const active=await fetch('/api/auth/session',{method:'POST',headers:{'X-CoSpace-CSRF':session.csrf}});if(!active.ok)throw Error();const r=await fetch('/api/subscription',{cache:'no-store'});if(!r.ok)throw Error();setValue(await r.json());setUnavailable(false);}catch{setUnavailable(true);}};
+function IdentitySubscription({user,onSessionCheck}:{user?:AccountProfile;onSessionCheck:()=>Promise<void>}){
+ const [value,setValue]=useState<Subscription|null>(null),[enabled,setEnabled]=useState(false),[unavailable,setUnavailable]=useState(false),[checking,setChecking]=useState(true);
+ const read=async(reconfirm=false)=>{setChecking(true);try{if(reconfirm)await onSessionCheck();const r=await fetch('/api/auth/config',{cache:'no-store'});if(!r.ok)throw Error();const config=await r.json();setEnabled(config.subscription_authorization===true);if(config.subscription_authorization===true){const r=await fetch('/api/subscription',{cache:'no-store'});if(!r.ok){if(r.status===401)await onSessionCheck();throw Error();}setValue(await r.json());}setUnavailable(false);}catch{setUnavailable(true);}finally{setChecking(false);}};
  useEffect(()=>{void read();},[]);
- return enabled?<SubscriptionNotice value={value} unavailable={unavailable} onRetry={()=>void read()}/>:null;
+ if(checking)return <EntryStatus state="checking-access" user={user}/>;
+ return enabled?<SubscriptionNotice user={user} value={value} unavailable={unavailable} onRetry={()=>void read(true)}/>:<EntryStatus state={unavailable?'access-unavailable':'connected'} user={user} onRetry={()=>void read(true)}/>;
 }
 export async function platformLogout(csrf:string){
  const response=await fetch('/api/auth/logout',{method:'POST',headers:{'X-CoSpace-CSRF':csrf}});
@@ -36,6 +35,7 @@ export async function platformLogout(csrf:string){
  try{localStorage.setItem('cospace.session.logout',String(Date.now()));}catch{}
  const result=await response.json();const destination=new URL(result.redirect_url);
  if(destination.protocol!=='https:'&&destination.origin!==location.origin)throw Error('logout_destination_rejected');
+ try{sessionStorage.setItem('cospace.entry.signed-out','1');}catch{}
  location.assign(destination.href);
 }
 
@@ -54,22 +54,28 @@ export function useAuthMode():AuthMode{
  return mode;
 }
 
-export function PlatformIdentityPage({business=false,preserveWork=false}:{business?:boolean;preserveWork?:boolean}){
+export function PlatformIdentityPage({preserveWork=false}:{preserveWork?:boolean}){
  const [session,setSession]=useState<Session|null>(null),[error,setError]=useState('');
- const [busy,setBusy]=useState(false);const csrf=useRef(''),activeAt=useRef(0);
- const read=async()=>{const r=await fetch('/api/auth/session',{cache:'no-store'});if(!r.ok)throw new Error();const value:Session=await r.json();setSession(value);csrf.current=value.csrf||'';setError('');};
+ const csrf=useRef(''),activeAt=useRef(0);
+ const read=async()=>{const r=await fetch('/api/auth/session',{cache:'no-store'});if(!r.ok)throw new Error();let value:Session=await r.json();csrf.current=value.csrf||'';if(value.authenticated){const r=await fetch('/api/auth/session',{method:'POST',headers:{'X-CoSpace-CSRF':csrf.current}});if(!r.ok){setSession({...value,authority_state:'unavailable'});throw Error();}value=await r.json();}setSession(value);csrf.current=value.csrf||'';setError('');};
  useEffect(()=>{read().catch(()=>setError('平台会话暂不可用，请稍后重试。'));},[]);
  useEffect(()=>{const activity=(event:Event)=>{
   if(!event.isTrusted||!csrf.current||document.visibilityState!=='visible'||Date.now()-activeAt.current<30000)return;
   activeAt.current=Date.now();fetch('/api/auth/session',{method:'POST',headers:{'X-CoSpace-CSRF':csrf.current}}).then(async r=>{
    if(!r.ok)throw new Error();const value:Session=await r.json();setSession(value);csrf.current=value.csrf||'';
-  }).catch(()=>setError('暂时无法确认平台状态，会话已保留。'));
+  }).catch(()=>{setSession(old=>old?{...old,authority_state:'unavailable'}:old);setError('暂时无法确认平台状态。');});
  };window.addEventListener('pointerdown',activity);window.addEventListener('keydown',activity);return()=>{window.removeEventListener('pointerdown',activity);window.removeEventListener('keydown',activity);};},[]);
- const login=()=>{const url='/auth/login?returnTo='+encodeURIComponent(location.pathname+location.search);if(preserveWork)window.open(url,'_blank','noopener,noreferrer');else location.assign(url);};
- return <HomeLayout>
-    {session?.authenticated?<><h2 className="text-heading-1">{session.user?.display_name}</h2><p className="text-body-small text-muted-foreground">平台会话已建立。空间权限与业务接口正在接入。</p><dl className="grid grid-cols-[auto_1fr] gap-x-lg gap-y-md text-body-small"><dt>组织</dt><dd className="break-all">{session.user?.org_id}</dd><dt>工作区</dt><dd className="break-all">{session.user?.workspace_id}</dd><dt>会话状态</dt><dd>{session.authority_state==='unavailable'?'平台暂不可达，会话已保留':session.authority_state==='confirmed'?'平台已确认':'已保存平台会话'}</dd></dl><IdentitySubscription/><p className="text-label-small text-muted-foreground">此入口尚未开放空间数据，原工程预览服务独立运行。</p><div className="flex flex-wrap gap-md"><Button variant="outline" disabled={busy} onClick={async()=>{setBusy(true);try{const r=await fetch('/api/auth/session',{method:'POST',headers:{'X-CoSpace-CSRF':csrf.current}});if(!r.ok)throw new Error();const value:Session=await r.json();setSession(value);csrf.current=value.csrf||'';setError('');}catch{setError('平台状态暂不可用，会话已保留。');}finally{setBusy(false);}}}>检查平台会话</Button><Button variant="outline" onClick={login}>重新连接</Button></div><form action="/auth/logout" method="post"><input type="hidden" name="csrf" value={session.csrf||''}/><Button type="submit" variant="ghost"><Icon name="sign-out"/>退出平台登录</Button></form></>:<><SignInContent onLogin={login}/></>}
-    {error&&<p className="text-body-small text-destructive" role="alert">{error}</p>}
- </HomeLayout>;
+ const login=()=>{try{sessionStorage.removeItem('cospace.entry.signed-out');}catch{}const url='/auth/login?returnTo='+encodeURIComponent(location.pathname+location.search);if(preserveWork)window.open(url,'_blank','noopener,noreferrer');else location.assign(url);};
+ const retry=()=>{void read().catch(()=>setError('平台会话暂不可用，请稍后重试。'));};
+ let signedOut=false;try{signedOut=sessionStorage.getItem('cospace.entry.signed-out')==='1';}catch{}
+ const state=identityEntryState(session,{failed:!!error,preserveWork,signedOut});
+ const retrySession=()=>{retry();if(preserveWork)window.dispatchEvent(new Event('cospace:confirm-session'));};
+ let content:React.ReactNode;
+ if(state==='identity')content=<IdentitySubscription key={sessionScopeKey(session)} user={session?.user} onSessionCheck={read}/>;
+ else if(state==='signin')content=<SignInContent onLogin={login}/>;
+ else content=<EntryStatus state={state} user={session?.user} preserveWork={preserveWork} onLogin={state==='signed-out'||state==='recovery'&&!session?.authenticated?login:undefined} onRetry={state==='unavailable'||state==='recovery'?retrySession:undefined}/>;
+ return <HomeLayout>{content}</HomeLayout>;
+
 }
 
 export function AuthBoundary({children}:{children:React.ReactNode}){
@@ -77,7 +83,7 @@ export function AuthBoundary({children}:{children:React.ReactNode}){
  if(mode==='preview')return <>{children}</>;
  if(mode==='platform')return <PlatformIdentityPage/>;
  if(mode==='business')return <BusinessSession>{children}</BusinessSession>;
- return <main className="flex min-h-dvh items-center justify-center bg-background text-foreground"><p role="status" className="text-body-small text-muted-foreground">{mode==='checking'?'正在连接 CoSpace…':'认证配置暂不可用，请刷新重试。'}</p></main>;
+ return <HomeLayout><EntryStatus state={mode==='checking'?'connecting':'unavailable'} onRetry={mode==='unavailable'?()=>location.reload():undefined}/></HomeLayout>;
 }
 
 function BusinessSession({children}:{children:React.ReactNode}){
@@ -118,7 +124,10 @@ function BusinessSession({children}:{children:React.ReactNode}){
    setSession({authenticated:false,authority_state:'signed_out'});setError('');
   };
   const bootstrap=async()=>{const config=await nativeFetch('/api/auth/config').then(r=>{if(!r.ok)throw Error();return r.json();});needsSubscription=config.subscription_authorization===true;setSubscriptionRequired(needsSubscription);const response=await nativeFetch('/api/auth/session',{cache:'no-store'});if(!response.ok)throw Error('无法读取平台会话');const next:Session=await response.json();csrf=next.csrf||'';authority=next;
-   if(next.authenticated)await confirm();else if(!stopped)setSession(next);
+   if(next.authenticated){
+    try{sessionStorage.removeItem('cospace.entry.signed-out');}catch{}
+    try{await confirm();}catch{if(!stopped){setSession({...next,authority_state:'unavailable'});setError('平台会话暂不可用，重新检查后继续。');}}
+   }else if(!stopped)setSession(next);
    if(stopped)return;
    window.fetch=async(input,init)=>{const url=new URL(typeof input==='string'?input:input instanceof URL?input.href:input.url,location.href);
     if(url.origin!==location.origin)return nativeFetch(input,init);
@@ -143,15 +152,15 @@ function BusinessSession({children}:{children:React.ReactNode}){
   };bootstrap().catch(()=>{if(!stopped)setError('平台会话暂不可用，请刷新重试。');});
   return()=>{stopped=true;window.fetch=nativeFetch;window.removeEventListener('pointerdown',activity);window.removeEventListener('keydown',activity);window.removeEventListener('focus',resume);document.removeEventListener('visibilitychange',resume);window.removeEventListener('cospace:confirm-session',retry);window.removeEventListener('storage',otherTabLogout);};
  },[]);
- if(error&&!ready)return <HomeLayout><p role="alert">{error}</p></HomeLayout>;
- if(!ready)return <HomeLayout><p role="status">正在确认平台会话…</p></HomeLayout>;
+ if(error&&!ready)return <HomeLayout><EntryStatus state="unavailable" onRetry={()=>location.reload()}/></HomeLayout>;
+ if(!ready)return <HomeLayout><EntryStatus state="restoring"/></HomeLayout>;
  const authorized=sessionConfirmed(session)&&(!subscriptionRequired||!!subscription?.business_allowed&&!subscriptionUnavailable);
  if(session?.authenticated&&retained.current&&sessionScopeKey(session)!==sessionScopeKey(retained.current))retained.current=null;
  if(authorized)retained.current=session;
  const suspended=!!retained.current&&!authorized;
  return <>
   {retained.current&&<div style={authorized?{display:'contents'}:{display:'none'}} aria-hidden={!authorized} inert={!authorized}><PlatformSession.Provider value={retained.current}><React.Fragment key={sessionScopeKey(retained.current)}>{children}</React.Fragment></PlatformSession.Provider></div>}
-  {!authorized&&(!session?.authenticated?<><PlatformIdentityPage business preserveWork={suspended}/>{suspended&&<section className="session-recovery-notice" role="status" aria-label="恢复当前工作"><Info size={20} aria-hidden="true"/><div><strong>会话已失效，当前工作已暂存</strong><p>点击“继续登录”将在新标签页登录，完成后回到此页。请勿刷新或关闭此页。</p><Button variant="ghost" size="sm" onClick={()=>window.dispatchEvent(new Event('cospace:confirm-session'))}><ArrowClockwise size={16}/>重新检查会话</Button></div></section>}</>:!sessionConfirmed(session)?<HomeLayout><h2>等待恢复平台会话</h2><p>工作面已遮挡，内存草稿保留。确认会话后可继续；不会重放保存、构建或发布操作。</p><Button onClick={()=>window.dispatchEvent(new Event('cospace:confirm-session'))}>重新检查会话</Button></HomeLayout>:<HomeLayout><p>{session.user?.display_name} · 当前工作区</p><SubscriptionNotice value={subscription} unavailable={subscriptionUnavailable} onRetry={()=>window.dispatchEvent(new Event('cospace:confirm-session'))}/><Button variant="ghost" onClick={()=>platformLogout(session.csrf||'')}>退出登录</Button></HomeLayout>)}
+  {!authorized&&(!session?.authenticated?<PlatformIdentityPage preserveWork={suspended}/>:!sessionConfirmed(session)?<HomeLayout><EntryStatus state="recovery" user={session.user} preserveWork={suspended} onRetry={()=>window.dispatchEvent(new Event('cospace:confirm-session'))}/></HomeLayout>:<HomeLayout><SubscriptionNotice user={session.user} value={subscription} unavailable={subscriptionUnavailable} onRetry={()=>window.dispatchEvent(new Event('cospace:confirm-session'))}/></HomeLayout>)}
   {authorized&&(quotaError||error)&&<div role="alert" className="fixed bottom-lg left-lg right-lg z-notification flex flex-wrap items-center gap-md rounded-md border bg-popover p-lg text-body-small"><span>{quotaError||error}</span>{quotaError&&<Button variant="ghost" size="sm" onClick={()=>setQuotaError('')}>关闭提示</Button>}</div>}
  </>;
 }

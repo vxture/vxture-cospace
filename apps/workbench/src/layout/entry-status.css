@@ -1,0 +1,23 @@
+/* Public states share the existing CoSpace entry card and spatial backdrop. */
+.entry-status{display:flex;flex-direction:column;width:100%;min-height:480px;text-align:center}
+.entry-status-body{display:flex;flex:1;justify-content:center;align-items:center;min-height:144px;padding-block:12px}
+.entry-state-art{display:block;flex:none;width:280px;height:155px;color:var(--primary-text);opacity:.52;transform:scale(.8,1.08)}
+.entry-operation-group{display:flex;flex-direction:column;gap:24px}
+.entry-status header h1{font-size:24px;font-weight:600;line-height:1.5;margin:0;text-wrap:balance}
+.entry-identity{display:flex;align-items:center;gap:10px;padding:16px;border:1px solid var(--primary-border-soft);border-radius:8px;background:color-mix(in srgb,var(--primary-muted) 45%,transparent);text-align:left}
+.entry-identity-icon{display:grid;place-items:center;flex:none;width:24px;height:24px;color:var(--primary-text)}
+.entry-identity-copy{min-width:0;flex:1}
+.entry-identity-copy strong,.entry-identity-copy>span{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.entry-identity-copy strong{font-size:14px;font-weight:500;line-height:22px}
+.entry-identity-copy>span{font-size:12px;color:var(--muted-foreground);line-height:20px;margin-top:4px}
+.entry-actions{display:flex;flex-direction:column;gap:12px}
+.entry-actions .entry-action{width:100%;height:48px;min-height:48px;padding-inline:16px;border-radius:8px;font-size:14px;justify-content:center;gap:8px}
+.entry-spinner{animation:entry-spin 1s linear infinite}
+@keyframes entry-spin{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){.entry-spinner{animation:none}}
+@media(max-width:520px){.entry-status{min-height:440px}.entry-state-art{width:244px;height:136px}.entry-status-body{min-height:136px}.entry-operation-group{gap:20px}}
+
+.entry-operation-group>.home-unified-account{margin:0}
+
+.entry-footnote{flex:none;min-height:41px;margin-top:24px;padding-top:20px;border-top:1px solid var(--primary-border-soft);font-size:12px;line-height:1.7;color:var(--muted-foreground);text-align:center;text-wrap:pretty}
+.entry-footnote-empty{border-color:transparent}
