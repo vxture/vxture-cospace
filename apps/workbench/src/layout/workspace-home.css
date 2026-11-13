@@ -13,8 +13,6 @@
 .workspace-home-resume{min-height:19px;margin-top:12px;font-size:13px;color:var(--muted-foreground)}
 .workspace-home-resume span{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .workspace-home-motif{grid-column:2;grid-row:1;justify-self:end;width:100%;height:auto;max-width:500px;max-height:270px;color:var(--primary)}
-.workspace-home-plane{fill:color-mix(in srgb,var(--primary) 8%,var(--card));stroke-opacity:.55}
-.workspace-home-node{fill:var(--card);stroke-width:2}
 .workspace-home-summary{padding-block:8px 0}
 .workspace-home-summary-layout{display:grid;grid-template-columns:minmax(200px,1fr) minmax(0,3fr);align-items:center;gap:24px;padding-block:22px;position:relative}
 .workspace-home-summary-layout:before,.workspace-home-summary-layout:after{content:"";position:absolute;left:var(--home-gutter);right:var(--home-gutter);height:1px;background:var(--border)}

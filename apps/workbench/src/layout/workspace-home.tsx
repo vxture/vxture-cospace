@@ -1,3 +1,4 @@
+import {SpatialMotif} from './spatial-motif';
 import {useState} from 'react';
 import {Button,StatusBadge} from '@vxture/design-system';
 import {ArrowRight,Cube,ArrowsClockwise,Broadcast,UploadSimple,Stack} from '@phosphor-icons/react';
@@ -14,23 +15,6 @@ const dateFormat=new Intl.DateTimeFormat('zh-CN',{year:'numeric',month:'2-digit'
 const reportTimeFormat=new Intl.DateTimeFormat('zh-CN',{timeZone:'Asia/Shanghai',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
 function MonitorFooter({href,name,at=null,label='最后上报'}:{href:string;name:string;at?:string|null;label?:string}){
  return <footer><div className="workspace-home-card-time"><span>{label}：</span>{at?<time dateTime={at} title={new Date(at).toLocaleString('zh-CN',{timeZone:'Asia/Shanghai',hour12:false})}>{reportTimeFormat.format(new Date(at))}</time>:<span>—</span>}</div><Button asChild variant="secondary" size="sm"><a href={href} aria-label={name+'详情'}>详情<ArrowRight size={14}/></a></Button></footer>;
-}
-
-// A decorative spatial diagram. It represents the product, not a user's scene.
-function SpatialMotif(){
- return <svg className="workspace-home-motif" viewBox="0 0 460 255" fill="none" aria-hidden="true">
-  <g stroke="currentColor" opacity=".16">
-   {Array.from({length:13},(_,i)=><path key={i} d={`M${30+i*17} ${155-i*8}l204 96 M${30+i*17} ${155+i*8}l204 -96`}/>)}
-  </g>
-  <g stroke="currentColor" strokeLinejoin="round">
-   <path className="workspace-home-plane" d="M81 159 232 88l153 71-153 73Z"/>
-   <path className="workspace-home-plane" d="M106 123 232 64l126 59-126 60Z"/>
-   <path className="workspace-home-plane" d="M132 87 232 40l100 47-100 48Z"/>
-   <path opacity=".48" d="M132 87v48l100 48 100-48V87M232 135v48M182 64v47l100 48M282 64v47l-100 48" strokeDasharray="4 4"/>
-   <path opacity=".72" d="M155 157l41-19 36 17 54-25 42 20" strokeWidth="1.5"/>
-   {[[155,157],[232,155],[286,130],[328,150],[232,40]].map(([x,y])=><circle key={x+':'+y} cx={x} cy={y} r="4" className="workspace-home-node"/>)}
-  </g>
- </svg>;
 }
 
 export function WorkspaceHome(){
@@ -50,7 +34,7 @@ export function WorkspaceHome(){
  return <main className="workspace-home" aria-labelledby="workspace-home-title">
    <section className="workspace-home-hero">
     <div className="workspace-home-wrap workspace-home-hero-layout">
-     <SpatialMotif/>
+     <SpatialMotif className="workspace-home-motif"/>
      <div className="workspace-home-intro">
      <span className="workspace-home-kicker"><Cube size={17} weight="duotone"/> CoSpace 工作台</span>
      <h1 id="workspace-home-title">从场景开始</h1>

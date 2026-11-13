@@ -118,7 +118,7 @@ export function HomeLayout({children,tools,footerTools}:{children:React.ReactNod
    <div className="home-content-inner">
    <div className="home-panorama-content">
     <p className="home-panorama-eyebrow">SPATIAL INTELLIGENCE</p>
-    <section className="home-entry home-panorama-entry" aria-label="登录 CoSpace">{children}</section>
+    <section className="home-entry home-panorama-entry" aria-label="CoSpace 访问入口">{children}</section>
     <div className="home-panorama-message"><p>空间底图建一次　具身智能体共用</p><span>MAP ONCE. SHARE ACROSS AGENTS.</span></div>
    </div>
    </div>
@@ -134,7 +134,7 @@ export function HomeLayout({children,tools,footerTools}:{children:React.ReactNod
      <SpatialIllustration/>
      <div className="home-visual-caption" aria-hidden="true"><span className="home-caption-line"/>MAP ONCE. SHARE ACROSS AGENTS.</div>
     </section>
-    <section className="home-entry" aria-label="登录 CoSpace">{children}</section>
+    <section className="home-entry" aria-label="CoSpace 访问入口">{children}</section>
    </div>
   </main>
   {footerTools&&<div className="home-preview-tools" aria-label="设计验证工具">{footerTools}</div>}<footer className="home-footer public-legal-footer"><div className="home-footer-inner"><span>© 2026 VXTURE · RUYIN</span><nav aria-label="法律信息"><a href="https://vxture.com/zh-CN/legal/terms" target="_blank" rel="noopener noreferrer">服务条款</a><a href="https://vxture.com/zh-CN/legal/privacy" target="_blank" rel="noopener noreferrer">隐私政策</a><a href="https://vxture.com/zh-CN/legal/copyright" target="_blank" rel="noopener noreferrer">版权声明</a></nav></div></footer>
