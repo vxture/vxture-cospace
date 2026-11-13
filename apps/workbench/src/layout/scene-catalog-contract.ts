@@ -46,3 +46,11 @@ export function sceneEntryHref(scene:SceneSpace){
  return release?`/space?screen=space&preview=1&space=${encodeURIComponent(scene.id)}&publication=${encodeURIComponent(release.id)}`:sceneWorkspaceHref(scene.id);
 }
 export const sceneEntryLabel=(scene:SceneSpace)=>currentRelease(scene)?'空间预览':'场景概览';
+// Home entry opens a working surface. The scene-only catalog URL is an overview drawer.
+export function homeSceneEntry(scene:SceneSpace){
+ if(currentRelease(scene))return {href:sceneEntryHref(scene),label:'空间预览'};
+ if(scene.capabilities?.includes('data.manage'))return {href:'/data?'+new URLSearchParams({space:scene.id,tab:'inputs'}),label:'数据管理'};
+ if(scene.capabilities?.includes('build.run'))return {href:'/build?'+new URLSearchParams({space:scene.id}),label:'构建中心'};
+ const service=sceneDestinations(scene).find(item=>item.key==='services'&&item.enabled);
+ return service?{href:service.href,label:'场景服务'}:{href:'/space',label:'场景目录'};
+}

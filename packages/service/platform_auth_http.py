@@ -105,8 +105,11 @@ def create_auth_app(rp, workbench=Path('apps/workbench/dist'), business=None, ac
             except WebhookConflict:raise HTTPException(409,'webhook_id_payload_conflict') from None
 
     @app.get('/auth/login')
-    def login(request: Request, returnTo: str = '/space', selectAccount: bool = False):
-        try: url, browser = rp.begin(returnTo, request.cookies.get(browser_cookie), select_account=selectAccount)
+    def login(request: Request, returnTo: str = '/', selectAccount: bool = False, tenant_hint: str | None = None, workspace_hint: str | None = None):
+        if any(len(request.query_params.getlist(k)) > 1 for k in ('tenant_hint', 'workspace_hint')):
+            raise HTTPException(400, 'login_context_rejected')
+        try: url, browser = rp.begin(returnTo, request.cookies.get(browser_cookie), select_account=selectAccount,
+                                    tenant_hint=tenant_hint, workspace_hint=workspace_hint)
         except ValueError as exc: raise HTTPException(400, 'return_path_rejected') from exc
         response = RedirectResponse(url, status_code=302)
         set_cookie(response, browser_cookie, browser, max_age=600)

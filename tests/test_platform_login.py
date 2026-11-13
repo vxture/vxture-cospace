@@ -92,7 +92,7 @@ def test_pkce_login_public_session_and_encrypted_server_storage(runtime):
     rp, client, accounts, clock = runtime
     assert client.get('/api/auth/session').json()['authenticated'] is False
     response, sid = login(rp, client, accounts)
-    assert response.headers['location'] == rp.config.origin+'/space'
+    assert response.headers['location'] == rp.config.origin+'/'
     assert 'HttpOnly' in response.headers['set-cookie'] and 'SameSite=lax' in response.headers['set-cookie']
     assert 'Domain=' not in response.headers['set-cookie'] and 'Max-Age=' not in response.headers['set-cookie'].split(',')[0]
     result = client.get('/api/auth/session'); data = result.json()

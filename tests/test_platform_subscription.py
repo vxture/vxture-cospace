@@ -23,6 +23,11 @@ from test_online_consumer import consumer
 KEY='test-only-not-a-production-secret-123456'
 NOW=1800000000
 
+
+def authorized_access(principal, token):
+    return dict(product='cospace', subject=principal.subject, org_id=principal.org_id,
+                workspace_id=principal.workspace_id, allowed=True)
+
 def config(**changes):
     return SubscriptionConfig(api_base='https://internal.example',webhook_keys=(SecretStr(KEY),),**changes)
 
@@ -48,7 +53,7 @@ def gate(tmp_path):
     rp=SimpleNamespace(config=SimpleNamespace(client_id='cospace',issuer='https://accounts.vxture.com'))
     clock=[0.];calls=[];value=[facts()]
     def fetch(principal,user_token):calls.append((principal.workspace_id,user_token));return value[0]
-    obj=PlatformSubscriptions(rp,config(),tmp_path/'policy',fetch=fetch,now=lambda:clock[0],wall=lambda:NOW)
+    obj=PlatformSubscriptions(rp,config(),tmp_path/'policy',fetch_access=authorized_access,fetch=fetch,now=lambda:clock[0],wall=lambda:NOW)
     principal=PlatformPrincipal(rp.config.issuer,'usr_test','org_mock','ws_mock',('workspace:owner',),'test',NOW+300)
     return obj,principal,clock,calls,value
 
@@ -104,7 +109,7 @@ def test_cache_expiry_network_failure_no_stale_fallback(gate):
 
 def test_signed_notification_invalidation_across_instances_and_no_grants(gate):
     obj,p,clock,calls,value=gate;obj.require(p)
-    second=PlatformSubscriptions(obj.rp,obj.config,obj.events.path.parent,fetch=obj.fetch,now=lambda:clock[0],wall=lambda:NOW)
+    second=PlatformSubscriptions(obj.rp,obj.config,obj.events.path.parent,fetch_access=authorized_access,fetch=obj.fetch,now=lambda:clock[0],wall=lambda:NOW)
     second.require(p);value[0]=facts(status=None,tier=None)
     assert second.webhook(*signed_event())['received']
     with pytest.raises(SubscriptionDenied):obj.require(p)
@@ -130,7 +135,7 @@ def test_replay_conflict_and_out_of_order_lifecycle(gate):
     value=dict(id='notify',type='subscription_changed',occurred_at=NOW,workspace_id='ws_mock',tenant_id='tenant_mock',application='cospace',data={})
     raw=json.dumps(value).encode();obj.webhook(*signed_event(value,raw=raw))
     assert obj.events.generation('ws_mock')==2
-    second=PlatformSubscriptions(obj.rp,obj.config,obj.events.path.parent,fetch=obj.fetch,wall=lambda:NOW)
+    second=PlatformSubscriptions(obj.rp,obj.config,obj.events.path.parent,fetch_access=authorized_access,fetch=obj.fetch,wall=lambda:NOW)
     assert second.webhook(payload,headers)['replayed']
 
 @pytest.mark.parametrize('changes',[
@@ -162,7 +167,7 @@ def test_signature_tamper_duplicate_headers_json_and_rotation(gate):
 
 def test_identity_pilot_subscription_route_and_signed_callback(runtime,tmp_path):
     rp,_,accounts,clock=runtime;production_client(rp,accounts)
-    values=[facts()];obj=PlatformSubscriptions(rp,config(),tmp_path/'policy',fetch=lambda *_:values[0],wall=lambda:NOW)
+    values=[facts()];obj=PlatformSubscriptions(rp,config(),tmp_path/'policy',fetch_access=authorized_access,fetch=lambda *_:values[0],wall=lambda:NOW)
     with TestClient(create_auth_app(rp,subscriptions=obj),base_url=rp.config.origin,follow_redirects=False) as c:
         assert c.get('/api/subscription').status_code==401
         login(rp,c,accounts)
@@ -179,7 +184,7 @@ def test_identity_pilot_subscription_route_and_signed_callback(runtime,tmp_path)
 def test_business_gate_precedes_records_preserves_session_and_scene_policy(secured,tmp_path):
     rp,_,accounts,clock,jobs,directory,spaces,policies,*_=secured
     production_client(rp,accounts);value=[facts(status=None,tier=None)]
-    obj=PlatformSubscriptions(rp,config(),tmp_path/'policy',fetch=lambda *_:value[0],now=lambda:clock[0],wall=lambda:NOW)
+    obj=PlatformSubscriptions(rp,config(),tmp_path/'policy',fetch_access=authorized_access,fetch=lambda *_:value[0],now=lambda:clock[0],wall=lambda:NOW)
     access=BusinessAccess(rp,policies,directory,jobs,subscriptions=obj)
     app=create_auth_app(rp,business=create_app(None,jobs,space_directory=directory,platform_origin=rp.config.origin),access=access,subscriptions=obj)
     with TestClient(app,base_url=rp.config.origin,follow_redirects=False) as c:
@@ -207,7 +212,7 @@ def test_subscribed_workspace_owner_can_create_first_scene_without_local_allocat
     settings=tmp_path/'workspace-scenes.json'
     settings.write_text(json.dumps(dict(profile='cospace.workspace-scenes/0.1',revision=1,workspaces=[])))
     values=[facts(status=None,tier=None)]
-    obj=PlatformSubscriptions(rp,config(),tmp_path/'policy',fetch=lambda *_:values[0],now=lambda:clock[0],wall=lambda:NOW)
+    obj=PlatformSubscriptions(rp,config(),tmp_path/'policy',fetch_access=authorized_access,fetch=lambda *_:values[0],now=lambda:clock[0],wall=lambda:NOW)
     access=BusinessAccess(rp,policies,directory,jobs,workspace_config=settings,subscriptions=obj)
     app=create_auth_app(rp,business=create_app(None,jobs,space_directory=directory,platform_origin=rp.config.origin),access=access,subscriptions=obj)
     with TestClient(app,base_url=rp.config.origin,follow_redirects=False) as client:
@@ -288,7 +293,7 @@ def test_token_exchange_context_signature_and_no_cookie_proxy_transport(keys,mon
 def test_s2s_subscription_before_geometry_and_on_revoke(consumer,tmp_path,monkeypatch):
     client,route,body,headers,_,_,access,jobs,spaces,old,new,c,accounts,clock=consumer
     production_client(access.rp,accounts)
-    value=[facts(tier=None,status=None)];obj=PlatformSubscriptions(access.rp,config(),tmp_path/'policy',fetch=lambda *_:value[0],wall=lambda:NOW)
+    value=[facts(tier=None,status=None)];obj=PlatformSubscriptions(access.rp,config(),tmp_path/'policy',fetch_access=authorized_access,fetch=lambda *_:value[0],wall=lambda:NOW)
     access.consumer.subscriptions=obj
     assert client.post(route,json=body,headers=headers).json()['detail']=='subscription_required'
     value[0]=facts(tier=None,status=None,bundled=True);obj.webhook(*signed_event())

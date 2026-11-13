@@ -11,7 +11,7 @@ from fastapi import Request
 from fastapi.responses import JSONResponse
 from starlette.concurrency import run_in_threadpool
 from packages.infrastructure.platform_identity import PlatformPrincipal, IdentityRejected, IdentityUnavailable
-from packages.infrastructure.platform_subscription import SubscriptionDenied, SubscriptionUnavailable
+from packages.infrastructure.platform_subscription import SubscriptionDenied, SubscriptionUnavailable, ApplicationAccessDenied
 from packages.service.platform_resource_access import PlatformResourceAccess
 from packages.lifecycle.space_settings import SpaceSettingsChange, SettingsConflict, SettingsUnavailable
 from packages.data.space_sources import SpaceSources, SourceChange, SourcesConflict, SourcesUnavailable
@@ -787,6 +787,7 @@ class BusinessAccess:
             return deny(409,public_error(exc,('source_catalog_changed','source_settings_revision_changed'),'source_settings_unavailable'))
         except SourcesUnavailable:return deny(503,'source_settings_unavailable')
         except PreflightUnavailable:return deny(503,'preflight_records_unavailable')
+        except ApplicationAccessDenied:return deny(403,'application_access_required')
         except SubscriptionDenied:return deny(403,'subscription_required')
         except SubscriptionUnavailable:return deny(503,'subscription_unavailable')
         except IdentityUnavailable:return deny(503,'platform_or_policy_unavailable')

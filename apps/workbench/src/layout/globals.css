@@ -12,6 +12,22 @@
 body{font-family:var(--body-font-family);font-size:var(--body-font-size);line-height:var(--body-line-height)}
 button,input,select,textarea{font-family:inherit}
 
+/* Outline actions need a quieter edge than input controls on pale workspaces.
+   Keep the DS focus ring and semantics; apply to portalled dialogs as well. */
+[data-slot="button"][data-variant="outline"]{
+ border-color:color-mix(in srgb,var(--foreground) 16%,var(--background));
+ background:color-mix(in srgb,var(--card) 82%,var(--background));
+ box-shadow:0 1px 2px color-mix(in srgb,var(--foreground) 3%,transparent);
+}
+[data-slot="button"][data-variant="outline"]:hover:not(:disabled):not([aria-disabled="true"]){
+ border-color:color-mix(in srgb,var(--primary) 28%,var(--border));
+ background:color-mix(in srgb,var(--primary) 5%,var(--card));
+}
+[data-slot="button"][data-variant="outline"]:active:not(:disabled):not([aria-disabled="true"]){
+ background:color-mix(in srgb,var(--primary) 9%,var(--card));
+ box-shadow:none;
+}
+
 /* Product front door: shared DS shell, one alignment grid, one primary action. */
 .cospace-home{min-height:100dvh;display:flex;flex-direction:column;--home-width:var(--container-page-xl);--home-inset:var(--space-xl)}
 .home-header>div,.home-main,.home-footer-inner{width:100%;max-width:var(--home-width);padding-inline:var(--home-inset);margin-inline:auto;box-sizing:border-box}

@@ -1,3 +1,4 @@
+from test_platform_subscription import authorized_access
 """Platform authority: no product-side seat ledger or commercial quantity gate."""
 from dataclasses import replace
 import sqlite3
@@ -21,7 +22,7 @@ def authority_http(online, tmp_path):
     production_client(rp, accounts)
     value = [facts()]
     subscriptions = PlatformSubscriptions(rp, config(cache_seconds=0), tmp_path/'subscription',
-        fetch=lambda *_: value[0], now=lambda: clock[0], wall=lambda: NOW)
+        fetch_access=authorized_access,fetch=lambda *_: value[0], now=lambda: clock[0], wall=lambda: NOW)
     access = BusinessAccess(rp, policies, directory, jobs, subscriptions=subscriptions)
     app = create_auth_app(rp, business=create_app(None, jobs, space_directory=directory, platform_origin=rp.config.origin),
                           access=access, subscriptions=subscriptions)
