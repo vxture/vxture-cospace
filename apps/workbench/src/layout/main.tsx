@@ -7,6 +7,7 @@ import {ProductUserMenu} from './user-menu';
 import {HeaderContext} from './header-context';
 import {SceneSelection} from './scene-selection';
 import {SceneCatalog} from './scene-catalog';
+import {WorkspaceQueries} from './workspace-queries';
 import {WorkspaceHome} from './workspace-home';
 import {SpatialServices} from './spatial-services';
 import {createBrowserRouter,RouterProvider} from 'react-router-dom';
@@ -117,7 +118,7 @@ function Business({route}:Readonly<{route:'data'|'ontology'|'build'|'delivery'|'
  return <BuildWorkspaceViews key={context.space}/>;
 }
 function BuildWorkspaceViews(){return <ConstructionFlow/>;}
-function RoutedApplication(){return <ThemeProvider defaultMode="light"><TooltipProvider><AuthBoundary><SceneSelection><App/></SceneSelection></AuthBoundary><NavigationGuard/></TooltipProvider></ThemeProvider>;}
+function RoutedApplication(){return <ThemeProvider defaultMode="light"><TooltipProvider><AuthBoundary><WorkspaceQueries><SceneSelection><App/></SceneSelection></WorkspaceQueries></AuthBoundary><NavigationGuard/></TooltipProvider></ThemeProvider>;}
 // A persistent parent route owns authentication and product context. Child route
 // changes must never remount the session boundary or re-bootstrap authentication.
 const router=createBrowserRouter([{element:<RoutedApplication/>,children:['/',...Object.keys(names).map(name=>'/'+name)].map(path=>({path,element:null}))}]);

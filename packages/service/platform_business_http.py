@@ -1,6 +1,7 @@
 from packages.infrastructure.platform_rp import APP_ROUTES
 """Explicit deny-by-default authorization before the engineering business ASGI app."""
 import json
+from packages.infrastructure.request_timings import measure_request,timed_call
 import re
 import sqlite3
 import zipfile
@@ -272,6 +273,7 @@ class BusinessAccess:
         # global ontology registration and member writes cannot inherit a space grant.
         raise PermissionError()
 
+    @measure_request
     async def dispatch(self, request, call_next):
         path=request.url.path
         def deny(status,detail):return JSONResponse({'detail':detail},status_code=status,headers={'Cache-Control':'no-store'})
@@ -291,12 +293,12 @@ class BusinessAccess:
                 return await call_next(request)
             if any(len(request.query_params.getlist(k))>1 for k in request.query_params):return deny(403,'space_access_denied')
             rpsid=request.cookies.get(self.rp.config.cookie_name)
-            session,_=await run_in_threadpool(self.rp.resolve,rpsid,active=False,require_access=True)
+            session,_=await run_in_threadpool(timed_call,'rp_session',self.rp.resolve,rpsid,active=False,require_access=True)
             if session is None:return deny(401,'authentication_required')
             if request.method not in ('GET','HEAD'):
                 if (request.headers.get('origin')!=self.rp.config.origin or request.headers.get('sec-fetch-site')=='cross-site'
                         or not self.rp.csrf_matches(rpsid,request.headers.get('x-cospace-csrf'))):return deny(403,'csrf_rejected')
-            await run_in_threadpool(self.require_subscription,session)
+            await run_in_threadpool(timed_call,'platform_gate',self.require_subscription,session)
             if path=='/api/globe/config':
                 if request.method not in ('GET','HEAD') or request.query_params:return deny(403,'globe_config_request_rejected')
                 return JSONResponse(self.globe.public(self.rp.config.origin),headers={'Cache-Control':'no-store'})
@@ -323,7 +325,7 @@ class BusinessAccess:
                             if received>MAX_UPLOAD:return deny(413,'upload_size_budget')
                             await run_in_threadpool(stream.write,chunk)
                     # Upload may outlast a session/policy confirmation. Recheck before commit.
-                    current,_=await run_in_threadpool(self.rp.resolve,rpsid,active=False,require_access=True)
+                    current,_=await run_in_threadpool(timed_call,'rp_session',self.rp.resolve,rpsid,active=False,require_access=True)
                     if current is None:return deny(401,'authentication_required')
                     await run_in_threadpool(self.require_subscription,current)
                     revision,policy=await run_in_threadpool(self.policies.load)
@@ -368,7 +370,7 @@ class BusinessAccess:
                             received+=len(chunk)
                             if received>MAX_ATTACHMENT_BYTES:return deny(413,'attachment_size_budget')
                             await run_in_threadpool(stream.write,chunk)
-                    current,_=await run_in_threadpool(self.rp.resolve,rpsid,active=False,require_access=True)
+                    current,_=await run_in_threadpool(timed_call,'rp_session',self.rp.resolve,rpsid,active=False,require_access=True)
                     if current is None:return deny(401,'authentication_required')
                     await run_in_threadpool(self.require_subscription,current)
                     revision,policy=await run_in_threadpool(self.policies.load)
@@ -627,7 +629,8 @@ class BusinessAccess:
                 identity=request.query_params['space_id']
                 if 'build.run' not in policy.capabilities(context['principal'],identity):
                     return JSONResponse({'space_id':identity,'candidate_ref':None,'job':None,'stages':None,'counts':None},headers={'Cache-Control':'no-store'})
-                try:result=await run_in_threadpool(scene_overview,self.jobs,identity)
+                try:result=await run_in_threadpool(timed_call,'scene_summary',scene_overview,self.jobs,identity)
+                except sqlite3.Error:return deny(503,'scene_overview_unavailable')
                 except (ValueError,OSError,KeyError,TypeError):return deny(409,'scene_overview_unavailable')
                 return JSONResponse(result,headers={'Cache-Control':'no-store'})
             if path=='/api/workflow':

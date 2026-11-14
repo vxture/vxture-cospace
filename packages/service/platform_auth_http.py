@@ -90,7 +90,7 @@ def create_auth_app(rp, workbench=Path('apps/workbench/dist'), business=None, ac
             session,_=rp.resolve(session_id(request),require_access=True)
             if session is None:raise HTTPException(401,'authentication_required')
             principal=rp.verifier.verify(session['access_token'])
-            return subscriptions.summary(principal,session['access_token'])
+            return subscriptions.summary(principal,session['access_token'],refresh='no-cache' in request.headers.get('cache-control','').lower())
 
         @app.post('/api/webhooks/vxture')
         async def webhook(request: Request):
@@ -137,6 +137,7 @@ def create_auth_app(rp, workbench=Path('apps/workbench/dist'), business=None, ac
                            csrf=session['csrf'], authority_ready=state in ('cached','confirmed')
                            and rp.now()<session['next_check_at'] and not session.get('retry_at',0), access_ready=session['access_expires_at'] > rp.now()
                            and not session.get('refresh_blocked') and not session.get('refresh_pending'))
+            payload['confirmation_max_age_s']=max(0,session['next_check_at']-rp.now()) if not session.get('retry_at',0) else 0
             payload['user'].update(session.get('profile', {}))
         response = JSONResponse(payload)
         if not session and session_id(request): clear_cookie(response, cookie)

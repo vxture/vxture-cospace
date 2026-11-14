@@ -1,4 +1,5 @@
 """Vxture C2 facts in short memory cache; C3 receipts contain no entitlements or secrets."""
+from concurrent.futures import Future
 from contextlib import closing
 from datetime import datetime, timezone
 import hashlib
@@ -14,6 +15,7 @@ import threading
 import time
 from urllib.parse import urlencode, urlsplit
 from urllib.request import Request, build_opener, ProxyHandler
+from packages.infrastructure.request_timings import timed_call
 from pydantic import BaseModel, ConfigDict, Field, SecretStr, model_validator
 from packages.infrastructure.platform_identity import IdentityUnavailable, IdentityRejected, NoRedirect, PlatformTokenVerifier
 
@@ -36,6 +38,7 @@ class SubscriptionConfig(BaseModel):
     api_base:str
     website_base:str='https://vxture.com'
     cache_seconds:int=Field(default=30,ge=0,le=45)
+    access_cache_seconds:int=Field(default=30,ge=0,le=30)
     webhook_keys:tuple[SecretStr,...]=Field(min_length=1,max_length=2)
     allow_tailnet_http:bool=False
     allow_loopback_http:bool=False
@@ -66,7 +69,8 @@ class SubscriptionConfig(BaseModel):
         if os.environ.get('COSPACE_PLATFORM_WEBHOOK_PREVIOUS_SECRET'):keys.append(os.environ['COSPACE_PLATFORM_WEBHOOK_PREVIOUS_SECRET'])
         return cls(api_base=os.environ[names[0]],website_base=os.environ.get('COSPACE_WEBSITE_BASE_URL','https://vxture.com'),
             webhook_keys=tuple(SecretStr(v) for v in keys),
-            allow_tailnet_http=os.environ.get('COSPACE_PLATFORM_TAILNET_HTTP')=='1')
+            allow_tailnet_http=os.environ.get('COSPACE_PLATFORM_TAILNET_HTTP')=='1',
+            access_cache_seconds=int(os.environ.get('COSPACE_PLATFORM_ACCESS_CACHE_SECONDS','30')))
 
 
 class Entitlement(BaseModel):
@@ -176,9 +180,9 @@ class EntitlementTransport:
             request.update(subject_token=user_token,subject_token_type='urn:ietf:params:oauth:token-type:access_token')
         else:request.update(org_id=principal.org_id,workspace_id=principal.workspace_id)
         try:
-            token=self.rp.transport.post('/oidc/token',request,form=True)
+            token=timed_call('token_exchange',self.rp.transport.post,'/oidc/token',request,form=True)
             if token.get('token_type')!='Bearer':raise ValueError('token_type')
-            bearer=token.get('access_token');claims=self.verifier.signed_claims(bearer)
+            bearer=token.get('access_token');claims=timed_call('platform_signature',self.verifier.signed_claims,bearer)
             if (claims.get('aud')!='vxture' or claims.get('act')!={'sub':PRODUCT}
                     or claims.get('scope')!='tool:vxture' or claims.get('delegated') is not None
                     or claims.get('mode')!=('obo' if user_token else 'service')
@@ -223,45 +227,85 @@ class PlatformSubscriptions:
     def __init__(self,rp,config,root,*,fetch=None,fetch_access=None,now=time.monotonic,wall=time.time):
         if rp.config.client_id!=PRODUCT:raise ValueError('cospace_subscription_client_required')
         self.rp,self.config=rp,config;self.events=SubscriptionEvents(root)
-        self.fetch=fetch or EntitlementTransport(rp,config).fetch
-        self.fetch_access=fetch_access or (lambda principal, token: EntitlementTransport(rp,config).access(principal, token))
-        self.now,self.wall=now,wall;self.cache={};self.lock=threading.RLock()
+        if fetch is not None and fetch_access is not None:
+            self.fetch,self.fetch_access=fetch,fetch_access
+        else:
+            transport=EntitlementTransport(rp,config)
+            self.fetch=transport.fetch if fetch is None else fetch
+            self.fetch_access=transport.access if fetch_access is None else fetch_access
+        self.now,self.wall=now,wall
+        self.cache={};self.access_cache={};self.pending={};self.lock=threading.RLock()
+
+    def _singleflight(self,key,read):
+        # Only short map operations use the shared lock; network I/O never does.
+        with self.lock:
+            pending=self.pending.get(key)
+            leader=pending is None
+            if leader:pending=Future();self.pending[key]=pending
+        if not leader:return pending.result()
+        try:
+            value=read();pending.set_result(value);return value
+        except BaseException as exc:
+            pending.set_exception(exc);raise
+        finally:
+            with self.lock:self.pending.pop(key,None)
+
+    def _get(self,cache,key,generation):
+        with self.lock:
+            value=cache.get(key)
+            return value[2] if value and value[0]>self.now() and value[1]==generation else None
+
+    def _put(self,cache,key,generation,value,seconds):
+        with self.lock:
+            cache[key]=(self.now()+seconds,generation,value)
+            if len(cache)>512:cache.pop(next(iter(cache)))
 
     def view(self,principal,user_token=None):
         if principal.issuer!=self.rp.config.issuer or not IDENTIFIER.fullmatch(principal.workspace_id):
             raise SubscriptionUnavailable('subscription_context_invalid')
         key=(principal.issuer,principal.org_id,principal.workspace_id)
-        try:
-            with self.lock:
-                generation=self.events.generation(principal.workspace_id);cached=self.cache.get(key)
-                if cached and cached[0]>self.now() and cached[1]==generation:return cached[2]
-                # No stale fallback after expiry or a signed invalidation.
-                value=Entitlement.model_validate(self.fetch(principal,user_token))
+        def read():
+            try:
+                generation=self.events.generation(principal.workspace_id)
+                cached=self._get(self.cache,key,generation)
+                if cached is not None:return cached
+                value=Entitlement.model_validate(timed_call('entitlements',self.fetch,principal,user_token))
                 if value.workspace_id!=principal.workspace_id or value.product!=PRODUCT:
                     raise ValueError('subscription_response_scope_mismatch')
                 if self.events.generation(principal.workspace_id)!=generation:
                     raise SubscriptionUnavailable('subscription_changed_during_read')
-                self.cache[key]=(self.now()+self.config.cache_seconds,generation,value)
-                # Bound a single-worker memory cache; eviction merely causes a fresh C2 read.
-                if len(self.cache)>512:self.cache.pop(next(iter(self.cache)))
+                self._put(self.cache,key,generation,value,self.config.cache_seconds)
                 return value
-        except SubscriptionUnavailable:raise
-        except (ValueError,TypeError,KeyError,OSError,sqlite3.Error) as exc:
-            raise SubscriptionUnavailable('platform_subscription_unavailable') from None
+            except SubscriptionUnavailable:raise
+            except (ValueError,TypeError,KeyError,OSError,sqlite3.Error):
+                raise SubscriptionUnavailable('platform_subscription_unavailable') from None
+        return self._singleflight(('entitlement',key),read)
 
-    def assigned(self, principal, user_token):
-        # Never reuse a workspace entitlement cache as user authorization. A
-        # revocation must affect the next request, including an existing session.
-        try:
-            value = self.fetch_access(principal, user_token)
-            if (not isinstance(value, dict) or type(value.get('allowed')) is not bool
-                    or (value.get('product'), value.get('subject'), value.get('org_id'), value.get('workspace_id'))
-                    != (PRODUCT, principal.subject, principal.org_id, principal.workspace_id)):
-                raise ValueError('application_access_scope_mismatch')
-            return value['allowed']
-        except SubscriptionUnavailable: raise
-        except (ValueError, TypeError, KeyError, OSError):
-            raise SubscriptionUnavailable('platform_application_access_unavailable') from None
+    def assigned(self, principal, user_token, *, refresh=False):
+        # A bounded, user/token-bound decision. Never share a workspace decision
+        # as member access; signed events invalidate all processes via SQLite.
+        if not user_token:raise SubscriptionUnavailable('user_bound_access_required')
+        key=(principal.issuer,PRODUCT,principal.subject,principal.org_id,principal.workspace_id,
+             hashlib.sha256(user_token.encode()).digest())
+        def read():
+            try:
+                generation=self.events.generation(principal.workspace_id)
+                cached=self._get(self.access_cache,key,generation)
+                if cached is not None and not refresh:return cached
+                value=timed_call('application_access',self.fetch_access,principal,user_token)
+                if (not isinstance(value,dict) or type(value.get('allowed')) is not bool
+                        or (value.get('product'),value.get('subject'),value.get('org_id'),value.get('workspace_id'))
+                        != (PRODUCT,principal.subject,principal.org_id,principal.workspace_id)):
+                    raise ValueError('application_access_scope_mismatch')
+                if self.events.generation(principal.workspace_id)!=generation:
+                    raise SubscriptionUnavailable('application_access_changed_during_read')
+                self._put(self.access_cache,key,generation,value['allowed'],
+                          min(self.config.access_cache_seconds,max(0,principal.expires_at-self.wall())))
+                return value['allowed']
+            except SubscriptionUnavailable:raise
+            except (ValueError,TypeError,KeyError,OSError,sqlite3.Error):
+                raise SubscriptionUnavailable('platform_application_access_unavailable') from None
+        return self._singleflight(('assignment',key),read)
 
     def require(self,principal,user_token=None,*,ui=False):
         value=self.view(principal,user_token)
@@ -269,9 +313,9 @@ class PlatformSubscriptions:
         if user_token and not self.assigned(principal,user_token):raise ApplicationAccessDenied('application_access_required')
         return value
 
-    def summary(self,principal,user_token=None):
+    def summary(self,principal,user_token=None,*,refresh=False):
         value=self.view(principal,user_token)
-        assigned = self.assigned(principal,user_token) if user_token and value.allowed() else None
+        assigned = self.assigned(principal,user_token,refresh=refresh) if user_token and value.allowed() else None
         permitted = assigned is not False
         return {'profile':'cospace.subscription-access/0.1','product':PRODUCT,
             'application_authorized':assigned,
@@ -279,7 +323,8 @@ class PlatformSubscriptions:
             'status':value.status,'tier':value.tier,'bundled':value.bundled,
             'business_allowed':value.allowed(ui=True) and permitted,'data_allowed':value.allowed() and permitted,'ui_available':value.allowed(ui=True) and permitted,
             'pricing_url':self.config.website_base+'/pricing?'+urlencode({'product':PRODUCT}),
-            'cache_max_age_s':self.config.cache_seconds}
+            'cache_max_age_s':self.config.cache_seconds,
+            'access_cache_max_age_s':self.config.access_cache_seconds}
 
     def webhook(self,raw,headers):
         if not 0<len(raw)<=65536:raise WebhookRejected('webhook_budget')

@@ -1,4 +1,5 @@
-import React,{useEffect,useState} from 'react';
+import React,{useCallback,useState} from 'react';
+import {useWorkspaceQuery} from './workspace-queries';
 import {businessEndpoint} from './business-endpoint';
 import {Button,Drawer,StatusBadge,DropdownMenu,DropdownMenuTrigger,DropdownMenuContent,DropdownMenuItem,DropdownMenuSeparator} from '@vxture/design-system';
 import {Cube,Database,FlowArrow,Package,DotsThreeVertical,Link,Broadcast} from '@phosphor-icons/react';
@@ -21,28 +22,29 @@ export function SceneDetail({scene,onClose,mapOverlay=false}:{scene?:SceneSpace;
   {scene&&<SceneOverview key={scene.id} scene={scene}/>}
  </Drawer>;
 }
-type Overview={space_id:string;candidate_ref:{candidate_id:string}|null;job:OverviewJob|null;stages:OverviewStages|null;counts:Record<string,number>|null};
+type Overview={space_id:string;candidate_ref:{candidate_id:string}|null;job:OverviewJob|null;stages:OverviewStages|null;counts:Record<string,number>|null;latest_job?:OverviewJob|null};
 const jobStates:Record<string,string>={queued:'排队中',running:'构建中',succeeded:'已完成',failed:'构建失败',interrupted:'已中断',views_failed:'视图待恢复'};
 const time=(value:string)=>Number.isFinite(Date.parse(value))?new Date(value).toLocaleString('zh-CN',{timeZone:'Asia/Shanghai',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}):'时间未记录';
 function SceneOverview({scene}:{scene:SceneSpace}){
  const platform=usePlatformSession(),canReadBuild=!platform||!!scene.capabilities?.includes('build.run');
- const [report,setReport]=useState<Overview|null>(null),[loading,setLoading]=useState(true),[error,setError]=useState(''),[revision,setRevision]=useState(0);
- useEffect(()=>{
-  const controller=new AbortController();setLoading(true);setError('');
-  if(!canReadBuild){setLoading(false);return()=>controller.abort();}
-  fetch(businessEndpoint+'/api/scene-overview?'+new URLSearchParams({space_id:scene.id}),{cache:'no-store',signal:controller.signal}).then(async response=>{
-   if(!response.ok)throw Error();const saved:Overview=await response.json();
-   if(saved.space_id!==scene.id||saved.job&&saved.job.space_id!==scene.id||saved.stages&&(saved.stages.space_id!==scene.id||saved.stages.job_id!==saved.job?.id))throw Error();
-   if(!controller.signal.aborted)setReport(saved);
-  }).catch(()=>{if(!controller.signal.aborted)setError('概览状态暂不可读');}).finally(()=>{if(!controller.signal.aborted)setLoading(false);});
-  return()=>controller.abort();
- },[scene.id,canReadBuild,revision]);
+ const [revision,setRevision]=useState(0);
+ const load=useCallback(async()=>{
+  if(!canReadBuild)return null;
+  const response=await fetch(businessEndpoint+'/api/scene-overview?'+new URLSearchParams({space_id:scene.id}),{cache:'no-store'});
+  if(!response.ok)throw new Error('概览状态暂不可读');
+  const saved:Overview=await response.json();
+  if(saved.space_id!==scene.id||saved.job&&saved.job.space_id!==scene.id||saved.latest_job&&saved.latest_job.space_id!==scene.id||saved.stages&&(saved.stages.space_id!==scene.id||saved.stages.job_id!==saved.job?.id))throw new Error('概览状态暂不可读');
+  return saved;
+ },[scene.id,canReadBuild]);
+ const {data:report,loading,error}=useWorkspaceQuery<Overview|null>('overview:'+scene.id+':'+canReadBuild,load,revision);
  const job=report?.job,stages=report?.stages||null;
  const state=scenePhases[scenePhase(scene)],releases=[...(scene.publications||[])].sort((a,b)=>(Date.parse(b.created_at)||0)-(Date.parse(a.created_at)||0));
  const source=job?.input_binding?.label||job?.input_id;
  const count=(key:string)=>Number.isSafeInteger(report?.counts?.[key])?report!.counts![key]:null;
  const objects=count('objects'),bindings=count('business_bindings'),relations=count('object_relations');
  const pending=loading?'—':error||'尚无构建记录';
+ let candidateLabel=loading?'—':error||'未选择';
+ if(report?.candidate_ref&&job)candidateLabel=job.display_code||job.build_code||job.id;
  return <div className="scene-detail-content" data-tone={state.tone}>
   <section aria-label="场景概要"><div className="scene-detail-section-heading"><h3>场景概要</h3><StatusBadge size="sm" icon={false} tone={state.tone}>{state.label}</StatusBadge></div>
    <dl><dt>场景</dt><dd>{scene.name}</dd>{scene.project_name&&<><dt>所属项目</dt><dd>{scene.project_name}</dd></>}<dt>位置</dt><dd>{scene.address||(scene.location?`${scene.location.longitude}, ${scene.location.latitude} · ${scene.location.crs}`:'位置未登记')}</dd><dt>构建模式</dt><dd>{canReadBuild?job?sceneBuildMode(job):pending:'需构建查看权限'}</dd>{scene.description&&<><dt>用途说明</dt><dd>{scene.description}</dd></>}</dl>
@@ -51,7 +53,8 @@ function SceneOverview({scene}:{scene:SceneSpace}){
    {error&&<div className="scene-overview-note" role="status"><span>{error}</span><Button variant="ghost" size="sm" onClick={()=>setRevision(n=>n+1)}>重试</Button></div>}
    {!canReadBuild?<p>当前账号无构建查看权限。</p>:<dl>
     <dt>数据来源</dt><dd>{source||(loading?'—':error||'尚未绑定构建资料')}</dd>
-    <dt>{report?.candidate_ref?'当前候选':'最近构建'}</dt><dd>{job?(job.display_code||job.build_code||job.id):pending}</dd>
+    <dt>当前候选</dt><dd>{candidateLabel}</dd>
+    <dt>最近构建</dt><dd>{report?.latest_job?(report.latest_job.display_code||report.latest_job.build_code||report.latest_job.id):pending}</dd>
     <dt>视觉表达</dt><dd>{job?sceneViewSummary(stages,'human'):loading?'—':error||'尚未构建'}</dd>
     <dt>计算表达</dt><dd>{job?sceneViewSummary(stages,'agent'):loading?'—':error||'尚未构建'}</dd>
     <dt>空间关联</dt><dd>{report&&!report.candidate_ref?'尚未选择工作候选':objects!==null&&bindings!==null&&relations!==null?`${objects} 个对象 · ${bindings} 个业务绑定 · ${relations} 条关系`:loading?'—':'暂不可读'}</dd>

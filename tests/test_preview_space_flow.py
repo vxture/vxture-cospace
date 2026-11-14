@@ -21,7 +21,7 @@ def setup(tmp_path):
     for identity,space in zip(('build-one','build-two'),spaces):
         ownership={k:space[k] for k in ('project_id',)}|{'space_id':space['id']}
         path=jobs.root/identity/'job.json'; job=json.loads(path.read_bytes())
-        job.update(ownership); path.write_text(json.dumps(job),encoding='utf-8')
+        job.update(ownership); jobs.save(job)
         path=jobs.root/identity/'output'/'model.json'; model=json.loads(path.read_bytes())
         model.update(ownership); model['source']={'input_binding':ownership}
         path.write_text(json.dumps(model),encoding='utf-8')
