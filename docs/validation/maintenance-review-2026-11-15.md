@@ -33,3 +33,9 @@ GitHub 默认分支当前展示 218 条历史镜像扫描告警，涉及 104 种
 ## 发布要求
 
 五项必需门禁 quality-gate、build、test-coverage、audit、gitleaks 通过后 squash 合并。主分支同一提交重新通过门禁后发布版本，由 production reviewer 审批，再部署到 worker02 /srv/md0/cospace，并验证健康检查与线上资源版本。
+
+## 自动补建的第二轮更新
+
+首批合并后 Dependabot 因队列空位自动补建 #85–#90。纳入第二批组合验证：FastAPI 0.162.4、SQLAlchemy 2.1.8、joserfc 1.8.0、Vite 8.3.8、Node 24 类型 24.19.2、laspy 2.7.0。继续导出生产锁文件；认证/权限回归、LAZ 压缩读写与前端生产构建均需通过，Linux 全量 CI 和容器烟测作为合并门禁。
+
+首批 Linux 全量结果：2259 passed、117 skipped，独立 IFC 测试通过。Windows 全量为 2358 passed、17 skipped、1 failed：test_live_owner_recovery_blocked 在子进程终止后立即恢复时仍报告 owner_alive，Linux 同一测试通过。保留锁释放时序诊断，不将 Windows 全量记为通过。第二轮认证相关定向回归 204 passed、1 skipped；LAZ 与前端生产构建通过。
