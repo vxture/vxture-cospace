@@ -1,3 +1,4 @@
+import {MapLoading} from './map-loading';
 import {loadGlobe} from './globe-loader';
 import {useSceneControls} from './scene-selection';
 import React,{Suspense,useEffect,useState} from 'react';
@@ -12,5 +13,5 @@ export function SceneMap(props:Props){
  useEffect(()=>{setMapActive(true);return ()=>setMapActive(false);},[setMapActive]);
  const [mode,setMode]=useState(readMapPreferences().viewMode);
  function changeView(value:'2D'|'3D'){try{localStorage.setItem(mapPreferenceKey,JSON.stringify({...readMapPreferences(),viewMode:value}));}catch{/* Current session remains usable. */}setMode(value);}
- return <div className="scene-geographic-view"><Suspense fallback={<div role="status">正在加载地图引擎…</div>}>{mode==='3D'?<Globe {...props} onViewChange={changeView}/>:<AmapView {...props} onViewChange={changeView}/>}</Suspense></div>;
+ return <div className="scene-geographic-view"><Suspense fallback={<MapLoading/>}>{mode==='3D'?<Globe {...props} onViewChange={changeView}/>:<AmapView {...props} onViewChange={changeView}/>}</Suspense></div>;
 }

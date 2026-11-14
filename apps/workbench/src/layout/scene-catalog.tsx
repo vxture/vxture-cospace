@@ -1,3 +1,4 @@
+import {MapLoading} from './map-loading';
 import {locationLabel} from './geographic-location';
 import React,{useMemo,useState} from 'react';
 import {Button,Input,NativeSelect,ViewHeader,SegmentedControl,StatusBadge} from '@vxture/design-system';
@@ -21,7 +22,7 @@ export function SceneCatalog(){
  const visible=useMemo(()=>filterScenes(spaces,query,phase,sort),[spaces,query,phase,sort]);
  const detail=spaces.find(s=>s.id===selected);
  const reset=()=>{setQuery('');setPhase('all');};
- if(mode==='map')return <React.Suspense fallback={<div role="status">正在打开地图…</div>}><SceneMap spaces={spaces} loading={loading} error={error} onBack={()=>appNavigate('/space')} onRefresh={()=>setRevision(v=>v+1)}/></React.Suspense>;
+ if(mode==='map')return <React.Suspense fallback={<MapLoading/>}><SceneMap spaces={spaces} loading={loading} error={error} onBack={()=>appNavigate('/space')} onRefresh={()=>setRevision(v=>v+1)}/></React.Suspense>;
  return <main className="scene-catalog" aria-label="场景选择"><div className="scene-catalog-shell">
   <ViewHeader title="我的场景" secondary={<span className="scene-total" aria-label="场景总数">{spaces.length}</span>} description="从场景开始，连接资料、模型与空间服务。" action={<CreateSceneButton size="xl" onCreated={id=>appNavigate('/data?'+new URLSearchParams({space:id,tab:'inputs'}))}/>}/>
   <div className="scene-catalog-toolbar" aria-label="场景清单操作区">
