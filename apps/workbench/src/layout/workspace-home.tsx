@@ -36,7 +36,7 @@ export function WorkspaceHome(){
     <div className="workspace-home-wrap workspace-home-hero-layout">
      <SpatialMotif className="workspace-home-motif"/>
      <div className="workspace-home-intro">
-     <span className="workspace-home-kicker"><Cube size={17} weight="duotone"/> CoSpace 工作台</span>
+     <span className="workspace-home-kicker"><Cube size={17} weight="duotone"/> CoSpace 首页</span>
      <h1 id="workspace-home-title">从场景开始</h1>
      <p>管理场景资料、构建空间底图，将成果发布给具身智能体使用。</p>
      <div className="workspace-home-actions">
