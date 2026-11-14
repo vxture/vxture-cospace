@@ -22,7 +22,7 @@ export function WorkspaceHome(){
  const {spaces,loading,error}=useSceneDirectory(revision);
  const remembered=useSelectedScene();
  const monitor=useHomeMonitor(error?[]:spaces,revision);
- const sum=(key:'requests'|'failed'|'rejected')=>monitor.rows.reduce((total,row)=>total+row[key],0);
+ const sum=(key:'requests'|'failed'|'rejected')=>monitor.rows.reduce((total,row)=>total+row.totals[key],0);
  const monitorPending=loading||!!error||monitor.loading;
  const metric=(key:'requests'|'failed'|'rejected')=>monitorPending||!monitor.rows.length?'—':sum(key).toLocaleString();
  const attention=monitor.rows.filter(row=>row.failed>0||row.rejected>0||row.configuration!=='configured');
@@ -49,7 +49,7 @@ export function WorkspaceHome(){
    </section>
    <section className="workspace-home-summary" aria-labelledby="workspace-home-progress">
     <div className="workspace-home-wrap workspace-home-summary-layout">
-     <div><h2 id="workspace-home-progress">服务运行 · 近 24 小时</h2><p>{monitorPending?'正在读取监测':!monitor.total?'暂无可读取的服务监测':`已读取 ${monitor.rows.length} / ${monitor.total} 个授权场景${incomplete?' · 已读取部分':''}`}</p></div>
+     <div><h2 id="workspace-home-progress">服务运行</h2><p>{monitorPending?'正在读取监测':!monitor.total?'暂无可读取的服务监测':`已读取 ${monitor.rows.length} / ${monitor.total} 个授权场景${incomplete?' · 已读取部分':''}`}</p></div>
       <dl className="workspace-home-metrics">
        <div><dt>场景数量</dt><dd>{loading||error?'—':spaces.length.toLocaleString()}</dd></div>
        <div><dt>服务调用</dt><dd>{metric('requests')}</dd></div>

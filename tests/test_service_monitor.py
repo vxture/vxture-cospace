@@ -27,16 +27,41 @@ def test_persistent_scoped_bounded_observations(tmp_path, monkeypatch):
     assert {v['publication_id'] for v in result['versions']}=={'preview-a','preview-b'}
     # Window expiry and actual retention deletion are separate.
     clock[0]+=86401
-    assert persisted.snapshot(p,'space-a')['request_count']==0
+    expired=persisted.snapshot(p,'space-a')
+    assert expired['request_count']==0
+    assert expired['totals']=={'requests':2,'failed':0,'rejected':0,'partial':False}
     clock[0]+=7*86400
     persisted.snapshot(p,'space-a')
     with sqlite3.connect(persisted.path) as db:assert db.execute('SELECT COUNT(*) FROM events').fetchone()[0]==0
+    assert ServiceMonitor(tmp_path,now=lambda:clock[0]).snapshot(p,'space-a')['totals']['requests']==2
     monkeypatch.setattr('packages.service.service_monitor.MAX_EVENTS',2)
     for index in range(4):
         clock[0]+=1;persisted.record(scope,f'preview-{index}','historical_result',200,10)
     capped=persisted.snapshot(p,'space-a')
     assert capped['request_count']==2 and capped['coverage']['partial'] and capped['coverage']['truncated_before']
     assert {r['publication'] for r in capped['recent']}=={'preview-2','preview-3'}
+    assert capped['totals']['requests']==6
+
+
+def test_totals_migrate_available_history_once_and_remain_tenant_scoped(tmp_path):
+    clock=[1000000.];p=principal()
+    monitor=ServiceMonitor(tmp_path,now=lambda:clock[0])
+    scope=(p.issuer,p.org_id,p.workspace_id,'space-a','robot')
+    for outcome,status in [('historical_result',200),('observation_time_unverified',200),('internal_error',503),('consumer_frame_mismatch',409)]:
+        monitor.record(scope,'preview-a',outcome,status,10)
+    # Simulate an existing pre-totals database with retained event details.
+    with sqlite3.connect(monitor.path) as db:
+        db.execute('DROP TABLE totals')
+        db.execute("DELETE FROM metadata WHERE key IN ('totals_initialized','totals_partial')")
+    clock[0]+=1
+    restored=ServiceMonitor(tmp_path,now=lambda:clock[0])
+    expected={'requests':4,'failed':1,'rejected':1,'partial':True}
+    assert restored.snapshot(p,'space-a')['totals']==expected
+    assert restored.snapshot(p,'space-a')['totals']==expected
+    assert restored.snapshot(principal(workspace='foreign'),'space-a')['totals']['requests']==0
+    assert restored.snapshot(p,'space-b')['totals']['requests']==0
+    restored.record(scope,'preview-a','historical_result',200,10)
+    assert restored.snapshot(p,'space-a')['totals']['requests']==5
 
 
 def test_only_verified_authorized_s2s_requests_are_recorded(consumer):
