@@ -36,6 +36,7 @@ class ServiceMonitor:
         db.row_factory = sqlite3.Row
         db.execute('PRAGMA secure_delete=ON')
         db.execute('CREATE TABLE IF NOT EXISTS metadata (key TEXT PRIMARY KEY, value REAL NOT NULL)')
+        existing=db.execute("SELECT 1 FROM metadata WHERE key='started_at'").fetchone() is not None
         db.execute('INSERT OR IGNORE INTO metadata VALUES (?,?)', ('started_at', self.now()))
         db.execute('''CREATE TABLE IF NOT EXISTS events (
             id INTEGER PRIMARY KEY AUTOINCREMENT, at REAL NOT NULL,
@@ -44,6 +45,20 @@ class ServiceMonitor:
             outcome TEXT NOT NULL, http_status INTEGER NOT NULL, duration_ms REAL NOT NULL)''')
         db.execute('CREATE INDEX IF NOT EXISTS scoped_events ON events(issuer,org,workspace,space,at)')
         db.execute('CREATE INDEX IF NOT EXISTS event_time ON events(at)')
+        db.execute('''CREATE TABLE IF NOT EXISTS totals (
+            issuer TEXT NOT NULL, org TEXT NOT NULL, workspace TEXT NOT NULL, space TEXT NOT NULL,
+            requests INTEGER NOT NULL, failed INTEGER NOT NULL, rejected INTEGER NOT NULL,
+            PRIMARY KEY(issuer,org,workspace,space))''')
+        if db.execute("SELECT 1 FROM metadata WHERE key='totals_initialized'").fetchone() is None:
+            # Seed only once from available observations; never re-add retained events.
+            db.execute('''INSERT INTO totals
+                SELECT issuer,org,workspace,space,COUNT(*),
+                    SUM(CASE WHEN outcome NOT IN ('historical_result','observation_time_unverified') AND http_status>=500 THEN 1 ELSE 0 END),
+                    SUM(CASE WHEN outcome NOT IN ('historical_result','observation_time_unverified') AND http_status<500 THEN 1 ELSE 0 END)
+                FROM events GROUP BY issuer,org,workspace,space''')
+            # Older installations may have already removed event details.
+            db.execute('INSERT INTO metadata VALUES (?,?)',('totals_partial',int(existing)))
+            db.execute('INSERT INTO metadata VALUES (?,?)',('totals_initialized',self.now()))
 
     def prune(self, db, now):
         db.execute('DELETE FROM events WHERE at < ?', (now - RETENTION,))
@@ -60,6 +75,11 @@ class ServiceMonitor:
             with self.connect() as db:
                 db.execute('INSERT INTO events(at,issuer,org,workspace,space,caller,publication,outcome,http_status,duration_ms) VALUES (?,?,?,?,?,?,?,?,?,?)',
                            (now, *scope, publication, outcome, http_status, round(duration_ms, 2)))
+                exceptional=outcome not in ('historical_result','observation_time_unverified')
+                db.execute('''INSERT INTO totals VALUES (?,?,?,?,1,?,?)
+                    ON CONFLICT(issuer,org,workspace,space) DO UPDATE SET
+                    requests=requests+1, failed=failed+excluded.failed, rejected=rejected+excluded.rejected''',
+                    (*scope[:4],int(exceptional and http_status>=500),int(exceptional and http_status<500)))
                 self.prune(db, now)
         except (OSError, sqlite3.Error):
             # Telemetry failure must not change the authorization or query result.
@@ -73,6 +93,7 @@ class ServiceMonitor:
             meta = dict(db.execute('SELECT key,value FROM metadata').fetchall())
             rows = db.execute('SELECT at,caller,publication,outcome,http_status,duration_ms FROM events WHERE issuer=? AND org=? AND workspace=? AND space=? AND at>=? AND at<=? ORDER BY at DESC,id DESC',
                               (*scope, now - WINDOW, now)).fetchall()
+            total=db.execute('SELECT requests,failed,rejected FROM totals WHERE issuer=? AND org=? AND workspace=? AND space=?',scope).fetchone()
         counts = {'historical_result': 0, 'refused': 0, 'rejected': 0, 'failed': 0}
         versions = {}
         outcomes = {}
@@ -94,6 +115,9 @@ class ServiceMonitor:
                          'partial': meta['started_at'] > now-WINDOW or meta.get('truncated_before', 0) >= now-WINDOW or self.write_failed_at is not None,
                          'write_failed_at': utc(self.write_failed_at), 'retention_days': 7, 'max_events': MAX_EVENTS},
             'request_count': len(rows), 'counts': counts,
+            'totals': {'requests':total['requests'] if total else 0,'failed':total['failed'] if total else 0,
+                       'rejected':total['rejected'] if total else 0,
+                       'partial':bool(meta['totals_partial']) or self.write_failed_at is not None},
             'last_request_at': utc(rows[0]['at']) if rows else None,
             'p95_ms': durations[math.ceil(len(durations)*.95)-1] if durations else None,
             'versions': [{'publication_id': key, 'requests': value} for key, value in sorted(versions.items(), key=lambda item: (-item[1],item[0]))[:10]],
