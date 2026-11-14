@@ -1,3 +1,4 @@
+import {MapLoading} from './map-loading';
 import {useSceneControls} from './scene-selection';
 import React,{useEffect,useMemo,useRef,useState} from 'react';
 import {Button,Input,SegmentedControl,Popover,PopoverTrigger,PopoverContent,Switch,Tabs,TabsList,TabsTrigger,Tooltip,TooltipTrigger,TooltipContent,useTheme} from '@vxture/design-system';
@@ -67,6 +68,7 @@ export function AmapSceneMap({spaces,loading,error,onBack,onRefresh,onViewChange
  useEffect(()=>{host.current?.querySelectorAll<HTMLButtonElement>('.scene-map-marker').forEach(button=>button.setAttribute('aria-pressed',String(!!selected&&!!button.dataset.sceneIds?.split(',').includes(selected))));},[selected]);
  return <main className="scene-map-workspace" data-basemap={preferences.basemap} data-map-theme={dark?'dark':'light'} data-ui-theme={theme} aria-label="高德场景地图">
   <div ref={host} className="scene-map-canvas" role="region" aria-label="场景分布地图"/>
+  {status.startsWith('正在')&&<MapLoading overlay/>}
   <div className="scene-map-heading"><ListBullets size={16} aria-hidden="true"/><h1>空间全景</h1><span className="scene-map-total" aria-label="场景总数">{spaces.length}</span><Button size="icon-xl" variant="ghost" aria-label={collapsed?'展开场景清单':'收起场景清单'} aria-expanded={!collapsed} aria-controls="scene-map-directory" onClick={()=>updatePreference('directoryExpanded',collapsed)}>{collapsed?<CaretDown size={16}/>:<CaretUp size={16}/>}</Button></div>
   <Tabs className="scene-map-phases" value={phase} onValueChange={setPhase}><TabsList aria-label="地图场景状态"><TabsTrigger value="all">全部</TabsTrigger>{Object.entries(scenePhases).map(([value,state])=><TabsTrigger key={value} value={value}>{state.label}</TabsTrigger>)}</TabsList></Tabs>
   <Button className="scene-map-back" size="xl" variant="secondary" onClick={onBack}><SquaresFour size={16}/>我的场景</Button>
@@ -74,7 +76,7 @@ export function AmapSceneMap({spaces,loading,error,onBack,onRefresh,onViewChange
    {loading&&<p role="status">正在读取场景…</p>}{error&&<div role="alert"><p>{error}</p><Button size="xl" variant="secondary" onClick={onRefresh}>重新读取</Button></div>}
    {visible.map(item=><button key={item.id} className="scene-map-item" aria-pressed={selected===item.id} data-tone={scenePhases[scenePhase(item)].tone} onClick={()=>choose(item.id)}><span className="scene-map-item-icon"><Cube size={18} aria-hidden="true"/></span><span className="scene-map-item-copy"><span className="scene-map-item-title"><strong title={item.name}>{item.name}</strong><span className="scene-map-tag">{scenePhases[scenePhase(item)].label}</span></span><small>{item.project_name}</small><small>{item.address||locationLabel(item.location)}</small></span></button>)}
    {!loading&&!error&&!visible.length&&<p>没有匹配的场景</p>}</div><footer><InfoIcon size={14} aria-hidden="true"/>{located} 个场景已定位 · {visible.length-located} 个位置待补充</footer></aside>}
-  {status&&<div className="scene-map-status" role="status"><p>{status}</p>{!status.startsWith('正在')&&<Button size="xl" variant="secondary" onClick={()=>setRevision(v=>v+1)}>重新加载</Button>}</div>}
+  {status&&!status.startsWith('正在')&&<div className="scene-map-status" role="alert"><p>{status}</p><Button size="xl" variant="secondary" onClick={()=>setRevision(v=>v+1)}>重新加载</Button></div>}
   {!!group.length&&<section className="scene-map-detail" aria-label="同址场景"><header><h2>同址场景 · {group.length}</h2><Button size="icon-xl" variant="ghost" aria-label="关闭同址场景" onClick={()=>setGroup([])}><X size={16}/></Button></header>{visible.filter(s=>group.includes(s.id)).map(s=><Button key={s.id} size="xl" variant="secondary" onClick={()=>choose(s.id)}>{s.name}</Button>)}</section>}
   <SceneDetail mapOverlay scene={scene} onClose={()=>setSelected('')}/>
   <div className="scene-map-tools" role="group" aria-label="地图操作">

@@ -1,0 +1,15 @@
+.map-loading{position:relative;display:grid;place-items:center;flex:1;min-width:0;min-height:0;align-self:stretch;overflow:hidden;background:radial-gradient(ellipse at center,color-mix(in srgb,var(--primary) 6%,var(--background)),var(--background) 70%);color:var(--muted-foreground)}
+.map-loading-overlay{position:absolute;inset:0;pointer-events:none}
+.scene-map-workspace .map-loading-overlay{padding-left:328px;padding-right:72px}
+.scene-map-workspace:not(:has(.scene-map-directory)) .map-loading-overlay{padding-left:72px}
+.map-loading-content{display:flex;flex-direction:column;align-items:center;gap:8px;padding:24px;max-width:100%}
+.map-loading-motif{width:clamp(200px,28vw,340px);max-width:100%;height:auto;color:color-mix(in srgb,var(--primary) 65%,var(--foreground))}
+.map-loading-content p{display:flex;align-items:center;gap:10px;margin:0;font-size:13px;line-height:20px}
+.map-loading-dots{display:flex;gap:4px}
+.map-loading-dots i{width:3px;height:3px;border-radius:50%;background:currentColor;animation:map-loading-pulse 1.5s ease-in-out infinite}
+.map-loading-dots i:nth-child(2){animation-delay:.2s}
+.map-loading-dots i:nth-child(3){animation-delay:.4s}
+@keyframes map-loading-pulse{0%,80%,100%{opacity:.25}40%{opacity:1}}
+@media(prefers-reduced-motion:reduce){.map-loading-dots i{animation:none;opacity:.6}}
+@media(max-width:900px){.scene-map-workspace .map-loading-overlay{padding-left:304px}}
+@media(max-width:600px){.scene-map-workspace .map-loading-overlay,.scene-map-workspace:not(:has(.scene-map-directory)) .map-loading-overlay{padding:42vh 48px 60px 24px}.map-loading-motif{width:200px}}
