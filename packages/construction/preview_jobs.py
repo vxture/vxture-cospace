@@ -22,21 +22,27 @@ class PreviewJobs:
     def __init__(self,root,snapshot,tracking,inputs=None):
         self.root=Path(root); self.root.mkdir(parents=True,exist_ok=True)
         self.snapshot=Path(snapshot); self.tracking=Path(tracking); self.lock=threading.Lock(); self.active={}
+        from packages.infrastructure.scene_read_model import SceneReadModel
+        self.read_model=SceneReadModel(self.root)
         self.inputs=inputs
         from packages.data.preview_batches import PreviewBatches
         self.batches=PreviewBatches(inputs) if inputs else None
         self.directory=getattr(inputs,"directory",None)
+        saved_records=[]
         for path in self.root.glob('*/job.json'):
             record=json.loads(path.read_bytes())
             if record['state'] in ['queued','running']:
                 record.update(state='interrupted',finished_at=now(),error='preview_service_restarted')
                 self.save(record)
+            saved_records.append(record)
+        self.read_model.rebuild(saved_records)
         from packages.construction.preview_derivations import SplitBuilds
         self.split=SplitBuilds(self)
 
     def save(self,record):
         path=self.root/record['id']/'job.json'; temp=path.with_suffix('.tmp')
         temp.write_text(json.dumps(record,indent=2),encoding='utf-8'); temp.replace(path)
+        self.read_model.register(record)
 
     def poll(self):
         for identity,(process,started,log) in list(self.active.items()):

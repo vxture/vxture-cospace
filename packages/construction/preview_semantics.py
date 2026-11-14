@@ -124,6 +124,7 @@ def annotate(jobs,ontologies,request,*,business=None,relations=None):
                 record.update(method='manual_object_relations_over_fixed_geometry',relation_count=len(saved_relations))
             (staging/'job.json').write_text(json.dumps(record,ensure_ascii=False,indent=2),encoding='utf-8')
             staging.rename(jobs.root/identity)
+            jobs.read_model.register(record)
             return record
         finally:
             if staging.exists():

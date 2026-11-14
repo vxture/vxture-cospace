@@ -10,8 +10,25 @@ from packages.lifecycle.preview_scope import scope, match
 
 
 def overview(jobs, space_id):
+    # Read models never bypass ownership or HTTP ACL checks.
+    ownership=scope(jobs.directory,space_id)
+    cached=jobs.read_model.cached(space_id,ownership)
+    if cached is not None and (cached.get('latest_job') or {}).get('id')==jobs.read_model.latest(space_id):return cached
+    return _read(jobs,space_id)
+
+
+def _read(jobs, space_id):
     ownership = scope(jobs.directory, space_id)
     selection_path = jobs.root / 'space-selections' / (space_id + '.json')
+    dependencies={}
+    def observe(path):
+        dependencies.update(jobs.read_model.fingerprint([path]))
+    observe(selection_path)
+    latest=jobs.read_model.latest(space_id)
+    latest_path=jobs.root/latest/'job.json' if latest else None
+    if latest_path:observe(latest_path)
+    latest_record=json.loads(latest_path.read_bytes()) if latest_path else None
+    if latest_record:match(latest_record,ownership)
     before = selection_path.read_bytes() if selection_path.exists() else None
     selection = json.loads(before) if before else None
     result = {'space_id': space_id, 'candidate_ref': None, 'job': None, 'stages': None,
@@ -22,6 +39,7 @@ def overview(jobs, space_id):
         identity = selection['candidate_id']
         if not re.fullmatch(r'build-[A-Za-z0-9-]+', identity):
             raise ValueError('overview_candidate_invalid')
+        observe(jobs.root/identity/'job.json');observe(jobs.root/identity/'output/model.json')
         record = json.loads((jobs.root / identity / 'job.json').read_bytes())
         if record['id'] != identity:
             raise ValueError('overview_job_mismatch')
@@ -39,14 +57,7 @@ def overview(jobs, space_id):
         if any(type(n) is not int or n < 0 for n in result['counts'].values()):
             raise ValueError('overview_counts_invalid')
     else:
-        # Read only this scene's saved task headers; jobs.list() polls processes.
-        records = []
-        for path in jobs.root.glob('*/job.json'):
-            item = json.loads(path.read_bytes())
-            if item.get('space_id') == space_id:
-                match(item, ownership)
-                records.append(item)
-        record = max(records, key=lambda item: (item.get('created_at', ''), item['id'])) if records else None
+        record=latest_record
     if record:
         fields = ('id', 'space_id', 'created_at', 'state', 'display_code', 'build_code',
                   'input_id', 'mode', 'pipeline', 'view_parent_id')
@@ -57,7 +68,8 @@ def overview(jobs, space_id):
         for kind, ref in record.get('view_tasks', {}).items():
             if kind not in ('human', 'agent'):
                 continue
-            _, task = jobs.split.task(ref)
+            observe(jobs.root/ref['job_id']/'views'/ref['task_id']/'task.json')
+            task_path, task = jobs.split.task(ref)
             match(task, ownership)
             if task['view_kind'] != kind or task['frozen_model'] != record.get('frozen_model'):
                 raise ValueError('overview_view_mismatch')
@@ -66,4 +78,9 @@ def overview(jobs, space_id):
                             'legacy': not bool(record.get('pipeline'))}
     if (selection_path.read_bytes() if selection_path.exists() else None) != before:
         raise ValueError('overview_selection_changed')
+    result['latest_job']={k:latest_record[k] for k in ('id','space_id','created_at','state','display_code','build_code') if k in latest_record} if latest_record else None
+    # Fixed-size scalar projection; dependency stamps invalidate file-backed changes.
+    if jobs.read_model.fingerprint([jobs.root/name for name in dependencies])!=dependencies or jobs.read_model.latest(space_id)!=latest:
+        raise ValueError('overview_sources_changed')
+    jobs.read_model.save(space_id,dependencies,result,ownership)
     return result

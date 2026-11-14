@@ -88,3 +88,71 @@ def test_overview_http_scope_and_build_permissions(secured, user, details):
     assert client.get('/api/scene-overview', params={'space_id': spaces[1]['id']}).status_code == 403
     assert client.get('/api/scene-overview').status_code == 403
     assert client.get('/api/scene-overview', params={'space_id': spaces[0]['id'], 'extra': '1'}).status_code == 422
+
+def test_overview_warm_read_uses_projection_and_no_job_directory_scan(tmp_path,monkeypatch):
+    _,jobs,_,spaces,*_=prepared(tmp_path)
+    first=overview(jobs,spaces[0]['id'])
+    from pathlib import Path
+    original=Path.glob
+    def no_job_scan(path,pattern):
+        if path==jobs.root:raise AssertionError('overview scanned jobs')
+        return original(path,pattern)
+    monkeypatch.setattr(Path,'glob',no_job_scan)
+    assert overview(jobs,spaces[0]['id'])==first
+    selection=jobs.root/'space-selections'/(spaces[0]['id']+'.json')
+    selection.unlink()
+    result=overview(jobs,spaces[0]['id'])
+    assert result['candidate_ref'] is None
+    assert result['latest_job']['id']==result['job']['id']
+
+
+def test_overview_keeps_latest_build_separate_from_selected_candidate(tmp_path):
+    _,jobs,_,spaces,*_=prepared(tmp_path)
+    previous=overview(jobs,spaces[0]['id'])
+    record=dict(previous['job'],id='build-newest',created_at='2099-01-01T00:00:00Z',state='failed',project_id=spaces[0]['project_id'])
+    (jobs.root/record['id']).mkdir();jobs.save(record)
+    result=overview(jobs,spaces[0]['id'])
+    assert result['latest_job']['id']=='build-newest'
+    assert result['job']['id']==previous['candidate_ref']['candidate_id']
+    assert result['latest_job']['id']!=result['job']['id']
+
+
+def test_read_model_rebuild_recovers_files_without_read_index(tmp_path):
+    _,jobs,_,spaces,*_=prepared(tmp_path)
+    import sqlite3
+    with sqlite3.connect(jobs.read_model.path) as db:db.execute('DELETE FROM jobs')
+    from packages.construction.preview_jobs import PreviewJobs
+    recovered=PreviewJobs(jobs.root,jobs.snapshot,jobs.tracking,jobs.inputs)
+    assert recovered.read_model.latest(spaces[0]['id']) is not None
+
+
+def test_warm_projection_rechecks_scene_project_ownership(tmp_path):
+    _,jobs,directory,spaces,*_=prepared(tmp_path)
+    overview(jobs,spaces[0]['id'])
+    project=directory.create('project','new owner')
+    path=directory.root/'space'/(spaces[0]['id']+'.json')
+    record=json.loads(path.read_bytes());record['project_id']=project['id']
+    path.write_text(json.dumps(record))
+    with pytest.raises(ValueError,match='space_ownership_mismatch'):
+        overview(jobs,spaces[0]['id'])
+
+
+def test_overview_response_exposes_safe_timing_segments(secured):
+    _,client,_,_,_,_,spaces,*_=secured
+    sign_in(secured,'usr_engineer')
+    response=client.get('/api/scene-overview',params={'space_id':spaces[0]['id']})
+    assert response.status_code==200
+    timing=response.headers['server-timing']
+    assert 'rp_session;dur=' in timing and 'scene_summary;dur=' in timing
+    assert 'token' not in timing and 'usr_engineer' not in timing
+
+
+def test_read_model_failure_is_explicit_service_unavailable(secured,monkeypatch):
+    import sqlite3
+    _,client,_,_,jobs,_,spaces,*_=secured
+    sign_in(secured,'usr_engineer')
+    def unavailable(*args):raise sqlite3.OperationalError('read model unavailable')
+    monkeypatch.setattr(jobs.read_model,'cached',unavailable)
+    response=client.get('/api/scene-overview',params={'space_id':spaces[0]['id']})
+    assert response.status_code==503
+    assert response.json()['detail']=='scene_overview_unavailable'

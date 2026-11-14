@@ -32,6 +32,7 @@ services:
       COSPACE_SESSION_KEY_FILE: /run/secrets/session-key
       COSPACE_PLATFORM_API_URL: ${COSPACE_PLATFORM_API_URL:?set platform API origin}
       COSPACE_PLATFORM_TAILNET_HTTP: ${COSPACE_PLATFORM_TAILNET_HTTP:-0}
+      COSPACE_PLATFORM_ACCESS_CACHE_SECONDS: ${COSPACE_PLATFORM_ACCESS_CACHE_SECONDS:-30}
       COSPACE_PLATFORM_WEBHOOK_SECRET_FILE: /run/secrets/webhook-secret
     volumes:
       - ${STACK_ROOT:?set worker02 production stack root}/data/business:/data

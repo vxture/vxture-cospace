@@ -331,16 +331,22 @@ def test_public_authority_readiness_tracks_server_confirmation_window(runtime):
     recent=activity(rp,client).json()
     assert len(accounts.calls)==calls
     assert recent['authority_state']=='cached' and recent['authority_ready'] is True
-    clock[0]+=91
+    assert 0<recent['confirmation_max_age_s']<=90
+    clock[0]+=10
+    assert client.get('/api/auth/session').json()['confirmation_max_age_s']==recent['confirmation_max_age_s']-10
+    clock[0]+=81
     stale=client.get('/api/auth/session').json()
     assert len(accounts.calls)==calls
     assert stale['authority_state']=='cached' and stale['authority_ready'] is False
+    assert stale['confirmation_max_age_s']==0
     accounts.unavailable=True
     unavailable=activity(rp,client).json()
     assert unavailable['authenticated'] and unavailable['authority_ready'] is False
+    assert unavailable['confirmation_max_age_s']==0
     accounts.unavailable=False;clock[0]+=31
     recovered=activity(rp,client).json()
     assert recovered['authority_state']=='confirmed' and recovered['authority_ready'] is True
+    assert recovered['confirmation_max_age_s']>0
 
 
 def test_account_switch_uses_oidc_chooser(runtime):

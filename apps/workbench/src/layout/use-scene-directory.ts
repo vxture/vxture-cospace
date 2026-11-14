@@ -1,28 +1,16 @@
-import {useEffect,useState} from 'react';
-import {usePlatformSession} from './platform-auth';
+import {useCallback} from 'react';
 import {businessEndpoint} from './business-endpoint';
 import type {SceneSpace} from './scene-directory';
-// Same scope/error contract for every scene workspace; URL selection stays explicit.
+import {useWorkspaceQuery} from './workspace-queries';
+// One scope-bound directory shared across modules; mutation/session events invalidate it.
 export function useSceneDirectory(revision=0){
- const platform=usePlatformSession(),workspace=platform?.user?.workspace_id||'engineering';
- const [sessionRevision,setSessionRevision]=useState(0);
- useEffect(()=>{
-  const refresh=()=>setSessionRevision(v=>v+1);
-  window.addEventListener('cospace:session-confirmed',refresh);
-  window.addEventListener('cospace:scene-information-saved',refresh);
-  return()=>{
-   window.removeEventListener('cospace:session-confirmed',refresh);
-   window.removeEventListener('cospace:scene-information-saved',refresh);
-  };
+ const load=useCallback(async()=>{
+  const response=await fetch(`${businessEndpoint}/api/spaces`,{cache:'no-store'});
+  if(!response.ok)throw new Error('场景目录暂不可用，请刷新重试。');
+  const body=await response.json();
+  if(!Array.isArray(body.spaces)||body.spaces.some((s:SceneSpace)=>!s||typeof s.id!=='string'||typeof s.name!=='string'||s.capabilities&&!Array.isArray(s.capabilities)||s.publications&&!Array.isArray(s.publications)))throw new Error('场景目录格式无法识别。');
+  return body.spaces as SceneSpace[];
  },[]);
- const [saved,setSaved]=useState<{workspace:string;spaces:SceneSpace[]}|null>(null),[loading,setLoading]=useState(true),[error,setError]=useState('');
- useEffect(()=>{const controller=new AbortController();setError('');
-  fetch(`${businessEndpoint}/api/spaces`,{cache:'no-store',signal:controller.signal}).then(async r=>{
-   if(!r.ok){if(r.status===403&&!controller.signal.aborted)setSaved(null);throw Error('场景目录暂不可用，请刷新重试。');}const body=await r.json();
-   if(!Array.isArray(body.spaces)||body.spaces.some((s:SceneSpace)=>!s||typeof s.id!=='string'||typeof s.name!=='string'||s.capabilities&&!Array.isArray(s.capabilities)||s.publications&&!Array.isArray(s.publications)))throw Error('场景目录格式无法识别。');
-   if(!controller.signal.aborted)setSaved({workspace,spaces:body.spaces});
-  }).catch(e=>{if(!controller.signal.aborted){setError(e.message);}}).finally(()=>{if(!controller.signal.aborted)setLoading(false);});
-  return()=>controller.abort();
- },[workspace,revision,sessionRevision]);
- return {spaces:saved?.workspace===workspace?saved.spaces:[],loading:loading&&!saved,error};
+ const query=useWorkspaceQuery<SceneSpace[]>('directory:'+revision,load);
+ return {spaces:query.data||[],loading:query.loading&&!query.data,error:query.error};
 }
