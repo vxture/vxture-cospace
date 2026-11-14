@@ -23,7 +23,7 @@ RUN apt-get update && apt-get upgrade -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 COPY deploy/linux/requirements.lock /app/deploy/linux/requirements.lock
 # pip's vendored build/download libraries are unnecessary in the running product.
-RUN pip install --no-cache-dir --require-hashes -r /app/deploy/linux/requirements.lock \
+RUN pip install --no-cache-dir --only-binary=:all: --require-hashes -r /app/deploy/linux/requirements.lock \
     && pip uninstall --yes pip
 COPY packages /app/packages
 COPY experiments/scripts /app/experiments/scripts
