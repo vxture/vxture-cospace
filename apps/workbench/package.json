@@ -14,7 +14,7 @@
   },
   "dependencies": {
     "@phosphor-icons/react": "2.1.10",
-    "@tanstack/react-query": "5.104.5",
+    "@tanstack/react-query": "5.107.1",
     "@vxture/design-system": "file:vendor/vxture-design-system-15.1.1.tgz",
     "@vxture/design-tokens": "file:vendor/vxture-design-tokens-4.0.0.tgz",
     "@vxture/design-ui": "file:vendor/vxture-design-ui-12.1.0.tgz",
@@ -24,9 +24,9 @@
     "react": "19.3.1",
     "react-dom": "19.3.1",
     "react-router-dom": "^7.18.5",
-    "tailwindcss": "4.3.3",
+    "tailwindcss": "4.3.5",
     "tailwindcss-animate": "1.0.7",
-    "three": "0.186.1",
+    "three": "0.187.0",
     "@vxture/globe": "file:../../packages/globe-sdk"
   },
   "pnpm": {
@@ -36,11 +36,11 @@
     }
   },
   "devDependencies": {
-    "@tailwindcss/vite": "4.3.3",
+    "@tailwindcss/vite": "4.3.5",
     "@types/node": "24.10.1",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
-    "@types/three": "0.186.0",
+    "@types/three": "0.187.0",
     "typescript": "7.0.2",
     "vite": "8.3.5"
   }

@@ -18,8 +18,13 @@ LABEL org.opencontainers.image.title="CoSpace" \
       org.opencontainers.image.created="${BUILD_TIME}"
 ENV PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1 OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1
 WORKDIR /app
+# Apply available distribution security fixes before installing the locked runtime.
+RUN apt-get update && apt-get upgrade -y --no-install-recommends \
+    && rm -rf /var/lib/apt/lists/*
 COPY deploy/linux/requirements.lock /app/deploy/linux/requirements.lock
-RUN pip install --no-cache-dir --require-hashes -r /app/deploy/linux/requirements.lock
+# pip's vendored build/download libraries are unnecessary in the running product.
+RUN pip install --no-cache-dir --require-hashes -r /app/deploy/linux/requirements.lock \
+    && pip uninstall --yes pip
 COPY packages /app/packages
 COPY experiments/scripts /app/experiments/scripts
 COPY experiments/templates/*.html /app/experiments/templates/
