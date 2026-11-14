@@ -24,6 +24,16 @@ test('different scopes never share queries and failures never retain a grant-bea
  first.invalidate();await first.read('directory',async()=>{throw new Error('denied');});
  assert.equal(first.snapshot('directory').data,null);assert.equal(first.snapshot('directory').error,'denied');
 });
+
+test('refresh updates the canonical shared key without cancelling other queries',async()=>{
+ const store=new WorkspaceQueryStore();let finish;
+ const unrelated=store.read('overview',()=>new Promise(resolve=>{finish=resolve;}));
+ await store.read('directory',async()=>['old']);
+ store.invalidate('directory');await store.read('directory',async()=>['new']);
+ finish('kept');await unrelated;
+ assert.deepEqual(store.snapshot('directory').data,['new']);
+ assert.equal(store.snapshot('overview').data,'kept');
+});
 test('server session lifetime uses monotonic request start without extending it by network delay',()=>{
  assert.equal(confirmationDeadline(60,1000),61000);
  for(const value of [undefined,null,NaN,Infinity,'60',-5])assert.equal(confirmationDeadline(value,1000),1000);

@@ -34,9 +34,10 @@ export class WorkspaceQueryStore{
   });
   return entry.pending;
  }
- invalidate(){
-  this.generation++;
-  for(const entry of this.entries.values()){
+ invalidate(key?:string){
+  if(key===undefined)this.generation++;
+  const entries=key===undefined?this.entries.values():this.entries.has(key)?[this.entries.get(key)!]:[];
+  for(const entry of entries){
    entry.expires=0;entry.pending=null;
    entry.snapshot={data:null,loading:true,error:'',revision:entry.snapshot.revision+1};
    entry.listeners.forEach(fn=>fn());

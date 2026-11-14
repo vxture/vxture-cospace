@@ -1,4 +1,4 @@
-import React,{createContext,useContext,useEffect,useMemo,useSyncExternalStore} from 'react';
+import React,{createContext,useContext,useEffect,useMemo,useRef,useSyncExternalStore} from 'react';
 import {WorkspaceQueryStore} from './workspace-query-store';
 import {usePlatformSession} from './platform-auth';
 import {sessionScopeKey} from './session-continuity';
@@ -14,11 +14,16 @@ export function WorkspaceQueries({children}:{children:React.ReactNode}){
  },[store]);
  return <Queries.Provider value={store}>{children}</Queries.Provider>;
 }
-export function useWorkspaceQuery<T>(key:string,load:()=>Promise<T>){
+export function useWorkspaceQuery<T>(key:string,load:()=>Promise<T>,refreshToken=0){
  const store=useContext(Queries);
  if(!store)throw new Error('workspace_query_provider_required');
  const subscribe=useMemo(()=>(fn:()=>void)=>store.subscribe(key,fn),[store,key]);
  const snapshot=useSyncExternalStore(subscribe,()=>store.snapshot<T>(key));
+ const previous=useRef({store,key,refreshToken});
+ useEffect(()=>{
+  const old=previous.current;previous.current={store,key,refreshToken};
+  if(old.store===store&&old.key===key&&old.refreshToken!==refreshToken)store.invalidate(key);
+ },[store,key,refreshToken]);
  useEffect(()=>{void store.read(key,load);},[store,key,load,snapshot.revision]);
  return snapshot;
 }

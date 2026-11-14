@@ -11,6 +11,6 @@ export function useSceneDirectory(revision=0){
   if(!Array.isArray(body.spaces)||body.spaces.some((s:SceneSpace)=>!s||typeof s.id!=='string'||typeof s.name!=='string'||s.capabilities&&!Array.isArray(s.capabilities)||s.publications&&!Array.isArray(s.publications)))throw new Error('场景目录格式无法识别。');
   return body.spaces as SceneSpace[];
  },[]);
- const query=useWorkspaceQuery<SceneSpace[]>('directory:'+revision,load);
+ const query=useWorkspaceQuery<SceneSpace[]>('directory',load,revision);
  return {spaces:query.data||[],loading:query.loading&&!query.data,error:query.error};
 }

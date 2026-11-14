@@ -36,7 +36,7 @@ function SceneOverview({scene}:{scene:SceneSpace}){
   if(saved.space_id!==scene.id||saved.job&&saved.job.space_id!==scene.id||saved.latest_job&&saved.latest_job.space_id!==scene.id||saved.stages&&(saved.stages.space_id!==scene.id||saved.stages.job_id!==saved.job?.id))throw new Error('概览状态暂不可读');
   return saved;
  },[scene.id,canReadBuild]);
- const {data:report,loading,error}=useWorkspaceQuery<Overview|null>('overview:'+scene.id+':'+canReadBuild+':'+revision,load);
+ const {data:report,loading,error}=useWorkspaceQuery<Overview|null>('overview:'+scene.id+':'+canReadBuild,load,revision);
  const job=report?.job,stages=report?.stages||null;
  const state=scenePhases[scenePhase(scene)],releases=[...(scene.publications||[])].sort((a,b)=>(Date.parse(b.created_at)||0)-(Date.parse(a.created_at)||0));
  const source=job?.input_binding?.label||job?.input_id;
