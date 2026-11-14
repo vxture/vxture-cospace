@@ -71,7 +71,7 @@ function App(){
  useEffect(()=>{const sync=(event:Event)=>setBuildAssistantOpen(Boolean((event as CustomEvent).detail));window.addEventListener('cospace-build-assistant-state',sync);window.addEventListener('cospace-publication-assistant-state',sync);window.addEventListener('cospace-association-assistant-state',sync);return()=>{window.removeEventListener('cospace-build-assistant-state',sync);window.removeEventListener('cospace-publication-assistant-state',sync);window.removeEventListener('cospace-association-assistant-state',sync);};},[]);
  const {theme,setTheme}=useTheme();
  useEffect(()=>{const fn=()=>{setLauncher(false);};return subscribeAppLocation(fn);},[]);
- useEffect(()=>{let title='登录';if(preview)title=route==='home'?'工作台':names[route];document.title=`CoSpace · ${title}`;},[route,preview,navigation.space]);
+ useEffect(()=>{let title='登录';if(preview)title=route==='home'?'工作台':names[route];document.title=`CoSpace · ${title}`;},[route,preview]);
  useEffect(()=>{if(!notice)return;const t=setTimeout(()=>setNotice(''),3500);return()=>clearTimeout(t);},[notice]);
  const enter=()=>{sessionStorage.setItem('cospace.ui.ds.preview','1');setPreview(true);};
  const exit=()=>{if(platform?.csrf){return platformLogout(platform.csrf);}sessionStorage.removeItem('cospace.ui.ds.preview');setPreview(false);};

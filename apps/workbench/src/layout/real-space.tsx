@@ -17,16 +17,16 @@ export function RealSpace({full,workspace}:{full:()=>void;workspace:string}){
  const candidate=!!current.job&&!current.publication;
  const api=useRef<SceneControls|null>(null);
  useEffect(()=>{const sync=()=>setCurrent(target());const unsubscribe=subscribeAppLocation(sync);const fullscreen=()=>setIsFull(Boolean(document.fullscreenElement));document.addEventListener('fullscreenchange',fullscreen);return()=>{unsubscribe();document.removeEventListener('fullscreenchange',fullscreen);};},[]);
- useEffect(()=>{const controller=new AbortController();setSpaces([]);setData(null);setError('');setSelected('');setSearch('');setView('human');setGeometry(true);setMarkers(true);document.title='读取固定空间 · 空间态势';
+ useEffect(()=>{const controller=new AbortController();setSpaces([]);setData(null);setError('');setSelected('');setSearch('');setView('human');setGeometry(true);setMarkers(true);
   (async()=>{try{
    const directory=await getJSON<{spaces:DirectorySpace[]}>('/api/spaces',controller.signal);if(controller.signal.aborted)return;setSpaces(directory.spaces);
    const space=directory.spaces.find(s=>s.id===current.space);if(!space)throw Error('空间不存在，请返回我的场景重新选择。');
    if(current.job&&current.publication)throw Error('候选与发布引用不能同时指定，请从来源页面重新打开。');
-   if(candidate){const result=await loadCandidateScene(space.id,current.job,controller.signal);if(!controller.signal.aborted){setData(result);document.title=`${space.name} · 候选成果`;}return;}
+   if(candidate){const result=await loadCandidateScene(space.id,current.job,controller.signal);if(!controller.signal.aborted){setData(result);}return;}
    const publication=space.publications.find(p=>p.id===current.publication);if(!publication)throw Error(current.publication?'所选发布不属于当前空间或已不可读。':'此入口未指定固定发布，请从我的场景打开。');
    if(!publicationAvailable(publication))throw Error('此固定发布不可用、已暂停或退役，请前往服务发布查看状态及替代版本。');
    const result=await loadPublishedScene(space.id,publication.id,controller.signal);if(controller.signal.aborted)return;
-   setData(result);document.title=`${space.name} · 空间态势`;
+   setData(result);
   }catch(e){if(!controller.signal.aborted)setError(e instanceof Error?e.message:'空间读取失败。');}})();
   return()=>controller.abort();
  },[current.space,current.publication,current.job,retry]);
