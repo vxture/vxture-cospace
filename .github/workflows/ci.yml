@@ -16,7 +16,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.14'
       - run: git diff-tree --root --check HEAD
@@ -50,7 +50,7 @@ jobs:
         run: node --experimental-strip-types --test tests/frontend/entry-state.test.mjs tests/frontend/workspace-query-store.test.mjs
       - name: Globe SDK version isolation and embed message boundary
         run: node --experimental-strip-types --test tests/frontend/globe-sdk.test.mjs tests/frontend/globe-coordinates.test.mjs tests/frontend/geographic-location.test.mjs
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.14'
       - run: python -m pip install uv==0.12.17
@@ -69,7 +69,7 @@ jobs:
       OPENBLAS_NUM_THREADS: '1'
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.14'
       - run: python -m pip install uv==0.12.17
