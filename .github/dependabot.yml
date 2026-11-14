@@ -14,3 +14,5 @@ updates:
       interval: weekly
     ignore:
       - dependency-name: '@vxture/*'
+      - dependency-name: '@types/node'
+        update-types: ['version-update:semver-major']

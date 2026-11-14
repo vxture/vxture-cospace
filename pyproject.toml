@@ -4,11 +4,11 @@ version = "0.1.0"
 requires-python = ">=3.14,<3.15"
 dependencies = [
   "fastapi==0.162.0",
-  "pydantic==2.14.1",
+  "pydantic==2.14.3",
   "uvicorn==0.54.0",
   "jsonschema==4.26.0",
   "sqlalchemy==2.1.6",
-  "psycopg[binary]==3.3.6",
+  "psycopg[binary]==3.3.8",
   "alembic==1.20.1",
   "joserfc==1.7.7",
   "cryptography==50.0.2",
@@ -25,7 +25,7 @@ preview = [
 ]
 
 [dependency-groups]
-dev = ["httpx2==2.16.0", "pytest==9.1.1"]
+dev = ["httpx2==2.16.0", "pytest==9.2.0"]
 
 [tool.uv]
 package = false

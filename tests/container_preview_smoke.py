@@ -1,5 +1,6 @@
 """Run in the built image, without mounting the source tree or test fixtures."""
 import json
+import importlib.util
 from pathlib import Path
 from tempfile import TemporaryDirectory
 import time
@@ -12,6 +13,7 @@ from packages.construction.preview_model import PreviewModel
 
 
 def main():
+    assert importlib.util.find_spec('pip') is None, 'runtime must exclude installer and vendored download libraries'
     with TemporaryDirectory(prefix='cospace-image-smoke-') as temporary:
         root = Path(temporary)
         identity = 'build-container-smoke'
