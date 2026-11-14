@@ -13,7 +13,7 @@ const states:Record<EntryState,{title:string;label:string;footnote?:string}>={
  unavailable:{title:'暂时无法连接',label:'连接暂不可用'},
  recovery:{title:'等待恢复登录',label:'等待恢复'},
  'signed-out':{title:'已退出登录',label:'已退出'},
- subscription:{title:'当前工作区未开通',label:'未开通',footnote:'请联系管理员开通，或前往工作台。'},
+ subscription:{title:'当前工作区未开通',label:'未开通',footnote:'请联系管理员开通，或前往平台。'},
  expired:{title:'工作区订阅需要续订',label:'待续订',footnote:'已有场景与成果会保留。'},
  unassigned:{title:'尚未获得使用授权',label:'待授权',footnote:'请联系组织管理员授权。'},
  'access-unavailable':{title:'暂时无法确认使用权限',label:'核验暂不可用'},
@@ -50,7 +50,7 @@ export function EntryStatus({state,user,onRetry,onLogin,preserveWork=false}:{rea
   {pending&&!user?<UnifiedAccountCard/>:<EntryIdentity user={user}/>}
   <div className="entry-actions">
    {pending?<Button className="entry-action" disabled><SpinnerGap className="entry-spinner" size={18}/>{content.label}…</Button>:<>
-    {workspaceAction&&<Button className="entry-action" asChild><a href="https://ruyin.work/">前往工作台</a></Button>}
+    {workspaceAction&&<Button className="entry-action" asChild><a href="https://ruyin.work/">前往平台</a></Button>}
     {onLogin&&<Button className="entry-action" onClick={onLogin}>重新登录</Button>}
     {onRetry&&<Button className="entry-action" variant={workspaceAction||onLogin?'outline':'default'} onClick={onRetry}>重新检查</Button>}
     {state==='signed-out'&&<Button className="entry-action" variant="outline" asChild><a href="https://accounts.vxture.com/">账号中心</a></Button>}

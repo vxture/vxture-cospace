@@ -63,6 +63,7 @@ function App(){
  // Header links must refresh even when only the scene changes on the same route.
  const navigation=useRecordNavigation();
  const route=currentRoute();
+ const panorama=route==='space'&&new URLSearchParams(location.search).get('view')==='map';
  const [preview,setPreview]=useState(()=>Boolean(platform)||sessionStorage.getItem('cospace.ui.ds.preview')==='1' || (new URLSearchParams(location.search).get('screen')==='space' && new URLSearchParams(location.search).get('preview')==='1'));
  const config=defaults;
  const [launcher,setLauncher]=useState(false);
@@ -72,13 +73,20 @@ function App(){
  useEffect(()=>{const sync=(event:Event)=>setBuildAssistantOpen(Boolean((event as CustomEvent).detail));window.addEventListener('cospace-build-assistant-state',sync);window.addEventListener('cospace-publication-assistant-state',sync);window.addEventListener('cospace-association-assistant-state',sync);return()=>{window.removeEventListener('cospace-build-assistant-state',sync);window.removeEventListener('cospace-publication-assistant-state',sync);window.removeEventListener('cospace-association-assistant-state',sync);};},[]);
  const {theme,setTheme}=useTheme();
  useEffect(()=>{const fn=()=>{setLauncher(false);};return subscribeAppLocation(fn);},[]);
- useEffect(()=>{let title='登录';if(preview)title=route==='home'?'工作台':names[route];document.title=`CoSpace · ${title}`;},[route,preview]);
+ useEffect(()=>{
+  let title='登录';
+  if(preview){
+   if(route==='home')title='首页';
+   else title=panorama?'空间全景':names[route];
+  }
+  document.title=`CoSpace · ${title}`;
+ },[route,preview,panorama]);
  useEffect(()=>{if(!notice)return;const t=setTimeout(()=>setNotice(''),3500);return()=>clearTimeout(t);},[notice]);
  const enter=()=>{sessionStorage.setItem('cospace.ui.ds.preview','1');setPreview(true);};
  const exit=()=>{if(platform?.csrf){return platformLogout(platform.csrf);}sessionStorage.removeItem('cospace.ui.ds.preview');setPreview(false);};
  const full=async()=>{try{if(document.fullscreenElement)await document.exitFullscreen();else await document.documentElement.requestFullscreen();}catch{setNotice('当前浏览器未允许全屏。');}};
- const identity=<CoSpaceBrand href="/" label="CoSpace · 工作台"/>;
- const launcherControl=<Popover open={launcher} onOpenChange={v=>{setLauncher(v);}}><PopoverTrigger asChild><ShellIconButton className="launcher-control" icon="app-grid" label="功能 Launcher" active={launcher}/></PopoverTrigger><ShellPanelContent align="start" sideOffset={12} className="product-launcher-panel"><ProductLauncher route={route} hasScene={!!new URLSearchParams(location.search).get('space')} hrefForRoute={target=>moduleLink(target,navigation.space)} onNavigate={()=>setLauncher(false)}/></ShellPanelContent></Popover>;
+ const identity=<CoSpaceBrand href="/" label="CoSpace · 首页"/>;
+ const launcherControl=<Popover open={launcher} onOpenChange={v=>{setLauncher(v);}}><PopoverTrigger asChild><ShellIconButton className="launcher-control" icon="app-grid" label="功能 Launcher" active={launcher}/></PopoverTrigger><ShellPanelContent align="start" sideOffset={12} className="product-launcher-panel"><ProductLauncher route={route} panorama={panorama} hasScene={!!new URLSearchParams(location.search).get('space')} hrefForRoute={target=>moduleLink(target,navigation.space)} onNavigate={()=>setLauncher(false)}/></ShellPanelContent></Popover>;
  const header=<ShellHeader height="md" leading={<>{launcherControl}{identity}<HeaderContext/></>} trailing={<div className="platform-header-actions"><ShellIconGroup label="全局工具">{(route==='build'||route==='delivery'||route==='association')&&<Button variant={buildAssistantOpen?'secondary':'ghost'} size="icon-sm" aria-label={route==='delivery'?'发布智能助手':route==='association'?'关联助手':'构建智能助手'} title={route==='delivery'?'发布智能助手':route==='association'?'关联助手':'构建智能助手'} disabled={!navigation.space} aria-expanded={buildAssistantOpen} onClick={()=>window.dispatchEvent(new Event(route==='delivery'?'cospace-publication-assistant-toggle':route==='association'?'cospace-association-assistant-toggle':'cospace-build-assistant-toggle'))}><Sparkle size={16}/></Button>}<ShellThemeToggle currentTheme={theme} onThemeChange={setTheme} buttonLabel="切换主题"/><HeaderSupportControls/><a href={managementHref('settings',navigation.space)} target="_blank" rel="noopener noreferrer" aria-label="配置与管理" title="配置与管理（新标签页）"><Gear size={16}/></a></ShellIconGroup><ShellIconGroup label="账户"><ProductUserMenu onLogout={exit}/></ShellIconGroup></div>}/>;
  if(preview&&route==='build'&&new URLSearchParams(location.search).get('screen')==='build')return <React.Suspense fallback={<main className="dark h-dvh bg-background text-foreground" role="status">正在打开构建画布…</main>}><BuildScan/></React.Suspense>;
  if(preview&&route==='space'&&new URLSearchParams(location.search).get('embed')==='globe')return <React.Suspense fallback={<main role="status">正在打开三维地球…</main>}><GlobeEmbed/></React.Suspense>;
