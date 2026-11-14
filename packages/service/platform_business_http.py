@@ -1,7 +1,7 @@
 from packages.infrastructure.platform_rp import APP_ROUTES
 """Explicit deny-by-default authorization before the engineering business ASGI app."""
 import json
-from packages.infrastructure.request_timings import begin,finish,timed_call
+from packages.infrastructure.request_timings import measure_request,timed_call
 import re
 import sqlite3
 import zipfile
@@ -273,17 +273,8 @@ class BusinessAccess:
         # global ontology registration and member writes cannot inherit a space grant.
         raise PermissionError()
 
+    @measure_request
     async def dispatch(self, request, call_next):
-        token,values,started=begin()
-        try:
-            response=await self._dispatch(request,call_next)
-        except BaseException:
-            finish(token,values,started)
-            raise
-        response.headers['Server-Timing']=finish(token,values,started)
-        return response
-
-    async def _dispatch(self, request, call_next):
         path=request.url.path
         def deny(status,detail):return JSONResponse({'detail':detail},status_code=status,headers={'Cache-Control':'no-store'})
         try:

@@ -143,8 +143,10 @@ def test_overview_response_exposes_safe_timing_segments(secured):
     response=client.get('/api/scene-overview',params={'space_id':spaces[0]['id']})
     assert response.status_code==200
     timing=response.headers['server-timing']
-    assert 'rp_session;dur=' in timing and 'scene_summary;dur=' in timing
-    assert 'token' not in timing and 'usr_engineer' not in timing
+    assert 'rp_session;dur=' in timing
+    assert 'scene_summary;dur=' in timing
+    assert 'token' not in timing
+    assert 'usr_engineer' not in timing
 
 
 def test_read_model_failure_is_explicit_service_unavailable(secured,monkeypatch):

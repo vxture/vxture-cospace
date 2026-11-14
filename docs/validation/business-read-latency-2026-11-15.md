@@ -11,7 +11,7 @@
 
 本地 Windows 固定测试场景概要直接读取 100 次：冷读 13.13ms，暖读中位数 3.14ms，暖读 p95 4.27ms。此结果仅衡量标量概要函数，不包含 HTTP、会话、平台授权、网络或生产负载，不用于声称线上总延迟。
 
-Windows 完整回归有 test_agent_files.py::test_live_owner_recovery_blocked 失败：杀死子进程并等待退出后仍得到 owner_alive。该测试及 agent_files.py 未修改；保留失败证据，不调整锁保护以绕过测试。完整结果与 GitHub Linux 检查在 PR 验证记录中补充。
+Windows 完整回归结果：2353 通过、17 跳过、22 个子测试通过、1 失败（1263 秒）。失败为 test_agent_files.py::test_live_owner_recovery_blocked：杀死子进程并等待退出后仍得到 owner_alive。该测试及 agent_files.py 未修改；保留失败证据，不调整锁保护以绕过测试。完整结果与 GitHub Linux 检查在 PR 验证记录中补充。
 
 ## 线上验收项
 

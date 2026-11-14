@@ -43,6 +43,8 @@ function SceneOverview({scene}:{scene:SceneSpace}){
  const count=(key:string)=>Number.isSafeInteger(report?.counts?.[key])?report!.counts![key]:null;
  const objects=count('objects'),bindings=count('business_bindings'),relations=count('object_relations');
  const pending=loading?'—':error||'尚无构建记录';
+ let candidateLabel=loading?'—':error||'未选择';
+ if(report?.candidate_ref&&job)candidateLabel=job.display_code||job.build_code||job.id;
  return <div className="scene-detail-content" data-tone={state.tone}>
   <section aria-label="场景概要"><div className="scene-detail-section-heading"><h3>场景概要</h3><StatusBadge size="sm" icon={false} tone={state.tone}>{state.label}</StatusBadge></div>
    <dl><dt>场景</dt><dd>{scene.name}</dd>{scene.project_name&&<><dt>所属项目</dt><dd>{scene.project_name}</dd></>}<dt>位置</dt><dd>{scene.address||(scene.location?`${scene.location.longitude}, ${scene.location.latitude} · ${scene.location.crs}`:'位置未登记')}</dd><dt>构建模式</dt><dd>{canReadBuild?job?sceneBuildMode(job):pending:'需构建查看权限'}</dd>{scene.description&&<><dt>用途说明</dt><dd>{scene.description}</dd></>}</dl>
@@ -51,7 +53,7 @@ function SceneOverview({scene}:{scene:SceneSpace}){
    {error&&<div className="scene-overview-note" role="status"><span>{error}</span><Button variant="ghost" size="sm" onClick={()=>setRevision(n=>n+1)}>重试</Button></div>}
    {!canReadBuild?<p>当前账号无构建查看权限。</p>:<dl>
     <dt>数据来源</dt><dd>{source||(loading?'—':error||'尚未绑定构建资料')}</dd>
-    <dt>当前候选</dt><dd>{report?.candidate_ref&&job?(job.display_code||job.build_code||job.id):loading?'—':error||'未选择'}</dd>
+    <dt>当前候选</dt><dd>{candidateLabel}</dd>
     <dt>最近构建</dt><dd>{report?.latest_job?(report.latest_job.display_code||report.latest_job.build_code||report.latest_job.id):pending}</dd>
     <dt>视觉表达</dt><dd>{job?sceneViewSummary(stages,'human'):loading?'—':error||'尚未构建'}</dd>
     <dt>计算表达</dt><dd>{job?sceneViewSummary(stages,'agent'):loading?'—':error||'尚未构建'}</dd>

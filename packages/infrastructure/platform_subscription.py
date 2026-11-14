@@ -227,9 +227,12 @@ class PlatformSubscriptions:
     def __init__(self,rp,config,root,*,fetch=None,fetch_access=None,now=time.monotonic,wall=time.time):
         if rp.config.client_id!=PRODUCT:raise ValueError('cospace_subscription_client_required')
         self.rp,self.config=rp,config;self.events=SubscriptionEvents(root)
-        transport=EntitlementTransport(rp,config) if fetch is None or fetch_access is None else None
-        self.fetch=fetch or transport.fetch
-        self.fetch_access=fetch_access or transport.access
+        if fetch is not None and fetch_access is not None:
+            self.fetch,self.fetch_access=fetch,fetch_access
+        else:
+            transport=EntitlementTransport(rp,config)
+            self.fetch=transport.fetch if fetch is None else fetch
+            self.fetch_access=transport.access if fetch_access is None else fetch_access
         self.now,self.wall=now,wall
         self.cache={};self.access_cache={};self.pending={};self.lock=threading.RLock()
 

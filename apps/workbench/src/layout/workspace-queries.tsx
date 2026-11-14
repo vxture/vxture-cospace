@@ -3,7 +3,7 @@ import {WorkspaceQueryStore} from './workspace-query-store';
 import {usePlatformSession} from './platform-auth';
 import {sessionScopeKey} from './session-continuity';
 const Queries=createContext<WorkspaceQueryStore|null>(null);
-export function WorkspaceQueries({children}:{children:React.ReactNode}){
+export function WorkspaceQueries({children}:Readonly<{children:React.ReactNode}>){
  const session=usePlatformSession(),scope=sessionScopeKey(session)+'|'+(session?.csrf||'preview');
  const store=useMemo(()=>new WorkspaceQueryStore(),[scope]);
  useEffect(()=>{

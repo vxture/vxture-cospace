@@ -1,5 +1,6 @@
 """Request-local durations only. No identity, credentials, URLs or payloads."""
 from contextvars import ContextVar
+from functools import wraps
 from time import perf_counter
 
 _current=ContextVar('request_timings',default=None)
@@ -22,3 +23,17 @@ def finish(token,values,started):
     _current.reset(token)
     values['total']=(perf_counter()-started)*1000
     return ', '.join(f'{name};dur={duration:.2f}' for name,duration in values.items())
+
+
+def measure_request(handler):
+    @wraps(handler)
+    async def measured(*args,**kwargs):
+        token,values,started=begin()
+        try:
+            response=await handler(*args,**kwargs)
+        except BaseException:
+            finish(token,values,started)
+            raise
+        response.headers['Server-Timing']=finish(token,values,started)
+        return response
+    return measured

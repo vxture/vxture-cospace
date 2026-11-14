@@ -101,7 +101,19 @@ function BusinessSession({children}:{children:React.ReactNode}){
  const [subscription,setSubscription]=useState<Subscription|null>(null),[subscriptionRequired,setSubscriptionRequired]=useState(false),[subscriptionUnavailable,setSubscriptionUnavailable]=useState(false);
  useEffect(()=>{let stopped=false;const nativeFetch=window.fetch.bind(window);let csrf='';let confirmAfter=0;let confirming:Promise<void>|null=null;let needsSubscription=false;let authority:Session|null=null;let businessAllowed=false;let generation=0;
   const acceptDeadline=(value:Session,started:number)=>{confirmAfter=confirmationDeadline(value.confirmation_max_age_s,started);};
-  const checkSubscription=async(force=false)=>{if(!needsSubscription){businessAllowed=true;return;}const subscriptionGeneration=generation;businessAllowed=false;try{const r=await nativeFetch('/api/subscription',{cache:'no-store',...(force?{headers:{'Cache-Control':'no-cache'}}:{})});if(!r.ok)throw Error();const value:Subscription=await r.json();if(stopped||subscriptionGeneration!==generation)return;businessAllowed=value.business_allowed;if(!stopped){setSubscription(value);setSubscriptionUnavailable(false);}}catch{if(!stopped&&subscriptionGeneration===generation){setSubscription(null);setSubscriptionUnavailable(true);}}};
+  const checkSubscription=async(force=false)=>{
+   if(!needsSubscription){businessAllowed=true;return;}
+   const subscriptionGeneration=generation;businessAllowed=false;
+   try{
+    const r=await nativeFetch('/api/subscription',{cache:'no-store',...(force?{headers:{'Cache-Control':'no-cache'}}:{})});
+    if(!r.ok)throw new Error('subscription_unavailable');
+    const value:Subscription=await r.json();
+    if(stopped||subscriptionGeneration!==generation)return;
+    businessAllowed=value.business_allowed;setSubscription(value);setSubscriptionUnavailable(false);
+   }catch{
+    if(!stopped&&subscriptionGeneration===generation){setSubscription(null);setSubscriptionUnavailable(true);}
+   }
+  };
   const confirm=async(forceAccess=false)=>{
    const confirmationGeneration=generation,started=performance.now();
    const response=await requestSessionConfirmation(nativeFetch,csrf,()=>!stopped&&confirmationGeneration===generation);
@@ -123,11 +135,20 @@ function BusinessSession({children}:{children:React.ReactNode}){
    window.dispatchEvent(new Event('cospace:access-invalidated'));authority=null;businessAllowed=false;csrf='';generation++;
    setSession({authenticated:false,authority_state:'signed_out'});setError('');
   };
-  const bootstrap=async()=>{const config=await nativeFetch('/api/auth/config').then(r=>{if(!r.ok)throw Error();return r.json();});needsSubscription=config.subscription_authorization===true;setSubscriptionRequired(needsSubscription);const started=performance.now();const response=await nativeFetch('/api/auth/session',{cache:'no-store'});if(!response.ok)throw Error('无法读取平台会话');const next:Session=await response.json();csrf=next.csrf||'';authority=next;
+  const bootstrapAuthority=async()=>{
+   const started=performance.now();
+   const response=await nativeFetch('/api/auth/session',{cache:'no-store'});
+   if(!response.ok)throw new Error('无法读取平台会话');
+   const next:Session=await response.json();csrf=next.csrf||'';authority=next;
    if(next.authenticated){
     try{sessionStorage.removeItem('cospace.entry.signed-out');}catch{}
     try{if(sessionConfirmed(next)&&next.confirmation_max_age_s&&next.confirmation_max_age_s>0){acceptDeadline(next,started);await checkSubscription();if(!stopped)setSession(next);}else await confirm();}catch{if(!stopped){setSession({...next,authority_state:'unavailable'});setError('平台会话暂不可用，重新检查后继续。');}}
    }else if(!stopped)setSession(next);
+  };
+  const bootstrap=async()=>{
+   const config=await nativeFetch('/api/auth/config').then(r=>{if(!r.ok)throw new Error('auth_config_unavailable');return r.json();});
+   needsSubscription=config.subscription_authorization===true;setSubscriptionRequired(needsSubscription);
+   await bootstrapAuthority();
    if(stopped)return;
    window.fetch=async(input,init)=>{const url=new URL(typeof input==='string'?input:input instanceof URL?input.href:input.url,location.href);
     if(url.origin!==location.origin)return nativeFetch(input,init);
@@ -144,7 +165,12 @@ function BusinessSession({children}:{children:React.ReactNode}){
     if(!['GET','HEAD'].includes(method)&&csrf)headers.set('X-CoSpace-CSRF',csrf);
     const result=await nativeFetch(input,{...init,headers});
     if(requestGeneration!==generation)return new Response(JSON.stringify({detail:'session_scope_changed'}),{status:409,headers:{'Content-Type':'application/json'}});
-    if(needsSubscription&&[403,409,503].includes(result.status)){const body=await result.clone().json().catch(()=>({}));const quotaMessage=productQuotaMessage(body.code||body.detail);if(quotaMessage)setQuotaError(quotaMessage);if(body.detail==='subscription_required'||body.detail==='subscription_unavailable'||body.detail==='application_access_required'){window.dispatchEvent(new Event('cospace:access-invalidated'));await checkSubscription();}}
+    if(needsSubscription&&[403,409,503].includes(result.status)){
+     const body=await result.clone().json().catch(()=>({}));
+     const quotaMessage=productQuotaMessage(body.code||body.detail);
+     if(quotaMessage){setQuotaError(quotaMessage);}
+     if(body.detail==='subscription_required'||body.detail==='subscription_unavailable'||body.detail==='application_access_required'){window.dispatchEvent(new Event('cospace:access-invalidated'));await checkSubscription();}
+    }
     if(result.status===401&&!url.pathname.startsWith('/api/auth/')){window.dispatchEvent(new Event('cospace:access-invalidated'));authority=null;businessAllowed=false;csrf='';generation++;setSession({authenticated:false,authority_state:'signed_out'});setError('');}
     if(result.ok&&!['GET','HEAD'].includes(method)&&url.pathname.startsWith('/api/')&&!url.pathname.startsWith('/api/auth/')&&!/comparisons|\/query(?:-range)?$/.test(url.pathname))window.dispatchEvent(new Event('cospace:records-changed'));
     return result;

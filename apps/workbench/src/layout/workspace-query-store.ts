@@ -3,9 +3,9 @@ type Entry<T>={snapshot:QuerySnapshot<T>;expires:number;pending:Promise<void>|nu
 // Per application/scope, never persistent browser storage. Invalidated generations
 // reject late responses, even when the transport cannot cancel an in-flight read.
 export class WorkspaceQueryStore{
- private entries=new Map<string,Entry<unknown>>();
+ private readonly entries=new Map<string,Entry<unknown>>();
  private generation=0;
- private now:()=>number;
+ private readonly now:()=>number;
  constructor(now:()=>number=()=>performance.now()){this.now=now;}
  private entry<T>(key:string):Entry<T>{
   if(!this.entries.has(key))this.entries.set(key,{snapshot:{data:null,loading:true,error:'',revision:0},expires:0,pending:null,listeners:new Set()});
@@ -44,5 +44,11 @@ export class WorkspaceQueryStore{
   }
   this.prune();
  }
- private prune(){if(this.entries.size>128)for(const [key,entry] of this.entries){if(!entry.listeners.size&&!entry.pending)this.entries.delete(key);if(this.entries.size<=128)break;}}
+ private prune(){
+  if(this.entries.size<=128)return;
+  for(const [key,entry] of this.entries){
+   if(!entry.listeners.size&&!entry.pending){this.entries.delete(key);}
+   if(this.entries.size<=128)break;
+  }
+ }
 }
