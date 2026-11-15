@@ -1,3 +1,4 @@
+import {useOperationConfirmation} from './operation-confirmation';
 import {appNavigate} from './app-router';
 import React,{useEffect,useRef,useState} from 'react';
 import {Button} from '@vxture/design-system';
@@ -22,9 +23,12 @@ export function BuildRecovery({job,inputState}:{job:RecoverableJob;inputState?:s
  const [token,setToken]=useState(''),[pending,setPending]=useState(false),[busy,setBusy]=useState(false),[message,setMessage]=useState(''),[storageReady,setStorageReady]=useState(false);
  const latch=useRef(false),alive=useRef(true);
  useEffect(()=>{alive.current=true;try{const saved=sessionStorage.getItem(key);if(saved&&!/^[a-f0-9]{32}$/.test(saved))throw Error();setToken(saved||'');setPending(!!saved);setStorageReady(true);}catch{setMessage('浏览器无法保存提交记录，请允许本站会话存储后刷新。');}return()=>{alive.current=false;};},[key]);
+ const pendingRef=useRef(pending);pendingRef.current=pending;
  const unavailable=!!inputState&&inputState!=='active';
  const navigate=(next:RecoverableJob)=>{if(next.space_id!==job.space_id||next.retry_of!==job.id||next.input_id!==job.input_id)throw Error('重试结果与原场景或资料不一致。');appNavigate(recordLink('build',{space:job.space_id,tab:'flow',job:next.id,...(next.input_id?{input:next.input_id}:{})}));};
- async function act(check:boolean){
+ const confirmOperation=useOperationConfirmation(JSON.stringify([job.space_id,job.id,inputState]));
+ async function act(check:boolean){if(check)return executeAct(true).catch(()=>false);return confirmOperation({verb:'重新构建',target:job.id,consequence:'使用原资料创建新的重试任务，原任务记录和历史发布保留，不会自动发布。'},()=>executeAct(pendingRef.current));}
+ async function executeAct(check:boolean){
   if(latch.current)return;latch.current=true;setBusy(true);setMessage('');
   try{
    if(check){
@@ -37,14 +41,14 @@ export function BuildRecovery({job,inputState}:{job:RecoverableJob;inputState?:s
     setPending(false);setMessage('尚未找到对应任务，可以使用原请求重新提交；系统会去重。');return;
    }
    const request=token||crypto.randomUUID().replaceAll('-','');
-   sessionStorage.setItem(key,request);setToken(request);setPending(true);
+   sessionStorage.setItem(key,request);setToken(request);pendingRef.current=true;setPending(true);
    const response=await fetch(`${endpoint}/api/build-retries`,{method:'POST',headers:{'Content-Type':'application/json'},signal:AbortSignal.timeout(20000),body:JSON.stringify({space_id:job.space_id,retry_of:job.id,request_id:request})});
    if(!alive.current)return;
    if(response.status>=500)throw Error('服务暂不可用，提交结果尚未确认，请先核对。');
    const body=await response.json();
-   if(!response.ok){setMessage(response.status===401||response.status===403?'当前登录或权限不允许重试，请重新登录并核对提交结果。':buildErrorText(String(body.detail)));return;}
+   if(!response.ok){setMessage(response.status===401||response.status===403?'当前登录或权限不允许重试，请重新登录并核对提交结果。':buildErrorText(String(body.detail)));throw Error('构建未受理，请取消后核对任务提示。');}
    navigate(body.job);
-  }catch(e){if(alive.current)setMessage(e instanceof Error&&e.message.includes('。')?e.message:'连接中断或提交结果未确认，请先核对提交结果。');}
+  }catch(e){if(alive.current)setMessage(e instanceof Error&&e.message.includes('。')?e.message:'连接中断或提交结果未确认，请先核对提交结果。');throw e;}
   finally{latch.current=false;if(alive.current)setBusy(false);}
  }
  return <div className="construction-recovery" aria-label="失败任务恢复">
