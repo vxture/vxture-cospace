@@ -1,0 +1,30 @@
+.workspace-with-assistant{position:relative;display:flex;flex:1;min-height:0;min-width:0;overflow:hidden}
+.workspace-business-content{display:flex;flex:1;min-width:0;min-height:0;overflow:hidden}
+.workspace-assistant-dock{display:flex;min-height:0;flex:none;max-width:100%;z-index:30}
+.workspace-assistant-panel{max-width:100%;height:100%;overflow:hidden}
+.workspace-assistant-heading{display:flex;flex:none;align-items:center;gap:8px;height:56px;padding:0 16px;border-bottom:1px solid var(--border);white-space:nowrap}
+.workspace-assistant-heading>svg{color:var(--primary);flex:none}
+.workspace-assistant-heading h2{font-size:14px;font-weight:600;margin:0}
+.workspace-assistant-heading>span{font-size:12px;color:var(--muted-foreground);margin-left:auto}
+.workspace-assistant-heading>div{display:flex;gap:2px;margin-left:8px}
+.workspace-assistant-scroll{flex:1;min-height:0;overflow:auto;padding:24px;display:flex;flex-direction:column;gap:20px}
+.workspace-assistant-context>span{font-size:12px;color:var(--muted-foreground)}
+.workspace-assistant-context h3{font-size:16px;margin:6px 0 0;font-weight:600}
+.workspace-assistant-scroll p{font-size:13px;line-height:1.7;color:var(--muted-foreground);margin:0}
+.workspace-assistant-tasks{display:flex;flex-direction:column;gap:16px}
+.workspace-assistant-tasks article{padding:20px;display:flex;flex-direction:column;align-items:flex-start;gap:12px;background:color-mix(in srgb,var(--primary) 4%,var(--card));border:1px solid color-mix(in srgb,var(--primary) 12%,var(--border));border-radius:var(--radius-lg)}
+.workspace-assistant-tasks article>header{display:flex;align-items:center;width:100%;gap:8px;justify-content:space-between}
+.workspace-assistant-tasks h3{font-size:14px;font-weight:600;margin:0}
+.workspace-assistant-tasks article>[data-slot=button]{align-self:flex-end}
+.workspace-assistant-note{display:flex;align-items:flex-start;gap:8px}.workspace-assistant-note>svg{flex:none;margin-top:2px;color:var(--primary)}
+.workspace-assistant-footer{padding:16px 24px;border-top:1px solid var(--border);font-size:12px;color:var(--muted-foreground);flex:none}
+/* Keep the DS width ladder. Full takes over the workspace, never the product header. */
+.workspace-assistant-full{position:absolute;inset:16px;z-index:40}
+.workspace-assistant-full>.workspace-assistant-panel{position:relative;inset:auto;width:100%;border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-overlay)}
+.workspace-assistant-full .workspace-assistant-scroll{width:100%;max-width:1200px;margin:0 auto;padding:32px}
+.workspace-assistant-full .workspace-assistant-tasks{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(320px,100%),1fr));align-items:start}
+@media(max-width:1199px){.workspace-assistant-dock:not(.workspace-assistant-full){position:absolute;inset:0 0 0 auto}.workspace-assistant-panel{max-width:100vw}}
+@media(max-width:480px){.workspace-assistant-heading{padding:0 12px;gap:6px}.workspace-assistant-heading>div{margin-left:0}.workspace-assistant-scroll{padding:20px}.workspace-assistant-full{inset:8px}.workspace-assistant-full .workspace-assistant-scroll{padding:20px}}
+
+.workspace-business-content>.build-scan{height:100%;min-width:0;container-type:inline-size}
+.workspace-business-content .build-scan-bottom{width:min(530px,calc(100% - 48px))}

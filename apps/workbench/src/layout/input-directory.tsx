@@ -1,3 +1,4 @@
+import {useAssistantReport} from './workspace-assistant';
 import {DataNavigation} from './data-navigation';
 import {WorkspaceHeading} from './workspace-frame';
 import {appNavigate} from './app-router';
@@ -74,6 +75,8 @@ export function InputDirectory(){
  const versions=(catalog?.items.filter(i=>i.kind==='candidate')||[]).sort((a,b)=>(b.created_at?Date.parse(b.created_at):0)-(a.created_at?Date.parse(a.created_at):0));
  const releases=catalog?.items.filter(i=>i.kind==='publication')||[];
  const issues=catalog?.items.filter(i=>i.integrity==='unavailable').length||0;
+ useAssistantReport({title:'场景资料检查',status:busy||directoryBusy?'loading':error||directoryError?'error':'ready',note:error||directoryError||(!scene?'请先选择可访问的场景。':!entries.length?'当前场景尚未登记输入资料。':issues?`当前目录有 ${issues} 项成果不可用。`:'资料已登记，可进入资料记录核对。'),tasks:busy||error||!scene||!entries.length?[]:entries.slice(0,3).map(entry=>({id:entry.id,title:'核对输入资料',evidence:entry.label,label:'进入资料',run:()=>appNavigate(recordLink('data',{space:target.space,tab:'inputs',input:entry.id}))}))});
+
 
  useEffect(()=>{
   setEntries([]);setCatalog(null);setError('');setSearch('');setFilter('all');setDetailMode('summary');

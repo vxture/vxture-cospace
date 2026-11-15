@@ -49,7 +49,7 @@ jobs:
       - name: Dangerous operation confirmation and impact boundaries
         run: node --experimental-strip-types --test tests/frontend/operation-confirmation.test.mjs
       - name: Public entry state routing and recovery boundaries
-        run: node --experimental-strip-types --test tests/frontend/entry-state.test.mjs tests/frontend/workspace-query-store.test.mjs
+        run: node --experimental-strip-types --test tests/frontend/entry-state.test.mjs tests/frontend/workspace-query-store.test.mjs tests/frontend/assistant-contract.test.mjs
       - name: Globe SDK version isolation and embed message boundary
         run: node --experimental-strip-types --test tests/frontend/globe-sdk.test.mjs tests/frontend/globe-coordinates.test.mjs tests/frontend/geographic-location.test.mjs
       - uses: actions/setup-python@v7

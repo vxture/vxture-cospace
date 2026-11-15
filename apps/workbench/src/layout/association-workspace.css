@@ -16,7 +16,7 @@
 .association-workspace .association-editor{gap:0}
 .association-workspace [data-slot=button]{padding-inline:12px}
 .association-workspace .association-nav nav>[data-slot=button]{padding-inline:8px}
-.association-workspace .association-nav>header>[data-slot=button],.association-workspace .publication-assistant>header>[data-slot=button]{padding:0}
+.association-workspace .association-nav>header>[data-slot=button]{padding:0}
 .association-overview{display:flex;flex-direction:column;gap:28px}
 .association-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}
 .association-metric{display:flex;min-width:0;flex-direction:column;gap:24px;text-align:left;padding:20px;border:1px solid var(--border);border-radius:var(--radius-lg);background:linear-gradient(135deg,color-mix(in srgb,var(--primary) 5%,var(--card)),var(--card));cursor:pointer;transition:background .15s,border-color .15s}

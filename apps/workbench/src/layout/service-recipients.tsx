@@ -1,3 +1,4 @@
+import {useAssistantReport} from './workspace-assistant';
 import {reducedDeviceRelations} from './operation-impact';
 import {useOperationConfirmation} from './operation-confirmation';
 import {useUnsavedNavigation,runGuarded} from './unsaved-navigation';
@@ -61,6 +62,7 @@ function RecipientWorkspace({spaceId,sceneName,revision,csrf}:{spaceId:string;sc
  const openCreate=()=>{setLinkExisting(false);setEditor({draft:{...blank(),relations:spaceId?[{space_id:spaceId,purposes:[],usage_modes:[]}]:[]}});setNotice('');};
  function edit(record:Recipient,section:EditSection){setDetail(null);setOverviewOpen(false);setEditor({record,section,draft:{name:record.name,morphology:record.morphology,morphology_note:record.morphology_note,manufacturer:record.manufacturer,model:record.model,external_id:record.external_id,contact:record.contact,relations:structuredClone(record.relations)}});}
  const deviceActions=(record:Recipient)=>Object.entries(deviceTabs).map(([key,label])=>{const Icon={overview:Info,spaces:LinkSimple,integration:PlugsConnected,records:ClockCounterClockwise}[key as DeviceTab];return {key,label,icon:<Icon size={16}/>,href:devicePageHref(record.id,key as DeviceTab,'/services?'+params)};});
+ useAssistantReport({title:'设备登记检查',status:loading?'loading':error?'error':'ready',note:error||(!data?.recipients.length?'当前范围尚未登记设备。':'登记信息不代表设备已在线或厂家接入已验证。'),tasks:loading||error?[]:(deviceId?data?.recipients.filter(record=>record.id===deviceId):data?.recipients||[])?.filter(record=>record.can_manage&&(!record.manufacturer||!record.model||!record.relations.length)).slice(0,4).map(record=>({id:record.id,title:record.relations.length?'补全设备资料':'关联作业场景',evidence:`${record.name} · ${forms[record.morphology].label} · ${record.relations.length?'厂家或型号尚未补全':'尚未关联场景'}`,label:record.relations.length?'编辑设备信息':'配置关联场景',run:()=>edit(record,record.relations.length?'information':'relations')}))||[]});
  const editorPanel=editor&&<RecipientEditor key={editor.record?.id||'new'} initial={editor.draft} record={editor.record} section={editor.section} spaces={data?.spaces||[]} csrf={csrf} onClose={()=>setEditor(null)} onSaved={()=>{setEditor(null);setNotice('已保存登记，接入尚未验证。');setRefresh(v=>v+1);}}/>;
  if(deviceId){
   const record=data?.recipients.find(value=>value.id===deviceId);

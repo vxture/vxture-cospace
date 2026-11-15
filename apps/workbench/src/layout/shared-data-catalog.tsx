@@ -1,3 +1,4 @@
+import {useAssistantReport} from './workspace-assistant';
 import {WorkspaceHeading} from './workspace-frame';
 import {DataNavigation} from './data-navigation';
 import {Database,Files,ArrowClockwise,MagnifyingGlass} from '@phosphor-icons/react';
@@ -37,6 +38,7 @@ export function SharedDataCatalog(){
   }).catch(e=>{if(!controller.signal.aborted)setError(e.message);}).finally(()=>{if(!controller.signal.aborted)setBusy(false);});
   return()=>controller.abort();
  },[key]);
+ useAssistantReport({title:'资料检查',status:busy?'loading':error?'error':'ready',note:error||(report?.status==='partial'?'部分目录未读取，不能据此判断全部数据状态。':report&&!report.items.length?'当前筛选范围暂无资料记录。':undefined),tasks:busy||error?[]:(report?.items||[]).filter(item=>['failed','interrupted','views_failed','registration_changed'].includes(item.state)).slice(0,5).map(item=>({id:item.key,title:`核查${kinds[item.kind]||'资料记录'}`,evidence:`${item.space_name} · ${item.label} · ${states[item.state]}`,label:'进入处理',tone:'warning',run:()=>appNavigate(item.href.replace(/^#/,'/'))}))});
  return <div className="shared-support-layout" data-layout="management"><DataNavigation category={category}/><section className="shared-data-catalog" aria-label="共用数据管理">
   <WorkspaceHeading icon={Database} title="数据管理" description="统一管理原始资料、过程记录与成果，按场景与生命周期查阅。" actions={<>{filter&&<Button asChild variant="secondary" size="sm"><a href={recordLink('data',{space:filter,tab:'inputs'})}><Files size={16}/>场景资料</a></Button>}<Button variant="secondary" size="sm" onClick={()=>setRevision(v=>v+1)} disabled={busy}><ArrowClockwise size={16}/>刷新目录</Button></>}/>
   <div className="shared-data-toolbar">

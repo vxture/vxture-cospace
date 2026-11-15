@@ -1,0 +1,21 @@
+export type AssistantTask={id:string;title:string;evidence:string;label:string;run:()=>void;tone?:'warning'|'danger'};
+export type AssistantReport={title:string;status:'loading'|'ready'|'error';note?:string;tasks:AssistantTask[]};
+
+export function assistantAvailable(route:string){return !['','home','space'].includes(route);}
+export function assistantScope(route:string,url:string,session:string){return JSON.stringify([session,route,url]);}
+// Suggestions hand off to existing business forms. They never bypass their
+// authorization, validation, unsaved-change guards or destructive confirmations.
+export function buildAssistantReport(facts:{loading:boolean;error:string;canBuild:boolean;canPublish:boolean;inputs:number;state?:string;model:boolean;selected:boolean;published:boolean},act:(step:string)=>void):AssistantReport{
+ if(facts.loading)return {title:'构建检查',status:'loading',tasks:[]};
+ if(facts.error)return {title:'构建检查',status:'error',note:facts.error,tasks:[]};
+ if(!facts.canBuild)return {title:'构建检查',status:'ready',note:'当前身份没有构建权限。',tasks:[]};
+ const task=(id:string,title:string,evidence:string,label:string):AssistantTask=>({id,title,evidence,label,run:()=>act(id)});
+ const tasks:AssistantTask[]=[];
+ if(!facts.inputs)tasks.push(task('prepare','准备构建资料','当前场景还没有登记输入资料。','准备资料'));
+ else if(!facts.state)tasks.push(task('check','检查本次资料','资料已登记，提交构建前需完成预检。','进入预检'));
+ else if(['failed','interrupted','views_failed'].includes(facts.state))tasks.push({...task('model','处理构建异常','当前构建未完整完成，请核查阶段记录与恢复选项。','核查构建'),tone:'warning'});
+ else if(['running','queued'].includes(facts.state))tasks.push(task('model','跟进构建进展','当前构建正在执行或排队。','查看进展'));
+ else if(facts.model&&!facts.selected)tasks.push(task('review','核对构建成果','模型已生成，尚未选择为当前候选。','核对成果'));
+ else if(facts.model&&facts.canPublish&&!facts.published)tasks.push(task('publish','准备服务发布','当前候选还没有对应的发布记录。','前往发布'));
+ return {title:'构建检查',status:'ready',note:tasks.length?undefined:'当前构建暂无待处理事项。',tasks};
+}
