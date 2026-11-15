@@ -1,6 +1,6 @@
 import React,{createContext,useContext,useEffect,useLayoutEffect,useRef,useState,useCallback} from 'react';
 import {Button,ShellDock} from '@vxture/design-system';
-import {Sparkle,ArrowsOutSimple,ArrowsInSimple,CornersOut,CornersIn,X} from '@phosphor-icons/react';
+import {Sparkle,CaretDoubleLeft,CaretDoubleRight,CornersOut,CornersIn,X} from '@phosphor-icons/react';
 import {AssistantConversation} from './assistant-conversation';
 import {appNavigate} from './app-router';
 import {useSceneDirectory} from './use-scene-directory';
@@ -23,7 +23,7 @@ export function useAssistantReport(report:AssistantReport){
  },[publish,scope,owner,signature]);
 }
 export function WorkspaceAssistant({scope,route,scene,children,header}:{scope:string;route:string;scene:string;children:React.ReactNode;header:(controls:{open:boolean;toggle:()=>void})=>React.ReactNode}){
- const [open,setOpen]=useState(true),[mode,setMode]=useState<'narrow'|'wide'|'full'>('narrow'),[published,setPublished]=useState<Published|null>(null);
+ const [open,setOpen]=useState(false),[mode,setMode]=useState<'narrow'|'wide'|'full'>('narrow'),[published,setPublished]=useState<Published|null>(null);
  const toggle=useCallback(()=>setOpen(value=>!value),[]);
  const publish=useCallback((value:Published|null,owner:symbol)=>setPublished(current=>value|| (current?.owner===owner?null:current)),[]);
  const report=published?.scope===scope?published.report:null;
@@ -31,7 +31,7 @@ export function WorkspaceAssistant({scope,route,scene,children,header}:{scope:st
  useEffect(()=>{if(!open)return;const key=(event:KeyboardEvent)=>{if(event.key!=='Escape'||event.defaultPrevented||document.querySelector('[role="dialog"],[role="alertdialog"],[role="menu"]'))return;event.preventDefault();if(mode==='full')setMode('narrow');else close();};window.addEventListener('keydown',key);return()=>window.removeEventListener('keydown',key);},[open,mode]);
  return <Assistant.Provider value={{scope,open,toggle,publish}}>{header({open,toggle})}<div className="workspace-with-assistant"><div className="workspace-business-content" inert={open&&mode==='full'}>{children}</div>{open&&<div id="workspace-assistant" role="region" aria-label="智能助手面板" className={`workspace-assistant-dock workspace-assistant-${mode}`}>
   <ShellDock mode={mode} className="workspace-assistant-panel"><header className="workspace-assistant-heading"><Sparkle size={18}/><h2>智能助手</h2><div>
-   <Button variant="ghost" size="icon-xl" aria-label={mode==='wide'?'收窄助手':'加宽助手'} aria-pressed={mode==='wide'} onClick={()=>setMode(mode==='wide'?'narrow':'wide')}>{mode==='wide'?<ArrowsInSimple size={16}/>:<ArrowsOutSimple size={16}/>}</Button>
+   <Button variant="ghost" size="icon-xl" aria-label={mode==='wide'?'收窄助手':'加宽助手'} title={mode==='wide'?'切换为窄模式':'切换为宽模式'} aria-pressed={mode==='wide'} onClick={()=>setMode(mode==='wide'?'narrow':'wide')}>{mode==='wide'?<CaretDoubleRight size={18}/>:<CaretDoubleLeft size={18}/>}</Button>
    <Button variant="ghost" size="icon-xl" aria-label={mode==='full'?'退出助手全屏':'全屏助手'} aria-pressed={mode==='full'} onClick={()=>setMode(mode==='full'?'narrow':'full')}>{mode==='full'?<CornersIn size={16}/>:<CornersOut size={16}/>}</Button>
    <Button variant="ghost" size="icon-xl" aria-label="关闭智能助手" onClick={close}><X size={16}/></Button>
   </div></header><AssistantTasks key={scope} report={report} route={route} scene={scene} onSelect={()=>{setMode('narrow');if(innerWidth<1200)setOpen(false);}}/></ShellDock>
