@@ -36,7 +36,7 @@ export function selectedServiceVersion(group:ServiceSpace,publication?:string):S
  if(publication!==undefined)return group.versions.find(v=>v.release.id===publication);
  return group.versions.find(v=>v.available)||group.versions[0];
 }
-export const serviceSections={directory:'服务目录',offline:'离线交付',online:'在线服务',feedback:'态势反馈',recipients:'智能体接入'} as const;
+export const serviceSections={directory:'服务目录',offline:'离线交付',online:'在线服务',feedback:'态势反馈',recipients:'智能设备'} as const;
 export type ServiceSection=keyof typeof serviceSections;
 export function sectionServices(version:ServiceVersion,section:ServiceSection){
  return version.services.filter(item=>section==='directory'||section==='offline'&&item.kind==='offline'||section==='online'&&item.kind==='query');
