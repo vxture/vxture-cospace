@@ -1,3 +1,4 @@
+import {useOperationConfirmation} from './operation-confirmation';
 import {useUnsavedNavigation} from './unsaved-navigation';
 import React,{useEffect,useRef,useState} from 'react';
 import {Button,Input,NativeSelect} from '@vxture/design-system';
@@ -37,10 +38,12 @@ function CloudEditor({endpoint,data,onRegistered}:{endpoint:string;data:CloudDir
   timer=setTimeout(()=>void read(),500);return()=>{controller.abort();clearTimeout(timer);};
  },[job?.id,active,endpoint,data,pollRevision]);
  async function finish(){setBusy(true);setError('');window.dispatchEvent(new Event('cospace:confirm-session'));try{const r=await fetch(`${endpoint}/api/scene-pointclouds/compositions/${job!.id}/register`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({space_id:data.space_id})});if(!r.ok)throw Error('尚未完成登记，请确认平台会话和场景权限后重试。');const value=checked(await r.json());if(alive.current){setJob(value);if(value.state==='succeeded')onRegistered();}}catch(e){if(alive.current)setError(e instanceof Error?e.message:'登记失败。');}finally{if(alive.current)setBusy(false);}}
- async function submit(){if(posting.current||active||!sources.length)return;posting.current=true;setBusy(true);setError('');
+ const confirmOperation=useOperationConfirmation(JSON.stringify([data.space_id,data.index_sha256,sources,bounds,step,label]));
+ async function submit(){return confirmOperation({verb:'生成并登记',target:label,consequence:`使用 ${sources.length} 个来源，范围 ${bounds.join(' / ')}，派生步长 ${step}，生成新区域资料。来源文件保留；不自动构建或发布。`},()=>executeSubmit());}
+ async function executeSubmit(){if(posting.current||active||!sources.length)return;posting.current=true;setBusy(true);setError('');
   try{const request={space_id:data.space_id,request_id:crypto.randomUUID().replaceAll('-',''),index_sha256:data.index_sha256,sources:sources.map(i=>data.sources[i].name),bounds,voxel_size:Number(step),label:label.trim()};
    const r=await fetch(`${endpoint}/api/scene-pointclouds/compositions`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(request)});const value=await r.json();if(!r.ok)throw Error(value.detail==='scene_cloud_worker_busy'?'另有区域资料正在生成，请稍后重试。':value.detail==='scene_cloud_index_changed'?'场景资料已变化，请重新打开。':'区域处理未受理，请重新核对来源和范围。');if(alive.current)setJob(checked(value));
-  }catch(e){if(alive.current)setError(e instanceof Error?e.message:'提交失败。');}finally{posting.current=false;if(alive.current)setBusy(false);}
+  }catch(e){if(alive.current)setError(e instanceof Error?e.message:'提交失败。');throw e;}finally{posting.current=false;if(alive.current)setBusy(false);}
  }
  const states:Record<string,string>={queued:'等待区域处理',running:'正在读取原始分块并生成资料',succeeded:'区域资料已登记',failed:'区域处理失败',interrupted:'处理已中断',awaiting_authorization:'成果已生成，待确认登记'};
  const issues:Record<string,string>={confirm_session_to_register:'平台会话需重新确认。已保留成果，确认后直接登记，无需重新处理原始点。',region_budget_exceeded:'所选范围的成果超过 250,000 点。请缩小范围或显式增大派生步长。',region_empty:'所选范围没有原始点。',authorization_changed:'处理期间访问权限发生变化，未登记成果。',service_restarted_submit_new_request:'服务重启使任务中断，请重新提交。',composition_failed_recheck_sources:'未完成登记，请核对来源完整性和处理参数。'};

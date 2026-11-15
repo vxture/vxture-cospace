@@ -1,3 +1,4 @@
+import {useOperationConfirmation} from './operation-confirmation';
 import {appNavigate} from './app-router';
 import React,{useEffect,useRef,useState} from 'react';
 import {Cube,Eye,Robot,ArrowUpRight} from '@phosphor-icons/react';
@@ -18,27 +19,30 @@ export function ViewDerivations({stages,state,input,modelPoints,surfaceCells,art
  const alive=useRef(true),latch=useRef(false);
  const key=(kind:string)=>`cospace:view:${endpoint}:${stages.space_id}:${stages.job_id}:${kind}`;
  useEffect(()=>{alive.current=true;try{const saved:Record<string,string>={};for(const kind of ['human','agent']){const token=sessionStorage.getItem(key(kind));if(token){if(!/^[a-f0-9]{32}$/.test(token))throw Error();saved[kind]=token;}}setPending(saved);setReady(true);}catch{setError('浏览器无法保存提交记录，请允许会话存储后刷新。');}return()=>{alive.current=false;};},[stages.space_id,stages.job_id]);
+ const pendingRef=useRef(pending);pendingRef.current=pending;
  const go=(job:{id:string;space_id:string;view_parent_id:string;rerun_view:string},kind:string)=>{
   if(job.space_id!==stages.space_id||job.view_parent_id!==stages.job_id||job.rerun_view!==kind)throw Error('视图任务与当前场景不一致。');
   appNavigate(recordLink('build',{space:stages.space_id,tab:'flow',job:job.id,...(input?{input}:{})}));
  };
- async function start(kind:string){
+ const confirmOperation=useOperationConfirmation(JSON.stringify([stages.space_id,stages.job_id,stages.frozen_model]));
+ async function start(kind:string){if(pending[kind])return executeStart(kind).catch(()=>false);return confirmOperation({verb:'重新生成',target:kind==='human'?'视觉表达':'计算表达',consequence:`基于 ${stages.job_id} 的冻结模型新建派生任务，另一类表达沿用固定引用。原候选及已有发布保留，不会自动切换或发布。`},()=>executeStart(kind));}
+ async function executeStart(kind:string){
   if(latch.current)return;latch.current=true;setBusy(kind);setError('');
   try{
    let token=sessionStorage.getItem(key(kind));
-   if(pending[kind]){
+   if(pendingRef.current[kind]){
     const response=await fetch(`${endpoint}/api/builds?${new URLSearchParams({space_id:stages.space_id})}`,{cache:'no-store',signal:AbortSignal.timeout(20000)});
     if(!response.ok)throw Error('暂时无法核对提交记录，请稍后重试。');
     const body=await response.json();const found=body.jobs.find((j:{view_request_id?:string;view_parent_id?:string})=>j.view_request_id===token&&j.view_parent_id===stages.job_id);
     if(!alive.current)return;if(found){go(found,kind);return;}
     setPending(p=>{const next={...p};delete next[kind];return next;});setError('尚未找到任务；可使用原请求重新提交，系统会去重。');return;
    }
-   token=token||crypto.randomUUID().replaceAll('-','');sessionStorage.setItem(key(kind),token);setPending(p=>({...p,[kind]:token!}));
+   token=token||crypto.randomUUID().replaceAll('-','');sessionStorage.setItem(key(kind),token);pendingRef.current={...pendingRef.current,[kind]:token};setPending(p=>({...p,[kind]:token!}));
    const response=await fetch(`${endpoint}/api/view-derivations`,{method:'POST',headers:{'Content-Type':'application/json'},signal:AbortSignal.timeout(20000),body:JSON.stringify({space_id:stages.space_id,candidate_id:stages.job_id,view_kind:kind,request_id:token})});
    if(!alive.current)return;
    if(!response.ok){if(response.status>=500)throw Error('服务暂不可用，提交结果未确认，请先核对。');const body=await response.json();throw Error(body.detail==='build_already_running'?'已有构建运行，请等待后核对重试。':'当前模型或视图未通过准入检查，请核查状态与权限。');}
    const result=await response.json();go(result.job,kind);
-  }catch(e){if(alive.current)setError(e instanceof Error&&e.message.includes('。')?e.message:'连接中断或提交结果未确认，请先核对。');}
+  }catch(e){if(alive.current)setError(e instanceof Error&&e.message.includes('。')?e.message:'连接中断或提交结果未确认，请先核对。');throw e;}
   finally{latch.current=false;if(alive.current)setBusy('');}
  }
  const running=['queued','running'].includes(state);

@@ -1,3 +1,4 @@
+import {useOperationConfirmation} from './operation-confirmation';
 import {useUnsavedNavigation,runGuarded} from './unsaved-navigation';
 import React,{useEffect,useState} from 'react';
 import {Button,Checkbox,Field,FieldLabel,Input,StatusBadge} from '@vxture/design-system';
@@ -16,7 +17,9 @@ export function SourceSettings({spaceId,onSaved,onImport}:{spaceId:string;onSave
    const value:Settings=await r.json();if(active){setData(value);setChosen(value.sources.map(s=>s.id));}
   }).catch(e=>{if(active)setError(e.message);}).finally(()=>{if(active)setLoading(false);});return()=>{active=false;};
  },[spaceId,refresh]);
- async function save(e?:React.FormEvent){e?.preventDefault();if(!data||busy)return false;setBusy(true);setError('');setNotice('');
+ const confirmOperation=useOperationConfirmation(JSON.stringify([spaceId,data?.revision,chosen,reason]));
+ async function save(e?:React.FormEvent){e?.preventDefault();if(!data?.sources.some(s=>!chosen.includes(s.id))&&!data?.unavailable_source_ids.length)return executeSave();return confirmOperation({verb:'移除',target:'场景资料来源',consequence:`取消 ${(data?.sources.filter(s=>!chosen.includes(s.id)).length||0)+(data?.unavailable_source_ids.length||0)} 项来源，后续不可从这些来源登记新资料；已登记资料保留。`},()=>executeSave());}
+ async function executeSave(e?:React.FormEvent){e?.preventDefault();if(!data||busy)return false;setBusy(true);setError('');setNotice('');
   try{const r=await fetch(`${endpoint}/api/source-settings`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({space_id:spaceId,expected_revision:data.revision,catalog_sha256:data.catalog_sha256,enabled_source_ids:chosen,reason:reason.trim()})});
    if(!r.ok)throw Error(r.status===409?'配置或来源清单已更新，请重新读取后核对。':r.status===403?'当前无来源配置权限，未保存。':'保存失败，请重新读取确认。');
    const value:Settings=await r.json();setData(value);setChosen(value.sources.map(s=>s.id));setReason('');setNotice('来源配置已保存，可继续导入资料。');onSaved?.();

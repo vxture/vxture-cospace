@@ -1,3 +1,4 @@
+import {useOperationConfirmation} from './operation-confirmation';
 import {useUnsavedNavigation,runGuarded} from './unsaved-navigation';
 import React,{useEffect,useRef,useState} from 'react';
 import {Button,Input,NativeSelect} from '@vxture/design-system';
@@ -16,7 +17,9 @@ export function InputCoordinates({endpoint,space,identity,onSaved}:{endpoint:str
   try{const r=await fetch(`${endpoint}/api/artifact-impact?${new URLSearchParams({space_id:space,artifact:'input:'+identity})}`,{signal:controller.signal,cache:'no-store'});if(!r.ok)throw Error('引用影响无法确认，请重新读取后再编辑。');const value=await r.json();if(value.space_id!==space||value.target?.key!=='input:'+identity||value.issues?.length)throw Error('引用记录存在缺口，请先核查。');if(run===generation.current)setImpact(value.reference_counts);}catch(e){if(run===generation.current&&!controller.signal.aborted)setError((e as Error).message);}
  }
  function update(value:Coordinates){setDraft(value);requestId.current='';setError('');}
- async function save(event?:React.FormEvent){event?.preventDefault();if(!data||!draft||!reason.trim()||!impact||gate.current)return false;gate.current=true;const run=generation.current;setBusy(true);setError('');if(!requestId.current)requestId.current=crypto.randomUUID().replaceAll('-','');
+ const confirmOperation=useOperationConfirmation(JSON.stringify([space,identity,data?.revision,draft,reason]));
+ async function save(event?:React.FormEvent){event?.preventDefault();return confirmOperation({verb:'修改',target:'资料坐标说明',consequence:`${data?.coordinates.frame_id} → ${draft?.frame_id}；坐标轴 ${draft?.axes.join(' / ')}；范围 ${draft?.scope}。关联批次 ${impact?.batch||0}、构建 ${impact?.job||0}、候选 ${impact?.candidate||0}、发布 ${impact?.publication||0}。原点云数值不变，后续需重新预检；历史任务及发布保留原说明。`},()=>executeSave());}
+ async function executeSave(event?:React.FormEvent){event?.preventDefault();if(!data||!draft||!reason.trim()||!impact||gate.current)return false;gate.current=true;const run=generation.current;setBusy(true);setError('');if(!requestId.current)requestId.current=crypto.randomUUID().replaceAll('-','');
   const controller=new AbortController();abort.current=controller;
   try{const r=await fetch(`${endpoint}/api/inputs/${identity}/coordinates`,{method:'POST',headers:{'Content-Type':'application/json'},signal:controller.signal,body:JSON.stringify({space_id:space,expected_revision:data.revision,request_id:requestId.current,coordinates:draft,reason:reason.trim()})});const value=await r.json();if(!r.ok)throw Error(r.status===409?'保存未完成：修订、资料状态或来源发生变化，请重新读取核查。':'保存未确认，可重试相同操作或重新读取核查。');if(value.profile!=='cospace.input-coordinates/0.1'||value.input_id!==identity||value.space_id!==space)throw Error('保存回执与当前资料不一致。');
    if(run===generation.current){setData(value);setEditing(false);setNotice('已保存修改历史。请重新预检；现有任务和发布保留原说明。');onSaved();}

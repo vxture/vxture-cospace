@@ -1,3 +1,4 @@
+import {requestLeave} from './unsaved-navigation';
 import {appNavigate,appRoute} from './app-router';
 import {SignInContent} from './signin-content';
 import {EntryStatus} from './entry-status';
@@ -28,6 +29,7 @@ function IdentitySubscription({user,onSessionCheck}:{user?:AccountProfile;onSess
  return enabled?<SubscriptionNotice user={user} value={value} unavailable={unavailable} onRetry={()=>void read(true)}/>:<EntryStatus state={unavailable?'access-unavailable':'connected'} user={user} onRetry={()=>void read(true)}/>;
 }
 export async function platformLogout(csrf:string){
+ if(!await requestLeave())return;
  const response=await fetch('/api/auth/logout',{method:'POST',headers:{'X-CoSpace-CSRF':csrf}});
  if(!response.ok)throw Error('logout_failed');
  // Same-origin tabs react immediately; other products/domains are checked on

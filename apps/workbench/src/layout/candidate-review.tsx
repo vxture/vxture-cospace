@@ -1,3 +1,4 @@
+import {useOperationConfirmation} from './operation-confirmation';
 import React,{useEffect,useRef,useState} from 'react';
 import {Button,Dialog,DialogContent,DialogHeader,DialogTitle,DialogDescription,DialogFooter,Input,Switch} from '@vxture/design-system';
 import {previewEndpoint} from './real-space-data';
@@ -16,9 +17,11 @@ export function CandidateReview({candidate,space,revision,onClose,onSelected}:{c
  useEffect(()=>{read();return()=>controller.current?.abort();},[candidate,space]);
  const stale=report!==null&&report.selection_revision!==revision;
  useEffect(()=>{if(stale)setAck(false);},[stale]);
- async function save(){if(!report||stale||!report.review_allowed||!ack||!note.trim())return;setSaving(true);setError('');
+ const confirmOperation=useOperationConfirmation(JSON.stringify([space,candidate,revision,report?.comparison_sha256]));
+ async function save(){return confirmOperation({verb:'切换',target:'当前候选',consequence:`${report?.base_ref?.candidate_id||'尚未选择'} → ${candidate}。改变当前工作基线，移除对象 ${report?.objects.removed.length||0} 项、关系 ${report?.relations?.removed.length||0} 项、业务绑定 ${report?.business?.removed.length||0} 项。历史发布保持固定，不自动发布。`,preconditions:[{label:'差异与当前修订一致',met:!!report&&!stale&&!!report.review_allowed},{label:'已核对差异并填写说明',met:ack&&!!note.trim()}]},()=>executeSave());}
+ async function executeSave(){if(!report||stale||!report.review_allowed||!ack||!note.trim())return;setSaving(true);setError('');
   try{const response=await fetch(`${previewEndpoint}/api/candidate-reviews`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({candidate_id:candidate,space_id:space||null,expected_revision:report.selection_revision,comparison_sha256:report.comparison_sha256,note:note.trim(),acknowledge_unverified:ack})});const body=await response.json();if(!response.ok)throw Error(String(body.detail||'核对确认失败'));await onSelected();onClose();
-  }catch(e){setError(e instanceof Error?e.message:'核对失败。');setReport(null);setAck(false);}finally{setSaving(false);}}
+  }catch(e){setError(e instanceof Error?e.message:'核对失败。');throw e;}finally{setSaving(false);}}
  return <Dialog open onOpenChange={open=>{if(!open&&!saving)onClose();}}><DialogContent className="candidate-review-dialog max-w-panel-lg max-h-[85dvh] overflow-auto"><DialogHeader><DialogTitle>候选更新核对</DialogTitle><DialogDescription>比较当前空间所选候选与目标候选。人工核对通过后仅更新候选选择；发布仍在服务发布单独确认。</DialogDescription></DialogHeader>
  {reading&&<p role="status" className="text-body-small">正在读取空间基准模型与对象差异…</p>}{error&&<p role="alert" className="text-body-small break-all">{error}</p>}{stale&&<p role="alert" className="text-body-small">当前选择已变化，请重新读取差异后核对。</p>}
  {report&&<div className="flex flex-col gap-lg" aria-label="候选差异">{report.coordinate_revision_only&&<p role="status">同一资料的坐标说明修订，原几何数值未变。请核对新的坐标解释；不同坐标说明之间不计算物理变化。</p>}<div className="grid grid-cols-1 gap-md sm:grid-cols-2"><div><p className="text-label-small text-muted-foreground">当前候选</p><p className="break-all text-body-small">{report.base_ref?.candidate_id||'尚无候选 · 首次选择'}</p></div><div><p className="text-label-small text-muted-foreground">目标候选</p><p className="break-all text-body-small">{report.target_ref.candidate_id}</p></div></div>
@@ -30,5 +33,5 @@ export function CandidateReview({candidate,space,revision,onClose,onSelected}:{c
  <p className="text-label-small text-muted-foreground">移除表面证据不表示空闲，未列出区域保持未知。对象变化仅为标注变化，所有语义仍待现场核实。两类视图使用目标候选的固定快照。</p><p className="break-all text-label-small text-muted-foreground">核对绑定：{report.comparison_sha256}</p>
  </div>}
  <label className="flex flex-col gap-sm text-body-small">核对说明<Input aria-label="候选核对说明" maxLength={500} value={note} disabled={saving||!report||stale} onChange={e=>setNote(e.target.value)} placeholder="记录本次修改及确认依据"/></label><label className="flex items-center gap-sm text-body-small"><Switch aria-label="确认已核对且未完成精度验收" checked={ack} disabled={saving||!report||stale||!report.review_allowed} onCheckedChange={setAck}/>已核对变化，知悉本次不代表精度验收或机器人放行</label>
- <DialogFooter><Button variant="outline" disabled={reading||saving} onClick={read}>重新读取差异</Button><Button variant="outline" disabled={saving} onClick={onClose}>取消</Button><Button disabled={saving||reading||!report||stale||!report.review_allowed||!ack||!note.trim()} onClick={save}>{saving?'正在确认':'确认核对并选择'}</Button></DialogFooter></DialogContent></Dialog>;
+ <DialogFooter><Button variant="outline" disabled={reading||saving} onClick={read}>重新读取差异</Button><Button variant="outline" disabled={saving} onClick={onClose}>取消</Button><Button disabled={saving||reading||!report||stale||!report.review_allowed||!ack||!note.trim()} onClick={save}>{saving?'正在确认':'核对并继续'}</Button></DialogFooter></DialogContent></Dialog>;
 }
