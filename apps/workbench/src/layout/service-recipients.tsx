@@ -1,6 +1,6 @@
 import React,{useEffect,useId,useRef,useState} from 'react';
 import {useSearchParams} from 'react-router-dom';
-import {ViewModeSwitch,Button,Checkbox,Drawer,Dialog,DialogContent,DialogHeader,DialogTitle,DialogDescription,Input,NativeSelect,StatusBadge} from '@vxture/design-system';
+import {ViewModeSwitch,Button,Checkbox,Drawer,Dialog,DialogContent,DialogHeader,DialogTitle,DialogDescription,Input,NativeSelect,StatusBadge,Tabs,TabsContent,TabsList,TabsTrigger} from '@vxture/design-system';
 import {AirplaneTilt,PawPrint,Car,Robot,PersonSimpleWalk,Shapes,Plus,MagnifyingGlass,ArrowsClockwise,Check,Info,LinkSimple,PlugsConnected,ClockCounterClockwise,X} from '@phosphor-icons/react';
 import {WorkspaceHeading} from './workspace-frame';
 import {businessEndpoint} from './business-endpoint';
@@ -25,14 +25,14 @@ type EditSection='information'|'relations';
 const blank=():Draft=>({name:'',morphology:'',morphology_note:'',manufacturer:'',model:'',external_id:'',contact:'',relations:[]});
 const time=(value:string)=>new Date(value).toLocaleString('zh-CN',{hour12:false});
 
-export function ServiceRecipients({spaceId='',revision=0}:{spaceId?:string;revision?:number}){
+export function ServiceRecipients({spaceId='',sceneName,revision=0}:{spaceId?:string;sceneName?:string;revision?:number}){
  const session=usePlatformSession();
  const scope=[session?.user?.org_id,session?.user?.workspace_id,session?.user?.subject].join(':');
- return <RecipientWorkspace key={scope+':'+spaceId} spaceId={spaceId} revision={revision} csrf={session?.csrf||''}/>;
+ return <RecipientWorkspace key={scope+':'+spaceId} spaceId={spaceId} sceneName={sceneName} revision={revision} csrf={session?.csrf||''}/>;
 }
 
-function RecipientWorkspace({spaceId,revision,csrf}:{spaceId:string;revision:number;csrf:string}){
- const [params]=useSearchParams();
+function RecipientWorkspace({spaceId,sceneName,revision,csrf}:{spaceId:string;sceneName?:string;revision:number;csrf:string}){
+ const [params,setParams]=useSearchParams();
  const deviceId=params.get('device')||'';
  const requestedTab=params.get('deviceTab')||'overview';
  const deviceTab:DeviceTab=Object.hasOwn(deviceTabs,requestedTab)?requestedTab as DeviceTab:'overview';
@@ -62,10 +62,20 @@ function RecipientWorkspace({spaceId,revision,csrf}:{spaceId:string;revision:num
  if(deviceId){
   const record=data?.recipients.find(value=>value.id===deviceId);
   const Shape=record?forms[record.morphology].icon:Robot;
-  return <section className="recipient-workspace recipient-device-page" aria-label="设备管理">
-   {!spaceId&&<WorkspaceHeading icon={Shape} title={record?.name||'设备详情'} description={record?`智能设备 · ${forms[record.morphology].label}`:'智能设备'} secondary={record&&<StatusBadge size="sm" icon={false} tone="neutral">已登记</StatusBadge>}/>}
-   {loading?<p role="status">正在读取设备…</p>:error?<div role="alert"><p>{error}</p><Button variant="outline" onClick={()=>setRefresh(value=>value+1)}>重试</Button></div>:record?<RecipientDetail record={record} spaces={data?.spaces||[]} onEdit={section=>edit(record,section)} activeSection={deviceTab}/>:<p role="alert">设备不可访问或已不存在。</p>}
-   {notice&&<p role="status">{notice}</p>}{editorPanel}
+  const description=['智能设备',record&&forms[record.morphology].label,sceneName].filter(Boolean).join(' · ');
+  return <section aria-label="设备管理">
+   <Tabs value={deviceTab} onValueChange={value=>setParams(current=>{const next=new URLSearchParams(current);next.set('deviceTab',value);return next;})} className="scene-service-page recipient-device-page">
+    <div className="scene-service-top">
+     <WorkspaceHeading icon={Shape} title={record?.name||'设备详情'} description={description} secondary={record&&<StatusBadge size="sm" icon={false} tone="neutral">已登记</StatusBadge>}/>
+     <div className="scene-service-tab-scroll"><TabsList aria-label="设备管理维度">{Object.entries(deviceTabs).map(([key,label])=><TabsTrigger key={key} value={key}>{label}</TabsTrigger>)}</TabsList></div>
+    </div>
+    {record&&!error?<RecipientDetail record={record} spaces={data?.spaces||[]} canEdit={record.can_manage&&!loading} onEdit={section=>edit(record,section)} notice={notice}/>:<TabsContent value={deviceTab}>
+     <div className="service-page-section">
+      {loading?<p role="status" className="spatial-service-section-note">正在读取设备…</p>:error?<div role="alert"><p>{error}</p><Button size="xl" variant="outline" onClick={()=>setRefresh(value=>value+1)}>重试</Button></div>:<p role="alert">设备不可访问或已不存在。</p>}
+     </div>
+    </TabsContent>}
+   </Tabs>
+   {editorPanel}
   </section>;
  }
  return <section className="recipient-workspace" aria-label={spaceId?'此场景关联的设备':'智能设备'}>
@@ -102,33 +112,48 @@ function RecipientWorkspace({spaceId,revision,csrf}:{spaceId:string;revision:num
  </section>;
 }
 
-function RecipientDetail({record,spaces,onEdit,activeSection}:{record:Recipient;spaces:Space[];onEdit:(section:EditSection)=>void;activeSection:DeviceTab}){
- const root=useRef<HTMLDivElement>(null);
- useEffect(()=>{if(activeSection!=='overview')root.current?.querySelector<HTMLElement>(`[data-device-section="${activeSection}"]`)?.scrollIntoView({block:'start'});},[activeSection]);
+function RecipientDetail({record,spaces,onEdit,canEdit,notice}:{record:Recipient;spaces:Space[];onEdit:(section:EditSection)=>void;canEdit:boolean;notice:string}){
  const facts=(items:[string,string][])=> <dl className="recipient-detail-facts">{items.map(([label,value])=><div key={label}><dt>{label}</dt><dd>{value||'—'}</dd></div>)}</dl>;
- return <div ref={root} className="recipient-detail">
-  <section className="recipient-detail-section" aria-labelledby="device-information-title" data-device-section="overview">
-   <header><h2 id="device-information-title">设备信息</h2>{record.can_manage&&<Button variant="outline" size="xl" onClick={()=>onEdit('information')}>编辑设备信息</Button>}</header>
-   <div className="recipient-detail-information">
-    <div><h3>设备属性</h3>{facts([['设备形态',forms[record.morphology].label],['厂家',record.manufacturer],['型号',record.model],['负责人',record.contact]])}{record.morphology_note&&<p className="recipient-detail-note">{record.morphology_note}</p>}</div>
-    <div><h3>设备标识</h3>{facts([['外部设备标识',record.external_id]])}<dl className="recipient-detail-facts recipient-detail-identity"><div><dt>设备 ID</dt><dd>{record.id}</dd></div></dl><p className="recipient-detail-note">外部设备标识尚未验证。</p></div>
+ return <>
+  {notice&&<p role="status" className="spatial-service-section-note">{notice}</p>}
+  <TabsContent value="overview">
+   <div className="scene-service-overview recipient-detail">
+    <section className="service-page-section">
+     <header className="recipient-detail-card-heading"><h2>设备属性</h2>{canEdit&&<Button variant="outline" size="xl" onClick={()=>onEdit('information')}>编辑设备信息</Button>}</header>
+     {facts([['设备形态',forms[record.morphology].label],['厂家',record.manufacturer],['型号',record.model],['负责人',record.contact],...(record.morphology_note?[['形态说明',record.morphology_note] as [string,string]]:[])])}
+    </section>
+    <section className="service-page-section">
+     <header className="recipient-detail-card-heading"><h2>设备标识</h2></header>
+     {facts([['设备 ID',record.id],['外部设备标识',record.external_id]])}
+     {record.external_id&&<p className="spatial-service-section-note">外部设备标识尚未验证。</p>}
+    </section>
+    <section className="service-page-section">
+     <header className="recipient-detail-card-heading"><h2>登记记录</h2></header>
+     <div className="recipient-detail-integration">{facts([['登记时间',time(record.created_at)],['更新时间',time(record.updated_at)],['修订号',String(record.revision)]])}</div>
+    </section>
    </div>
-   <div className="recipient-detail-audit"><span>登记：{time(record.created_at)}</span><span>更新：{time(record.updated_at)}</span><span>修订 {record.revision}</span></div>
-  </section>
-  <section className="recipient-detail-section" aria-labelledby="device-spaces-title" data-device-section="spaces">
-   <header><h2 id="device-spaces-title">关联场景 <span>{record.relations.length}</span></h2>{record.can_manage&&<Button variant="outline" size="xl" onClick={()=>onEdit('relations')}>编辑关联场景</Button>}</header>
-   {record.relations.length?<div className="recipient-detail-relations"><div className="recipient-detail-relation-head" aria-hidden="true"><span>场景</span><span>接入用途</span><span>服务使用方式</span></div>{record.relations.map(r=><div className="recipient-detail-relation" key={r.space_id}><h3>{spaces.find(s=>s.id===r.space_id)?.name||r.space_id}</h3><div className="recipient-tags">{r.purposes.map(p=><StatusBadge key={p} size="sm" tone="neutral">{purposeNames[p]}</StatusBadge>)}</div><span>{!r.purposes.includes('use')?'—':r.usage_modes.length?r.usage_modes.map(m=>m==='online'?'在线服务':'离线成果').join('、'):'待配置'}</span></div>)}</div>:<p className="recipient-detail-empty">尚未关联场景。</p>}
-   <p className="recipient-detail-note">用途登记不授予实际服务权限。</p>
-  </section>
-  <section className="recipient-detail-section" aria-labelledby="device-integration-title" data-device-section="integration">
-   <header><h2 id="device-integration-title">接入配置</h2><StatusBadge size="sm" icon={false} tone="neutral">待厂家对接</StatusBadge></header>
-   <div className="recipient-detail-integration">{facts([['设备身份','未验证'],['通信接口','待厂家提供'],['数据约定','待配置']])}</div><p className="recipient-detail-note">厂家对接后，验证设备身份、数据格式及时间与坐标约定。</p>
-  </section>
-  <section className="recipient-detail-section" aria-labelledby="device-records-title" data-device-section="records">
-   <header><h2 id="device-records-title">使用记录</h2></header>
-   <div className="recipient-detail-empty"><ClockCounterClockwise size={24} aria-hidden="true"/><div><h3>暂无使用记录</h3><p>完成厂家接入后，记录采集提交、服务调用与离线交付。</p></div></div>
-  </section>
- </div>;
+  </TabsContent>
+  <TabsContent value="spaces">
+   <section className="service-page-section recipient-detail">
+    <header className="recipient-detail-card-heading"><h2>关联场景 <span>{record.relations.length} 个</span></h2>{canEdit&&<Button variant="outline" size="xl" onClick={()=>onEdit('relations')}>编辑关联场景</Button>}</header>
+    {record.relations.length?<div className="recipient-detail-relations"><div className="recipient-detail-relation-head" aria-hidden="true"><span>场景</span><span>接入用途</span><span>服务使用方式</span></div>{record.relations.map(r=><div className="recipient-detail-relation" key={r.space_id}><h3>{spaces.find(s=>s.id===r.space_id)?.name||r.space_id}</h3><div className="recipient-tags">{r.purposes.map(p=><StatusBadge key={p} size="sm" tone="neutral">{purposeNames[p]}</StatusBadge>)}</div><span>{!r.purposes.includes('use')?'—':r.usage_modes.length?r.usage_modes.map(m=>m==='online'?'在线服务':'离线成果').join('、'):'待配置'}</span></div>)}</div>:<p className="recipient-detail-empty">尚未关联场景。</p>}
+    <p className="spatial-service-section-note">用途登记不授予实际服务权限。</p>
+   </section>
+  </TabsContent>
+  <TabsContent value="integration">
+   <section className="service-page-section recipient-detail">
+    <header className="recipient-detail-card-heading"><h2>厂家接入</h2><StatusBadge size="sm" icon={false} tone="neutral">待厂家对接</StatusBadge></header>
+    <div className="recipient-detail-integration">{facts([['设备身份','未验证'],['通信接口','待厂家提供'],['数据约定','待配置']])}</div>
+    <p className="spatial-service-section-note">厂家对接后，验证设备身份、数据格式及时间与坐标约定。</p>
+   </section>
+  </TabsContent>
+  <TabsContent value="records">
+   <section className="service-page-section recipient-detail">
+    <header className="recipient-detail-card-heading"><h2>使用记录</h2></header>
+    <div className="recipient-detail-empty"><ClockCounterClockwise size={24} aria-hidden="true"/><div><h3>暂无使用记录</h3><p>完成厂家接入后，记录采集提交、服务调用与离线交付。</p></div></div>
+   </section>
+  </TabsContent>
+ </>;
 }
 
 function CheckOption({checked,onChange,children}:{checked:boolean;onChange:(checked:boolean)=>void;children:React.ReactNode}){

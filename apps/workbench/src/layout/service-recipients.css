@@ -104,28 +104,22 @@
  .recipient-filter-select{flex:1 1 120px}
 }
 
-.recipient-device-page{gap:0}
-.recipient-detail{gap:0;font-size:var(--body-small-font-size)}
-.recipient-detail-section{min-width:0;scroll-margin-top:24px;padding:24px 0;border-top:1px solid var(--border)}
-.recipient-detail-section:first-child{padding-top:0;border-top:0}
-.recipient-detail-section>header{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:20px;min-height:32px}
-.recipient-detail-section h2{margin:0;font-size:var(--body-font-size);font-weight:600;display:flex;align-items:center;gap:10px}
-.recipient-detail-section h2>span{color:var(--muted-foreground);font-size:var(--body-small-font-size);font-weight:400}
-.recipient-detail-section h3{margin:0;font-size:var(--body-small-font-size);font-weight:500;overflow-wrap:anywhere}
-.recipient-detail-information{display:grid;grid-template-columns:1.1fr 1fr;gap:32px}
-.recipient-detail-information>div{min-width:0}
-.recipient-detail-information h3{margin-bottom:16px;color:var(--muted-foreground);font-size:var(--label-small-font-size)}
+.recipient-device-page .workspace-page-copy h1{overflow-wrap:anywhere}
+.recipient-detail{font-size:var(--body-small-font-size)}
+.service-page-section.recipient-detail{gap:16px}
+.recipient-detail-card-heading{display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:32px;margin-bottom:16px}
+.service-page-section.recipient-detail>.recipient-detail-card-heading{margin-bottom:0}
+.recipient-detail-card-heading h2{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.recipient-detail-card-heading h2>span{color:var(--muted-foreground);font-size:var(--body-small-font-size);font-weight:400}
+.recipient-detail h3{margin:0;font-size:var(--body-small-font-size);font-weight:500;overflow-wrap:anywhere}
 .recipient-detail-facts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px 24px;margin:0}
 .recipient-detail-facts>div{display:flex;flex-direction:column;gap:6px;min-width:0}
 .recipient-detail-facts dt{font-size:var(--label-small-font-size);color:var(--muted-foreground)}
 .recipient-detail-facts dd{margin:0;overflow-wrap:anywhere;line-height:1.6}
-.recipient-detail-identity{grid-template-columns:1fr;margin-top:16px}
-.recipient-detail-identity dd{font-family:var(--font-mono,monospace);font-size:var(--label-small-font-size)}
-.recipient-detail-note{margin:16px 0 0;color:var(--muted-foreground);font-size:var(--label-small-font-size);line-height:1.7}
-.recipient-detail-audit{display:flex;flex-wrap:wrap;gap:8px 24px;margin-top:24px;color:var(--muted-foreground);font-size:var(--label-small-font-size)}
 .recipient-detail-relation,.recipient-detail-relation-head{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr) minmax(0,.8fr);align-items:center;gap:16px;padding:14px 0}
-.recipient-detail-relation-head{color:var(--muted-foreground);font-size:var(--label-small-font-size);padding:0 0 12px;border-bottom:1px dashed var(--border)}
-.recipient-detail-relation+.recipient-detail-relation{border-top:1px dashed var(--border)}
+.recipient-detail-relation:last-child{padding-bottom:0}
+.recipient-detail-relation-head{color:var(--muted-foreground);font-size:var(--label-small-font-size);padding:0 0 12px;border-bottom:1px solid var(--border)}
+.recipient-detail-relation+.recipient-detail-relation{border-top:1px solid var(--border)}
 .recipient-detail-relation>span{font-size:var(--label-small-font-size);overflow-wrap:anywhere}
 .recipient-detail-integration>.recipient-detail-facts{grid-template-columns:repeat(3,minmax(0,1fr))}
 .recipient-detail-empty{display:flex;align-items:flex-start;gap:14px;margin:0;color:var(--muted-foreground);line-height:1.7}
@@ -133,12 +127,10 @@
 .recipient-detail-empty h3{color:var(--foreground)}
 .recipient-detail-empty p{margin:4px 0 0;font-size:var(--label-small-font-size)}
 @container(max-width:650px){
- .recipient-detail-information{grid-template-columns:1fr;gap:24px}
- .recipient-detail-information>div+div{padding-top:20px;border-top:1px dashed var(--border)}
  .recipient-detail-relation-head{display:none}
  .recipient-detail-relation{grid-template-columns:1fr;gap:10px}
+ .recipient-detail-relation:first-of-type,.recipient-detail-relation-head+.recipient-detail-relation{padding-top:0}
  .recipient-detail-relation>h3{font-weight:600}
- .recipient-detail-section{padding:20px 0}
- .recipient-detail-section>header{gap:8px}
- .recipient-detail-integration>.recipient-detail-facts{gap:12px}
+ .recipient-detail-card-heading{gap:8px;flex-wrap:wrap}
+ .recipient-detail-integration>.recipient-detail-facts{grid-template-columns:repeat(auto-fit,minmax(min(100%,125px),1fr));gap:12px}
 }
