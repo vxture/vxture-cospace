@@ -1,6 +1,7 @@
 import React,{createContext,useContext,useEffect,useLayoutEffect,useRef,useState,useCallback} from 'react';
-import {Button,ShellDock,StatusBadge} from '@vxture/design-system';
-import {Sparkle,ArrowsOutSimple,ArrowsInSimple,CornersOut,CornersIn,X,ArrowRight,Info} from '@phosphor-icons/react';
+import {Button,ShellDock} from '@vxture/design-system';
+import {Sparkle,ArrowsOutSimple,ArrowsInSimple,CornersOut,CornersIn,X} from '@phosphor-icons/react';
+import {AssistantConversation} from './assistant-conversation';
 import {appNavigate} from './app-router';
 import {useSceneDirectory} from './use-scene-directory';
 import {usePlatformSession} from './platform-auth';
@@ -29,11 +30,11 @@ export function WorkspaceAssistant({scope,route,scene,children,header}:{scope:st
  const close=()=>{setOpen(false);requestAnimationFrame(()=>document.querySelector<HTMLButtonElement>('.platform-header-actions button[aria-label="智能助手"]')?.focus());};
  useEffect(()=>{if(!open)return;const key=(event:KeyboardEvent)=>{if(event.key!=='Escape'||event.defaultPrevented||document.querySelector('[role="dialog"],[role="alertdialog"],[role="menu"]'))return;event.preventDefault();if(mode==='full')setMode('narrow');else close();};window.addEventListener('keydown',key);return()=>window.removeEventListener('keydown',key);},[open,mode]);
  return <Assistant.Provider value={{scope,open,toggle,publish}}>{header({open,toggle})}<div className="workspace-with-assistant"><div className="workspace-business-content" inert={open&&mode==='full'}>{children}</div>{open&&<div id="workspace-assistant" role="region" aria-label="智能助手面板" className={`workspace-assistant-dock workspace-assistant-${mode}`}>
-  <ShellDock mode={mode} className="workspace-assistant-panel"><header className="workspace-assistant-heading"><Sparkle size={18}/><h2>智能助手</h2><span>逐项确认</span><div>
+  <ShellDock mode={mode} className="workspace-assistant-panel"><header className="workspace-assistant-heading"><Sparkle size={18}/><h2>智能助手</h2><div>
    <Button variant="ghost" size="icon-xl" aria-label={mode==='wide'?'收窄助手':'加宽助手'} aria-pressed={mode==='wide'} onClick={()=>setMode(mode==='wide'?'narrow':'wide')}>{mode==='wide'?<ArrowsInSimple size={16}/>:<ArrowsOutSimple size={16}/>}</Button>
    <Button variant="ghost" size="icon-xl" aria-label={mode==='full'?'退出助手全屏':'全屏助手'} aria-pressed={mode==='full'} onClick={()=>setMode(mode==='full'?'narrow':'full')}>{mode==='full'?<CornersIn size={16}/>:<CornersOut size={16}/>}</Button>
    <Button variant="ghost" size="icon-xl" aria-label="关闭智能助手" onClick={close}><X size={16}/></Button>
-  </div></header><AssistantTasks key={scope} report={report} route={route} scene={scene} onSelect={()=>{setMode('narrow');if(innerWidth<1200)setOpen(false);}}/><footer className="workspace-assistant-footer">按当前页面数据推荐，选择任务后逐项确认。</footer></ShellDock>
+  </div></header><AssistantTasks key={scope} report={report} route={route} scene={scene} onSelect={()=>{setMode('narrow');if(innerWidth<1200)setOpen(false);}}/></ShellDock>
  </div>}</div></Assistant.Provider>;
 }
 function AssistantTasks({report,route,scene,onSelect}:{report:AssistantReport|null;route:string;scene:string;onSelect:()=>void}){
@@ -65,10 +66,5 @@ function AssistantTasks({report,route,scene,onSelect}:{report:AssistantReport|nu
  }
  if(directory.error&&!['settings','members','identity','account'].includes(route))fallback.note=directory.error;
  const value=report||fallback;
- return <div className="workspace-assistant-scroll" tabIndex={0}><div className="workspace-assistant-context"><span>当前任务</span><h3>{value.title}</h3></div>
-  {value.status==='loading'?<p role="status">正在检查当前页面…</p>:value.status==='error'?<p role="alert">{value.note||'当前信息不可读取，请在业务页重试。'}</p>:<>
-   {(value.note||!value.tasks.length)&&<p className="workspace-assistant-note">{!value.tasks.length&&<Info size={18}/>}<span>{value.note||'当前页面暂无待处理任务。'}</span></p>}
-   <div className="workspace-assistant-tasks">{value.tasks.map(task=><article key={task.id}><header><h3>{task.title}</h3>{task.tone&&<StatusBadge size="sm" tone={task.tone}>待处理</StatusBadge>}</header><p>{task.evidence}</p><Button variant="secondary" size="xl" onClick={()=>{onSelect();task.run();}}>{task.label}<ArrowRight size={14}/></Button></article>)}</div>
-  </>}
- </div>;
+ return <AssistantConversation report={value} onSelect={onSelect}/>;
 }
