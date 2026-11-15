@@ -19,3 +19,23 @@ export function buildAssistantReport(facts:{loading:boolean;error:string;canBuil
  else if(facts.model&&facts.canPublish&&!facts.published)tasks.push(task('publish','准备服务发布','当前候选还没有对应的发布记录。','前往发布'));
  return {title:'构建检查',status:'ready',note:tasks.length?undefined:'当前构建暂无待处理事项。',tasks};
 }
+
+export const assistantConfirmationModes=[
+ {id:'each',label:'逐项确认',description:'每项操作前请你确认。',icon:'list-checks'},
+ {id:'routine',label:'常规授权',description:'常规自动，重要或存疑时确认。',icon:'target'},
+ {id:'full',label:'充分授权',description:'授权范围内自动执行。',icon:'agent'},
+] as const;
+export type AssistantConfirmationMode=typeof assistantConfirmationModes[number]['id'];
+/** Match only current, readable suggestions. Never infer new executable actions. */
+export function matchAssistantTasks(text:string,report:AssistantReport):AssistantTask[]{
+ if(report.status!=='ready')return [];
+ const query=text.trim().toLowerCase();
+ if(!query)return [];
+ if(/^(推荐|推荐操作|待办|待处理|有什么任务|全部任务)[？?。!！]*$/.test(query))return report.tasks;
+ const phrases=query.match(/[a-z0-9]+|[\u4e00-\u9fff]+/g)||[];
+ const terms=phrases.flatMap(word=>/^[a-z0-9]+$/.test(word)?[word]:Array.from({length:Math.max(0,word.length-1)},(_,i)=>word.slice(i,i+2)));
+ const scored=report.tasks.map(task=>({task,score:terms.filter(term=>`${task.title} ${task.evidence} ${task.label}`.toLowerCase().includes(term)).length}));
+ const maximum=Math.max(0,...scored.map(item=>item.score));
+ return maximum?scored.filter(item=>item.score===maximum).map(item=>item.task):[];
+}
+export function assistantTaskSignature(task:AssistantTask){return JSON.stringify([task.id,task.title,task.evidence,task.label]);}

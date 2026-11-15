@@ -24,3 +24,24 @@ test('build checks follow saved facts and only execute the selected handoff',()=
  assert.equal(buildAssistantReport({...base,state:'succeeded',model:true,selected:true,published:true},()=>{}).tasks.length,0);
  assert.equal(buildAssistantReport({...base,state:'succeeded',model:true,selected:true,canPublish:false},()=>{}).tasks.length,0);
 });
+
+test('conversation retrieves current suggestions without calling business operations',async()=>{
+ const {matchAssistantTasks}=await import('../../apps/workbench/src/layout/assistant-contract.ts');
+ let calls=0;
+ const report={title:'设备检查',status:'ready',tasks:[{id:'dog',title:'补全设备资料',evidence:'机器狗02 厂家尚未补全',label:'编辑资料',run:()=>calls++},{id:'drone',title:'关联作业场景',evidence:'无人机01 尚未关联场景',label:'配置关联',run:()=>calls++}]};
+ assert.deepEqual(matchAssistantTasks('无人机01',report).map(t=>t.id),['drone']);
+ assert.deepEqual(matchAssistantTasks('推荐操作',report).map(t=>t.id),['dog','drone']);
+ assert.deepEqual(matchAssistantTasks('删除所有账户',report),[]);
+ assert.deepEqual(matchAssistantTasks('   ',report),[]);
+ for(const status of ['loading','error'])assert.deepEqual(matchAssistantTasks('无人机01',{...report,status}),[]);
+ assert.equal(calls,0);
+});
+
+test('authorization modes remain bounded preferences and task signatures expire on changed facts',async()=>{
+ const {assistantConfirmationModes,assistantTaskSignature}=await import('../../apps/workbench/src/layout/assistant-contract.ts');
+ assert.deepEqual(assistantConfirmationModes.map(m=>m.label),['逐项确认','常规授权','充分授权']);
+ assert.equal(new Set(assistantConfirmationModes.map(m=>m.icon)).size,3);
+ const task={id:'one',title:'关联场景',evidence:'设备尚未关联',label:'进入表单',run:()=>{}};
+ assert.equal(assistantTaskSignature(task),assistantTaskSignature({...task,run:()=>null}));
+ for(const change of [{id:'two'},{evidence:'设备已关联'},{label:'其他操作'}])assert.notEqual(assistantTaskSignature(task),assistantTaskSignature({...task,...change}));
+});
