@@ -3,6 +3,7 @@ import {Button,Checkbox,Drawer,Dialog,DialogContent,DialogHeader,DialogTitle,Dia
 import {AirplaneTilt,PawPrint,Car,Robot,PersonSimpleWalk,Shapes,Plus,MagnifyingGlass,ArrowsClockwise,SquaresFour,ListBullets,Check,ArrowRight,X} from '@phosphor-icons/react';
 import {businessEndpoint} from './business-endpoint';
 import {usePlatformSession} from './platform-auth';
+import {ServiceDirectoryRow} from './service-directory-row';
 import './service-recipients.css';
 
 const forms={aerial:{label:'飞行式',example:'无人机',icon:AirplaneTilt},quadruped:{label:'四足式',example:'机器狗、四足机器人',icon:PawPrint},wheeled:{label:'轮式',example:'轮式机器人、移动底盘',icon:Car},tracked:{label:'履带式',example:'履带机器人',icon:Robot},humanoid:{label:'人形式',example:'人形机器人',icon:PersonSimpleWalk},other:{label:'其他形态',example:'其他足式、复合移动等',icon:Shapes}};
@@ -35,8 +36,8 @@ function RecipientWorkspace({spaceId,revision,csrf}:{spaceId:string;revision:num
   if(spaceId||scene)params.set('space_id',spaceId||scene);
   if(query)params.set('q',query);if(morphology)params.set('morphology',morphology);if(purpose)params.set('purpose',purpose);
   fetch(`${businessEndpoint}/api/service-recipients?${params}`,{cache:'no-store',signal:controller.signal}).then(async r=>{
-   if(!r.ok)throw Error(r.status===403?'当前账号无权查看这些服务对象。':'服务对象暂不可读取，请重试。');
-   const value=await r.json();if(value.profile!=='cospace.service-recipients/0.1'||!Array.isArray(value.recipients)||!Array.isArray(value.spaces))throw Error('服务对象数据格式无法识别。');
+   if(!r.ok)throw Error(r.status===403?'当前账号无权查看这些智能体。':'智能体列表暂不可读取，请重试。');
+   const value=await r.json();if(value.profile!=='cospace.service-recipients/0.1'||!Array.isArray(value.recipients)||!Array.isArray(value.spaces))throw Error('智能体数据格式无法识别。');
    if(!controller.signal.aborted)setData(value);
   }).catch(e=>{if(!controller.signal.aborted){setData(null);setError(e.message);}}).finally(()=>{if(!controller.signal.aborted)setLoading(false);});
   return()=>controller.abort();
@@ -45,7 +46,7 @@ function RecipientWorkspace({spaceId,revision,csrf}:{spaceId:string;revision:num
  const canCreate=!!data?.can_create&&(!spaceId||!!fixedSpace?.can_manage);
  const openCreate=()=>{setLinkExisting(false);setEditor({draft:{...blank(),relations:spaceId?[{space_id:spaceId,purposes:[],usage_modes:[]}]:[]}});setNotice('');};
  function edit(record:Recipient){setDetail(null);setEditor({record,draft:{name:record.name,morphology:record.morphology,morphology_note:record.morphology_note,manufacturer:record.manufacturer,model:record.model,external_id:record.external_id,contact:record.contact,relations:structuredClone(record.relations)}});}
- return <section className="recipient-workspace" aria-label={spaceId?'此场景的服务对象':'智能体服务对象'}>
+ return <section className="recipient-workspace" aria-label={spaceId?'此场景关联的智能体':'智能体接入'}>
   <div className="recipient-operation-bar">
    <div className="recipient-view-group"><div className="recipient-view-switch" role="group" aria-label="显示方式"><Button variant="outline" size="icon-xl" aria-label="卡片视图" aria-pressed={view==='cards'} onClick={()=>setView('cards')}><SquaresFour size={16}/></Button><Button variant="outline" size="icon-xl" aria-label="列表视图" aria-pressed={view==='list'} onClick={()=>setView('list')}><ListBullets size={16}/></Button></div><span className="recipient-count" aria-live="polite">{loading?'正在读取…':error?'暂不可读':`${data?.total||0} 个智能体`}</span></div>
    <div className="recipient-operation-right"><div className="recipient-filter-group">
@@ -54,22 +55,18 @@ function RecipientWorkspace({spaceId,revision,csrf}:{spaceId:string;revision:num
     <NativeSelect wrapperClassName="recipient-filter-select" aria-label="接入用途" value={purpose} onChange={e=>{setPurpose(e.target.value);setOffset(0);}}><option value="">全部接入用途</option><option value="collect">空间数据采集</option><option value="use">空间服务使用</option></NativeSelect>
     {!spaceId&&<NativeSelect wrapperClassName="recipient-filter-select recipient-scene-select" aria-label="关联场景" value={scene} onChange={e=>{setScene(e.target.value);setOffset(0);}}><option value="">全部关联场景</option>{data?.spaces.map(s=><option value={s.id} key={s.id}>{s.name}</option>)}</NativeSelect>}
    </div>
-   <div className="recipient-actions"><Button variant="outline" size="icon-xl" aria-label="刷新服务对象" onClick={()=>setRefresh(v=>v+1)}><ArrowsClockwise size={16}/></Button>{canCreate&&<Button size="xl" onClick={()=>spaceId?setLinkExisting(true):openCreate()}><Plus size={16}/>{spaceId?'关联智能体':'添加智能体'}</Button>}</div></div>
+   <div className="recipient-actions"><Button variant="outline" size="icon-xl" aria-label="刷新智能体列表" onClick={()=>setRefresh(v=>v+1)}><ArrowsClockwise size={16}/></Button>{canCreate&&<Button size="xl" onClick={()=>spaceId?setLinkExisting(true):openCreate()}><Plus size={16}/>{spaceId?'关联智能体':'添加智能体'}</Button>}</div></div>
   </div>
   {notice&&<p role="status" className="recipient-notice">{notice}</p>}
-  {loading?<p role="status" className="service-list-empty">正在读取服务对象…</p>:error?<div role="alert" className="service-list-empty"><p>{error}</p><Button variant="outline" onClick={()=>setRefresh(v=>v+1)}>重新加载</Button></div>:!data?.recipients.length?<div className="service-list-empty"><h2>{query||morphology||purpose||scene?'没有匹配的智能体':spaceId?'此场景尚未关联智能体':'尚未添加智能体'}</h2><p>登记设备形态与接入用途后，可继续配置厂家对接。登记不会自动开通服务权限。</p>{(query||morphology||purpose||scene||offset>0)&&<Button variant="outline" onClick={()=>{setQuery('');setMorphology('');setPurpose('');setScene('');setOffset(0);}}>清除筛选</Button>}</div>:<div className={view==='cards'?'recipient-card-grid':'recipient-list'}>{data.recipients.map(record=>{
+  {loading?<p role="status" className="service-list-empty">正在读取智能体…</p>:error?<div role="alert" className="service-list-empty"><p>{error}</p><Button variant="outline" onClick={()=>setRefresh(v=>v+1)}>重新加载</Button></div>:!data?.recipients.length?<div className="service-list-empty"><h2>{query||morphology||purpose||scene?'没有匹配的智能体':spaceId?'此场景尚未关联智能体':'尚未添加智能体'}</h2><p>登记设备形态与接入用途后，可继续配置厂家对接。登记不会自动开通服务权限。</p>{(query||morphology||purpose||scene||offset>0)&&<Button variant="outline" onClick={()=>{setQuery('');setMorphology('');setPurpose('');setScene('');setOffset(0);}}>清除筛选</Button>}</div>:<div className={view==='cards'?'recipient-card-grid':'service-directory-list'}>{data.recipients.map(record=>{
    const links=record.relations.filter(r=>!spaceId||r.space_id===spaceId),purposes=[...new Set(links.flatMap(r=>r.purposes))];const Shape=forms[record.morphology].icon;
    const sceneNames=links.map(r=>data.spaces.find(s=>s.id===r.space_id)?.name||r.space_id).join('、');
    if(view==='cards')return <article className="recipient-tile" key={record.id}><div className="recipient-device-icon"><Shape size={24}/></div><div className="recipient-tile-body"><div className="recipient-card-heading"><strong title={record.name}>{record.name}</strong><span className="recipient-form-label">{forms[record.morphology].label}</span><span className="recipient-tile-status"><StatusBadge size="sm" tone="neutral">待厂家对接</StatusBadge></span></div><div className="recipient-card-summary"><span title={sceneNames}>{sceneNames||'未关联场景'}</span><div className="recipient-tags">{purposes.map(p=><StatusBadge size="sm" tone="neutral" key={p}>{purposeNames[p]}</StatusBadge>)}</div></div></div><Button variant="outline" size="icon-xl" aria-label={`查看${record.name}详情`} onClick={()=>setDetail(record)}><ArrowRight size={16}/></Button></article>;
-   return <article className="recipient-row" key={record.id}>
-    <div className="recipient-device-icon"><Shape size={24}/></div>
-    <div className="recipient-card-content">
-     <div className="recipient-card-heading"><strong title={record.name}>{record.name}</strong><span className="recipient-form-label">{forms[record.morphology].label}</span><div className="recipient-tags">{purposes.map(p=><StatusBadge size="sm" tone="neutral" key={p}>{purposeNames[p]}</StatusBadge>)}</div></div>
-     <div className="recipient-card-summary"><span title={sceneNames}>{links.length?`关联场景：${sceneNames}`:'未关联场景'}</span>{(record.manufacturer||record.model)&&<span title={[record.manufacturer,record.model].filter(Boolean).join(' / ')}>{[record.manufacturer,record.model].filter(Boolean).join(' / ')}</span>}{record.external_id&&<span title={record.external_id}>设备标识：{record.external_id}</span>}</div>
-    </div>
-    <StatusBadge size="sm" tone="neutral">待厂家对接</StatusBadge>
-    <Button variant="outline" size="xl" onClick={()=>setDetail(record)}>查看</Button>
-   </article>;
+   return <ServiceDirectoryRow key={record.id} label={record.name} symbol={<Shape size={36} weight="duotone"/>}
+    heading={<><h3 className="service-entry-name">{record.name}</h3><span className="service-project">{forms[record.morphology].label}{(record.manufacturer||record.model)&&` · ${[record.manufacturer,record.model].filter(Boolean).join(' / ')}`}</span></>}
+    capabilities={<><span className="service-entry-label">接入用途</span><div className="recipient-tags">{purposes.length?purposes.map(p=><StatusBadge size="sm" tone="neutral" key={p}>{purposeNames[p]}</StatusBadge>):<span className="service-project">未配置用途</span>}</div></>}
+    metadata={<><div className="service-release-primary"><StatusBadge size="sm" icon={false} tone="neutral">待厂家对接</StatusBadge></div><div className="service-project">{sceneNames?`关联场景：${sceneNames}`:'未关联场景'}</div>{record.external_id&&<div className="service-project">设备标识：{record.external_id}</div>}</>}
+    action={<Button variant="outline" size="xl" aria-label={`查看${record.name}详情`} onClick={()=>setDetail(record)}>查看详情<ArrowRight size={16}/></Button>}/>;
   })}</div>}
   {!!data&&data.total>20&&!loading&&<div className="recipient-pagination"><Button variant="outline" size="sm" disabled={offset===0} onClick={()=>setOffset(v=>Math.max(0,v-20))}>上一页</Button><span>{offset+1}–{Math.min(offset+20,data.total)} / {data.total}</span><Button variant="outline" size="sm" disabled={offset+20>=data.total} onClick={()=>setOffset(v=>v+20)}>下一页</Button></div>}
   <Drawer open={!!detail} onClose={()=>setDetail(null)} side="right" width="min(672px, 100vw)" title={detail?.name||'智能体详情'} closeLabel="关闭智能体详情">{detail&&<RecipientDetail record={detail} spaces={data?.spaces||[]} onEdit={()=>edit(detail)}/>}</Drawer>

@@ -1,6 +1,6 @@
 import type {ServiceSection} from './spatial-service-contract';
 
-export const sceneServiceTabs={overview:'服务概况',online:'在线服务',offline:'离线交付',feedback:'态势反馈',recipients:'服务对象'} as const;
+export const sceneServiceTabs={overview:'服务概况',online:'在线服务',offline:'离线交付',feedback:'态势反馈',recipients:'智能体接入'} as const;
 export type SceneServiceTab=keyof typeof sceneServiceTabs;
 export type ServiceListFilter={query?:string;state?:string};
 export const entryServiceTab=(section:ServiceSection):SceneServiceTab=>section==='directory'?'overview':section;

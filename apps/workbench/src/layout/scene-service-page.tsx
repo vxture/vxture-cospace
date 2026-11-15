@@ -1,7 +1,7 @@
 import React from 'react';
 import {Button,NativeSelect,StatusBadge,Tabs,TabsList,TabsTrigger,TabsContent} from '@vxture/design-system';
 import {ArrowSquareOut,ArrowsClockwise} from '@phosphor-icons/react';
-import {Cube} from '@phosphor-icons/react';
+import {Cube,UploadSimple} from '@phosphor-icons/react';
 import {WorkspaceHeading} from './workspace-frame';
 import {serviceKinds,type ServiceSpace,type ServiceVersion} from './spatial-service-contract';
 import {sceneServiceTabs,type SceneServiceTab} from './service-workspace-contract';
@@ -11,9 +11,14 @@ import {OnlineServiceMonitor,useServiceReport} from './online-service-monitor';
 import {realScreenHref} from './real-space-data';
 import {locationLabel} from './geographic-location';
 import {ServiceRecipients} from './service-recipients';
+import {ServiceDirectoryRow} from './service-directory-row';
 
-export function UnavailableServiceSection({section}:{section:'feedback'|'recipients'}){
- return <section className="service-unavailable" aria-label={sceneServiceTabs[section]}><StatusBadge size="sm" icon={false} tone="neutral">尚未开放</StatusBadge><h2>{section==='feedback'?'态势反馈接入尚未开放':'服务对象登记尚未开放'}</h2><p>{section==='feedback'?'开放后可在此查看反馈接入、反馈记录与处理状态。':'开放后可在此查看服务对象、使用方式及关联版本。'}</p></section>;
+export function FeedbackUnavailable(){
+ return <div className="service-directory-list"><ServiceDirectoryRow label="态势反馈尚未开放" symbol={<UploadSimple size={36} weight="duotone"/>}
+  heading={<h2 className="service-entry-name">态势反馈</h2>}
+  capabilities={<span className="service-project">开放后可查看反馈记录和处理进展。</span>}
+  metadata={<StatusBadge size="sm" icon={false} tone="neutral">尚未开放</StatusBadge>}/>
+ </div>;
 }
 
 function ServiceOverview({group,version,revision}:{group:ServiceSpace;version:ServiceVersion;revision:number}){
@@ -44,7 +49,7 @@ export function SceneServicePage({group,version,tab,revision,onTab,onVersion,onR
    <TabsContent value="overview"><ServiceOverview group={group} version={version} revision={revision}/></TabsContent>
    <TabsContent value="online"><div className="service-tab-body">{query?<ServiceAccess key={query.id} item={query}/>:<p className="spatial-service-section-note">当前账号未获此版本的在线查询权限。</p>}<OnlineServiceMonitor scene={scene} space={scene.id} revision={revision}/></div></TabsContent>
    <TabsContent value="offline">{offline?<ServiceAccess key={offline.id} item={offline}/>:<p className="spatial-service-section-note">当前账号未获此版本的离线交付权限。</p>}</TabsContent>
-   <TabsContent value="feedback"><UnavailableServiceSection section="feedback"/></TabsContent>
+   <TabsContent value="feedback"><FeedbackUnavailable/></TabsContent>
   </>}
   <TabsContent value="recipients"><ServiceRecipients spaceId={scene.id} revision={revision}/></TabsContent>
  </Tabs>;
