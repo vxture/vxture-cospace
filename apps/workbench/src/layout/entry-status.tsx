@@ -5,6 +5,7 @@ import type {AccountProfile} from './account-profile';
 import {UnifiedAccountCard} from './unified-account-card';
 import {SpatialMotif} from './spatial-motif';
 import type {EntryState} from './entry-state';
+import {PublicEntryHeading,PublicEntryFootnote} from './public-entry-parts';
 
 const states:Record<EntryState,{title:string;label:string;footnote?:string}>={
  connecting:{title:'正在连接',label:'连接中'},
@@ -42,7 +43,7 @@ export function EntryStatus({state,user,onRetry,onLogin,preserveWork=false}:{rea
  const content=states[state],pending=['connecting','restoring','checking-access'].includes(state);
  const workspaceAction=['subscription','expired','unassigned'].includes(state);
  return <div className="entry-status" aria-busy={pending}>
-  <header><h1>{content.title}</h1></header>
+  <PublicEntryHeading>{content.title}</PublicEntryHeading>
   <div className="entry-status-body">
    <EntryIllustration state={state}/>
   </div>
@@ -57,6 +58,6 @@ export function EntryStatus({state,user,onRetry,onLogin,preserveWork=false}:{rea
    </>}
   </div>
   </div>
-  <footer className={`entry-footnote${preserveWork||content.footnote?'':' entry-footnote-empty'}`} aria-hidden={!(preserveWork||content.footnote)}>{preserveWork?'请保留此页，在新标签页登录后返回。':content.footnote}</footer>
+  <PublicEntryFootnote>{preserveWork?'请保留此页，在新标签页登录后返回。':content.footnote}</PublicEntryFootnote>
  </div>;
 }

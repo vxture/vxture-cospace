@@ -1,3 +1,4 @@
+import {useAssistantReport} from './workspace-assistant';
 import {useUnsavedNavigation} from './unsaved-navigation';
 import {useOperationConfirmation} from './operation-confirmation';
 import {subscribeAppLocation} from './app-router';
@@ -49,6 +50,7 @@ export function OntologyWorkbench(){
   fetch(`${endpoint}/api/ontologies/${encodeURIComponent(authorized.ontology_id)}/${encodeURIComponent(authorized.version)}?${new URLSearchParams({sha256:authorized.sha256})}`,{signal:controller.signal}).then(async r=>{const body=await r.json();if(!r.ok)throw Error(message(body.detail));if(key(body.record)!==referenceKey||body.integrity!=='verified')throw Error('规则响应与所选版本不一致。');return body as Loaded;}).then(body=>{if(!controller.signal.aborted)setLoaded(body);}).catch(e=>{if(!controller.signal.aborted)setError(e.message);}).finally(()=>{if(!controller.signal.aborted)setReading(false);});
   return()=>{controller.abort();validation.current?.abort();};
  },[referenceKey,revision,versions]);
+ useAssistantReport({title:'本体规则检查',status:listing||reading?'loading':error?'error':'ready',note:error||(!versions.length?'当前规则库没有已登记版本。':!loaded?'请选择固定规则版本，核对类型与属性。':result?.status==='passed'?'本次对象校验通过。':undefined),tasks:listing||reading||error?[]:result?.status==='failed'?[{id:'validation',title:'处理对象校验问题',evidence:`本次校验发现 ${result.issues.length} 项问题。`,label:'定位校验结果',tone:'warning',run:()=>document.querySelector('[aria-label="草稿校验结果"]')?.scrollIntoView({behavior:'smooth',block:'center'})}]:!loaded&&versions.length?[{id:'version',title:'核对固定规则版本',evidence:`规则库已登记 ${versions.length} 个版本，请选择实际使用的版本。`,label:'选择版本',run:()=>(()=>{if(!rules)appNavigate('/ontology?'+new URLSearchParams({...Object.fromEntries(new URLSearchParams(location.search)),tab:'rules'}));else document.querySelector<HTMLSelectElement>('select[aria-label="选择本体版本"]')?.focus();})()}]:[]});
  function choose(value:string){
   const record=versions.find(v=>key(v)===value);const params=new URLSearchParams(location.search);
   for(const name of ['ontology_id','ontology_version','ontology_sha256'])params.delete(name);

@@ -1,3 +1,5 @@
+import {useAssistantReport} from './workspace-assistant';
+import {appNavigate} from './app-router';
 import React,{useEffect,useState} from 'react';
 import {Button,Card,CardHeader,CardTitle,CardContent,StatusBadge,Table,TableHeader,TableBody,TableHead,TableRow,TableCell} from '@vxture/design-system';
 import {ArrowsClockwise} from '@phosphor-icons/react';
@@ -28,8 +30,13 @@ export function useServiceReport(scene:SceneSpace|undefined,space:string,revisio
  const report=saved?.space===space?saved.report:undefined,error=saved?.space===space?saved.error:undefined;
  return {allowed,report,error,refresh:()=>setRefresh(value=>value+1)};
 }
+export function useServiceAssistantReport(allowed:boolean,report:Report|undefined,error:string|undefined,online=false){
+ const inspect=()=>{if(!online){const params=new URLSearchParams(location.search);params.set('tab','online');appNavigate('/services?'+params);return;}const details=document.querySelector<HTMLDetailsElement>('[data-service-diagnostics]');if(details){details.open=true;details.scrollIntoView({behavior:'smooth',block:'start'});}};
+ useAssistantReport({title:'服务运行检查',status:error?'error':allowed&&!report?'loading':'ready',note:error||(!allowed?'当前账号没有运行监测权限。':report?.coverage.partial?'当前统计窗口记录不完整。':'检查依据为当前场景全部版本的监测记录。'),tasks:!allowed||!report||error?[]:[...(report.counts.failed||report.counts.rejected||report.counts.refused?[{id:'errors',title:'核查调用异常',evidence:`当前统计窗口：${report.counts.failed} 次异常、${report.counts.rejected+report.counts.refused} 次拒绝。`,label:'核查异常',tone:'warning' as const,run:inspect}]:[]),...(report.configuration.state!=='configured'?[{id:'integration',title:'核对服务接入',evidence:configLabels[report.configuration.state]+'，需由部署管理员核对服务身份与授权配置。',label:'核对接入',run:inspect}]:[])]});
+}
 export function OnlineServiceMonitor({scene,space,revision}:{scene?:SceneSpace;space:string;revision:number}){
  const {allowed,report,error,refresh}=useServiceReport(scene,space,revision);
+ useServiceAssistantReport(allowed,report,error,true);
  if(!space)return <Card><CardContent className="pt-xl text-body-small text-muted-foreground">请从服务清单进入具体场景服务。</CardContent></Card>;
  if(!scene)return <Card><CardContent className="pt-xl text-body-small text-muted-foreground">正在核对当前空间授权，请稍候；若持续未显示，请刷新空间目录。</CardContent></Card>;
  if(!allowed)return <Card><CardContent className="pt-xl text-body-small text-muted-foreground">当前账号可使用已授权服务。调用监测与接入身份信息仅向空间发布管理员开放。</CardContent></Card>;
@@ -43,7 +50,7 @@ export function OnlineServiceMonitor({scene,space,revision}:{scene?:SceneSpace;s
     <div><h3 className="text-body font-medium mb-sm">已授权调用身份</h3><div className="flex flex-wrap gap-sm">{report.configuration.callers.length?report.configuration.callers.map(caller=><StatusBadge key={caller} tone="neutral">{caller}</StatusBadge>):<p className="text-body-small text-muted-foreground">暂无已配置的空间调用身份</p>}</div><p className="text-label-small text-muted-foreground mt-sm">一个调用身份可代理多个具身智能体，不表示设备数量或在线状态。</p></div>
    </>}
   </CardContent></Card>
-  {report&&<details className="service-inline-details"><summary>服务保障与异常诊断</summary><ServiceAssurancePanel space={space} assurance={report.assurance} outcomes={report.outcomes} callers={report.callers}/></details>}
+  {report&&<details className="service-inline-details" data-service-diagnostics><summary>服务保障与异常诊断</summary><ServiceAssurancePanel space={space} assurance={report.assurance} outcomes={report.outcomes} callers={report.callers}/></details>}
   {report&&<details className="service-inline-details"><summary>调用记录与版本分布</summary><Card><CardHeader><CardTitle className="text-heading-3">调用与版本</CardTitle></CardHeader><CardContent className="flex flex-col gap-lg">
    <div className="flex flex-wrap gap-sm" aria-label="调用最多的前十个版本">{report.versions.map(version=><StatusBadge key={version.publication_id} tone="neutral">Ver: {version.publication_id.slice(-8)} · {version.requests} 次</StatusBadge>)}</div>
    {report.recent.length?<div className="overflow-x-auto"><Table><TableHeader><TableRow><TableHead>请求时间</TableHead><TableHead>调用身份</TableHead><TableHead>版本</TableHead><TableHead>结果</TableHead><TableHead>耗时</TableHead></TableRow></TableHeader><TableBody>{report.recent.map((row,index)=><TableRow key={index}><TableCell>{time(row.at)}</TableCell><TableCell>{row.caller}</TableCell><TableCell title={row.publication}>Ver: {row.publication.slice(-8)}</TableCell><TableCell>{reasons[row.outcome]||'服务异常'} · {row.http_status}</TableCell><TableCell>{row.duration_ms} ms</TableCell></TableRow>)}</TableBody></Table></div>:<p className="text-body-small text-muted-foreground">当前窗口暂无调用记录。未记录到请求不代表设备离线。</p>}

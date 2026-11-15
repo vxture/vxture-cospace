@@ -7,7 +7,7 @@ import {serviceKinds,type ServiceSpace,type ServiceVersion} from './spatial-serv
 import {sceneServiceTabs,type SceneServiceTab} from './service-workspace-contract';
 import {serviceStateLabels,serviceVersionLabel} from './spatial-service-list';
 import {ServiceAccess} from './spatial-service-detail';
-import {OnlineServiceMonitor,useServiceReport} from './online-service-monitor';
+import {OnlineServiceMonitor,useServiceReport,useServiceAssistantReport} from './online-service-monitor';
 import {realScreenHref} from './real-space-data';
 import {locationLabel} from './geographic-location';
 import {ServiceRecipients} from './service-recipients';
@@ -26,6 +26,7 @@ export function FeedbackUnavailable({view='list'}:{view?:'cards'|'list'}){
 
 function ServiceOverview({group,version,revision}:{group:ServiceSpace;version:ServiceVersion;revision:number}){
  const {allowed,report,error}=useServiceReport(group.scene,group.scene.id,revision);
+ useServiceAssistantReport(allowed,report,error);
  const configLabels={configured:'接入已配置',not_configured:'接入未配置',not_granted:'未授权接入',unavailable:'接入配置异常'};
  const checkLabels={integration:'接入授权需核对',publication:'可分发版本需核对',freshness:'观测时效未核验',observation:'监测覆盖需核对'};
  const attention=report?.assurance.checks.filter(check=>check.state!=='pass')||[];

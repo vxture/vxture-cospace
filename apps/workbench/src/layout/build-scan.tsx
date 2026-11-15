@@ -1,3 +1,5 @@
+import {useAssistantReport} from './workspace-assistant';
+import {appNavigate} from './app-router';
 import React,{lazy,Suspense,useEffect,useState} from 'react';
 import {Button,Icon} from '@vxture/design-system';
 import {businessEndpoint} from './business-endpoint';
@@ -19,6 +21,7 @@ export function BuildScan(){
    if(!controller.signal.aborted)setMode(['cospace.build-process/0.1','cospace.lidar-build-process/0.1'].includes(record.process_profile)?'process':'static');
   }).catch(e=>{if(!controller.signal.aborted){setError(e.message);setMode('error');}});return()=>controller.abort();
  },[space,job,input,retry]);
+ useAssistantReport({title:'构建任务检查',status:mode==='error'?'error':mode==='loading'?'loading':'ready',note:mode==='error'?error:'当前画布跟随指定的场景、资料和构建任务。',tasks:mode==='static'||mode==='process'?[{id:'flow',title:'核查构建阶段',evidence:'前往此任务的构建记录，核对阶段状态与成果。',label:'进入构建记录',run:()=>appNavigate('/build?'+new URLSearchParams({space,job,input,tab:'flow'}))}]:[]});
  if(mode==='process')return <BuildProcess key={job} space={space} job={job} input={input}/>;
  if(mode==='static')return <StaticBuildScan/>;
  return <main className="build-scan dark" aria-label="全屏构建画布"><div className="build-scan-message" role={mode==='error'?'alert':'status'}><p>{mode==='error'?error:'正在读取构建任务…'}</p>{mode==='error'&&<Button size="sm" variant="outline" onClick={()=>setRetry(n=>n+1)}>重新读取</Button>}<Button asChild size="sm" variant="ghost"><a href={`/build?${new URLSearchParams({space,job,input,tab:'flow'})}`}>返回构建流程</a></Button></div></main>;

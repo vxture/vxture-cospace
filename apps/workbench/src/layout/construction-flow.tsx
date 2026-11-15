@@ -1,3 +1,5 @@
+import {useAssistantReport} from './workspace-assistant';
+import {buildAssistantReport} from './assistant-contract';
 import {candidateScreenHref} from './real-space-data';
 import {hasPreviewModelSummary} from './preview-model-contract';
 import {usePlatformSession} from './platform-auth';
@@ -7,8 +9,8 @@ import {SpaceSettings} from './space-settings';
 import {runGuarded} from './unsaved-navigation';
 import {appNavigate} from './app-router';
 import React,{useEffect,useState} from 'react';
-import {Button,Badge,StatusBadge,Drawer,Textarea,Select,SelectTrigger,SelectValue,SelectContent,SelectItem,Dialog,DialogContent,DialogHeader,DialogTitle,DialogDescription} from '@vxture/design-system';
-import {ArrowClockwise,ArrowUpRight,Database,Cube,Eye,Robot,ArrowRight,Plus,ClockCounterClockwise,Sparkle,UploadSimple,Broadcast,Desktop,CheckCircle,SidebarSimple,FileArrowUp,X,ArrowsOutSimple,ArrowsInSimple,Clock,WarningCircle,Circle,SpinnerGap,Layout,Cpu,MapPin,ListChecks} from '@phosphor-icons/react';
+import {Button,Badge,StatusBadge,Drawer,Select,SelectTrigger,SelectValue,SelectContent,SelectItem,Dialog,DialogContent,DialogHeader,DialogTitle,DialogDescription} from '@vxture/design-system';
+import {ArrowClockwise,ArrowUpRight,Database,Cube,Eye,Robot,ArrowRight,Plus,ClockCounterClockwise,UploadSimple,Broadcast,Desktop,CheckCircle,SidebarSimple,FileArrowUp,Clock,WarningCircle,Circle,SpinnerGap,Layout,Cpu,MapPin,ListChecks} from '@phosphor-icons/react';
 import {businessEndpoint as endpoint} from './business-endpoint';
 import {recordLink,useRecordNavigation} from './record-navigation';
 import {inputFormat} from './input-format';
@@ -40,12 +42,10 @@ export function ConstructionFlow({active=true}:{active?:boolean}={}){
  const platform=usePlatformSession(),capabilities=useSceneCapabilities();
  const canBuild=!platform||capabilities.includes('build.run');
  const [data,setData]=useState<Snapshot|null>(null),[error,setError]=useState(''),[busy,setBusy]=useState(true),[revision,setRevision]=useState(0);
- const [step,setStep]=useState('model'),[assistantOpen,setAssistantOpen]=useState(()=>innerWidth>=1200),[assistantWide,setAssistantWide]=useState(false),[restart,setRestart]=useState(false),[historyOpen,setHistoryOpen]=useState(()=>innerWidth>=1100);
+ const [step,setStep]=useState('model'),[restart,setRestart]=useState(false),[historyOpen,setHistoryOpen]=useState(()=>innerWidth>=1100);
  const draft=target.tab==='tasks';
  const [buildInfo,setBuildInfo]=useState<BuildInfo>({name:'',purpose:'',changes:''});
  useEffect(()=>{setBuildInfo({name:'',purpose:'',changes:''});},[target.space,target.tab,target.job]);
- useEffect(()=>{const toggle=()=>setAssistantOpen(v=>!v);window.addEventListener('cospace-build-assistant-toggle',toggle);return()=>window.removeEventListener('cospace-build-assistant-toggle',toggle);},[]);
- useEffect(()=>{window.dispatchEvent(new CustomEvent('cospace-build-assistant-state',{detail:assistantOpen}));return()=>{window.dispatchEvent(new CustomEvent('cospace-build-assistant-state',{detail:false}));};},[assistantOpen]);
  useEffect(()=>{let next='model';if(target.tab==='info')next='info';else if(draft)next='prepare';else if(target.tab==='candidate')next='review';setStep(next);},[target.job,target.space,target.tab,draft]);
  const [preflightOpen,setPreflightOpen]=useState(false);
  const [review,setReview]=useState<{candidate:string;revision:number}|null>(null);
@@ -111,6 +111,7 @@ export function ConstructionFlow({active=true}:{active?:boolean}={}){
  const totalEnd=job?.demo_timeline?.stages[3]?.end||confirmedAt||(failed?job?.finished_at:job?clockNow:undefined);
  const totalEstimated=!!job?.demo_timeline?.estimated||!!input?.registered_at_estimated||reviewEstimated;
  const stepNavigation=<nav className="build-step-nav" aria-label="构建环节">{steps.map((s,i)=>{const timing=stageTimes[i];return <div className="build-step-entry" key={s.id}><Button disabled={!canBuild} variant={step===s.id?'secondary':'ghost'} aria-current={step===s.id?'step':undefined} onClick={()=>void runGuarded(()=>{setStep(s.id);if(innerWidth<1100)setHistoryOpen(false);})}><s.icon size={16}/><strong>{String(i+1).padStart(2,'0')} {s.title}</strong><span className={`build-step-state build-step-state-${s.tone}`}><s.mark size={12}/>{s.status}</span></Button><dl className="build-step-timing"><div><dt>开始时间：</dt><dd>{shortTime(timing.start)}{timing.estimated&&<small title={job?.demo_timeline?.basis}>估算</small>}</dd></div><div><dt>完成时间：</dt><dd>{timing.end?shortTime(timing.end):'待完成'}</dd></div><div><dt>总计耗时：</dt><dd title={timing.start&&timing.end?`${Math.max(0,(Date.parse(timing.end)-Date.parse(timing.start))/1000).toFixed(1)} 秒${timing.estimated?'；依据登记、提交或选定时间估算':''}`:undefined}>{elapsed(timing.start,timing.end)}{timing.estimated&&timing.start&&timing.end&&<small>估算</small>}</dd></div></dl></div>;})}</nav>;
+ useAssistantReport(buildAssistantReport({loading:busy,error:error||data?.modelIssue||'',canBuild,canPublish:!platform||capabilities.includes('publication.manage'),inputs:data?.inputs.length||0,state:job?.state,model:!!model,selected,published:!!release},next=>{if(next==='publish')appNavigate(recordLink('delivery',{space:target.space,tab:'overview'}));else void runGuarded(()=>setStep(next));}));
  const materialPreparation=<BuildMaterials endpoint={endpoint} space={target.space} items={data?.inputs||[]} selectedId={job?.input_id||target.input} locked={!!job} onRegistered={id=>{setRevision(n=>n+1);if(draft)appNavigate(recordLink('build',{tab:'tasks',input:id}));}} onNext={()=>setStep('check')}/>;
  return <section className={`construction-flow build-desk ${historyOpen?'':'build-history-hidden'}`} aria-label="构建工作操作台">
   <aside className="build-history workflow-nav-panel" aria-label="构建导航与记录" id="build-navigation-panel">
@@ -174,7 +175,6 @@ export function ConstructionFlow({active=true}:{active?:boolean}={}){
    </>}
    </div>
   </div>
-  {assistantOpen&&<aside className={`build-assistant-column ${assistantWide?'build-assistant-wide':''}`} aria-label="构建智能助手" id="build-assistant-panel"><header><Sparkle size={18}/><h2>构建助手</h2><div className="build-assistant-header-actions"><Button variant="ghost" size="sm" aria-label={assistantWide?'收窄助手面板':'加宽助手面板'} title={assistantWide?'收窄至 320px':'加宽至 640px'} aria-pressed={assistantWide} onClick={()=>setAssistantWide(v=>!v)}>{assistantWide?<ArrowsInSimple size={16}/>:<ArrowsOutSimple size={16}/>}</Button><Button variant="ghost" size="sm" aria-label="关闭构建助手" onClick={()=>setAssistantOpen(false)}><X size={16}/></Button></div></header><div className="build-assistant-scroll" tabIndex={0}><div className="build-assistant-context"><span>当前构建</span><strong title={currentInput}>{currentInput}</strong></div><section className="build-support-body"><div className="build-assistant-welcome"><Sparkle size={16}/>构建指引 · {step==='info'?'基本信息':steps.find(s=>s.id===step)?.title}</div><p>{step==='info'?'场景基本信息由当前空间统一维护，修改后同步用于场景目录。地址和地图锚点不改变构建模型坐标。':step==='prepare'?'上传资料会登记到当前场景，也可使用已登记资料。已有点云执行整理与表达派生，不自动配准或重建。':step==='check'?'先选择本次资料并执行预检，再提交构建。文件完整性检查不代表坐标与精度验收。':step==='model'?'空间基准模型保留本次固定成果；视觉表达与计算表达来自同一模型，可以分别重新生成。新候选经核对后再发布。':'核对模型与两类表达的来源后，保存候选选择，再前往服务发布。已有固定发布不会自动切换。'}</p><details><summary>构建与重建</summary><p>补充资料后新建构建，或沿用空间基准模型重新生成指定表达。历史构建与固定发布保留。</p></details><details><summary>成果说明</summary><p>空间基准模型是本次构建保存的空间成果，尚不等同于独立验收的空间真值。计算表达仅覆盖观测表面；未知区域不代表可通行。</p></details><details><summary>接入与自动构建</summary><p>实时接入与客户端协同为规划能力，预留增量、批次完整与补传完成触发条件，尚未启用。</p></details></section></div><footer><StatusBadge tone="info">智能问答规划中</StatusBadge><p>当前提供与构建环节关联的操作指引。</p><div className="build-assistant-composer"><Textarea aria-label="向构建助手提问" placeholder="描述构建目标，或询问当前任务…" disabled/><div><small>智能问答尚未接入</small><Button disabled size="sm">发送<ArrowRight size={14}/></Button></div></div></footer></aside>}
 
   <Drawer open={preflightOpen} onClose={()=>setPreflightOpen(false)} side="right" width={400} title="预检历史" description={currentInput} closeLabel="关闭预检历史">{job?.input_id&&<PreflightHistory endpoint={endpoint} identity={job.input_id} embedded/>}</Drawer>
   <Dialog open={restart} onOpenChange={setRestart}><DialogContent><DialogHeader><DialogTitle>从哪个环节重新开始</DialogTitle><DialogDescription>将在新构建中选择或添加资料，当前构建与已有发布保持不变。</DialogDescription></DialogHeader><div className="build-restart-options"><Button variant="outline" onClick={()=>{setRestart(false);newBuild();}}><UploadSimple size={20}/><span><strong>资料准备</strong><small>补充或更换资料，检查后新建构建</small></span><ArrowRight size={16}/></Button><Button variant="outline" onClick={()=>{setRestart(false);appNavigate(recordLink('build',{tab:'tasks',...(job?.input_id?{input:job.input_id}:{}),...(job?.batch_ref?{batch:job.batch_ref.batch_id}:{})}));}}><Cube size={20}/><span><strong>模型构建</strong><small>重新选择并核验资料，生成模型与两类表达</small></span><ArrowRight size={16}/></Button><Button variant="outline" disabled={!stages?.frozen_model} onClick={()=>{setRestart(false);setStep('model');}}><Eye size={20}/><span><strong>表达派生</strong><small>沿用冻结模型，选择需要重新生成的空间表达</small></span><ArrowRight size={16}/></Button></div></DialogContent></Dialog>

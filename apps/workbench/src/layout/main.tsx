@@ -1,3 +1,6 @@
+import {WorkspaceAssistant} from './workspace-assistant';
+import {assistantAvailable,assistantScope} from './assistant-contract';
+import {sessionScopeKey} from './session-continuity';
 import {ManagementFrame} from './management-frame';
 import {ManagementWorkspace} from './management-workspace';
 import {managementHref} from './management-contract';
@@ -70,8 +73,6 @@ function App(){
  const [launcher,setLauncher]=useState(false);
  const [modal,setModal]=useState<{title:string;body:string}|null>(null);
  const [notice,setNotice]=useState('');
- const [buildAssistantOpen,setBuildAssistantOpen]=useState(false);
- useEffect(()=>{const sync=(event:Event)=>setBuildAssistantOpen(Boolean((event as CustomEvent).detail));window.addEventListener('cospace-build-assistant-state',sync);window.addEventListener('cospace-publication-assistant-state',sync);window.addEventListener('cospace-association-assistant-state',sync);return()=>{window.removeEventListener('cospace-build-assistant-state',sync);window.removeEventListener('cospace-publication-assistant-state',sync);window.removeEventListener('cospace-association-assistant-state',sync);};},[]);
  const {theme,setTheme}=useTheme();
  useEffect(()=>{const fn=()=>{setLauncher(false);};return subscribeAppLocation(fn);},[]);
  useEffect(()=>{
@@ -88,11 +89,13 @@ function App(){
  const full=async()=>{try{if(document.fullscreenElement)await document.exitFullscreen();else await document.documentElement.requestFullscreen();}catch{setNotice('当前浏览器未允许全屏。');}};
  const identity=<CoSpaceBrand href="/" label="CoSpace · 首页" iconButton/>;
  const launcherControl=<Popover open={launcher} onOpenChange={v=>{setLauncher(v);}}><PopoverTrigger asChild><ShellIconButton className="launcher-control" icon="app-grid" label="功能 Launcher" active={launcher}/></PopoverTrigger><ShellPanelContent align="start" sideOffset={12} className="product-launcher-panel"><ProductLauncher route={route} panorama={panorama} hasScene={!!new URLSearchParams(location.search).get('space')} hrefForRoute={target=>moduleLink(target,navigation.space)} onNavigate={()=>setLauncher(false)}/></ShellPanelContent></Popover>;
- const header=<ShellHeader height="md" leading={<>{launcherControl}{identity}<HeaderContext/></>} trailing={<div className="platform-header-actions"><ShellIconGroup label="全局工具">{(route==='build'||route==='delivery'||route==='association')&&<Button variant={buildAssistantOpen?'secondary':'ghost'} size="icon-sm" aria-label={route==='delivery'?'发布智能助手':route==='association'?'关联助手':'构建智能助手'} title={route==='delivery'?'发布智能助手':route==='association'?'关联助手':'构建智能助手'} disabled={!navigation.space} aria-expanded={buildAssistantOpen} onClick={()=>window.dispatchEvent(new Event(route==='delivery'?'cospace-publication-assistant-toggle':route==='association'?'cospace-association-assistant-toggle':'cospace-build-assistant-toggle'))}><Sparkle size={16}/></Button>}<ShellThemeToggle currentTheme={theme} onThemeChange={setTheme} buttonLabel="切换主题"/><HeaderSupportControls/><a href={managementHref('settings',navigation.space)} target="_blank" rel="noopener noreferrer" aria-label="配置与管理" title="配置与管理（新标签页）"><Gear size={16}/></a></ShellIconGroup><ShellIconGroup label="账户"><ProductUserMenu onLogout={exit}/></ShellIconGroup></div>}/>;
- if(preview&&route==='build'&&new URLSearchParams(location.search).get('screen')==='build')return <React.Suspense fallback={<main className="dark h-dvh bg-background text-foreground" role="status">正在打开构建画布…</main>}><BuildScan/></React.Suspense>;
+ const assistantEnabled=assistantAvailable(route);
+ const assistantKey=assistantScope(route,location.pathname+location.search,sessionScopeKey(platform));
+ const header=(assistant?:{open:boolean;toggle:()=>void})=><ShellHeader height="md" leading={<>{launcherControl}{identity}<HeaderContext/></>} trailing={<div className="platform-header-actions"><ShellIconGroup label="全局工具">{assistant&&<Button variant={assistant.open?'secondary':'ghost'} size="icon-sm" aria-label="智能助手" aria-controls="workspace-assistant" title="智能助手" aria-expanded={assistant.open} onClick={assistant.toggle}><Sparkle size={16}/></Button>}<ShellThemeToggle currentTheme={theme} onThemeChange={setTheme} buttonLabel="切换主题"/><HeaderSupportControls/><a href={managementHref('settings',navigation.space)} target="_blank" rel="noopener noreferrer" aria-label="配置与管理" title="配置与管理（新标签页）"><Gear size={16}/></a></ShellIconGroup><ShellIconGroup label="账户"><ProductUserMenu onLogout={exit}/></ShellIconGroup></div>}/>;
  if(preview&&route==='space'&&new URLSearchParams(location.search).get('embed')==='globe')return <React.Suspense fallback={<main role="status">正在打开三维地球…</main>}><GlobeEmbed/></React.Suspense>;
  const showLoginInfo=()=>setModal({title:'平台登录 · 独立接入验证',body:'已按 yucer 接通 OIDC + PKCE、中央会话与全局登出的独立验证入口。当前工程服务保持 UI 预览，尚未配置 CoSpace 平台客户端和业务空间授权。'});
  const renderWorkspace=()=>{
+  if(route==='build'&&new URLSearchParams(location.search).get('screen')==='build')return <React.Suspense fallback={<output className="flex flex-1 items-center justify-center" role="status">正在打开构建画布…</output>}><BuildScan/></React.Suspense>;
   if(route==='home')return <WorkspaceHome/>;
   if(route==='space'){
    if(new URLSearchParams(location.search).get('screen')==='space'){
@@ -111,7 +114,7 @@ function App(){
  };
  return <>
  {!preview?<LoginPage identity={identity} tools={<ShellThemeToggle currentTheme={theme} onThemeChange={setTheme} buttonLabel="切换主题"/>} login={showLoginInfo} enter={enter}/> :
- <div className="flex h-dvh flex-col overflow-hidden bg-background text-foreground" id="workbench-shell">{route==='space'&&new URLSearchParams(location.search).get('screen')==='space'?null:header}{renderWorkspace()}</div>}
+ <div className="flex h-dvh flex-col overflow-hidden bg-background text-foreground" id="workbench-shell">{assistantEnabled?<WorkspaceAssistant header={header} scope={assistantKey} route={route} scene={navigation.space}>{renderWorkspace()}</WorkspaceAssistant>:<>{route==='space'&&new URLSearchParams(location.search).get('screen')==='space'?null:header()}{renderWorkspace()}</>}</div>}
  <Dialog open={Boolean(modal)} onOpenChange={v=>{if(!v)setModal(null);}}><DialogContent><DialogHeader><DialogTitle>{modal?.title}</DialogTitle><DialogDescription>{modal?.body}</DialogDescription></DialogHeader><DialogFooter><Button onClick={()=>setModal(null)}>知道了</Button></DialogFooter></DialogContent></Dialog>
 
  {notice&&<div role="status" className="fixed bottom-lg left-lg z-notification rounded-md border border-border bg-popover px-lg py-md text-body-small text-popover-foreground shadow-notification">{notice}</div>}
