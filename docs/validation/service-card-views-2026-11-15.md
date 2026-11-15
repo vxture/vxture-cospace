@@ -17,7 +17,7 @@ Date: 2026-11-15.
   entries use a pale primary surface with heading, capabilities, release metadata
   and a bottom-right action. Feedback remains an unavailable placeholder, without
   fabricated feedback records, counts or actions.
-- Device cards have a minimum height of 232px, a responsive 300px minimum column
+- Device cards have a minimum height of 192px, a responsive 300px minimum column
   width, device name/form, top-right integration status, associated scenes and
   purpose tags. Six decorative SVG silhouettes represent aerial, quadruped,
   wheeled, tracked, humanoid and other forms. Silhouettes do not imply a vendor,
@@ -31,10 +31,14 @@ Date: 2026-11-15.
   and device responses. No production business records were changed.
 - Checked all five sections in card and list modes at 390, 1052 and 1536px.
   No document or entry content overflow was found. At 1052px device cards were
-  358px wide and 232px high; at 1536px they were 384px wide and 232px high.
+  358px wide and approximately 195px high; at 1536px they were 384px wide and approximately 195px high.
 - Checked mouse and keyboard switching, unchanged fixed-publication links across
   modes, opening a device detail, its associated-scene tab, and the add dialog.
 - Local screenshots and browser scripts remain under ignored output/.
+
+Service cards use compact 12px vertical gaps and 20px padding; service cards are
+approximately 220px high at the checked widths. Business icon tiles across card
+and list modes use the same pale primary surface and primary-colored icon.
 
 This is UI verification with synthetic records, not third-party device
 integration acceptance or a production deployment record.

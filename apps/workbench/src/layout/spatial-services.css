@@ -14,7 +14,7 @@
 .service-directory-list{display:flex;flex-direction:column;gap:16px}
 .service-list-row{display:grid;grid-template-columns:64px minmax(140px,1fr) minmax(280px,1.3fr) minmax(270px,1fr) 130px;align-items:center;gap:24px;padding:24px;min-height:132px;border:1px solid var(--border);border-radius:var(--radius-lg);background:var(--card);font-size:var(--body-small-font-size);transition:border-color .15s,box-shadow .15s}
 .service-list-row:hover,.service-list-row:focus-within{border-color:color-mix(in srgb,var(--primary) 35%,var(--border));box-shadow:0 3px 12px color-mix(in srgb,var(--primary) 5%,transparent)}
-.service-entry-symbol{display:flex;align-items:center;justify-content:center;width:64px;height:64px;color:var(--primary);background:var(--accent);border-radius:var(--radius-lg)}
+.service-entry-symbol{display:flex;align-items:center;justify-content:center;width:64px;height:64px;color:var(--primary);background:color-mix(in srgb,var(--primary) 7%,var(--card));border-radius:var(--radius-lg)}
 .service-entry-heading{display:flex;flex-direction:column;align-items:flex-start;gap:8px;min-width:0}
 .service-entry-title{display:flex;align-items:center;flex-wrap:wrap;gap:12px;min-width:0}
 .service-entry-title>a,.service-entry-name{margin:0;font-size:var(--body-font-size);font-weight:600;color:var(--foreground);overflow-wrap:anywhere}
@@ -81,13 +81,13 @@
 .service-workspace-shell > .service-directory-list{margin-top:24px}
 
 .service-card-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr));gap:16px}
-.service-card-grid>.service-list-row{grid-template-columns:40px minmax(0,1fr);grid-template-rows:auto auto 1fr auto;gap:20px 12px;min-height:264px;padding:24px;align-items:start;background:color-mix(in srgb,var(--primary) 3%,var(--card))}
-.service-card-grid .service-entry-symbol{grid-column:1;grid-row:1;width:40px;height:40px;background:color-mix(in srgb,var(--primary) 7%,var(--card))}
+.service-card-grid>.service-list-row{grid-template-columns:40px minmax(0,1fr);grid-template-rows:auto auto 1fr auto;gap:12px;min-height:208px;padding:20px;align-items:start;background:color-mix(in srgb,var(--primary) 3%,var(--card))}
+.service-card-grid .service-entry-symbol{grid-column:1;grid-row:1;width:40px;height:40px}
 .service-card-grid .service-entry-symbol>svg{width:26px;height:26px}
 .service-card-grid .service-entry-heading{grid-column:2;grid-row:1;gap:6px}
 .service-card-grid .service-entry-title{gap:6px 8px}
 .service-card-grid .service-entry-capability-group{grid-column:1/-1;grid-row:2;border:0;padding:0;gap:8px}
-.service-card-grid .service-entry-label{display:block}
-.service-card-grid .service-entry-release{grid-column:1/-1;grid-row:3;border:0;padding:0;gap:8px}
+.service-card-grid .service-entry-label{display:none}
+.service-card-grid .service-entry-release{grid-column:1/-1;grid-row:3;border:0;padding:0;gap:6px}
 .service-card-grid .service-entry-action{grid-column:1/-1;grid-row:4;align-self:end;justify-self:end}
 .service-card-grid .service-entry-action>[data-slot=button]{width:auto}
