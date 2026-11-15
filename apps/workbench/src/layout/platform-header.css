@@ -5,7 +5,6 @@
 .cospace-brand-button:focus-visible{outline:2px solid var(--ring);outline-offset:-2px}
 .cospace-brand span{font-size:18px;font-weight:600;line-height:24px;letter-spacing:-.3px}
 .cospace-brand:focus-visible{outline:2px solid var(--ring);outline-offset:4px}
-.platform-header button[aria-label="功能 Launcher"]{margin-right:8px}
 .platform-product-brand{display:inline-flex;align-items:center;height:32px;flex-shrink:0}
 .platform-brand{display:inline-flex;align-items:center;gap:8px;height:32px;color:var(--foreground);font-size:16px;font-weight:600;line-height:24px}
 .platform-brand img{display:block;width:24px;height:24px}
