@@ -1,9 +1,21 @@
-# Device detail: continuous sections and scoped editing
+# Device detail: shared service frame and scoped editing
 
-Date: 2026-11-15. Replaces the tabbed device-detail presentation introduced by
-`service-card-overview-actions-2026-11-15.md`. Card/list behavior is unchanged.
+Date: 2026-11-15. The current layout follows the scene-service detail frame.
+The earlier continuous-section layout is retained below as historical context.
 
-## Design and routing
+## Current layout: scene-service detail frame
+
+- Device detail shares the scene-service header, sticky position, underline tabs,
+  and card styles. The title remains the device name. The device's four tabs
+  show their own content and retain the existing scoped editors.
+- Existing deviceTab links select the corresponding panel. Changing tabs keeps
+  the device request and restarts content scroll at the top. An entry from a
+  scene retains its scene and publication but shows one header and one tab bar.
+- Browser verification at 390px and 1052px confirmed fixed header position on
+  scroll, matching tab and card styling, no horizontal overflow, preserved
+  scene context, no refetch on tab changes and both independent edit flows.
+
+## Earlier continuous layout
 
 - The global detail page uses the device name as its only primary heading, with
   smart-device category and morphology below. Remove the redundant generic
@@ -35,8 +47,13 @@ Date: 2026-11-15. Replaces the tabbed device-detail presentation introduced by
 ## Verification
 
 - TypeScript/Vite production build and all 98 frontend tests passed.
+- Current-layout browser QA at 390px and 1052px verified the shared sticky
+  heading, 44px underline tabs, card radius/padding, independent panels, tab
+  reload, preserved scene/publication URLs, readonly controls and scoped edits.
+  Tab switching does not refetch device data and resets content scroll.
 - Local Playwright QA used synthetic devices and mocked API responses only.
-  At 390/1052/1536px, checked section visibility, title hierarchy, absence of
+  Earlier continuous-layout QA at 390/1052/1536px checked section visibility,
+  title hierarchy, absence of
   tabs/back button, responsive information columns and horizontal overflow.
 - Exercised information-save preservation of relations, relation-save
   preservation of information, expected revision advancement, retained conflict
