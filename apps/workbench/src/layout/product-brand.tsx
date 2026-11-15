@@ -2,8 +2,10 @@ import React from 'react';
 import productLogo from '../assets/cospace-logo.svg';
 import platformLogo from '@vxture/design-system/assets/brands/vx-brand/vxture-logo-icon.svg';
 
-export function CoSpaceBrand({href='/space',label='CoSpace · 我的场景'}:{href?:string;label?:string}){
- return <a className="cospace-brand" href={href} aria-label={label}><img src={productLogo} alt="" width={28} height={28}/><span>CoSpace</span></a>;
+export function CoSpaceBrand({href='/space',label='CoSpace · 我的场景',iconButton=false}:{href?:string;label?:string;iconButton?:boolean}){
+ const logo=<img src={productLogo} alt="" width={28} height={28}/>;
+ if(iconButton)return <div className="cospace-brand"><a className="cospace-brand-button" href={href} aria-label={label}>{logo}</a><span>CoSpace</span></div>;
+ return <a className="cospace-brand" href={href} aria-label={label}>{logo}<span>CoSpace</span></a>;
 }
 
 // Public entry pages identify both the platform and its product.
