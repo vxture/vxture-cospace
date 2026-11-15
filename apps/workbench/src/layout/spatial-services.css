@@ -1,15 +1,16 @@
-/* DS supplies controls, tabs, badges and surfaces. Product CSS arranges the
-   service ledger and the single-scene workspace, without scene cover cards. */
+/* DS supplies controls, tabs and badges; product CSS arranges service entries. */
 .spatial-services{display:flex;overflow:hidden;background:var(--card)}
 .spatial-service-content{flex:1;min-width:0;overflow:auto;container-type:inline-size}
 .service-workspace-shell{width:100%;max-width:1536px;margin-inline:auto;padding:20px 48px 48px}
 .service-list-toolbar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;margin-block:24px}
 .service-list-count{font-size:var(--body-small-font-size);color:var(--muted-foreground)}
+.service-list-view-group{display:flex;align-items:center;gap:12px;flex-shrink:0}
 .service-list-filters{display:flex;align-items:center;gap:12px;min-width:0;flex:0 1 510px}
 .service-list-filters .service-list-state-select{width:160px;flex:0 0 160px}
 .service-list-search{position:relative;min-width:120px;flex:1}
 .service-list-search>svg{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--muted-foreground);pointer-events:none}
-.service-list-search input{padding-left:36px;width:100%}
+.service-list-search input{padding-left:36px;width:100%;height:32px}
+.service-list-state-select select{height:32px}
 .service-directory-list{display:flex;flex-direction:column;gap:16px}
 .service-list-row{display:grid;grid-template-columns:64px minmax(140px,1fr) minmax(280px,1.3fr) minmax(270px,1fr) 130px;align-items:center;gap:24px;padding:24px;min-height:132px;border:1px solid var(--border);border-radius:var(--radius-lg);background:var(--card);font-size:var(--body-small-font-size);transition:border-color .15s,box-shadow .15s}
 .service-list-row:hover,.service-list-row:focus-within{border-color:color-mix(in srgb,var(--primary) 35%,var(--border));box-shadow:0 3px 12px color-mix(in srgb,var(--primary) 5%,transparent)}
@@ -78,3 +79,15 @@
 @media(max-width:639px){.service-mobile-navigation{position:sticky;top:20px;z-index:11;height:32px;min-height:32px;margin-bottom:8px;background:var(--card)}.scene-service-top{top:60px;box-shadow:0 -60px 0 var(--card)}}
 .service-list-row:focus-within{background:color-mix(in srgb,var(--accent) 38%,var(--card))}
 .service-workspace-shell > .service-directory-list{margin-top:24px}
+
+.service-card-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr));gap:16px}
+.service-card-grid>.service-list-row{grid-template-columns:40px minmax(0,1fr);grid-template-rows:auto auto 1fr auto;gap:20px 12px;min-height:264px;padding:24px;align-items:start;background:color-mix(in srgb,var(--primary) 3%,var(--card))}
+.service-card-grid .service-entry-symbol{grid-column:1;grid-row:1;width:40px;height:40px;background:color-mix(in srgb,var(--primary) 7%,var(--card))}
+.service-card-grid .service-entry-symbol>svg{width:26px;height:26px}
+.service-card-grid .service-entry-heading{grid-column:2;grid-row:1;gap:6px}
+.service-card-grid .service-entry-title{gap:6px 8px}
+.service-card-grid .service-entry-capability-group{grid-column:1/-1;grid-row:2;border:0;padding:0;gap:8px}
+.service-card-grid .service-entry-label{display:block}
+.service-card-grid .service-entry-release{grid-column:1/-1;grid-row:3;border:0;padding:0;gap:8px}
+.service-card-grid .service-entry-action{grid-column:1/-1;grid-row:4;align-self:end;justify-self:end}
+.service-card-grid .service-entry-action>[data-slot=button]{width:auto}

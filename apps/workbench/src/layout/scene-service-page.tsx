@@ -13,8 +13,8 @@ import {locationLabel} from './geographic-location';
 import {ServiceRecipients} from './service-recipients';
 import {ServiceDirectoryRow} from './service-directory-row';
 
-export function FeedbackUnavailable(){
- return <div className="service-directory-list"><ServiceDirectoryRow label="态势反馈尚未开放" symbol={<UploadSimple size={36} weight="duotone"/>}
+export function FeedbackUnavailable({view='list'}:{view?:'cards'|'list'}){
+ return <div className={view==='cards'?'service-card-grid':'service-directory-list'}><ServiceDirectoryRow label="态势反馈尚未开放" symbol={<UploadSimple size={36} weight="duotone"/>}
   heading={<h2 className="service-entry-name">态势反馈</h2>}
   capabilities={<span className="service-project">开放后可查看反馈记录和处理进展。</span>}
   metadata={<StatusBadge size="sm" icon={false} tone="neutral">尚未开放</StatusBadge>}/>
