@@ -33,5 +33,26 @@
     "archive": "vxture-design-ui-12.1.0.tgz",
     "sha256": "0d76640a160fa7946e47482ba9e806676f7fa4a58cd1a77a1e10fe5e13c2e678",
     "source": "https://npm.pkg.github.com/@vxture/design-ui/-/design-ui-12.1.0.tgz"
+  },
+  {
+    "sha256": "63e64bc0bb0b4f43a9760d06751b02e4fa7ac33d925bac7a14bdd5d5bb45b4e0",
+    "source": "https://npm.pkg.github.com/@vxture/design-system/-/design-system-15.6.1.tgz",
+    "name": "@vxture/design-system",
+    "version": "15.6.1",
+    "archive": "vxture-design-system-15.6.1.tgz"
+  },
+  {
+    "sha256": "d69ab3f3967eff5dd9cdaef5399e1748a56cf6bf44468bea2fbca5bff5fa5125",
+    "source": "https://npm.pkg.github.com/@vxture/design-ui/-/design-ui-12.5.1.tgz",
+    "name": "@vxture/design-ui",
+    "version": "12.5.1",
+    "archive": "vxture-design-ui-12.5.1.tgz"
+  },
+  {
+    "sha256": "8fbb544549145aa2adc62099c46fd5c5ab2205c3f9fe555242cfccb720377156",
+    "source": "https://npm.pkg.github.com/@vxture/design-tokens/-/design-tokens-4.1.0.tgz",
+    "name": "@vxture/design-tokens",
+    "version": "4.1.0",
+    "archive": "vxture-design-tokens-4.1.0.tgz"
   }
 ]

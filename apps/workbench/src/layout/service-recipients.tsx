@@ -1,9 +1,10 @@
 import React,{useEffect,useId,useRef,useState} from 'react';
-import {Button,Checkbox,Drawer,Dialog,DialogContent,DialogHeader,DialogTitle,DialogDescription,Input,NativeSelect,StatusBadge,Tabs,TabsContent,TabsList,TabsTrigger} from '@vxture/design-system';
-import {AirplaneTilt,PawPrint,Car,Robot,PersonSimpleWalk,Shapes,Plus,MagnifyingGlass,ArrowsClockwise,SquaresFour,ListBullets,Check,ArrowRight,X} from '@phosphor-icons/react';
+import {ViewModeSwitch,Button,Checkbox,Drawer,Dialog,DialogContent,DialogHeader,DialogTitle,DialogDescription,Input,NativeSelect,StatusBadge,Tabs,TabsContent,TabsList,TabsTrigger} from '@vxture/design-system';
+import {AirplaneTilt,PawPrint,Car,Robot,PersonSimpleWalk,Shapes,Plus,MagnifyingGlass,ArrowsClockwise,Check,ArrowRight,X} from '@phosphor-icons/react';
 import {businessEndpoint} from './business-endpoint';
 import {usePlatformSession} from './platform-auth';
 import {ServiceDirectoryRow} from './service-directory-row';
+import {DeviceArtwork} from './device-artwork';
 import './service-recipients.css';
 
 const forms={aerial:{label:'飞行式',example:'无人机',icon:AirplaneTilt},quadruped:{label:'四足式',example:'机器狗、四足机器人',icon:PawPrint},wheeled:{label:'轮式',example:'轮式机器人、移动底盘',icon:Car},tracked:{label:'履带式',example:'履带机器人',icon:Robot},humanoid:{label:'人形式',example:'人形机器人',icon:PersonSimpleWalk},other:{label:'其他形态',example:'其他足式、复合移动等',icon:Shapes}};
@@ -29,7 +30,7 @@ function RecipientWorkspace({spaceId,revision,csrf}:{spaceId:string;revision:num
  const [data,setData]=useState<Directory|null>(null),[loading,setLoading]=useState(true),[error,setError]=useState(''),[refresh,setRefresh]=useState(0);
  const [query,setQuery]=useState(''),[morphology,setMorphology]=useState(''),[purpose,setPurpose]=useState(''),[scene,setScene]=useState(''),[offset,setOffset]=useState(0);
  const [detail,setDetail]=useState<Recipient|null>(null),[editor,setEditor]=useState<{record?:Recipient;draft:Draft}|null>(null),[notice,setNotice]=useState('');
- const [linkExisting,setLinkExisting]=useState(false),[view,setView]=useState<'cards'|'list'>('list');
+ const [linkExisting,setLinkExisting]=useState(false),[view,setView]=useState<'cards'|'list'>('cards');
  useEffect(()=>{
   const controller=new AbortController();setLoading(true);setError('');setDetail(null);
   const params=new URLSearchParams({offset:String(offset),limit:'20'});
@@ -48,7 +49,7 @@ function RecipientWorkspace({spaceId,revision,csrf}:{spaceId:string;revision:num
  function edit(record:Recipient){setDetail(null);setEditor({record,draft:{name:record.name,morphology:record.morphology,morphology_note:record.morphology_note,manufacturer:record.manufacturer,model:record.model,external_id:record.external_id,contact:record.contact,relations:structuredClone(record.relations)}});}
  return <section className="recipient-workspace" aria-label={spaceId?'此场景关联的设备':'智能设备'}>
   <div className="recipient-operation-bar">
-   <div className="recipient-view-group"><div className="recipient-view-switch" role="group" aria-label="显示方式"><Button variant="outline" size="icon-xl" aria-label="卡片视图" aria-pressed={view==='cards'} onClick={()=>setView('cards')}><SquaresFour size={16}/></Button><Button variant="outline" size="icon-xl" aria-label="列表视图" aria-pressed={view==='list'} onClick={()=>setView('list')}><ListBullets size={16}/></Button></div><span className="recipient-count" aria-live="polite">{loading?'正在读取…':error?'暂不可读':`${data?.total||0} 台设备`}</span></div>
+   <div className="recipient-view-group"><ViewModeSwitch value={view} onChange={setView} ariaLabel="显示方式" labels={{cards:'卡片视图',list:'列表视图'}}/><span className="recipient-count" aria-live="polite">{loading?'正在读取…':error?'暂不可读':`${data?.total||0} 台设备`}</span></div>
    <div className="recipient-operation-right"><div className="recipient-filter-group">
     <div className="recipient-search"><MagnifyingGlass size={16}/><Input aria-label="搜索设备" placeholder="搜索名称、标识或厂家" maxLength={160} value={query} onChange={e=>{setQuery(e.target.value);setOffset(0);}}/></div>
     <NativeSelect wrapperClassName="recipient-filter-select" aria-label="设备形态" value={morphology} onChange={e=>{setMorphology(e.target.value);setOffset(0);}}><option value="">全部设备形态</option>{Object.entries(forms).map(([key,value])=><option value={key} key={key}>{value.label}</option>)}</NativeSelect>
@@ -61,7 +62,12 @@ function RecipientWorkspace({spaceId,revision,csrf}:{spaceId:string;revision:num
   {loading?<p role="status" className="service-list-empty">正在读取设备…</p>:error?<div role="alert" className="service-list-empty"><p>{error}</p><Button variant="outline" onClick={()=>setRefresh(v=>v+1)}>重新加载</Button></div>:!data?.recipients.length?<div className="service-list-empty"><h2>{query||morphology||purpose||scene?'没有匹配的设备':spaceId?'此场景尚未关联设备':'尚未添加设备'}</h2><p>登记设备形态与接入用途后，可继续配置厂家对接。登记不会自动开通服务权限。</p>{(query||morphology||purpose||scene||offset>0)&&<Button variant="outline" onClick={()=>{setQuery('');setMorphology('');setPurpose('');setScene('');setOffset(0);}}>清除筛选</Button>}</div>:<div className={view==='cards'?'recipient-card-grid':'service-directory-list'}>{data.recipients.map(record=>{
    const links=record.relations.filter(r=>!spaceId||r.space_id===spaceId),purposes=[...new Set(links.flatMap(r=>r.purposes))];const Shape=forms[record.morphology].icon;
    const sceneNames=links.map(r=>data.spaces.find(s=>s.id===r.space_id)?.name||r.space_id).join('、');
-   if(view==='cards')return <article className="recipient-tile" key={record.id}><div className="recipient-device-icon"><Shape size={24}/></div><div className="recipient-tile-body"><div className="recipient-card-heading"><strong title={record.name}>{record.name}</strong><span className="recipient-form-label">{forms[record.morphology].label}</span><span className="recipient-tile-status"><StatusBadge size="sm" tone="neutral">待厂家对接</StatusBadge></span></div><div className="recipient-card-summary"><span title={sceneNames}>{sceneNames||'未关联场景'}</span><div className="recipient-tags">{purposes.map(p=><StatusBadge size="sm" tone="neutral" key={p}>{purposeNames[p]}</StatusBadge>)}</div></div></div><Button variant="outline" size="icon-xl" aria-label={`查看${record.name}详情`} onClick={()=>setDetail(record)}><ArrowRight size={16}/></Button></article>;
+   if(view==='cards')return <article className="recipient-tile" aria-label={record.name} key={record.id}>
+    <DeviceArtwork morphology={record.morphology}/>
+    <header className="recipient-tile-header"><div className="recipient-device-icon"><Shape size={24} weight="duotone"/></div><div className="recipient-tile-title"><h3 title={record.name}>{record.name}</h3><span className="recipient-form-label">{forms[record.morphology].label}</span></div><StatusBadge size="sm" icon={false} tone="neutral">待厂家对接</StatusBadge></header>
+    <div className="recipient-tile-scenes"><span>关联场景</span><p title={sceneNames}>{sceneNames||'未关联场景'}</p></div>
+    <footer className="recipient-tile-footer"><div className="recipient-tags">{purposes.length?purposes.map(p=><StatusBadge size="sm" tone="neutral" key={p}>{purposeNames[p]}</StatusBadge>):<span className="recipient-form-label">未配置用途</span>}</div><Button variant="outline" size="icon-xl" aria-label={`查看${record.name}详情`} onClick={()=>setDetail(record)}><ArrowRight size={16}/></Button></footer>
+   </article>;
    return <ServiceDirectoryRow key={record.id} label={record.name} symbol={<Shape size={36} weight="duotone"/>}
     heading={<><h3 className="service-entry-name">{record.name}</h3><span className="service-project">{forms[record.morphology].label}{(record.manufacturer||record.model)&&` · ${[record.manufacturer,record.model].filter(Boolean).join(' / ')}`}</span></>}
     capabilities={<><span className="service-entry-label">接入用途</span><div className="recipient-tags">{purposes.length?purposes.map(p=><StatusBadge size="sm" tone="neutral" key={p}>{purposeNames[p]}</StatusBadge>):<span className="service-project">未配置用途</span>}</div></>}
