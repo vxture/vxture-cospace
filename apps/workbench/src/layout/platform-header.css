@@ -47,3 +47,7 @@
 .platform-header a[aria-label="配置与管理"]:focus-visible{outline:2px solid var(--ring);outline-offset:2px}
 
 .platform-header[data-surface=card],.platform-header[data-surface=background]{border-bottom:1px solid var(--border);box-shadow:none}
+
+.platform-header .platform-assistant-entry{width:32px;height:32px;min-width:32px;border-radius:var(--radius-lg);color:var(--ai-text)}
+.platform-header button.platform-assistant-entry[aria-label] svg{width:24px;height:24px}
+.platform-header .platform-assistant-entry[aria-expanded=true]{background:var(--ai-muted)}
