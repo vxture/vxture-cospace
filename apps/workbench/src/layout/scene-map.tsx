@@ -1,7 +1,7 @@
 import {MapLoading} from './map-loading';
 import {useSceneControls} from './scene-selection';
 import React,{useEffect,useMemo,useRef,useState} from 'react';
-import {Button,Input,SegmentedControl,Popover,PopoverTrigger,PopoverContent,Switch,Tabs,TabsList,TabsTrigger,Tooltip,TooltipTrigger,TooltipContent,useTheme} from '@vxture/design-system';
+import {Button,Input,SegmentedControl,Popover,PopoverTrigger,PopoverContent,Switch,Tooltip,TooltipTrigger,TooltipContent,useTheme} from '@vxture/design-system';
 import {SquaresFour,MagnifyingGlass,CaretUp,CaretDown,Crosshair,Plus,Minus,SlidersHorizontal,InfoIcon,PaperPlaneIcon,Cube,ListBullets,ArrowCounterClockwise,X} from '@phosphor-icons/react';
 import type {SceneSpace} from './scene-directory';
 import {scenePhases,scenePhase,filterScenes,type ScenePhase} from './scene-catalog-contract';
@@ -70,7 +70,7 @@ export function AmapSceneMap({spaces,loading,error,onBack,onRefresh,onViewChange
   <div ref={host} className="scene-map-canvas" role="region" aria-label="场景分布地图"/>
   {status.startsWith('正在')&&<MapLoading overlay/>}
   <div className="scene-map-heading"><ListBullets size={16} aria-hidden="true"/><h1>空间全景</h1><span className="scene-map-total" aria-label="场景总数">{spaces.length}</span><Button size="icon-xl" variant="ghost" aria-label={collapsed?'展开场景清单':'收起场景清单'} aria-expanded={!collapsed} aria-controls="scene-map-directory" onClick={()=>updatePreference('directoryExpanded',collapsed)}>{collapsed?<CaretDown size={16}/>:<CaretUp size={16}/>}</Button></div>
-  <Tabs className="scene-map-phases" value={phase} onValueChange={setPhase}><TabsList aria-label="地图场景状态"><TabsTrigger value="all">全部</TabsTrigger>{Object.entries(scenePhases).map(([value,state])=><TabsTrigger key={value} value={value}>{state.label}</TabsTrigger>)}</TabsList></Tabs>
+  <div className="scene-map-phases"><SegmentedControl ariaLabel="地图场景状态" value={phase} onChange={setPhase} items={[{value:'all',label:'全部'},...Object.entries(scenePhases).map(([value,state])=>({value,label:state.label}))]}/></div>
   <Button className="scene-map-back" size="xl" variant="secondary" onClick={onBack}><SquaresFour size={16}/>我的场景</Button>
   {!collapsed&&<aside id="scene-map-directory" className="scene-map-directory" aria-label="场景清单"><div className="scene-map-search"><MagnifyingGlass size={16}/><Input value={query} aria-label="搜索地图场景" placeholder="搜索场景、项目或位置" onChange={e=>setQuery(e.target.value)}/></div><div className="scene-map-items">
    {loading&&<p role="status">正在读取场景…</p>}{error&&<div role="alert"><p>{error}</p><Button size="xl" variant="secondary" onClick={onRefresh}>重新读取</Button></div>}

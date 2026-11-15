@@ -108,8 +108,7 @@ html:has(.entry-lab){scrollbar-gutter:stable}
 /* Published uses brand blue; normal work in progress uses info sky blue. */
 .entry-card[data-tone=brand]{--scene-tone:var(--primary);--scene-surface:color-mix(in srgb,var(--primary) 7%,var(--card));--scene-ink:var(--primary);--scene-border:var(--primary)}
 .entry-card[data-tone=neutral] .scene-cover{filter:grayscale(1)}
-.entry-layout-switch{display:flex;gap:2px;flex:none;padding:3px;border:1px solid var(--border);border-radius:8px}
-.entry-layout-switch button{width:30px;height:30px;padding:0}
+
 .entry-catalog-filters{display:flex;align-items:center;justify-content:flex-end;gap:10px;min-width:0;flex:1;margin-left:auto}
 .entry-catalog-filters>input{width:clamp(140px,22vw,300px);min-width:0}
 .entry-catalog-filters>span:has(select){width:126px;flex:none}
@@ -120,11 +119,10 @@ html:has(.entry-lab){scrollbar-gutter:stable}
 .entry-layout-list .entry-card-body{padding:16px 20px}
 @media(max-width:1100px){.entry-catalog-filters{gap:8px}.entry-catalog-filters>span:has(select){width:112px}.entry-catalog-filters>span:last-child{width:164px}.entry-catalog-filters>input{width:140px}}
 @media(max-width:850px){.entry-catalog-operations{flex-wrap:wrap;justify-content:space-between}.entry-catalog-filters{flex-wrap:wrap;flex:1;justify-content:flex-end}.entry-catalog-filters>input{flex-basis:100%;max-width:100%}.entry-layout-list .entry-card{grid-template-columns:220px minmax(0,1fr)}}
-@media(max-width:700px){.entry-layout-switch{align-self:flex-start}.entry-catalog-filters{flex-basis:100%}.entry-catalog-filters>input{width:100%}.entry-catalog-filters>span:has(select){flex:1;width:auto;min-width:0}.entry-catalog-filters>span:last-child{flex:1.45}.entry-layout-list .entry-card{grid-template-columns:minmax(0,1fr)}.entry-layout-list .entry-card-visual{display:grid;grid-template-columns:112px minmax(0,1fr);align-items:center}.entry-layout-list .entry-card-heading{position:relative;grid-column:2;grid-row:1;padding:10px}.entry-layout-list .entry-card-title{flex-direction:column;align-items:flex-start}.entry-layout-list .entry-card-title h2{white-space:normal}.entry-layout-list .entry-card-cover{grid-column:1;grid-row:1}.entry-layout-list .entry-card-body{padding:10px 12px}.entry-layout-list .scene-cover-caption{display:none}}
+@media(max-width:700px){.entry-catalog-filters{flex-basis:100%}.entry-catalog-filters>input{width:100%}.entry-catalog-filters>span:has(select){flex:1;width:auto;min-width:0}.entry-catalog-filters>span:last-child{flex:1.45}.entry-layout-list .entry-card{grid-template-columns:minmax(0,1fr)}.entry-layout-list .entry-card-visual{display:grid;grid-template-columns:112px minmax(0,1fr);align-items:center}.entry-layout-list .entry-card-heading{position:relative;grid-column:2;grid-row:1;padding:10px}.entry-layout-list .entry-card-title{flex-direction:column;align-items:flex-start}.entry-layout-list .entry-card-title h2{white-space:normal}.entry-layout-list .entry-card-cover{grid-column:1;grid-row:1}.entry-layout-list .entry-card-body{padding:10px 12px}.entry-layout-list .scene-cover-caption{display:none}}
 /* Compact controls, matching the 32px operation row. */
 .entry-catalog-operations input,.entry-catalog-operations select{height:32px;min-height:32px;padding-block:4px}
-.entry-layout-switch{height:32px;box-sizing:border-box;padding:2px}
-.entry-layout-switch button{height:26px;min-height:26px;width:28px}
+
 .entry-catalog-filters>span:last-child{width:136px}
 .entry-release-version{font-size:10px;color:var(--scene-ink);white-space:nowrap;flex:none}
 .entry-mode-map .entry-catalog-operations{display:none}
@@ -248,10 +246,8 @@ html:has(.entry-lab){scrollbar-gutter:stable}
 .entry-mode-map .entry-map-note{left:380px}
 @media(max-width:700px){.entry-map-heading{left:12px;top:12px}.entry-mode-map .entry-list{top:56px;left:12px;width:min(336px,calc(100% - 72px));bottom:32px;max-height:none;padding:10px}.entry-map-directory-controls{grid-template-columns:minmax(0,1fr) 108px;gap:8px}.entry-mode-map .entry-map-note{left:12px}.entry-map-summary{font-size:14px}.entry-mode-map .entry-selection{max-height:45dvh}}
 /* Map status controls and symbols share the design-system semantic palette. */
-.entry-phase-switch{position:absolute;z-index:5;top:24px;left:50%;transform:translateX(-50%);display:grid;grid-template-columns:repeat(7,64px);height:36px;padding:3px;border:1px solid var(--border);border-radius:9px;background:color-mix(in srgb,var(--background) 80%,transparent);backdrop-filter:blur(8px);box-shadow:var(--shadow-overlay);isolation:isolate}
-.entry-phase-switch button{position:relative;z-index:1;background:transparent;font-size:14px;white-space:nowrap;border-radius:6px;color:var(--muted-foreground)}
-.entry-phase-switch button[aria-pressed=true]{color:var(--primary);font-weight:500}
-.entry-phase-track{position:absolute;inset:3px auto 3px 3px;width:64px;background:var(--card);border-radius:6px;box-shadow:var(--shadow-raised);transform:translateX(calc(var(--phase-index)*64px));transition:transform .18s ease}
+.entry-phase-switch{position:absolute;z-index:5;top:24px;left:50%;transform:translateX(-50%);max-width:calc(100% - 24px);overflow-x:auto;scrollbar-width:none}
+
 .entry-mode-map .entry-list{bottom:104px;background:color-mix(in srgb,var(--background) 58%,transparent);backdrop-filter:blur(3px)}
 .entry-map-directory-controls{grid-template-columns:minmax(0,1fr);padding-bottom:10px}
 .entry-mode-map .entry-catalog-operations{display:none}
@@ -268,21 +264,18 @@ html:has(.entry-lab){scrollbar-gutter:stable}
 .entry-map-legend{position:absolute;z-index:4;left:24px;bottom:32px;display:flex;align-items:center;gap:14px;padding:10px 12px;border:1px solid var(--border);border-radius:8px;background:color-mix(in srgb,var(--background) 80%,transparent);backdrop-filter:blur(6px);box-shadow:var(--shadow-raised);font-size:12px}
 .entry-map-legend>span{display:flex;align-items:center;gap:6px;white-space:nowrap}
 .entry-legend-cluster{display:grid;place-items:center;width:18px;height:18px;border-radius:50%;background:#273e68;color:white;font-size:10px;font-style:normal}
-@media(max-width:1100px){.entry-phase-switch{grid-template-columns:repeat(7,58px)}.entry-phase-track{width:58px;transform:translateX(calc(var(--phase-index)*58px))}}
-@media(max-width:800px){.entry-phase-switch{top:64px;max-width:calc(100% - 24px);grid-template-columns:repeat(7,minmax(42px,1fr));width:448px}.entry-phase-track{width:calc((100% - 6px)/7);transform:translateX(calc(var(--phase-index)*100%))}.entry-phase-switch button{font-size:12px}.entry-mode-map .entry-list{top:112px;bottom:120px}.entry-map-legend{left:12px;right:64px;bottom:32px;gap:10px;flex-wrap:wrap;padding:8px 10px;font-size:11px}.entry-map-summary{font-size:11px}}
-@media(prefers-reduced-motion:reduce){.entry-phase-track{transition:none}}
+@media(max-width:800px){.entry-phase-switch{top:64px;max-width:calc(100% - 24px);width:max-content}.entry-mode-map .entry-list{top:112px;bottom:120px}.entry-map-legend{left:12px;right:64px;bottom:32px;gap:10px;flex-wrap:wrap;padding:8px 10px;font-size:11px}.entry-map-summary{font-size:11px}}
 /* Unified circular map markers; semantic glyphs distinguish each phase. */
 /* Location pins: a shared silhouette with a semantic symbol in the round head. */
 .entry-map-legend{padding-block:12px 10px}
 /* Consistent top-row geometry and typography. */
-.entry-map-heading,.entry-phase-switch,.entry-mode-map .entry-topbar>button{height:36px;min-height:36px;font-family:inherit;font-size:14px;line-height:20px;border-radius:8px;box-sizing:border-box}
+.entry-map-heading,.entry-mode-map .entry-topbar>button{height:36px;min-height:36px;font-family:inherit;font-size:14px;line-height:20px;border-radius:8px;box-sizing:border-box}
 .entry-mode-map .entry-topbar>button{padding-inline:14px;font-weight:400}
 .entry-map-heading h1{font-size:14px;line-height:20px;font-weight:600}
 .entry-map-heading>span{font-size:14px;line-height:20px}
-.entry-phase-switch button{font-family:inherit;font-size:14px;line-height:20px;font-weight:400}
-.entry-phase-switch button[aria-pressed=true]{font-weight:500}
+
 .entry-map-heading>svg,.entry-mode-map .entry-topbar>button>svg{width:16px;height:16px}
-@media(max-width:800px){.entry-phase-switch button{font-size:12px}.entry-mode-map .entry-topbar>button{font-size:14px}}
+@media(max-width:800px){.entry-mode-map .entry-topbar>button{font-size:14px}}
 /* Shared pin: semantic body, inset circular icon, tip anchored to the location. */
 .entry-map-symbol{--pin-color:var(--primary);position:relative;display:inline-grid;place-items:center;flex:none;width:34px;height:34px;background:transparent;isolation:isolate;font-style:normal}
 .entry-map-symbol[data-state=building]{--pin-color:var(--info)}

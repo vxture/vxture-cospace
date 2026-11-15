@@ -1,8 +1,8 @@
 import {MapLoading} from './map-loading';
 import {locationLabel} from './geographic-location';
 import React,{useMemo,useState} from 'react';
-import {Button,Input,NativeSelect,ViewHeader,SegmentedControl,StatusBadge} from '@vxture/design-system';
-import {MagnifyingGlass,MapPin,ArrowRight,Cube,ArrowsClockwise,List,SquaresFour} from '@phosphor-icons/react';
+import {Button,Input,NativeSelect,ViewHeader,ViewModeSwitch,StatusBadge} from '@vxture/design-system';
+import {MagnifyingGlass,MapPin,ArrowRight,Cube,ArrowsClockwise} from '@phosphor-icons/react';
 import {useSceneDirectory} from './use-scene-directory';
 import {SceneCover} from './scene-cover';
 import {CreateSceneButton} from './create-scene';
@@ -26,7 +26,7 @@ export function SceneCatalog(){
  return <main className="scene-catalog" aria-label="场景选择"><div className="scene-catalog-shell">
   <ViewHeader title="我的场景" secondary={<span className="scene-total" aria-label="场景总数">{spaces.length}</span>} description="从场景开始，连接资料、模型与空间服务。" action={<CreateSceneButton size="xl" onCreated={id=>appNavigate('/data?'+new URLSearchParams({space:id,tab:'inputs'}))}/>}/>
   <div className="scene-catalog-toolbar" aria-label="场景清单操作区">
-   <SegmentedControl value={layout} onChange={setLayout} size="md" className="h-control-xl p-2xs" ariaLabel="清单布局" items={[{value:"list",label:<List size={20}/>,ariaLabel:"列表布局"},{value:"cards",label:<SquaresFour size={20}/>,ariaLabel:"卡片布局"}]}/>
+   <ViewModeSwitch value={layout} onChange={setLayout} ariaLabel="清单布局" labels={{list:'列表布局',cards:'卡片布局'}}/>
    <span className="scene-result-count" aria-live="polite">筛选 <strong>{visible.length}</strong> 项</span>
    <div className="scene-catalog-filters"><div className="scene-catalog-search"><MagnifyingGlass size={16}/><Input aria-label="搜索场景" placeholder="搜索场景、项目或位置" value={query} onChange={e=>setQuery(e.target.value)}/></div><NativeSelect wrapperClassName="scene-catalog-select" aria-label="场景状态" value={phase} onChange={e=>setPhase(e.target.value)}><option value="all">全部状态</option>{Object.entries(scenePhases).map(([key,value])=><option key={key} value={key}>{value.label}</option>)}</NativeSelect><NativeSelect wrapperClassName="scene-catalog-select" aria-label="场景排序" value={sort} onChange={e=>setSort(e.target.value)}><option value="phase">按进展阶段</option><option value="name">按名称排序</option><option value="time">按时间排序</option></NativeSelect><Button size="icon-xl" variant="outline" aria-label="刷新场景目录" onClick={()=>setRevision(v=>v+1)}><ArrowsClockwise size={16}/></Button></div>
   </div>

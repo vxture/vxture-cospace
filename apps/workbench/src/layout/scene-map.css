@@ -14,12 +14,7 @@
 .scene-map-back{background:var(--map-surface);backdrop-filter:var(--map-blur);color:var(--foreground);border:1px solid var(--border);box-shadow:var(--shadow-raised)}
 .scene-map-back:hover{background:var(--map-hover)}
 .scene-map-back svg{width:14px;height:14px}
-.scene-map-phases{position:absolute;top:18px;left:calc(50% + 90px);transform:translateX(-50%);max-width:calc(100% - 48px)}
-/* One translucent DS tab surface; the map overlay has no nested frame. */
-.scene-map-phases [role=tablist]{display:flex;height:32px;padding:2px;background:var(--map-surface);backdrop-filter:var(--map-blur);border:0;border-radius:var(--radius-md);box-shadow:none;gap:2px;overflow-x:auto;scrollbar-width:none}
-.scene-map-phases [role=tablist]::-webkit-scrollbar{display:none}
-.scene-map-phases [role=tab]{height:28px;min-height:28px;font-size:var(--body-small-font-size);font-weight:400;padding-inline:10px;border:0;border-radius:var(--radius-sm);color:var(--muted-foreground);box-shadow:none;background:transparent;white-space:nowrap}
-.scene-map-phases [role=tab][data-state=active]{background:var(--map-selected);color:var(--primary-muted-foreground);box-shadow:none}
+.scene-map-phases{position:absolute;top:18px;left:calc(50% + 90px);transform:translateX(-50%);max-width:calc(100% - 48px);overflow-x:auto;scrollbar-width:none}
 .scene-map-directory{position:absolute;top:60px;bottom:68px;left:24px;width:304px;padding:10px;display:flex;flex-direction:column;gap:10px;background:var(--map-surface)}
 .scene-map-search{position:relative}
 .scene-map-search>svg{position:absolute;left:9px;top:8px;width:14px;height:14px;color:var(--muted-foreground);pointer-events:none}
@@ -76,7 +71,7 @@
 .scene-map-settings footer{padding:8px 12px;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:4px}
 .scene-map-settings footer>span{font-size:var(--label-micro-font-size);color:var(--muted-foreground)}
 .scene-map-settings footer button{font-size:var(--body-small-font-size);height:24px;min-height:24px;padding:0 4px;gap:4px}
-@media(max-width:1250px){.scene-map-directory{top:108px}.scene-map-phases{top:64px;left:50%;width:max-content;max-width:calc(100% - 48px)}.scene-map-phases [role=tab]{padding-inline:8px}.scene-map-detail{top:112px}}
+@media(max-width:1250px){.scene-map-directory{top:108px}.scene-map-phases{top:64px;left:50%;width:max-content;max-width:calc(100% - 48px)}.scene-map-detail{top:112px}}
 @media(max-width:900px){.scene-map-phases{left:24px;right:24px;transform:none;width:max-content;max-width:calc(100% - 48px)}.scene-map-directory{width:280px}.scene-map-heading{width:280px}.scene-map-status{left:calc(50% + 125px);max-width:300px}.scene-map-legend{gap:8px;max-width:calc(100% - 88px);flex-wrap:wrap}.scene-map-detail{right:64px}}
 @media(max-width:600px){.scene-map-heading{left:12px;width:200px}.scene-map-back{right:12px}.scene-map-phases{left:12px;max-width:calc(100% - 24px)}.scene-map-directory{left:12px;top:108px;bottom:auto;max-height:40%;width:240px}.scene-map-status{left:50%;top:65%;width:calc(100% - 48px)}.scene-map-tools{right:12px;bottom:112px}.scene-map-legend{left:12px;bottom:26px;max-width:calc(100% - 24px)}.scene-map-detail{right:12px;top:108px;max-height:calc(100% - 190px)}}
 
