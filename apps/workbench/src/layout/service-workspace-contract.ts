@@ -3,6 +3,15 @@ import type {ServiceSection} from './spatial-service-contract';
 export const sceneServiceTabs={overview:'服务概况',online:'在线服务',offline:'离线交付',feedback:'态势反馈',recipients:'智能设备'} as const;
 export type SceneServiceTab=keyof typeof sceneServiceTabs;
 export type ServiceListFilter={query?:string;state?:string};
+export const deviceTabs={overview:'设备信息',spaces:'关联场景',integration:'接入配置',records:'使用记录'} as const;
+export type DeviceTab=keyof typeof deviceTabs;
+export function devicePageHref(device:string,tab:DeviceTab='overview',context='/services?section=recipients'){
+ const params=new URLSearchParams(context.split('?')[1]);
+ if(!params.has('section'))params.set('section','recipients');
+ if(params.has('space'))params.set('tab','recipients');
+ params.set('device',device);params.set('deviceTab',tab);
+ return '/services?'+params;
+}
 export const entryServiceTab=(section:ServiceSection):SceneServiceTab=>section==='directory'?'overview':section;
 export function serviceListHref(section:ServiceSection,filter:ServiceListFilter={}){
  const params=new URLSearchParams({section});

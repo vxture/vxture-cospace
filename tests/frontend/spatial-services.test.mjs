@@ -2,6 +2,8 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {spatialServices,filterSpatialServices,serviceResourcePath} from '../../apps/workbench/src/layout/spatial-service-contract.ts';
 import {serviceListHref,servicePageHref,entryServiceTab} from '../../apps/workbench/src/layout/service-workspace-contract.ts';
+import {devicePageHref} from '../../apps/workbench/src/layout/service-workspace-contract.ts';
+import {serviceEntryDestinations} from '../../apps/workbench/src/layout/service-entry-actions.ts';
 
 test('navigation opens global service lists, without scene or record context',()=>{
  for(const section of ['directory','offline','online','feedback','recipients']){
@@ -40,6 +42,28 @@ test('scene tab navigation keeps the pinned publication and list return context'
 
 const release=(id,state='active',date='2026-11-10T00:00:00Z')=>({id,created_at:date,lifecycle_state:state});
 const scene=(capabilities,publications)=>({id:'space-a',name:'园区',project_name:'北方项目',capabilities,publications});
+
+test('card actions only expose granted service pages and retain the selected version and filters',()=>{
+ for(const capability of ['space.preview','space.query','space.export']){
+  const group=serviceSpaces(spatialServices([scene([capability],[release('fixed-old','paused'),release('other')])]))[0];
+  const selected=selectedServiceVersion(group,'fixed-old');
+  const actions=serviceEntryDestinations(group,selected,'directory',{query:'园区 A&B',state:'unavailable'});
+  assert.deepEqual(actions.map(a=>a.key),capability==='space.query'?['overview','online']:capability==='space.export'?['overview','offline']:['overview']);
+  for(const action of actions){const url=new URL(action.href,'http://local');assert.equal(url.searchParams.get('publication'),'fixed-old');assert.equal(url.searchParams.get('space'),'space-a');assert.equal(url.searchParams.get('tab'),action.key);assert.equal(url.searchParams.get('q'),'园区 A&B');}
+  assert.equal(serviceEntryDestinations(group,selected,'online').length,capability==='space.query'?1:0);
+  assert.equal(serviceEntryDestinations(group,selected,'offline').length,capability==='space.export'?1:0);
+  assert.deepEqual(serviceEntryDestinations(group,selected,'feedback'),[]);
+ }
+});
+
+test('device pages encode identities, retain scene context and open the requested management tab',()=>{
+ for(const tab of ['overview','spaces','integration','records']){
+  const url=new URL(devicePageHref('device A&B',tab,'/services?section=directory&space=scene-a&publication=fixed-a&tab=online'),'http://local');
+  assert.equal(url.pathname,'/services');assert.equal(url.searchParams.get('device'),'device A&B');assert.equal(url.searchParams.get('deviceTab'),tab);
+  assert.equal(url.searchParams.get('section'),'directory');assert.equal(url.searchParams.get('space'),'scene-a');assert.equal(url.searchParams.get('publication'),'fixed-a');assert.equal(url.searchParams.get('tab'),'recipients');
+ }
+ assert.equal(new URL(devicePageHref('device-a'),'http://local').searchParams.get('section'),'recipients');
+});
 test('catalog exposes only granted operations and retains fixed versions',()=>{
  const values=spatialServices([scene(['space.preview','space.query'],[release('preview-a'),release('preview-old','paused')])]);
  assert.equal(values.length,4);
