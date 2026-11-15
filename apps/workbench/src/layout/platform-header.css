@@ -1,6 +1,8 @@
 .platform-header{--platform-control-height:32px}
 .cospace-brand{display:inline-flex;align-items:center;gap:8px;height:32px;flex-shrink:0;color:var(--foreground);text-decoration:none;border-radius:var(--radius-sm,4px)}
 .cospace-brand img{display:block;width:28px;height:28px;flex-shrink:0}
+.cospace-brand-button{display:grid;place-items:center;width:32px;height:32px;flex:none;border-radius:inherit}
+.cospace-brand-button:focus-visible{outline:2px solid var(--ring);outline-offset:-2px}
 .cospace-brand span{font-size:18px;font-weight:600;line-height:24px;letter-spacing:-.3px}
 .cospace-brand:focus-visible{outline:2px solid var(--ring);outline-offset:4px}
 .platform-header button[aria-label="功能 Launcher"]{margin-right:8px}

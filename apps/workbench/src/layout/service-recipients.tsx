@@ -1,7 +1,8 @@
 import React,{useEffect,useId,useRef,useState} from 'react';
-import {Link,useSearchParams} from 'react-router-dom';
-import {ViewModeSwitch,Button,Checkbox,Drawer,Dialog,DialogContent,DialogHeader,DialogTitle,DialogDescription,Input,NativeSelect,StatusBadge,Tabs,TabsContent,TabsList,TabsTrigger} from '@vxture/design-system';
-import {AirplaneTilt,PawPrint,Car,Robot,PersonSimpleWalk,Shapes,Plus,MagnifyingGlass,ArrowsClockwise,Check,ArrowLeft,Info,LinkSimple,PlugsConnected,ClockCounterClockwise,X} from '@phosphor-icons/react';
+import {useSearchParams} from 'react-router-dom';
+import {ViewModeSwitch,Button,Checkbox,Drawer,Dialog,DialogContent,DialogHeader,DialogTitle,DialogDescription,Input,NativeSelect,StatusBadge} from '@vxture/design-system';
+import {AirplaneTilt,PawPrint,Car,Robot,PersonSimpleWalk,Shapes,Plus,MagnifyingGlass,ArrowsClockwise,Check,Info,LinkSimple,PlugsConnected,ClockCounterClockwise,X} from '@phosphor-icons/react';
+import {WorkspaceHeading} from './workspace-frame';
 import {businessEndpoint} from './business-endpoint';
 import {usePlatformSession} from './platform-auth';
 import {ServiceDirectoryRow} from './service-directory-row';
@@ -20,6 +21,7 @@ type Recipient=Omit<Draft,'morphology'>&{morphology:Morphology;id:string;revisio
 type Space={id:string;name:string;can_manage:boolean};
 type Directory={recipients:Recipient[];spaces:Space[];can_create:boolean;total:number;offset:number;limit:number};
 const purposeNames={collect:'空间数据采集',use:'空间服务使用'};
+type EditSection='information'|'relations';
 const blank=():Draft=>({name:'',morphology:'',morphology_note:'',manufacturer:'',model:'',external_id:'',contact:'',relations:[]});
 const time=(value:string)=>new Date(value).toLocaleString('zh-CN',{hour12:false});
 
@@ -30,13 +32,13 @@ export function ServiceRecipients({spaceId='',revision=0}:{spaceId?:string;revis
 }
 
 function RecipientWorkspace({spaceId,revision,csrf}:{spaceId:string;revision:number;csrf:string}){
- const [params,setParams]=useSearchParams();
+ const [params]=useSearchParams();
  const deviceId=params.get('device')||'';
  const requestedTab=params.get('deviceTab')||'overview';
  const deviceTab:DeviceTab=Object.hasOwn(deviceTabs,requestedTab)?requestedTab as DeviceTab:'overview';
  const [data,setData]=useState<Directory|null>(null),[loading,setLoading]=useState(true),[error,setError]=useState(''),[refresh,setRefresh]=useState(0);
  const [query,setQuery]=useState(''),[morphology,setMorphology]=useState(''),[purpose,setPurpose]=useState(''),[scene,setScene]=useState(''),[offset,setOffset]=useState(0);
- const [detail,setDetail]=useState<Recipient|null>(null),[overviewOpen,setOverviewOpen]=useState(false),[editor,setEditor]=useState<{record?:Recipient;draft:Draft}|null>(null),[notice,setNotice]=useState('');
+ const [detail,setDetail]=useState<Recipient|null>(null),[overviewOpen,setOverviewOpen]=useState(false),[editor,setEditor]=useState<{record?:Recipient;draft:Draft;section?:EditSection}|null>(null),[notice,setNotice]=useState('');
  const [linkExisting,setLinkExisting]=useState(false),[view,setView]=useState<'cards'|'list'>('cards');
  useEffect(()=>{
   const controller=new AbortController();setLoading(true);setError('');setOverviewOpen(false);setDetail(null);
@@ -54,14 +56,15 @@ function RecipientWorkspace({spaceId,revision,csrf}:{spaceId:string;revision:num
  const fixedSpace=data?.spaces.find(s=>s.id===spaceId);
  const canCreate=!!data?.can_create&&(!spaceId||!!fixedSpace?.can_manage);
  const openCreate=()=>{setLinkExisting(false);setEditor({draft:{...blank(),relations:spaceId?[{space_id:spaceId,purposes:[],usage_modes:[]}]:[]}});setNotice('');};
- function edit(record:Recipient){setDetail(null);setEditor({record,draft:{name:record.name,morphology:record.morphology,morphology_note:record.morphology_note,manufacturer:record.manufacturer,model:record.model,external_id:record.external_id,contact:record.contact,relations:structuredClone(record.relations)}});}
+ function edit(record:Recipient,section:EditSection){setDetail(null);setOverviewOpen(false);setEditor({record,section,draft:{name:record.name,morphology:record.morphology,morphology_note:record.morphology_note,manufacturer:record.manufacturer,model:record.model,external_id:record.external_id,contact:record.contact,relations:structuredClone(record.relations)}});}
  const deviceActions=(record:Recipient)=>Object.entries(deviceTabs).map(([key,label])=>{const Icon={overview:Info,spaces:LinkSimple,integration:PlugsConnected,records:ClockCounterClockwise}[key as DeviceTab];return {key,label,icon:<Icon size={16}/>,href:devicePageHref(record.id,key as DeviceTab,'/services?'+params)};});
- const editorPanel=editor&&<RecipientEditor key={editor.record?.id||'new'} initial={editor.draft} record={editor.record} spaces={data?.spaces||[]} csrf={csrf} onClose={()=>setEditor(null)} onSaved={()=>{setEditor(null);setNotice('已保存登记，接入尚未验证。');setRefresh(v=>v+1);}}/>;
+ const editorPanel=editor&&<RecipientEditor key={editor.record?.id||'new'} initial={editor.draft} record={editor.record} section={editor.section} spaces={data?.spaces||[]} csrf={csrf} onClose={()=>setEditor(null)} onSaved={()=>{setEditor(null);setNotice('已保存登记，接入尚未验证。');setRefresh(v=>v+1);}}/>;
  if(deviceId){
   const record=data?.recipients.find(value=>value.id===deviceId);
-  const back=new URLSearchParams(params);back.delete('device');back.delete('deviceTab');
-  return <section className="recipient-workspace" aria-label="设备管理"><div className="recipient-page-heading"><Button variant="ghost" size="xl" asChild><Link to={'/services?'+back}><ArrowLeft size={16}/>返回设备列表</Link></Button>{record&&!loading&&<h2>{record.name}</h2>}</div>
-   {loading?<p role="status">正在读取设备…</p>:error?<div role="alert"><p>{error}</p><Button variant="outline" onClick={()=>setRefresh(value=>value+1)}>重试</Button></div>:record?<RecipientDetail record={record} spaces={data?.spaces||[]} onEdit={()=>edit(record)} activeTab={deviceTab} onTabChange={value=>setParams(current=>{const next=new URLSearchParams(current);next.set('deviceTab',value);return next;})}/>:<p role="alert">设备不可访问或已不存在。</p>}
+  const Shape=record?forms[record.morphology].icon:Robot;
+  return <section className="recipient-workspace recipient-device-page" aria-label="设备管理">
+   {!spaceId&&<WorkspaceHeading icon={Shape} title={record?.name||'设备详情'} description={record?`智能设备 · ${forms[record.morphology].label}`:'智能设备'} secondary={record&&<StatusBadge size="sm" icon={false} tone="neutral">已登记</StatusBadge>}/>}
+   {loading?<p role="status">正在读取设备…</p>:error?<div role="alert"><p>{error}</p><Button variant="outline" onClick={()=>setRefresh(value=>value+1)}>重试</Button></div>:record?<RecipientDetail record={record} spaces={data?.spaces||[]} onEdit={section=>edit(record,section)} activeSection={deviceTab}/>:<p role="alert">设备不可访问或已不存在。</p>}
    {notice&&<p role="status">{notice}</p>}{editorPanel}
   </section>;
  }
@@ -99,10 +102,33 @@ function RecipientWorkspace({spaceId,revision,csrf}:{spaceId:string;revision:num
  </section>;
 }
 
-function RecipientDetail({record,spaces,onEdit,activeTab,onTabChange}:{record:Recipient;spaces:Space[];onEdit:()=>void;activeTab?:DeviceTab;onTabChange?:(value:string)=>void}){
- const [localTab,setLocalTab]=useState('overview');
- const tab=activeTab||localTab,setTab=onTabChange||setLocalTab;
- return <div className="recipient-detail"><div className="recipient-actions"><StatusBadge tone="neutral">已登记</StatusBadge><StatusBadge tone="neutral">待厂家对接</StatusBadge>{record.can_manage&&<Button variant="outline" size="sm" onClick={onEdit}>编辑信息与关联</Button>}</div><p className="text-label-small text-muted-foreground">登记用途不授予实际服务权限，设备状态尚未验证。</p><Tabs value={tab} onValueChange={setTab}><TabsList aria-label="设备详情"><TabsTrigger value="overview">设备信息</TabsTrigger><TabsTrigger value="spaces">关联场景</TabsTrigger><TabsTrigger value="integration">接入配置</TabsTrigger><TabsTrigger value="records">使用记录</TabsTrigger></TabsList><TabsContent value="overview"><dl className="recipient-facts">{[['设备 ID',record.id],['设备形态',forms[record.morphology].label],['形态说明',record.morphology_note],['厂家',record.manufacturer],['型号',record.model],['外部设备标识',record.external_id],['负责人',record.contact],['登记时间',time(record.created_at)],['修改时间',time(record.updated_at)],['修订号',String(record.revision)]].map(([label,value])=><div key={label}><dt>{label}</dt><dd>{value||'未补充'}</dd></div>)}</dl></TabsContent><TabsContent value="spaces"><div className="recipient-relations">{!record.relations.length&&<p>尚未关联空间。</p>}{record.relations.map(r=><article key={r.space_id}><h3>{spaces.find(s=>s.id===r.space_id)?.name||r.space_id}</h3><div className="recipient-tags">{r.purposes.map(p=><StatusBadge key={p} tone="neutral">{purposeNames[p]}</StatusBadge>)}</div>{r.purposes.includes('use')&&<p>{r.usage_modes.length?r.usage_modes.map(m=>m==='online'?'在线服务':'离线成果').join('、'):'服务使用方式待配置'}</p>}<p className="text-label-small text-muted-foreground">用途已登记 · 接入授权未验证 · 实际使用版本未确认</p></article>)}</div></TabsContent><TabsContent value="integration"><h3>待厂家对接</h3><p>后续按厂家方案验证设备身份、数据格式、时间与坐标约定以及可用空间能力。</p><p className="text-body-small text-muted-foreground">外部设备标识当前为人工登记，尚未验证。现有平台调用身份不自动绑定为此设备身份。</p></TabsContent><TabsContent value="records"><h3>暂无设备使用记录</h3><p>厂家接入并验证设备身份后，分别记录采集提交、在线请求、离线交付及应用版本。登记与下载不表示设备已使用成果。</p></TabsContent></Tabs></div>;
+function RecipientDetail({record,spaces,onEdit,activeSection}:{record:Recipient;spaces:Space[];onEdit:(section:EditSection)=>void;activeSection:DeviceTab}){
+ const root=useRef<HTMLDivElement>(null);
+ useEffect(()=>{if(activeSection!=='overview')root.current?.querySelector<HTMLElement>(`[data-device-section="${activeSection}"]`)?.scrollIntoView({block:'start'});},[activeSection]);
+ const facts=(items:[string,string][])=> <dl className="recipient-detail-facts">{items.map(([label,value])=><div key={label}><dt>{label}</dt><dd>{value||'—'}</dd></div>)}</dl>;
+ return <div ref={root} className="recipient-detail">
+  <section className="recipient-detail-section" aria-labelledby="device-information-title" data-device-section="overview">
+   <header><h2 id="device-information-title">设备信息</h2>{record.can_manage&&<Button variant="outline" size="xl" onClick={()=>onEdit('information')}>编辑设备信息</Button>}</header>
+   <div className="recipient-detail-information">
+    <div><h3>设备属性</h3>{facts([['设备形态',forms[record.morphology].label],['厂家',record.manufacturer],['型号',record.model],['负责人',record.contact]])}{record.morphology_note&&<p className="recipient-detail-note">{record.morphology_note}</p>}</div>
+    <div><h3>设备标识</h3>{facts([['外部设备标识',record.external_id]])}<dl className="recipient-detail-facts recipient-detail-identity"><div><dt>设备 ID</dt><dd>{record.id}</dd></div></dl><p className="recipient-detail-note">外部设备标识尚未验证。</p></div>
+   </div>
+   <div className="recipient-detail-audit"><span>登记：{time(record.created_at)}</span><span>更新：{time(record.updated_at)}</span><span>修订 {record.revision}</span></div>
+  </section>
+  <section className="recipient-detail-section" aria-labelledby="device-spaces-title" data-device-section="spaces">
+   <header><h2 id="device-spaces-title">关联场景 <span>{record.relations.length}</span></h2>{record.can_manage&&<Button variant="outline" size="xl" onClick={()=>onEdit('relations')}>编辑关联场景</Button>}</header>
+   {record.relations.length?<div className="recipient-detail-relations"><div className="recipient-detail-relation-head" aria-hidden="true"><span>场景</span><span>接入用途</span><span>服务使用方式</span></div>{record.relations.map(r=><div className="recipient-detail-relation" key={r.space_id}><h3>{spaces.find(s=>s.id===r.space_id)?.name||r.space_id}</h3><div className="recipient-tags">{r.purposes.map(p=><StatusBadge key={p} size="sm" tone="neutral">{purposeNames[p]}</StatusBadge>)}</div><span>{!r.purposes.includes('use')?'—':r.usage_modes.length?r.usage_modes.map(m=>m==='online'?'在线服务':'离线成果').join('、'):'待配置'}</span></div>)}</div>:<p className="recipient-detail-empty">尚未关联场景。</p>}
+   <p className="recipient-detail-note">用途登记不授予实际服务权限。</p>
+  </section>
+  <section className="recipient-detail-section" aria-labelledby="device-integration-title" data-device-section="integration">
+   <header><h2 id="device-integration-title">接入配置</h2><StatusBadge size="sm" icon={false} tone="neutral">待厂家对接</StatusBadge></header>
+   <div className="recipient-detail-integration">{facts([['设备身份','未验证'],['通信接口','待厂家提供'],['数据约定','待配置']])}</div><p className="recipient-detail-note">厂家对接后，验证设备身份、数据格式及时间与坐标约定。</p>
+  </section>
+  <section className="recipient-detail-section" aria-labelledby="device-records-title" data-device-section="records">
+   <header><h2 id="device-records-title">使用记录</h2></header>
+   <div className="recipient-detail-empty"><ClockCounterClockwise size={24} aria-hidden="true"/><div><h3>暂无使用记录</h3><p>完成厂家接入后，记录采集提交、服务调用与离线交付。</p></div></div>
+  </section>
+ </div>;
 }
 
 function CheckOption({checked,onChange,children}:{checked:boolean;onChange:(checked:boolean)=>void;children:React.ReactNode}){
@@ -129,27 +155,28 @@ async function saveRecipient(draft:Draft,record:Recipient|undefined,csrf:string,
  return await response.json() as Recipient;
 }
 
-function RecipientEditor({initial,record,spaces,csrf,onClose,onSaved}:{initial:Draft;record?:Recipient;spaces:Space[];csrf:string;onClose:()=>void;onSaved:()=>void}){
- const [draft,setDraft]=useState(initial),[step,setStep]=useState(1),[busy,setBusy]=useState(false),[error,setError]=useState('');
+function RecipientEditor({initial,record,section,spaces,csrf,onClose,onSaved}:{initial:Draft;record?:Recipient;section?:EditSection;spaces:Space[];csrf:string;onClose:()=>void;onSaved:()=>void}){
+ const [draft,setDraft]=useState(initial),[step,setStep]=useState(section==='relations'?2:1),[busy,setBusy]=useState(false),[error,setError]=useState('');
  const prefix=useId(),pending=useRef<{body:string;id:string}|null>(null),mounted=useRef(true),saving=useRef(false);
  useEffect(()=>{mounted.current=true;return()=>{mounted.current=false;};},[]);
  function set<K extends keyof Draft>(key:K,value:Draft[K]){setDraft(previous=>({...previous,[key]:value}));setError('');}
- function next(){if(!draft.morphology||!draft.name.trim()||draft.morphology==='other'&&!draft.morphology_note.trim()){setError('请选择设备形态，填写名称；其他形态需补充说明。');return;}setError('');setStep(2);}
+ function validInformation(){if(!draft.morphology||!draft.name.trim()||draft.morphology==='other'&&!draft.morphology_note.trim()){setError('请选择设备形态，填写名称；其他形态需补充说明。');return false;}return true;}
+ function next(){if(!validInformation())return;setError('');setStep(2);}
  async function save(){
-  if(saving.current)return;
+  if(saving.current||!validInformation())return;
   if(draft.relations.some(r=>!r.purposes.length)){setError('请为每个已关联场景至少选择一项接入用途，或取消该场景的关联。');return;}
   saving.current=true;setBusy(true);setError('');
   const body=JSON.stringify(draft);if(pending.current?.body!==body)pending.current={body,id:requestId()};
   try{await saveRecipient(draft,record,csrf,pending.current!.id);if(mounted.current)onSaved();}catch(e){if(mounted.current)setError((e as Error).message);}finally{saving.current=false;if(mounted.current)setBusy(false);}
  }
- return <Dialog open onOpenChange={open=>{if(!open&&!busy)onClose();}}><DialogContent className="recipient-editor-dialog" onEscapeKeyDown={e=>{if(busy)e.preventDefault();}} onInteractOutside={e=>e.preventDefault()}><DialogHeader><DialogTitle>{record?'编辑设备':'添加设备'}</DialogTitle><DialogDescription>登记设备形态与作业用途，厂家接口可在后续接入。</DialogDescription></DialogHeader>
-  <form className="recipient-editor" onSubmit={e=>{e.preventDefault();if(step===1)next();else void save();}}>
-   <ol className="recipient-steps" aria-label="登记步骤"><li aria-current={step===1?'step':undefined} data-complete={step>1}><span>{step>1?<Check size={16}/>:1}</span><div><strong>设备信息</strong><small>选择形态，填写基本信息</small></div></li><li aria-current={step===2?'step':undefined}><span>2</span><div><strong>场景与用途</strong><small>按场景配置，可稍后关联</small></div></li></ol>
+ return <Dialog open onOpenChange={open=>{if(!open&&!busy)onClose();}}><DialogContent className="recipient-editor-dialog" onEscapeKeyDown={e=>{if(busy)e.preventDefault();}} onInteractOutside={e=>e.preventDefault()}><DialogHeader><DialogTitle>{record?section==='relations'?'编辑关联场景':'编辑设备信息':'添加设备'}</DialogTitle><DialogDescription>{record?section==='relations'?'调整关联场景与接入用途。':'更新设备形态、名称与厂家信息。':'登记设备形态与作业用途，厂家接口可在后续接入。'}</DialogDescription></DialogHeader>
+  <form className="recipient-editor" onSubmit={e=>{e.preventDefault();if(!record&&step===1)next();else void save();}}>
+   {!record&&<ol className="recipient-steps" aria-label="登记步骤"><li aria-current={step===1?'step':undefined} data-complete={step>1}><span>{step>1?<Check size={16}/>:1}</span><div><strong>设备信息</strong><small>选择形态，填写基本信息</small></div></li><li aria-current={step===2?'step':undefined}><span>2</span><div><strong>场景与用途</strong><small>按场景配置，可稍后关联</small></div></li></ol>}
    <div className="recipient-editor-body"><fieldset disabled={busy}>
    {step===1?<><legend className="sr-only">设备信息</legend><div className="recipient-field"><span id={prefix+'-shape'}>设备形态 <span aria-hidden="true">*</span></span><div className="recipient-morphologies" role="radiogroup" aria-labelledby={prefix+'-shape'}>{Object.entries(forms).map(([key,value])=>{const Shape=value.icon;return <Button type="button" variant="outline" role="radio" aria-checked={draft.morphology===key} className="recipient-morphology" key={key} onClick={()=>set('morphology',key as Morphology)}><Shape size={24}/><div><strong>{value.label}</strong><span>{value.example}</span></div>{draft.morphology===key&&<Check size={16}/>}</Button>;})}</div></div><div className="recipient-information-grid">{([['name','设备名称 *',100],...(draft.morphology==='other'?[['morphology_note','形态说明 *',200]]:[]),['manufacturer','厂家',100],['model','型号',100],['external_id','外部设备标识',160],['contact','负责人',100]] as [keyof Omit<Draft,'relations'>,string,number][]).map(([key,label,max])=><div className="recipient-field" key={key}><label htmlFor={prefix+'-'+key}>{label}</label><Input id={prefix+'-'+key} placeholder={key==='name'?'例如：园区巡检机器狗 01':'选填'} value={draft[key]} maxLength={max} required={key==='name'||key==='morphology_note'} onChange={e=>set(key,e.target.value)}/></div>)}</div></>:<><legend className="sr-only">场景与用途</legend><div className="recipient-device-summary"><strong>{draft.name}</strong><span>{draft.morphology?forms[draft.morphology].label:''}</span><span>场景关联为选填，后续可继续配置。</span></div><RelationChoices spaces={spaces} relations={draft.relations} onChange={value=>set('relations',value)}/></>}
    </fieldset></div>
    {error&&<p role="alert" className="text-body-small text-destructive">{error}</p>}
-   <div className="recipient-editor-footer"><span className="recipient-footer-note">{step===1?'* 为必填项':draft.relations.length?`已关联 ${draft.relations.length} 个场景 · 登记后待厂家对接`:'暂不关联场景，仅保存设备信息'}</span><Button size="xl" type="button" variant="outline" disabled={busy} onClick={onClose}>取消</Button>{step===2&&<Button size="xl" type="button" variant="outline" disabled={busy} onClick={()=>setStep(1)}>上一步</Button>}<Button size="xl" type="submit" disabled={busy}>{busy?'正在保存…':step===1?'下一步：场景与用途':draft.relations.length?'保存登记':'仅保存设备'}</Button></div>
+   <div className="recipient-editor-footer"><span className="recipient-footer-note">{step===1?'* 为必填项':draft.relations.length?`已关联 ${draft.relations.length} 个场景 · 登记后待厂家对接`:'暂不关联场景，仅保存设备信息'}</span><Button size="xl" type="button" variant="outline" disabled={busy} onClick={onClose}>取消</Button>{!record&&step===2&&<Button size="xl" type="button" variant="outline" disabled={busy} onClick={()=>setStep(1)}>上一步</Button>}<Button size="xl" type="submit" disabled={busy}>{busy?'正在保存…':record?'保存更改':step===1?'下一步：场景与用途':draft.relations.length?'保存登记':'仅保存设备'}</Button></div>
   </form></DialogContent></Dialog>;
 
 }
