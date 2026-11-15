@@ -1,5 +1,5 @@
-import React from 'react';
-import {Button,NativeSelect,StatusBadge,Tabs,TabsList,TabsTrigger,TabsContent} from '@vxture/design-system';
+import React,{useState} from 'react';
+import {Drawer,Button,NativeSelect,StatusBadge,Tabs,TabsList,TabsTrigger,TabsContent} from '@vxture/design-system';
 import {ArrowSquareOut,ArrowsClockwise} from '@phosphor-icons/react';
 import {Cube,UploadSimple} from '@phosphor-icons/react';
 import {WorkspaceHeading} from './workspace-frame';
@@ -12,9 +12,12 @@ import {realScreenHref} from './real-space-data';
 import {locationLabel} from './geographic-location';
 import {ServiceRecipients} from './service-recipients';
 import {ServiceDirectoryRow} from './service-directory-row';
+import {ServiceCard} from './service-card';
 
 export function FeedbackUnavailable({view='list'}:{view?:'cards'|'list'}){
- return <div className={view==='cards'?'service-card-grid':'service-directory-list'}><ServiceDirectoryRow label="态势反馈尚未开放" symbol={<UploadSimple size={36} weight="duotone"/>}
+ const [overview,setOverview]=useState(false);
+ if(view==='cards')return <><div className="service-card-grid"><ServiceCard label="态势反馈尚未开放" symbol={<UploadSimple size={26} weight="duotone"/>} heading={<div className="service-card-title-line"><h3>态势反馈</h3><StatusBadge size="sm" icon={false} tone="neutral">尚未开放</StatusBadge></div>} metadata={<span>最后上报：—</span>} onOverview={()=>setOverview(true)}><p className="service-project">开放后可查看反馈记录和处理进展。</p></ServiceCard></div><Drawer open={overview} onClose={()=>setOverview(false)} side="right" width="md" title="态势反馈概要" closeLabel="关闭态势反馈概要"><div className="service-card-overview"><StatusBadge tone="neutral">尚未开放</StatusBadge><p>态势反馈接入尚未开放，暂无上报记录。</p></div></Drawer></>;
+ return <div className="service-directory-list"><ServiceDirectoryRow label="态势反馈尚未开放" symbol={<UploadSimple size={36} weight="duotone"/>}
   heading={<h2 className="service-entry-name">态势反馈</h2>}
   capabilities={<span className="service-project">开放后可查看反馈记录和处理进展。</span>}
   metadata={<StatusBadge size="sm" icon={false} tone="neutral">尚未开放</StatusBadge>}/>

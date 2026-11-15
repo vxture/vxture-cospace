@@ -1,10 +1,13 @@
 import React,{useEffect,useId,useRef,useState} from 'react';
+import {Link,useSearchParams} from 'react-router-dom';
 import {ViewModeSwitch,Button,Checkbox,Drawer,Dialog,DialogContent,DialogHeader,DialogTitle,DialogDescription,Input,NativeSelect,StatusBadge,Tabs,TabsContent,TabsList,TabsTrigger} from '@vxture/design-system';
-import {AirplaneTilt,PawPrint,Car,Robot,PersonSimpleWalk,Shapes,Plus,MagnifyingGlass,ArrowsClockwise,Check,ArrowRight,X} from '@phosphor-icons/react';
+import {AirplaneTilt,PawPrint,Car,Robot,PersonSimpleWalk,Shapes,Plus,MagnifyingGlass,ArrowsClockwise,Check,ArrowLeft,Info,LinkSimple,PlugsConnected,ClockCounterClockwise,X} from '@phosphor-icons/react';
 import {businessEndpoint} from './business-endpoint';
 import {usePlatformSession} from './platform-auth';
 import {ServiceDirectoryRow} from './service-directory-row';
 import {DeviceArtwork} from './device-artwork';
+import {ServiceCard,ServiceCardActions} from './service-card';
+import {devicePageHref,deviceTabs,type DeviceTab} from './service-workspace-contract';
 import './service-recipients.css';
 
 const forms={aerial:{label:'飞行式',example:'无人机',icon:AirplaneTilt},quadruped:{label:'四足式',example:'机器狗、四足机器人',icon:PawPrint},wheeled:{label:'轮式',example:'轮式机器人、移动底盘',icon:Car},tracked:{label:'履带式',example:'履带机器人',icon:Robot},humanoid:{label:'人形式',example:'人形机器人',icon:PersonSimpleWalk},other:{label:'其他形态',example:'其他足式、复合移动等',icon:Shapes}};
@@ -27,26 +30,41 @@ export function ServiceRecipients({spaceId='',revision=0}:{spaceId?:string;revis
 }
 
 function RecipientWorkspace({spaceId,revision,csrf}:{spaceId:string;revision:number;csrf:string}){
+ const [params,setParams]=useSearchParams();
+ const deviceId=params.get('device')||'';
+ const requestedTab=params.get('deviceTab')||'overview';
+ const deviceTab:DeviceTab=Object.hasOwn(deviceTabs,requestedTab)?requestedTab as DeviceTab:'overview';
  const [data,setData]=useState<Directory|null>(null),[loading,setLoading]=useState(true),[error,setError]=useState(''),[refresh,setRefresh]=useState(0);
  const [query,setQuery]=useState(''),[morphology,setMorphology]=useState(''),[purpose,setPurpose]=useState(''),[scene,setScene]=useState(''),[offset,setOffset]=useState(0);
- const [detail,setDetail]=useState<Recipient|null>(null),[editor,setEditor]=useState<{record?:Recipient;draft:Draft}|null>(null),[notice,setNotice]=useState('');
+ const [detail,setDetail]=useState<Recipient|null>(null),[overviewOpen,setOverviewOpen]=useState(false),[editor,setEditor]=useState<{record?:Recipient;draft:Draft}|null>(null),[notice,setNotice]=useState('');
  const [linkExisting,setLinkExisting]=useState(false),[view,setView]=useState<'cards'|'list'>('cards');
  useEffect(()=>{
-  const controller=new AbortController();setLoading(true);setError('');setDetail(null);
-  const params=new URLSearchParams({offset:String(offset),limit:'20'});
-  if(spaceId||scene)params.set('space_id',spaceId||scene);
-  if(query)params.set('q',query);if(morphology)params.set('morphology',morphology);if(purpose)params.set('purpose',purpose);
-  fetch(`${businessEndpoint}/api/service-recipients?${params}`,{cache:'no-store',signal:controller.signal}).then(async r=>{
+  const controller=new AbortController();setLoading(true);setError('');setOverviewOpen(false);setDetail(null);
+  const request=new URLSearchParams({offset:String(deviceId?0:offset),limit:'20'});
+  if(spaceId||(!deviceId&&scene))request.set('space_id',spaceId||scene);
+  if(deviceId)request.set('q',deviceId.slice(0,160));
+  else{if(query)request.set('q',query);if(morphology)request.set('morphology',morphology);if(purpose)request.set('purpose',purpose);}
+  fetch(`${businessEndpoint}/api/service-recipients?${request}`,{cache:'no-store',signal:controller.signal}).then(async r=>{
    if(!r.ok)throw Error(r.status===403?'当前账号无权查看这些设备。':'设备列表暂不可读取，请重试。');
    const value=await r.json();if(value.profile!=='cospace.service-recipients/0.1'||!Array.isArray(value.recipients)||!Array.isArray(value.spaces))throw Error('设备数据格式无法识别。');
    if(!controller.signal.aborted)setData(value);
   }).catch(e=>{if(!controller.signal.aborted){setData(null);setError(e.message);}}).finally(()=>{if(!controller.signal.aborted)setLoading(false);});
   return()=>controller.abort();
- },[spaceId,scene,query,morphology,purpose,offset,refresh,revision]);
+ },[spaceId,scene,query,morphology,purpose,offset,refresh,revision,deviceId]);
  const fixedSpace=data?.spaces.find(s=>s.id===spaceId);
  const canCreate=!!data?.can_create&&(!spaceId||!!fixedSpace?.can_manage);
  const openCreate=()=>{setLinkExisting(false);setEditor({draft:{...blank(),relations:spaceId?[{space_id:spaceId,purposes:[],usage_modes:[]}]:[]}});setNotice('');};
  function edit(record:Recipient){setDetail(null);setEditor({record,draft:{name:record.name,morphology:record.morphology,morphology_note:record.morphology_note,manufacturer:record.manufacturer,model:record.model,external_id:record.external_id,contact:record.contact,relations:structuredClone(record.relations)}});}
+ const deviceActions=(record:Recipient)=>Object.entries(deviceTabs).map(([key,label])=>{const Icon={overview:Info,spaces:LinkSimple,integration:PlugsConnected,records:ClockCounterClockwise}[key as DeviceTab];return {key,label,icon:<Icon size={16}/>,href:devicePageHref(record.id,key as DeviceTab,'/services?'+params)};});
+ const editorPanel=editor&&<RecipientEditor key={editor.record?.id||'new'} initial={editor.draft} record={editor.record} spaces={data?.spaces||[]} csrf={csrf} onClose={()=>setEditor(null)} onSaved={()=>{setEditor(null);setNotice('已保存登记，接入尚未验证。');setRefresh(v=>v+1);}}/>;
+ if(deviceId){
+  const record=data?.recipients.find(value=>value.id===deviceId);
+  const back=new URLSearchParams(params);back.delete('device');back.delete('deviceTab');
+  return <section className="recipient-workspace" aria-label="设备管理"><div className="recipient-page-heading"><Button variant="ghost" size="xl" asChild><Link to={'/services?'+back}><ArrowLeft size={16}/>返回设备列表</Link></Button>{record&&!loading&&<h2>{record.name}</h2>}</div>
+   {loading?<p role="status">正在读取设备…</p>:error?<div role="alert"><p>{error}</p><Button variant="outline" onClick={()=>setRefresh(value=>value+1)}>重试</Button></div>:record?<RecipientDetail record={record} spaces={data?.spaces||[]} onEdit={()=>edit(record)} activeTab={deviceTab} onTabChange={value=>setParams(current=>{const next=new URLSearchParams(current);next.set('deviceTab',value);return next;})}/>:<p role="alert">设备不可访问或已不存在。</p>}
+   {notice&&<p role="status">{notice}</p>}{editorPanel}
+  </section>;
+ }
  return <section className="recipient-workspace" aria-label={spaceId?'此场景关联的设备':'智能设备'}>
   <div className="recipient-operation-bar">
    <div className="recipient-view-group"><ViewModeSwitch value={view} onChange={setView} ariaLabel="显示方式" labels={{cards:'卡片视图',list:'列表视图'}}/><span className="recipient-count" aria-live="polite">{loading?'正在读取…':error?'暂不可读':`${data?.total||0} 台设备`}</span></div>
@@ -62,28 +80,29 @@ function RecipientWorkspace({spaceId,revision,csrf}:{spaceId:string;revision:num
   {loading?<p role="status" className="service-list-empty">正在读取设备…</p>:error?<div role="alert" className="service-list-empty"><p>{error}</p><Button variant="outline" onClick={()=>setRefresh(v=>v+1)}>重新加载</Button></div>:!data?.recipients.length?<div className="service-list-empty"><h2>{query||morphology||purpose||scene?'没有匹配的设备':spaceId?'此场景尚未关联设备':'尚未添加设备'}</h2><p>登记设备形态与接入用途后，可继续配置厂家对接。登记不会自动开通服务权限。</p>{(query||morphology||purpose||scene||offset>0)&&<Button variant="outline" onClick={()=>{setQuery('');setMorphology('');setPurpose('');setScene('');setOffset(0);}}>清除筛选</Button>}</div>:<div className={view==='cards'?'recipient-card-grid':'service-directory-list'}>{data.recipients.map(record=>{
    const links=record.relations.filter(r=>!spaceId||r.space_id===spaceId),purposes=[...new Set(links.flatMap(r=>r.purposes))];const Shape=forms[record.morphology].icon;
    const sceneNames=links.map(r=>data.spaces.find(s=>s.id===r.space_id)?.name||r.space_id).join('、');
-   if(view==='cards')return <article className="recipient-tile" aria-label={record.name} key={record.id}>
-    <DeviceArtwork morphology={record.morphology}/>
-    <header className="recipient-tile-header"><div className="recipient-device-icon"><Shape size={24} weight="duotone"/></div><div className="recipient-tile-title"><h3 title={record.name}>{record.name}</h3><span className="recipient-form-label">{forms[record.morphology].label}</span></div><StatusBadge size="sm" icon={false} tone="neutral">待厂家对接</StatusBadge></header>
-    <div className="recipient-tile-scenes"><span>关联场景</span><p title={sceneNames}>{sceneNames||'未关联场景'}</p></div>
-    <footer className="recipient-tile-footer"><div className="recipient-tags">{purposes.length?purposes.map(p=><StatusBadge size="sm" tone="neutral" key={p}>{purposeNames[p]}</StatusBadge>):<span className="recipient-form-label">未配置用途</span>}</div><Button variant="outline" size="icon-xl" aria-label={`查看${record.name}详情`} onClick={()=>setDetail(record)}><ArrowRight size={16}/></Button></footer>
-   </article>;
+   const controls=<ServiceCardActions label={record.name} items={deviceActions(record)}/>;
+   if(view==='cards')return <ServiceCard key={record.id} label={record.name} symbol={<Shape size={26} weight="duotone"/>} artwork={<DeviceArtwork morphology={record.morphology}/>}
+    heading={<><div className="service-card-title-line"><h3 title={record.name}>{record.name}</h3><StatusBadge size="sm" icon={false} tone="neutral">待厂家对接</StatusBadge></div><span className="recipient-form-label">{forms[record.morphology].label}</span></>}
+    metadata={<><span>更新：{time(record.updated_at)}</span></>} actions={controls} onOverview={()=>{setDetail(record);setOverviewOpen(true);}}>
+    <p title={sceneNames}>{sceneNames||'未关联场景'}</p><div className="recipient-tags">{purposes.length?purposes.map(p=><StatusBadge size="sm" tone="neutral" key={p}>{purposeNames[p]}</StatusBadge>):<span className="recipient-form-label">未配置用途</span>}</div>
+   </ServiceCard>;
    return <ServiceDirectoryRow key={record.id} label={record.name} symbol={<Shape size={36} weight="duotone"/>}
     heading={<><h3 className="service-entry-name">{record.name}</h3><span className="service-project">{forms[record.morphology].label}{(record.manufacturer||record.model)&&` · ${[record.manufacturer,record.model].filter(Boolean).join(' / ')}`}</span></>}
     capabilities={<><span className="service-entry-label">接入用途</span><div className="recipient-tags">{purposes.length?purposes.map(p=><StatusBadge size="sm" tone="neutral" key={p}>{purposeNames[p]}</StatusBadge>):<span className="service-project">未配置用途</span>}</div></>}
     metadata={<><div className="service-release-primary"><StatusBadge size="sm" icon={false} tone="neutral">待厂家对接</StatusBadge></div><div className="service-project">{sceneNames?`关联场景：${sceneNames}`:'未关联场景'}</div>{record.external_id&&<div className="service-project">设备标识：{record.external_id}</div>}</>}
-    action={<Button variant="outline" size="xl" aria-label={`查看${record.name}详情`} onClick={()=>setDetail(record)}>查看详情<ArrowRight size={16}/></Button>}/>;
+    action={controls}/>;
   })}</div>}
   {!!data&&data.total>20&&!loading&&<div className="recipient-pagination"><Button variant="outline" size="sm" disabled={offset===0} onClick={()=>setOffset(v=>Math.max(0,v-20))}>上一页</Button><span>{offset+1}–{Math.min(offset+20,data.total)} / {data.total}</span><Button variant="outline" size="sm" disabled={offset+20>=data.total} onClick={()=>setOffset(v=>v+20)}>下一页</Button></div>}
-  <Drawer open={!!detail} onClose={()=>setDetail(null)} side="right" width="min(672px, 100vw)" title={detail?.name||'设备详情'} closeLabel="关闭设备详情">{detail&&<RecipientDetail record={detail} spaces={data?.spaces||[]} onEdit={()=>edit(detail)}/>}</Drawer>
-  {editor&&<RecipientEditor key={editor.record?.id||'new'} initial={editor.draft} record={editor.record} spaces={data?.spaces||[]} csrf={csrf} onClose={()=>setEditor(null)} onSaved={()=>{setEditor(null);setNotice('已保存登记，接入尚未验证。');setRefresh(v=>v+1);}}/>}
+  <Drawer open={overviewOpen} onClose={()=>setOverviewOpen(false)} side="right" width="md" title="设备概要" description={detail?.name} closeLabel="关闭设备概要">{detail&&<div className="service-card-overview"><div><StatusBadge tone="neutral">待厂家对接</StatusBadge></div><dl>{[['设备形态',forms[detail.morphology].label],['厂家 / 型号',[detail.manufacturer,detail.model].filter(Boolean).join(' / ')||'未补充'],['关联场景',detail.relations.map(r=>data?.spaces.find(s=>s.id===r.space_id)?.name||r.space_id).join('、')||'未关联'],['接入用途',[...new Set(detail.relations.flatMap(r=>r.purposes))].map(p=>purposeNames[p]).join('、')||'未配置'],['最近修改',time(detail.updated_at)]].map(([key,value])=><div key={key}><dt>{key}</dt><dd>{value}</dd></div>)}</dl><div className="service-card-overview-actions"><ServiceCardActions label={detail.name} items={[{key:'device',label:'设备管理',icon:<Info size={16}/>,href:devicePageHref(detail.id,'overview','/services?'+params)}]}/></div></div>}</Drawer>
+  {editorPanel}
   {linkExisting&&<LinkRecipient spaceId={spaceId} csrf={csrf} onCreate={openCreate} onClose={()=>setLinkExisting(false)} onSaved={()=>{setLinkExisting(false);setNotice('已关联设备，接入用途已保存，实际授权仍需独立配置。');setRefresh(v=>v+1);}}/>}
  </section>;
 }
 
-function RecipientDetail({record,spaces,onEdit}:{record:Recipient;spaces:Space[];onEdit:()=>void}){
- const [tab,setTab]=useState('overview');
- return <div className="recipient-detail"><div className="recipient-actions"><StatusBadge tone="neutral">已登记</StatusBadge><StatusBadge tone="neutral">待厂家对接</StatusBadge>{record.can_manage&&<Button variant="outline" size="sm" onClick={onEdit}>编辑信息与关联</Button>}</div><p className="text-label-small text-muted-foreground">登记用途不授予实际服务权限，设备状态尚未验证。</p><Tabs value={tab} onValueChange={setTab}><TabsList aria-label="设备详情"><TabsTrigger value="overview">概况</TabsTrigger><TabsTrigger value="spaces">关联空间</TabsTrigger><TabsTrigger value="integration">接入配置</TabsTrigger><TabsTrigger value="records">使用记录</TabsTrigger></TabsList><TabsContent value="overview"><dl className="recipient-facts">{[['设备 ID',record.id],['设备形态',forms[record.morphology].label],['形态说明',record.morphology_note],['厂家',record.manufacturer],['型号',record.model],['外部设备标识',record.external_id],['负责人',record.contact],['登记时间',time(record.created_at)],['修改时间',time(record.updated_at)],['修订号',String(record.revision)]].map(([label,value])=><div key={label}><dt>{label}</dt><dd>{value||'未补充'}</dd></div>)}</dl></TabsContent><TabsContent value="spaces"><div className="recipient-relations">{!record.relations.length&&<p>尚未关联空间。</p>}{record.relations.map(r=><article key={r.space_id}><h3>{spaces.find(s=>s.id===r.space_id)?.name||r.space_id}</h3><div className="recipient-tags">{r.purposes.map(p=><StatusBadge key={p} tone="neutral">{purposeNames[p]}</StatusBadge>)}</div>{r.purposes.includes('use')&&<p>{r.usage_modes.length?r.usage_modes.map(m=>m==='online'?'在线服务':'离线成果').join('、'):'服务使用方式待配置'}</p>}<p className="text-label-small text-muted-foreground">用途已登记 · 接入授权未验证 · 实际使用版本未确认</p></article>)}</div></TabsContent><TabsContent value="integration"><h3>待厂家对接</h3><p>后续按厂家方案验证设备身份、数据格式、时间与坐标约定以及可用空间能力。</p><p className="text-body-small text-muted-foreground">外部设备标识当前为人工登记，尚未验证。现有平台调用身份不自动绑定为此设备身份。</p></TabsContent><TabsContent value="records"><h3>暂无设备使用记录</h3><p>厂家接入并验证设备身份后，分别记录采集提交、在线请求、离线交付及应用版本。登记与下载不表示设备已使用成果。</p></TabsContent></Tabs></div>;
+function RecipientDetail({record,spaces,onEdit,activeTab,onTabChange}:{record:Recipient;spaces:Space[];onEdit:()=>void;activeTab?:DeviceTab;onTabChange?:(value:string)=>void}){
+ const [localTab,setLocalTab]=useState('overview');
+ const tab=activeTab||localTab,setTab=onTabChange||setLocalTab;
+ return <div className="recipient-detail"><div className="recipient-actions"><StatusBadge tone="neutral">已登记</StatusBadge><StatusBadge tone="neutral">待厂家对接</StatusBadge>{record.can_manage&&<Button variant="outline" size="sm" onClick={onEdit}>编辑信息与关联</Button>}</div><p className="text-label-small text-muted-foreground">登记用途不授予实际服务权限，设备状态尚未验证。</p><Tabs value={tab} onValueChange={setTab}><TabsList aria-label="设备详情"><TabsTrigger value="overview">设备信息</TabsTrigger><TabsTrigger value="spaces">关联场景</TabsTrigger><TabsTrigger value="integration">接入配置</TabsTrigger><TabsTrigger value="records">使用记录</TabsTrigger></TabsList><TabsContent value="overview"><dl className="recipient-facts">{[['设备 ID',record.id],['设备形态',forms[record.morphology].label],['形态说明',record.morphology_note],['厂家',record.manufacturer],['型号',record.model],['外部设备标识',record.external_id],['负责人',record.contact],['登记时间',time(record.created_at)],['修改时间',time(record.updated_at)],['修订号',String(record.revision)]].map(([label,value])=><div key={label}><dt>{label}</dt><dd>{value||'未补充'}</dd></div>)}</dl></TabsContent><TabsContent value="spaces"><div className="recipient-relations">{!record.relations.length&&<p>尚未关联空间。</p>}{record.relations.map(r=><article key={r.space_id}><h3>{spaces.find(s=>s.id===r.space_id)?.name||r.space_id}</h3><div className="recipient-tags">{r.purposes.map(p=><StatusBadge key={p} tone="neutral">{purposeNames[p]}</StatusBadge>)}</div>{r.purposes.includes('use')&&<p>{r.usage_modes.length?r.usage_modes.map(m=>m==='online'?'在线服务':'离线成果').join('、'):'服务使用方式待配置'}</p>}<p className="text-label-small text-muted-foreground">用途已登记 · 接入授权未验证 · 实际使用版本未确认</p></article>)}</div></TabsContent><TabsContent value="integration"><h3>待厂家对接</h3><p>后续按厂家方案验证设备身份、数据格式、时间与坐标约定以及可用空间能力。</p><p className="text-body-small text-muted-foreground">外部设备标识当前为人工登记，尚未验证。现有平台调用身份不自动绑定为此设备身份。</p></TabsContent><TabsContent value="records"><h3>暂无设备使用记录</h3><p>厂家接入并验证设备身份后，分别记录采集提交、在线请求、离线交付及应用版本。登记与下载不表示设备已使用成果。</p></TabsContent></Tabs></div>;
 }
 
 function CheckOption({checked,onChange,children}:{checked:boolean;onChange:(checked:boolean)=>void;children:React.ReactNode}){
