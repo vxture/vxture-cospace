@@ -7,12 +7,14 @@ import './entry-status.css';
 
 import {sessionScopeKey,sessionConfirmed,confirmationDeadline,requestSessionConfirmation} from './session-continuity';
 import React,{createContext,useContext,useEffect,useLayoutEffect,useRef,useState} from 'react';
-import {Button} from '@vxture/design-system';
+import {Button,ShellBootScreen} from '@vxture/design-system';
 import {HomeLayout} from './home-layout';
 import {productQuotaMessage} from './product-quota-messages';
 import type {AccountProfile} from './account-profile';
 
 type Session={authenticated:boolean;authority_state:string;authority_ready?:boolean;confirmation_max_age_s?:number;csrf?:string;access_ready?:boolean;user?:AccountProfile};
+type AuthConfig={enabled?:boolean;mode?:string;business_authorization?:boolean;subscription_authorization?:boolean};
+const AuthConfiguration=createContext<AuthConfig|null>(null);
 export type AuthMode='checking'|'preview'|'platform'|'business'|'unavailable';
 export const PlatformSession=createContext<Session|null>(null);
 export const usePlatformSession=()=>useContext(PlatformSession);
@@ -22,8 +24,9 @@ function SubscriptionNotice({value,unavailable=false,onRetry,user}:{value:Subscr
  return <EntryStatus state={state} user={user} onRetry={onRetry}/>;
 }
 function IdentitySubscription({user,onSessionCheck}:{user?:AccountProfile;onSessionCheck:()=>Promise<void>}){
+ const config=useContext(AuthConfiguration);
  const [value,setValue]=useState<Subscription|null>(null),[enabled,setEnabled]=useState(false),[unavailable,setUnavailable]=useState(false),[checking,setChecking]=useState(true);
- const read=async(reconfirm=false)=>{setChecking(true);try{if(reconfirm)await onSessionCheck();const r=await fetch('/api/auth/config',{cache:'no-store'});if(!r.ok)throw Error();const config=await r.json();setEnabled(config.subscription_authorization===true);if(config.subscription_authorization===true){const r=await fetch('/api/subscription',{cache:'no-store'});if(!r.ok){if(r.status===401)await onSessionCheck();throw Error();}setValue(await r.json());}setUnavailable(false);}catch{setUnavailable(true);}finally{setChecking(false);}};
+ const read=async(reconfirm=false)=>{setChecking(true);try{if(reconfirm)await onSessionCheck();if(!config)throw Error('auth_config_unavailable');setEnabled(config.subscription_authorization===true);if(config.subscription_authorization===true){const r=await fetch('/api/subscription',{cache:'no-store'});if(!r.ok){if(r.status===401)await onSessionCheck();throw Error();}setValue(await r.json());}setUnavailable(false);}catch{setUnavailable(true);}finally{setChecking(false);}};
  useEffect(()=>{void read();},[]);
  if(checking)return <EntryStatus state="checking-access" user={user}/>;
  return enabled?<SubscriptionNotice user={user} value={value} unavailable={unavailable} onRetry={()=>void read(true)}/>:<EntryStatus state={unavailable?'access-unavailable':'connected'} user={user} onRetry={()=>void read(true)}/>;
@@ -41,20 +44,23 @@ export async function platformLogout(csrf:string){
  location.assign(destination.href);
 }
 
-export function useAuthMode():AuthMode{
- const [mode,setMode]=useState<AuthMode>('checking');
+function useAuthConfiguration(){
+ const [state,setState]=useState<{mode:AuthMode;config:AuthConfig|null}>({mode:'checking',config:null});
  useEffect(()=>{const controller=new AbortController();fetch('/api/auth/config',{cache:'no-store',signal:controller.signal}).then(async response=>{
-  // Old local engineering servers do not expose this new endpoint yet.
-  if(response.status===404){setMode('preview');return;}
+  if(response.status===404){if(!controller.signal.aborted)setState({mode:'preview',config:null});return;}
   if(!response.ok)throw new Error('config unavailable');
-  const config=await response.json();
-  if(config.enabled===true&&config.mode==='identity_pilot')setMode('platform');
-  else if(config.enabled===true&&config.mode==='authorized_workbench'&&config.business_authorization===true)setMode('business');
-  else if(config.enabled===false&&config.mode==='engineering_preview')setMode('preview');
+  const config:AuthConfig=await response.json();
+  let mode:AuthMode;
+  if(config.enabled===true&&config.mode==='identity_pilot')mode='platform';
+  else if(config.enabled===true&&config.mode==='authorized_workbench'&&config.business_authorization===true)mode='business';
+  else if(config.enabled===false&&config.mode==='engineering_preview')mode='preview';
   else throw new Error('invalid mode');
- }).catch(error=>{if(error.name!=='AbortError')setMode('unavailable');});return()=>controller.abort();},[]);
- return mode;
+  if(!controller.signal.aborted)setState({mode,config});
+ }).catch(error=>{if(error.name!=='AbortError')setState({mode:'unavailable',config:null});});return()=>controller.abort();},[]);
+ return state;
 }
+
+function SessionBootScreen(){return <ShellBootScreen label="正在加载"/>;}
 
 export function PlatformIdentityPage({preserveWork=false}:{preserveWork?:boolean}){
  const [session,setSession]=useState<Session|null>(null),[error,setError]=useState('');
@@ -73,6 +79,7 @@ export function PlatformIdentityPage({preserveWork=false}:{preserveWork?:boolean
  const state=identityEntryState(session,{failed:!!error,preserveWork,signedOut});
  const retrySession=()=>{retry();if(preserveWork)window.dispatchEvent(new Event('cospace:confirm-session'));};
  let content:React.ReactNode;
+ if(!session&&!error)return <SessionBootScreen/>;
  if(state==='identity')content=<IdentitySubscription key={sessionScopeKey(session)} user={session?.user} onSessionCheck={read}/>;
  else if(state==='signin')content=<SignInContent onLogin={login}/>;
  else content=<EntryStatus state={state} user={session?.user} preserveWork={preserveWork} onLogin={state==='signed-out'||state==='recovery'&&!session?.authenticated?login:undefined} onRetry={state==='unavailable'||state==='recovery'?retrySession:undefined}/>;
@@ -81,14 +88,14 @@ export function PlatformIdentityPage({preserveWork=false}:{preserveWork?:boolean
 }
 
 export function AuthBoundary({children}:{children:React.ReactNode}){
- const mode=useAuthMode();
- if(mode==='preview')return <>{children}</>;
- if(mode==='platform')return <PlatformIdentityPage/>;
- if(mode==='business')return <BusinessSession>{children}</BusinessSession>;
- return <HomeLayout><EntryStatus state={mode==='checking'?'connecting':'unavailable'} onRetry={mode==='unavailable'?()=>location.reload():undefined}/></HomeLayout>;
+ const {mode,config}=useAuthConfiguration();
+ if(mode==='checking')return <SessionBootScreen/>;
+ if(mode==='unavailable')return <HomeLayout><EntryStatus state="unavailable" onRetry={()=>location.reload()}/></HomeLayout>;
+ return <AuthConfiguration.Provider value={config}>{mode==='preview'?children:mode==='platform'?<PlatformIdentityPage/>:<BusinessSession>{children}</BusinessSession>}</AuthConfiguration.Provider>;
 }
 
 function BusinessSession({children}:{children:React.ReactNode}){
+ const config=useContext(AuthConfiguration);
  const [quotaError,setQuotaError]=useState('');
  const [session,setSession]=useState<Session|null>(null),[ready,setReady]=useState(false),[error,setError]=useState('');
  const retained=useRef<Session|null>(null),lastScope=useRef('');
@@ -148,7 +155,7 @@ function BusinessSession({children}:{children:React.ReactNode}){
    }else if(!stopped)setSession(next);
   };
   const bootstrap=async()=>{
-   const config=await nativeFetch('/api/auth/config').then(r=>{if(!r.ok)throw new Error('auth_config_unavailable');return r.json();});
+   if(!config)throw new Error('auth_config_unavailable');
    needsSubscription=config.subscription_authorization===true;setSubscriptionRequired(needsSubscription);
    await bootstrapAuthority();
    if(stopped)return;
@@ -182,7 +189,7 @@ function BusinessSession({children}:{children:React.ReactNode}){
   return()=>{stopped=true;window.fetch=nativeFetch;window.removeEventListener('pointerdown',activity);window.removeEventListener('keydown',activity);window.removeEventListener('focus',resume);document.removeEventListener('visibilitychange',resume);window.removeEventListener('cospace:confirm-session',retry);window.removeEventListener('storage',otherTabLogout);};
  },[]);
  if(error&&!ready)return <HomeLayout><EntryStatus state="unavailable" onRetry={()=>location.reload()}/></HomeLayout>;
- if(!ready)return <HomeLayout><EntryStatus state="restoring"/></HomeLayout>;
+ if(!ready)return <SessionBootScreen/>;
  const authorized=sessionConfirmed(session)&&(!subscriptionRequired||!!subscription?.business_allowed&&!subscriptionUnavailable);
  if(session?.authenticated&&retained.current&&sessionScopeKey(session)!==sessionScopeKey(retained.current))retained.current=null;
  if(authorized)retained.current=session;
