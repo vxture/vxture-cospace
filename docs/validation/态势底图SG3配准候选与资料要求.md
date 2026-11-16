@@ -43,3 +43,31 @@ python -m experiments.scripts.ifc_control_picker --ifc-root <目录> --cloud-roo
 ```
 
 生成的 HTML 可离线打开。Anoeta 显示 27,904 个结构三角面及 42,370 个原始点样本（总计 254,219，按 6 点步长取样），原坐标不变。点击两侧顶点与样本、描述共同特征并指定用途后，导出未核验工作表。IFC 记录实体 GlobalId 和原网格顶点索引，点云记录原 PLY 顶点索引，索引均从 0 起。线框和投影点的深度会重叠，必须换角度核对选点；若采样没有覆盖具体特征，应先回看完整点云。浏览器工作表保留原始候选；经人工确认物理对应、组间独立性和米制单位后再整理为求解输入。本次没有生成实测控制点或配准矩阵。
+
+## 复核工作表到求解候选
+
+`experiments.scripts.ifc_reviewed_alignment` 补齐离线工作表与求解器之间的核验环节。保留浏览器工作表的未核验标记，通过独立复核记录声明单位依据与逐点证据，不允许直接将工作表布尔值改为已核验。
+
+复核记录结构如下（摘要与证据 ID 仅为结构示意，必须替换；controls 覆盖工作表所有点）：
+
+```json
+{
+  "profile": "cospace.ifc-control-review-record/0.1",
+  "worksheet_sha256": "<工作表规范化内容的SHA-256>",
+  "reviewer": "reviewer-id",
+  "unit_evidence": {"id": "survey-unit-report", "sha256": "<单位依据文件SHA-256>"},
+  "controls": [
+    {"control_id": "control-1", "evidence": {"id": "landmark-1", "sha256": "<该点复核证据SHA-256>"}}
+  ]
+}
+```
+
+工作表摘要使用 `packages.spatial.scene_identity.content_digest`（JSON 键排序、无额外空白、UTF-8）计算，不是原始 JSON 文件字节的摘要。证据应保留可识别同一物理位置的三维定位记录；检查点在求解前固定，不在看到误差后改作拟合点。复核记录与工作表一起保存在本地证据目录，不提交原始现场数据或身份信息。
+
+```text
+python -m experiments.scripts.ifc_reviewed_alignment --worksheet <工作表.json> --review <复核记录.json> --ifc-root <IFC目录> --cloud-root <点云目录> --ifc-sha256 <已核对目录摘要> --cloud-sha256 <已核对PLY摘要> --max-check-error-m <本次检查阈值> --output <新候选.json>
+```
+
+程序重新读取固定来源，逐点比对 GlobalId、网格顶点索引、PLY 顶点索引和原始坐标，拒绝改写坐标、未知实体、越界索引、过期工作表复核及缺项记录。然后调用同一刚体求解器，沿用独立检查点及退化几何检查。输出保留复核记录及其摘要；证据文件内容没有被程序读取或认证，`evidence_content_verified`、`control_evidence_verified`、`alignment_verified` 和正式可用标记始终为 false。声明证据摘要不能替代实际复核，也不构成线上审批机制。
+
+当前进展：离线工具链已可用，合成验证通过；Anoeta 的单位依据及真实对应点证据仍缺失，未生成真实候选。后续应先完成这些资料，再核对误差、覆盖范围和结构一致性，不能直接进入正式成果采用。
