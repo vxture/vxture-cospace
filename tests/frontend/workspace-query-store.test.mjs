@@ -41,7 +41,7 @@ test('server session lifetime uses monotonic request start without extending it 
 
 test('normal confirmation sends only POST, while rotated CSRF recovers once',async()=>{
  const calls=[];
- const send=async(url,init)=>{calls.push([url,init?.method||'GET',init?.headers?.['X-CoSpace-CSRF']]);return Response.json({csrf:'new'});};
+ const send=async(url,init)=>{calls.push([url,init?.method||'GET',init?.headers?.['X-CoSpace-CSRF']]);return Response.json({authenticated:true,csrf:'new'});};
  assert.equal((await requestSessionConfirmation(send,'old',()=>true)).status,200);
  assert.deepEqual(calls,[['/api/auth/session','POST','old']]);
  calls.length=0;
@@ -56,7 +56,14 @@ test('scope change during recovery stops confirmation, and another denial never 
  assert.equal(await requestSessionConfirmation(send,'old',()=>valid),null);
  assert.deepEqual(calls,['POST','GET']);
  calls.length=0;valid=true;
- const denied=async(url,init)=>{calls.push(init?.method||'GET');return init?.method?new Response(null,{status:403}):Response.json({csrf:'new'});};
+ const denied=async(url,init)=>{calls.push(init?.method||'GET');return init?.method?new Response(null,{status:403}):Response.json({authenticated:true,csrf:'new'});};
  assert.equal((await requestSessionConfirmation(denied,'old',()=>true)).status,403);
  assert.deepEqual(calls,['POST','GET','POST']);
+});
+
+test('confirmation recovers a signed-out response without posting an empty CSRF token',async()=>{
+ const calls=[];
+ const send=async(url,init)=>{calls.push(init?.method||'GET');return init?.method?new Response(null,{status:403}):Response.json({authenticated:false,authority_state:'signed_out'});};
+ assert.equal((await (await requestSessionConfirmation(send,'old',()=>true)).json()).authority_state,'signed_out');
+ assert.deepEqual(calls,['POST','GET']);
 });

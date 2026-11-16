@@ -91,7 +91,7 @@ class MockAccounts:
                 raw = self.rfile.read(int(self.headers.get('Content-Length',0)))
                 body = json.loads(raw) if path == '/oidc/session/status' else {k:v[0] for k,v in parse_qs(raw.decode()).items()}
                 if path == '/oidc/session/status':
-                    parent.calls.append({'path':path, 'active':body.get('active')})
+                    parent.calls.append({'path':path, 'active':body.get('active'), 'sid':body.get('sid')})
                     if parent.unavailable: return self.send(503, {'error':'unavailable'})
                     return self.send(200, {'valid':True, 'next_check_at':int(parent.now())+90} if parent.valid else {'valid':False})
                 if path != '/oidc/token': return self.send(404)

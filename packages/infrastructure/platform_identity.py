@@ -17,6 +17,9 @@ from joserfc.errors import JoseError
 from joserfc.jwk import RSAKey
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+# Standard JWT event identifier, never an HTTP request destination.
+LOGOUT_EVENT = 'http://schemas.openid.net/event/backchannel-logout'  # NOSONAR
+
 
 class IdentityRejected(ValueError):
     """Credential is invalid for this resource request (401, not global logout)."""
@@ -155,6 +158,18 @@ class PlatformTokenVerifier:
         if not isinstance(claims.get('sub'),str) or not re.fullmatch(r'usr_[A-Za-z0-9_-]{1,150}',claims['sub']):
             raise IdentityRejected('platform_credential_invalid')
         return claims
+
+    def verify_logout(self, token):
+        claims = self.signed_claims(token)
+        if (claims.get('events') != {LOGOUT_EVENT: {}}
+                or 'nonce' in claims
+                or not isinstance(claims.get('sid'), str)
+                or not re.fullmatch(r'[A-Za-z0-9_-]{1,128}', claims['sid'])
+                or not isinstance(claims.get('jti'), str) or not 1 <= len(claims['jti']) <= 256
+                or claims['exp'] <= self.now()
+                or claims['exp'] - claims['iat'] > 300):
+            raise IdentityRejected('logout_token_invalid')
+        return claims['sid']
 
     def verify_id(self, token, *, nonce=None, subject=None, sid=None):
         claims = self.verified_claims(token)

@@ -9,7 +9,7 @@ from packages.service.space_access import SpaceAccessPolicy
 from packages.service.platform_auth_http import create_auth_app
 from packages.service.platform_business_http import BusinessAccess
 from experiments.scripts.serve_nyu_flow_preview import create_app
-from test_platform_login import runtime, login, activity
+from test_platform_login import runtime, login, activity, notify_logout
 from test_preview_workflow import prepared, inventory
 
 
@@ -89,6 +89,22 @@ def test_filtered_directory_and_direct_space_only_authorized(secured):
     assert c.get('/api/spaces/'+spaces[1]['id']).status_code==403
     assert c.get('/api/projects/'+spaces[0]['project_id']).status_code==200
     assert c.get('/api/projects/project-'+'f'*16).status_code==403
+
+
+@pytest.mark.parametrize('scenario,expected', [('notice',401), ('lost_notice',401), ('unavailable',503)])
+def test_central_session_blocks_protected_api(secured, scenario, expected):
+    rp, client, accounts, *_ = secured
+    sign_in(secured)
+    assert client.get('/api/spaces').status_code == 200
+    if scenario == 'notice':
+        with TestClient(client.app,base_url=rp.config.origin,follow_redirects=False) as callback:
+            assert notify_logout(callback, accounts).status_code == 200
+    else:
+        accounts.valid = False
+        accounts.unavailable = scenario == 'unavailable'
+        session = client.get('/api/auth/session?fresh=1').json()
+        assert session['authority_state'] == ('unavailable' if accounts.unavailable else 'signed_out')
+    assert client.get('/api/spaces').status_code == expected
 
 
 @pytest.mark.parametrize('method,suffix',[('GET',''),('HEAD',''),('GET','/preflight'),('HEAD','/preflight'),('POST','/preflight')])
