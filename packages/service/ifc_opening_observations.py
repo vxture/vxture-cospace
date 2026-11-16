@@ -27,7 +27,7 @@ class IfcOpeningObservations:
                   'data_kind': 'ifc_design_candidate', 'assessment': 'unverified',
                   'active_count': 0, 'expired_count': 0, 'retracted_count': 0}
         scope = observation_scope(principal, space, pin)
-        if not self.journal.registered(scope):
+        if not self.journal.registered(scope, subject['entity_id']):
             return result
         when = self.clock()
         state = self.journal.resolve(scope, subject['entity_id'], as_of=when, known_at=when)

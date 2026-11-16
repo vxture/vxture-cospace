@@ -90,6 +90,8 @@ def test_registered_reports_are_scoped_to_authenticated_tenant_and_not_geometry(
     assert 'report' not in value
     assert str(root) not in json.dumps(value)
     assert journal.registered(scope | {'workspace': 'other-workspace'}) is False
+    assert journal.registered(scope, 'wall') is True
+    assert journal.registered(scope, 'not-registered-door') is False
     journal.clock = lambda: '2026-11-17T00:02:00Z'
     journal.append(scope, report('late-old', entity_id='wall', observed_at='2026-11-16T23:59:00Z', value='open'),
                    authenticated_producer='sensor-a')

@@ -75,12 +75,16 @@ class ObservationJournal:
             db.execute('INSERT OR IGNORE INTO registrations VALUES (?,?)', (key, raw))
         return key
 
-    def registered(self, scope):
+    def registered(self, scope, entity=None):
         key = scope_key(scope)
         if not self.path.exists():
             return False
         with closing(sqlite3.connect(self.path.as_uri() + '?mode=ro', uri=True)) as db:
-            return db.execute('SELECT 1 FROM registrations WHERE scope=?', (key,)).fetchone() is not None
+            row = db.execute('SELECT document FROM registrations WHERE scope=?', (key,)).fetchone()
+            if row is None:
+                return False
+            registration = Registration.model_validate_json(row[0])
+            return entity is None or entity in {s.entity_id for s in registration.subjects}
 
     def append(self, scope, document, *, authenticated_producer):
         return self.append_batch(scope, [document], authenticated_producer=authenticated_producer)[0]
