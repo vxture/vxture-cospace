@@ -122,8 +122,8 @@ class IfcWorkspace:
         except ValidationError as exc:raise ValueError('ifc_structure_evidence_invalid') from exc
         indices={p['global_id']:f'e{i:05}' for i,p in enumerate(doc['products'])}
         rows=[{'entity_id': e.entity_id, 'ifc_type': e.ifc_type, 'source_role': e.role, 'element_id': indices[e.entity_id], 'name': products[e.entity_id]['name'], 'geometry_status': products[e.entity_id]['geometry_status']} for e in entities]
-        return result|dict(structure_available=True,entities=rows,relations=relations,
-                           declared_role_counts=dict(sorted(Counter(e.role for e in entities).items())))
+        return result|{'structure_available': True, 'entities': rows, 'relations': relations,
+                       'declared_role_counts': dict(sorted(Counter(e.role for e in entities).items()))}
 
     def element(self,space,identity,expected):
         binding,doc=self.catalog(space,expected)

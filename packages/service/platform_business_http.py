@@ -50,6 +50,9 @@ INPUTS_ROUTE='/api/inputs'
 PUBLICATION_MANAGE='publication.manage'
 
 
+IFC_STRUCTURE_PATH = '/api/scene-ifc/structure'
+
+
 class BusinessAccess:
     def __init__(self, rp, policies, directory, jobs, registration_sources=None,workspace_config=None,consumer_config=None,subscriptions=None,scene_pointcloud_config=None,scene_ifc_config=None):
         self.rp,self.policies,self.directory,self.jobs=rp,policies,directory,jobs
@@ -131,7 +134,7 @@ class BusinessAccess:
             space(q.get('space_id'),DATA_MANAGE);return {'principal':principal}
         if (path=='/api/scene-attachments' or re.fullmatch(r'/api/scene-attachments/attachment-[a-f0-9]{16}',path)) and method in ('GET','HEAD','POST'):
             space(q.get('space_id'),DATA_MANAGE);return {'principal':principal}
-        if path in ('/api/scene-ifc','/api/scene-ifc/element','/api/scene-ifc/structure') and method in ('GET','HEAD'):
+        if path in ('/api/scene-ifc','/api/scene-ifc/element',IFC_STRUCTURE_PATH) and method in ('GET','HEAD'):
             space(q.get('space_id'),'association.edit');return {'principal':principal}
         if ((path=='/api/scene-pointclouds' or re.fullmatch(r'/api/scene-pointclouds/(tiles/t[0-9]{5}/[0-2]|compositions/compose-[a-f0-9]{24})',path)) and method in ('GET','HEAD')
                 or (path=='/api/scene-pointclouds/compositions' or re.fullmatch(r'/api/scene-pointclouds/compositions/compose-[a-f0-9]{24}/register',path)) and method=='POST'):
@@ -437,11 +440,11 @@ class BusinessAccess:
             if path.startswith('/api/scene-ifc'):
                 try:
                     expected={'space_id'} if path=='/api/scene-ifc' else {'space_id','element_id','catalog_sha256'}
-                    if path=='/api/scene-ifc/structure':expected={'space_id','catalog_sha256'}
+                    if path==IFC_STRUCTURE_PATH:expected={'space_id','catalog_sha256'}
                     if set(request.query_params)!=expected or len(request.query_params.multi_items())!=len(expected):return deny(422,'ifc_invalid_request')
-                    if path=='/api/scene-ifc/structure' and not re.fullmatch('[a-f0-9]{64}',request.query_params['catalog_sha256']):return deny(422,'ifc_invalid_request')
+                    if path==IFC_STRUCTURE_PATH and not re.fullmatch('[a-f0-9]{64}',request.query_params['catalog_sha256']):return deny(422,'ifc_invalid_request')
                     if path=='/api/scene-ifc':result=await run_in_threadpool(self.scene_ifc.directory_view,request.query_params['space_id'])
-                    elif path=='/api/scene-ifc/structure':result=await run_in_threadpool(self.scene_ifc.structure_view,request.query_params['space_id'],request.query_params['catalog_sha256'])
+                    elif path==IFC_STRUCTURE_PATH:result=await run_in_threadpool(self.scene_ifc.structure_view,request.query_params['space_id'],request.query_params['catalog_sha256'])
                     else:result=await run_in_threadpool(self.scene_ifc.preview,request.query_params['space_id'],request.query_params['element_id'],request.query_params['catalog_sha256'])
                     return JSONResponse(result,headers={'Cache-Control':'no-store'})
                 except ValidationError:return deny(422,'ifc_invalid_request')

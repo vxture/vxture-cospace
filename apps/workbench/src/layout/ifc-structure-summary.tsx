@@ -4,12 +4,12 @@ import {businessEndpoint as endpoint} from './business-endpoint';
 
 import {checked,relations,type Structure} from './ifc-structure-contract';
 
-export function IfcStructureSummary({space,catalogSha256,selectedId,onSelect}:{space:string;catalogSha256:string;selectedId?:string;onSelect:(id:string)=>void}){
+export function IfcStructureSummary({space,catalogSha256,selectedId,onSelect}:Readonly<{space:string;catalogSha256:string;selectedId?:string;onSelect:(id:string)=>void}>){
  const [data,setData]=useState<Structure|null>(null),[error,setError]=useState(''),[revision,setRevision]=useState(0);
  useEffect(()=>{
   const controller=new AbortController();setData(null);setError('');
   fetch(`${endpoint}/api/scene-ifc/structure?${new URLSearchParams({space_id:space,catalog_sha256:catalogSha256})}`,{signal:controller.signal,cache:'no-store'})
-   .then(async response=>{if(!response.ok)throw Error('结构声明读取失败，请重新读取资料。');return checked(await response.json(),space,catalogSha256);})
+   .then(async response=>{if(!response.ok){throw new Error('结构声明读取失败，请重新读取资料。');}return checked(await response.json(),space,catalogSha256);})
    .then(value=>{if(!controller.signal.aborted)setData(value);})
    .catch(reason=>{if(!controller.signal.aborted)setError(reason.message);});
   return()=>controller.abort();
