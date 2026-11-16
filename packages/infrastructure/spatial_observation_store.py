@@ -10,6 +10,7 @@ from packages.spatial.opening_observations import (
 )
 
 MAX_EVENTS = 5000
+MAX_BATCH = 128
 
 
 def _initialize(db):
@@ -75,15 +76,21 @@ class ObservationJournal:
         return key
 
     def append(self, scope, document, *, authenticated_producer):
-        report, key = Report.model_validate(document), scope_key(scope)
-        if authenticated_producer != report.producer:
+        return self.append_batch(scope, [document], authenticated_producer=authenticated_producer)[0]
+
+    def append_batch(self, scope, documents, *, authenticated_producer):
+        if not isinstance(documents, list) or not 1 <= len(documents) <= MAX_BATCH:
+            raise ValueError('observation_batch_budget')
+        reports, key = [Report.model_validate(row) for row in documents], scope_key(scope)
+        if any(report.producer != authenticated_producer for report in reports):
             raise ValueError('observation_producer_mismatch')
         with closing(sqlite3.connect(self.path.as_uri() + '?mode=rw', uri=True, timeout=5)) as db, db:
             db.execute('BEGIN IMMEDIATE')
             registration = _registration(db, key)
-            if report.producer not in registration.producers or report.entity_id not in {s.entity_id for s in registration.subjects}:
+            subjects = {s.entity_id for s in registration.subjects}
+            if authenticated_producer not in registration.producers or any(report.entity_id not in subjects for report in reports):
                 raise ValueError('observation_reference_not_registered')
-            return self._append(db, key, report)
+            return [self._append(db, key, report) for report in reports]
 
     def _append(self, db, key, report):
         raw = canonical(report.model_dump())

@@ -184,3 +184,21 @@ def test_retraction_is_explicit_historical_and_never_revives_older_state(journal
         append(journal, report('bad', value=None))
     append(journal, report('reinstate', supersedes='retract-1', value='open'))
     assert resolve(journal)['value'] == 'open'
+
+
+def test_batch_is_bounded_atomic_and_retryable(journal):
+    store, scope, _ = journal
+    documents = [report(), report('correction', value='open', supersedes='event-1')]
+    first = store.append_batch(scope, documents, authenticated_producer='sensor-a')
+    assert store.append_batch(scope, documents, authenticated_producer='sensor-a') == first
+    assert resolve(journal)['value'] == 'open'
+    with pytest.raises(ValueError, match='correction_binding'):
+        store.append_batch(scope, [report('would-be-added'), report('invalid', supersedes='missing')],
+                           authenticated_producer='sensor-a')
+    with sqlite3.connect(store.path) as db:
+        assert db.execute('SELECT COUNT(*) FROM reports').fetchone()[0] == 2
+    for documents in [[], [report()] * 129]:
+        with pytest.raises(ValueError, match='batch_budget'):
+            store.append_batch(scope, documents, authenticated_producer='sensor-a')
+    with pytest.raises(ValueError, match='producer_mismatch'):
+        store.append_batch(scope, [report('other', producer='sensor-b')], authenticated_producer='sensor-a')
