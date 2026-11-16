@@ -1,0 +1,44 @@
+{
+  "profile": "cospace.legacy-anchor-projection/0.1",
+  "source": {
+    "profile": "cospace.legacy-anchor-mapping/0.1",
+    "source_document_sha256": "49d4ca741e8dc8f8122f7e6ad1c79eaccf8b705cb34d7650a3ee0fdedc45576b",
+    "source_space_id": "space-3333333333333333",
+    "source_model_id": "build-1111111111111111",
+    "source_model_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "source_frame_id": "synthetic-local",
+    "mappings": [
+      {
+        "source_type_id": "old-cabinet",
+        "target_type_id": "cabinet"
+      }
+    ]
+  },
+  "data_kind": "source_unverified",
+  "frame_id": "synthetic-local",
+  "unit": "m",
+  "anchors": [
+    {
+      "entity_id": "cabinet",
+      "source_type_id": "old-cabinet",
+      "target_type_id": "cabinet",
+      "position": [
+        1.0,
+        6.0,
+        0.0
+      ],
+      "source_point_index": 0
+    }
+  ],
+  "geometry_role": "reference_point",
+  "limitations": [
+    "declared_point_only",
+    "no_extent_or_connections",
+    "no_coordinate_transform",
+    "no_model_point_recomputation",
+    "target_type_meaning_unverified"
+  ],
+  "evidence_verified": false,
+  "real_release_ready": false,
+  "robot_ready": false
+}

@@ -1,0 +1,29 @@
+{
+  "profile": "cospace.synthetic-identity-changes/0.1",
+  "data_kind": "synthetic",
+  "base": {
+    "scene_id": "synthetic-building",
+    "snapshot_id": "synthetic-snapshot-01",
+    "sha256": "1a82ffb87511593d245e6a4b9346f7182b565491d943668a1ac812ab5fa6ef07"
+  },
+  "target": {
+    "scene_id": "synthetic-building",
+    "snapshot_id": "synthetic-snapshot-02",
+    "sha256": "22607772bcec1414ebc71c4cc4e9d16eb4c05c74860b4565d91f737c2ce6e512"
+  },
+  "events": [
+    {
+      "id": "proposal-split",
+      "kind": "split",
+      "before_ids": [
+        "room-l1"
+      ],
+      "after_ids": [
+        "room-l1-a",
+        "room-l1-b"
+      ],
+      "assessment": "unverified",
+      "reason": "Synthetic alternative proposal; not an identity approval."
+    }
+  ]
+}

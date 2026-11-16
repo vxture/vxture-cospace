@@ -1,0 +1,29 @@
+{
+  "profile": "cospace.synthetic-identity-changes/0.1",
+  "data_kind": "synthetic",
+  "base": {
+    "scene_id": "synthetic-building",
+    "snapshot_id": "synthetic-snapshot-02",
+    "sha256": "22607772bcec1414ebc71c4cc4e9d16eb4c05c74860b4565d91f737c2ce6e512"
+  },
+  "target": {
+    "scene_id": "synthetic-building",
+    "snapshot_id": "synthetic-snapshot-03",
+    "sha256": "d6550bdb655648f6ca0913c491c9bf81b4fc11818ae7cc4a577715e487e121c9"
+  },
+  "events": [
+    {
+      "id": "proposal-merge",
+      "kind": "merge",
+      "before_ids": [
+        "room-l1-a",
+        "room-l1-b"
+      ],
+      "after_ids": [
+        "room-l1-merged"
+      ],
+      "assessment": "unverified",
+      "reason": "Synthetic alternative proposal; not an identity approval."
+    }
+  ]
+}
