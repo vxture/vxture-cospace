@@ -90,3 +90,30 @@ python -m experiments.scripts.ifc_structure_review --ifc-root <IFC目录> --ifc-
 | 0 个 IfcSpace | 明确标缺少空间声明，任务端点保持空列表 | 房间、楼道区域边界，后续再独立关联本体类型 |
 
 输出中的 `index_bounds_m` 只是已读取网格的索引范围，不能作为净开口尺寸、房间边界或通行能力。所有任务为 pending/unverified；`confirmed_connections` 为空，未与点云对齐，未生成正式空间实例或连接。复核清单是本地工作资料，不是 SG0 synthetic 图，也不是线上发布协议。
+
+## 空间边界和端点标注
+
+在原 IFC 坐标下填写 2.5D 区域和门、楼梯端点。工具每次从固定 IFC 来源重建复核清单，工作表与清单内容摘要绑定；旧清单上的工作表不能静默用于新修订。
+
+```text
+python -m experiments.scripts.ifc_spatial_annotation --ifc-root <IFC目录> --ifc-sha256 <已核对目录摘要> --output <新工作表.json>
+python -m experiments.scripts.ifc_spatial_annotation --ifc-root <IFC目录> --ifc-sha256 <已核对目录摘要> --worksheet <已填写工作表.json> --output <新检查报告.json>
+```
+
+1. 在 `evidence` 登记定位图或复核记录的 ID、SHA-256。证据文件另行保存在本地。
+2. 在 `areas` 填区域 ID、名称、IFC 楼层 GlobalId（`level_id`）、不重复首点的平面边界 `footprint_xy_m`、高度区间 `z_range_m` 和 `evidence_ids`。只支持单环边界及统一高度区间，复杂区域不要用外包矩形代替。区域 ID 是工作表的局部标识；本体类型与正式实例身份独立处理。
+3. 在对应 `connections` 任务中写 `endpoints`、`evidence_ids`。每端填 `role`、`area_id`、`point_xyz_m`。门端点用 `side_a` / `side_b`（不代表通行方向），楼梯用 `lower` / `upper`。有一侧证据时可以只填一侧，待核实的端点留空。
+
+校验拒绝过期绑定、悬空引用、退化或自交边界、点落在所填区域外及楼梯上下倒置。完整只表示两个端点和引用均已填写且内部一致；工具不认证证据内容，也不判断端点是否确实位于对应门洞或楼梯接口、面积有无重叠或是否与现场一致。确认这些内容仍需人工核对。输出不包含已确认连接，不生成现场状态或设备通行规则。
+
+Anoeta 真实来源已通过空表生成和回读：0 个已填区域、9 个待标注任务。真实填写优先选一扇门，标注两侧可辨识区域；再选一部楼梯，核对上下端标高与所属区域。需要可现场核实的原坐标标注、平面图或定位记录，点云无需重发。
+
+### 可视复核图册
+
+```text
+python -m experiments.scripts.ifc_structure_atlas --ifc-root <IFC目录> --ifc-sha256 <已核对目录摘要> --output <新图册.html>
+```
+
+图册将每项门/楼梯任务的来源对象、相关构件和显式关系排在一起，提供 XY、XZ、YZ 三个正交线框投影。同一投影中各构件使用共同坐标和比例，不做平移叠合；三个投影各自适配范围。蓝色表示门与楼梯段，棕色表示开口，灰色表示墙或平台。只读、无外部资源、可离线打开；来源目录及所用网格继续通过摘要核对。
+
+Anoeta 共生成 9 项、27 张投影。它帮助定位复核对象，不能替代原生三维检查、实景资料或实测。线框无表面遮挡，门扇、开口及宿主墙可能重叠；显示边界是设计几何范围，不是当前净宽或可用空间。图册不写标注、不生成房间，不给出楼梯段之间的自动拓扑，也不把原生声明升级为现场事实。
