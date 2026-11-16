@@ -26,7 +26,23 @@ function SubscriptionNotice({value,unavailable=false,onRetry,user}:{value:Subscr
 function IdentitySubscription({user,onSessionCheck}:{user?:AccountProfile;onSessionCheck:()=>Promise<void>}){
  const config=useContext(AuthConfiguration);
  const [value,setValue]=useState<Subscription|null>(null),[enabled,setEnabled]=useState(false),[unavailable,setUnavailable]=useState(false),[checking,setChecking]=useState(true);
- const read=async(reconfirm=false)=>{setChecking(true);try{if(reconfirm)await onSessionCheck();if(!config)throw Error('auth_config_unavailable');setEnabled(config.subscription_authorization===true);if(config.subscription_authorization===true){const r=await fetch('/api/subscription',{cache:'no-store'});if(!r.ok){if(r.status===401)await onSessionCheck();throw Error();}setValue(await r.json());}setUnavailable(false);}catch{setUnavailable(true);}finally{setChecking(false);}};
+ const read=async(reconfirm=false)=>{
+  setChecking(true);
+  try{
+   if(reconfirm){await onSessionCheck();}
+   if(!config){throw new Error('auth_config_unavailable');}
+   setEnabled(config.subscription_authorization===true);
+   if(config.subscription_authorization===true){
+    const response=await fetch('/api/subscription',{cache:'no-store'});
+    if(!response.ok){
+     if(response.status===401){await onSessionCheck();}
+     throw new Error('subscription_unavailable');
+    }
+    setValue(await response.json());
+   }
+   setUnavailable(false);
+  }catch{setUnavailable(true);}finally{setChecking(false);}
+ };
  useEffect(()=>{void read();},[]);
  if(checking)return <EntryStatus state="checking-access" user={user}/>;
  return enabled?<SubscriptionNotice user={user} value={value} unavailable={unavailable} onRetry={()=>void read(true)}/>:<EntryStatus state={unavailable?'access-unavailable':'connected'} user={user} onRetry={()=>void read(true)}/>;
@@ -47,7 +63,10 @@ export async function platformLogout(csrf:string){
 function useAuthConfiguration(){
  const [state,setState]=useState<{mode:AuthMode;config:AuthConfig|null}>({mode:'checking',config:null});
  useEffect(()=>{const controller=new AbortController();fetch('/api/auth/config',{cache:'no-store',signal:controller.signal}).then(async response=>{
-  if(response.status===404){if(!controller.signal.aborted)setState({mode:'preview',config:null});return;}
+  if(response.status===404){
+   if(!controller.signal.aborted){setState({mode:'preview',config:null});}
+   return;
+  }
   if(!response.ok)throw new Error('config unavailable');
   const config:AuthConfig=await response.json();
   let mode:AuthMode;
@@ -91,7 +110,10 @@ export function AuthBoundary({children}:{children:React.ReactNode}){
  const {mode,config}=useAuthConfiguration();
  if(mode==='checking')return <SessionBootScreen/>;
  if(mode==='unavailable')return <HomeLayout><EntryStatus state="unavailable" onRetry={()=>location.reload()}/></HomeLayout>;
- return <AuthConfiguration.Provider value={config}>{mode==='preview'?children:mode==='platform'?<PlatformIdentityPage/>:<BusinessSession>{children}</BusinessSession>}</AuthConfiguration.Provider>;
+ let content=children;
+ if(mode==='platform')content=<PlatformIdentityPage/>;
+ else if(mode==='business')content=<BusinessSession>{children}</BusinessSession>;
+ return <AuthConfiguration.Provider value={config}>{content}</AuthConfiguration.Provider>;
 }
 
 function BusinessSession({children}:{children:React.ReactNode}){
