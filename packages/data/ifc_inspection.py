@@ -34,7 +34,7 @@ def mesh_arrays(vertices,faces):
     return vertices,faces.astype('<i4')
 
 
-def native_reader(path):
+def native_reader(path, *, document_metadata=None):
     try:
         import ifcopenshell
         import ifcopenshell.geom
@@ -85,6 +85,8 @@ def native_reader(path):
             except (RuntimeError,ValueError):
                 row['geometry_status']='extraction_failed';yield row,None,None;continue
             row['geometry_status']='extracted';yield row,vertices,faces
+    if document_metadata is not None:
+        metadata.update(document_metadata(document))
     return metadata,rows()
 
 
