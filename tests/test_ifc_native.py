@@ -1,5 +1,6 @@
 """Run in experiments/ifc-tool; the production environment has no native parser."""
 import gc
+from pathlib import Path
 import numpy as np
 import pytest
 ifcopenshell=pytest.importorskip('ifcopenshell')
@@ -38,3 +39,78 @@ def test_native_document_lifetime_units_and_world_placement(tmp_path):
     report=inspect_ifc(source,tmp_path/'out',expected_sha256=digest(source))
     assert report['product_count']==1 and report['vertices']==4 and report['triangles']==4
     assert report['geometry_counts']=={'extracted':1} and not report['alignment_verified']
+
+
+def test_structure_candidate_preserves_declared_edges_and_geometry(tmp_path):
+    from packages.data.ifc_structure import inspect_ifc_structure
+
+    source = tmp_path/'structure.ifc'
+    fixture(source)
+    model = ifcopenshell.open(str(source))
+
+    def create(kind, **fields):
+        return model.create_entity(kind, GlobalId=ifcopenshell.guid.new(), **fields)
+
+    building = create('IfcBuilding')
+    level = create('IfcBuildingStorey')
+    door = create('IfcDoor')
+    stair = create('IfcStair')
+    flight = create('IfcStairFlight')
+    opening = create('IfcOpeningElement')
+    wall = model.by_type('IfcWall')[0]
+    create('IfcRelAggregates', RelatingObject=building, RelatedObjects=[level])
+    create('IfcRelAggregates', RelatingObject=stair, RelatedObjects=[flight])
+    create('IfcRelContainedInSpatialStructure', RelatingStructure=level, RelatedElements=[door, wall, stair])
+    create('IfcRelVoidsElement', RelatingBuildingElement=wall, RelatedOpeningElement=opening)
+    create('IfcRelFillsElement', RelatingOpeningElement=opening, RelatedBuildingElement=door)
+    model.write(str(source))
+    pinned = digest(source)
+    report = inspect_ifc_structure(source, tmp_path/'candidate', expected_sha256=pinned)
+    assert digest(source) == pinned
+    assert report['source']['sha256'] == pinned
+    assert not report['alignment_verified']
+    structure = report['structure']
+    assert structure['missing_declared_roles'] == ['space', 'distribution_board']
+    assert structure['assessment'] == 'unverified'
+    assert {e['geometry_product_id'] for e in structure['entities']} == {p['global_id'] for p in report['products']}
+    assert {(r['kind'], r['source_id'], r['target_id']) for r in structure['relations']} == {
+        ('aggregates', building.GlobalId, level.GlobalId),
+        ('aggregates', stair.GlobalId, flight.GlobalId),
+        ('contained_in', door.GlobalId, level.GlobalId),
+        ('contained_in', wall.GlobalId, level.GlobalId),
+        ('contained_in', stair.GlobalId, level.GlobalId),
+        ('opening_in', opening.GlobalId, wall.GlobalId),
+        ('fills', door.GlobalId, opening.GlobalId),
+    }
+    products = {p['global_id']: p for p in report['products']}
+    assert products[wall.GlobalId]['mesh']['triangles'] == 4
+    assert products[door.GlobalId]['geometry_status'] == 'no_representation'
+
+
+def test_structure_candidate_requires_fixed_source(tmp_path):
+    from packages.data.ifc_structure import inspect_ifc_structure
+
+    source = tmp_path/'structure.ifc'
+    fixture(source)
+    with pytest.raises(ValueError, match='ifc_source_digest_mismatch'):
+        inspect_ifc_structure(source, tmp_path/'candidate', expected_sha256='0'*64)
+    assert not (tmp_path/'candidate').exists()
+
+
+def test_structure_cli_path_boundaries(tmp_path, monkeypatch):
+    from experiments.scripts import inspect_ifc_structure as cli
+
+    root = tmp_path/'sources'
+    root.mkdir()
+    inside, outside = root/'inside.ifc', tmp_path/'outside.ifc'
+    inside.write_bytes(b'fixture')
+    outside.write_bytes(b'fixture')
+    monkeypatch.setenv('COSPACE_SCENE_INPUT_ROOT', str(root))
+    monkeypatch.setattr(cli, 'OUTPUT_ROOT', tmp_path/'output')
+    assert cli.source_path(inside.relative_to(root)) == inside
+    with pytest.raises(ValueError, match='relative_ifc_required'):
+        cli.source_path(inside)
+    with pytest.raises(ValueError, match='source_outside_allowed_root'):
+        cli.source_path(Path('../outside.ifc'))
+    with pytest.raises(ValueError, match='invalid_run_id'):
+        cli.output_path('../outside')
