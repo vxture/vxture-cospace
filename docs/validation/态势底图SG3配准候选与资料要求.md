@@ -71,3 +71,22 @@ python -m experiments.scripts.ifc_reviewed_alignment --worksheet <工作表.json
 程序重新读取固定来源，逐点比对 GlobalId、网格顶点索引、PLY 顶点索引和原始坐标，拒绝改写坐标、未知实体、越界索引、过期工作表复核及缺项记录。然后调用同一刚体求解器，沿用独立检查点及退化几何检查。输出保留复核记录及其摘要；证据文件内容没有被程序读取或认证，`evidence_content_verified`、`control_evidence_verified`、`alignment_verified` 和正式可用标记始终为 false。声明证据摘要不能替代实际复核，也不构成线上审批机制。
 
 当前进展：离线工具链已可用，合成验证通过；Anoeta 的单位依据及真实对应点证据仍缺失，未生成真实候选。后续应先完成这些资料，再核对误差、覆盖范围和结构一致性，不能直接进入正式成果采用。
+
+## IFC 原坐标中的结构复核清单
+
+配准依据待补时，可独立在 IFC 自身坐标系整理空间结构证据，不必停下所有 SG3 工作。`experiments.scripts.ifc_structure_review` 从固定来源生成门和楼梯的复核任务，重验目录、原 IFC 和所引用网格摘要；只列显式源关系，不根据名称、本体映射、包围盒相邻或楼层编号生成空间连接。
+
+```text
+python -m experiments.scripts.ifc_structure_review --ifc-root <IFC目录> --ifc-sha256 <已核对目录摘要> --output <新结构复核清单.json>
+```
+
+2026-11-17 已用 Anoeta 原生结构目录实际生成 9 项任务：
+
+| 原始声明 | 核对结果 | 尚缺内容 |
+|---|---|---|
+| 7 个 IfcDoor | 每扇门都有 fills → IfcOpeningElement → opening_in → IfcWall 路径，门、开口及宿主墙均有网格 | 两侧空间边界与端口；现场是否仍一致 |
+| 2 个 IfcStair | 整体无独立网格；每部均聚合 3 个 IfcStairFlight 和 2 个 IfcSlab，子构件均有网格 | 平台接口、上下端所在空间与楼层的逐项确认 |
+| 3 个 IfcBuildingStorey | 保留声明名称和来源身份，没有楼层独立网格 | 不能把名称中的数字或单一 contained_in 关系当作楼梯两端楼层 |
+| 0 个 IfcSpace | 明确标缺少空间声明，任务端点保持空列表 | 房间、楼道区域边界，后续再独立关联本体类型 |
+
+输出中的 `index_bounds_m` 只是已读取网格的索引范围，不能作为净开口尺寸、房间边界或通行能力。所有任务为 pending/unverified；`confirmed_connections` 为空，未与点云对齐，未生成正式空间实例或连接。复核清单是本地工作资料，不是 SG0 synthetic 图，也不是线上发布协议。
