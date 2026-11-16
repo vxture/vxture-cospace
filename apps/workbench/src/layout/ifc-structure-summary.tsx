@@ -3,6 +3,7 @@ import {Button} from '@vxture/design-system';
 import {businessEndpoint as endpoint} from './business-endpoint';
 
 import {checked,relations,type Structure} from './ifc-structure-contract';
+import {IfcOpeningObservation} from './ifc-opening-observation';
 
 export function IfcStructureSummary({space,catalogSha256,selectedId,onSelect}:Readonly<{space:string;catalogSha256:string;selectedId?:string;onSelect:(id:string)=>void}>){
  const [data,setData]=useState<Structure|null>(null),[error,setError]=useState(''),[revision,setRevision]=useState(0);
@@ -26,6 +27,7 @@ export function IfcStructureSummary({space,catalogSha256,selectedId,onSelect}:Re
    {selectedId&&!entities.has(selectedId)&&<p className="text-body-small text-muted-foreground">该构件未纳入结构提取范围。</p>}
    {entities.has(selectedId||'')&&(edges.length?<ul className="flex flex-col gap-sm">{edges.slice(0,20).map((r,index)=><li key={`${r.ifc_relation_id}:${index}`} className="flex flex-wrap items-center gap-xs text-body-small">{node(r.source_id)}<span className="text-label-small text-muted-foreground">{relations[r.kind]} →</span>{node(r.target_id)}</li>)}</ul>:<p className="text-body-small text-muted-foreground">当前构件没有已提取的结构关系。</p>)}
    {edges.length>20&&<p className="text-label-small text-muted-foreground">显示前 20 项，共 {edges.length} 项。</p>}
+   {selectedId&&entities.get(selectedId)?.source_role==='door'&&<IfcOpeningObservation key={`${space}:${catalogSha256}:${selectedId}`} space={space} pin={catalogSha256} element={entities.get(selectedId)!.element_id}/>}
   </>}
  </section>;
 }

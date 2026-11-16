@@ -75,6 +75,13 @@ class ObservationJournal:
             db.execute('INSERT OR IGNORE INTO registrations VALUES (?,?)', (key, raw))
         return key
 
+    def registered(self, scope):
+        key = scope_key(scope)
+        if not self.path.exists():
+            return False
+        with closing(sqlite3.connect(self.path.as_uri() + '?mode=ro', uri=True)) as db:
+            return db.execute('SELECT 1 FROM registrations WHERE scope=?', (key,)).fetchone() is not None
+
     def append(self, scope, document, *, authenticated_producer):
         return self.append_batch(scope, [document], authenticated_producer=authenticated_producer)[0]
 
@@ -129,11 +136,14 @@ class ObservationJournal:
             ceiling = through_sequence
         records = [r for r in records if r['sequence'] <= ceiling and utc(r['received_at']) <= known]
         status, value, latest, active, retracted = resolve_reports(records, entity, when)
+        received_times = [r['received_at'] for r in records if r['report']['entity_id'] == entity
+                          and utc(r['report']['observed_at']) <= when]
         context = {'scope': registration.scope.model_dump(), 'registration_sha256': content_digest(registration.model_dump()),
                    'entity_id': entity, 'as_of': as_of, 'known_at': known_at, 'through_sequence': ceiling,
                    'policy': 'cospace.reported-opening-state/0.1', 'records_sha256': content_digest(records)}
         return {'profile': 'cospace.reported-opening-state/0.1', **context, 'status': status, 'value': value,
                 'active': active, 'retracted': retracted,
+                'last_received_at': max(received_times, key=utc, default=None),
                 'expired': [r for r in latest if utc(r['report']['valid_until']) <= when], 'cursor': content_digest(context),
                 'data_kind': registration.data_kind, 'assessment': 'unverified', 'evidence_content_verified': False,
                 'source_content_verified': False, 'clock_quality_verified': False, 'real_release_ready': False,

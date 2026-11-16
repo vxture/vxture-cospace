@@ -51,6 +51,7 @@ PUBLICATION_MANAGE='publication.manage'
 
 
 IFC_STRUCTURE_PATH = '/api/scene-ifc/structure'
+IFC_OBSERVATION_PATH = '/api/scene-ifc/opening-observation'
 
 
 class BusinessAccess:
@@ -61,6 +62,8 @@ class BusinessAccess:
         self.globe=GlobeRuntime.from_env()
         self.scene_pointclouds=ScenePointcloudWorkspace(jobs.inputs,scene_pointcloud_config) if jobs.inputs else None
         self.scene_ifc=IfcWorkspace(directory,jobs,scene_ifc_config)
+        from packages.service.ifc_opening_observations import IfcOpeningObservations
+        self.ifc_observations=IfcOpeningObservations(jobs.root,self.scene_ifc)
         self.attachments=SceneAttachments(jobs.inputs) if jobs.inputs else None
         self.sources=SpaceSources(directory.root,registration_sources or {})
         self.recipients=ServiceRecipients(directory.root)
@@ -134,7 +137,7 @@ class BusinessAccess:
             space(q.get('space_id'),DATA_MANAGE);return {'principal':principal}
         if (path=='/api/scene-attachments' or re.fullmatch(r'/api/scene-attachments/attachment-[a-f0-9]{16}',path)) and method in ('GET','HEAD','POST'):
             space(q.get('space_id'),DATA_MANAGE);return {'principal':principal}
-        if path in ('/api/scene-ifc','/api/scene-ifc/element',IFC_STRUCTURE_PATH) and method in ('GET','HEAD'):
+        if path in ('/api/scene-ifc','/api/scene-ifc/element',IFC_STRUCTURE_PATH,IFC_OBSERVATION_PATH) and method in ('GET','HEAD'):
             space(q.get('space_id'),'association.edit');return {'principal':principal}
         if ((path=='/api/scene-pointclouds' or re.fullmatch(r'/api/scene-pointclouds/(tiles/t[0-9]{5}/[0-2]|compositions/compose-[a-f0-9]{24})',path)) and method in ('GET','HEAD')
                 or (path=='/api/scene-pointclouds/compositions' or re.fullmatch(r'/api/scene-pointclouds/compositions/compose-[a-f0-9]{24}/register',path)) and method=='POST'):
@@ -445,9 +448,11 @@ class BusinessAccess:
                     if path==IFC_STRUCTURE_PATH and not re.fullmatch('[a-f0-9]{64}',request.query_params['catalog_sha256']):return deny(422,'ifc_invalid_request')
                     if path=='/api/scene-ifc':result=await run_in_threadpool(self.scene_ifc.directory_view,request.query_params['space_id'])
                     elif path==IFC_STRUCTURE_PATH:result=await run_in_threadpool(self.scene_ifc.structure_view,request.query_params['space_id'],request.query_params['catalog_sha256'])
+                    elif path==IFC_OBSERVATION_PATH:result=await run_in_threadpool(self.ifc_observations.read,context['principal'],request.query_params['space_id'],request.query_params['catalog_sha256'],request.query_params['element_id'])
                     else:result=await run_in_threadpool(self.scene_ifc.preview,request.query_params['space_id'],request.query_params['element_id'],request.query_params['catalog_sha256'])
                     return JSONResponse(result,headers={'Cache-Control':'no-store'})
                 except ValidationError:return deny(422,'ifc_invalid_request')
+                except sqlite3.Error:return deny(503,'observation_storage_unavailable')
                 except (ValueError,KeyError,OSError,TypeError,zipfile.BadZipFile):return deny(409,'ifc_evidence_unavailable')
             if path.startswith('/api/scene-pointclouds'):
                 from fastapi.responses import Response
