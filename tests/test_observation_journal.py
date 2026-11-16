@@ -167,3 +167,20 @@ def test_failure_rolls_back_and_read_budget_fails_explicitly(journal, monkeypatc
     monkeypatch.setattr('packages.infrastructure.spatial_observation_store.MAX_EVENTS', 0)
     with pytest.raises(ValueError, match='read_budget'):
         resolve(journal)
+
+
+def test_retraction_is_explicit_historical_and_never_revives_older_state(journal):
+    append(journal, report('older', observed_at='2026-11-16T23:59:00Z'))
+    append(journal, report())
+    journal[2][0] = '2026-11-17T00:03:00Z'
+    append(journal, report('retract-1', operation='retract', value=None, supersedes='event-1'))
+    state = resolve(journal)
+    assert state['status'] == 'retracted' and state['value'] is None and not state['active']
+    assert len(state['retracted']) == 1
+    assert resolve(journal, known_at='2026-11-17T00:02:00Z')['status'] == 'reported'
+    with pytest.raises(ValueError, match='retraction_requires'):
+        append(journal, report('bad', operation='retract', value=None))
+    with pytest.raises(ValueError, match='assertion_requires'):
+        append(journal, report('bad', value=None))
+    append(journal, report('reinstate', supersedes='retract-1', value='open'))
+    assert resolve(journal)['value'] == 'open'

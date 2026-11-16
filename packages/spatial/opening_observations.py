@@ -45,7 +45,8 @@ class Report(Fixed):
     event_id: Identity
     producer: Identity
     entity_id: Annotated[str, Field(min_length=1, max_length=255)]
-    value: Literal['open', 'closed', 'partially_open', 'unknown']
+    operation: Literal['assert', 'retract'] = 'assert'
+    value: Literal['open', 'closed', 'partially_open', 'unknown'] | None
     observed_at: Annotated[str, Field(min_length=20, max_length=40)]
     valid_until: Annotated[str, Field(min_length=20, max_length=40)]
     evidence_sha256: Annotated[list[Digest], Field(min_length=1, max_length=16)]
@@ -57,6 +58,11 @@ class Report(Fixed):
             raise ValueError('observation_expiry_required')
         if len(set(self.evidence_sha256)) != len(self.evidence_sha256):
             raise ValueError('observation_duplicate_evidence')
+        if self.operation == 'retract':
+            if self.supersedes is None or self.value is not None:
+                raise ValueError('observation_retraction_requires_target_and_null')
+        elif self.value is None:
+            raise ValueError('observation_assertion_requires_value')
         return self
 
 
@@ -87,11 +93,13 @@ def _latest(remaining):
     return latest
 
 
-def _status(latest, active, values):
+def _status(latest, live, values):
     if not latest:
         status = 'unavailable'
-    elif not active:
+    elif not live:
         status = 'expired'
+    elif not values:
+        status = 'retracted'
     elif len(values) > 1:
         status = 'conflict'
     elif values == {'unknown'}:
@@ -107,7 +115,9 @@ def resolve_reports(records, entity, when):
     replaced = {(r['report']['producer'], r['report']['supersedes']) for r in visible}
     remaining = [r for r in visible if (r['report']['producer'], r['report']['event_id']) not in replaced]
     latest = _latest(remaining)
-    active = [r for r in latest if utc(r['report']['valid_until']) > when]
+    live = [r for r in latest if utc(r['report']['valid_until']) > when]
+    active = [r for r in live if r['report']['operation'] == 'assert']
+    retracted = [r for r in live if r['report']['operation'] == 'retract']
     values = {r['report']['value'] for r in active}
-    status = _status(latest, active, values)
-    return status, next(iter(values)) if status == 'reported' else None, latest, active
+    status = _status(latest, live, values)
+    return status, next(iter(values)) if status == 'reported' else None, latest, active, retracted

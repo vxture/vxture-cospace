@@ -121,13 +121,14 @@ class ObservationJournal:
                 raise ValueError('observation_sequence_unavailable')
             ceiling = through_sequence
         records = [r for r in records if r['sequence'] <= ceiling and utc(r['received_at']) <= known]
-        status, value, latest, active = resolve_reports(records, entity, when)
+        status, value, latest, active, retracted = resolve_reports(records, entity, when)
         context = {'scope': registration.scope.model_dump(), 'registration_sha256': content_digest(registration.model_dump()),
                    'entity_id': entity, 'as_of': as_of, 'known_at': known_at, 'through_sequence': ceiling,
                    'policy': 'cospace.reported-opening-state/0.1', 'records_sha256': content_digest(records)}
         return {'profile': 'cospace.reported-opening-state/0.1', **context, 'status': status, 'value': value,
-                'active': active, 'expired': [r for r in latest if r not in active], 'cursor': content_digest(context),
+                'active': active, 'retracted': retracted,
+                'expired': [r for r in latest if utc(r['report']['valid_until']) <= when], 'cursor': content_digest(context),
                 'data_kind': registration.data_kind, 'assessment': 'unverified', 'evidence_content_verified': False,
                 'source_content_verified': False, 'clock_quality_verified': False, 'real_release_ready': False,
                 'limitations': ['producer_reports_not_field_truth', 'no_source_priority', 'no_navigation_or_traversability',
-                                'no_automatic_rebuild', 'no_retraction_events', 'single_host_bounded_journal']}
+                                'no_automatic_rebuild', 'single_host_bounded_journal']}
