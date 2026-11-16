@@ -21,6 +21,7 @@ export async function requestSessionConfirmation(send:typeof fetch,csrf:string,c
   if(fresh.ok){
    const saved=await fresh.json();
    if(!current())return null;
+   if(!saved.authenticated)return new Response(JSON.stringify(saved),{status:200});
    response=await post(saved.csrf||'');
   }
  }

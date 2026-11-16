@@ -131,12 +131,20 @@ function BusinessSession({children}:{children:React.ReactNode}){
  },[session]);
  const [subscription,setSubscription]=useState<Subscription|null>(null),[subscriptionRequired,setSubscriptionRequired]=useState(false),[subscriptionUnavailable,setSubscriptionUnavailable]=useState(false);
  useEffect(()=>{let stopped=false;const nativeFetch=window.fetch.bind(window);let csrf='';let confirmAfter=0;let confirming:Promise<void>|null=null;let needsSubscription=false;let authority:Session|null=null;let businessAllowed=false;let generation=0;
+  const signedOut=()=>{
+   authority=null;businessAllowed=false;csrf='';generation++;
+   retained.current=null;
+   window.dispatchEvent(new Event('cospace:access-invalidated'));
+   setSubscription(null);setSession({authenticated:false,authority_state:'signed_out'});setError('');
+  };
   const acceptDeadline=(value:Session,started:number)=>{confirmAfter=confirmationDeadline(value.confirmation_max_age_s,started);};
   const checkSubscription=async(force=false)=>{
    if(!needsSubscription){businessAllowed=true;return;}
    const subscriptionGeneration=generation;businessAllowed=false;
    try{
     const r=await nativeFetch('/api/subscription',{cache:'no-store',...(force?{headers:{'Cache-Control':'no-cache'}}:{})});
+    if(stopped||subscriptionGeneration!==generation)return;
+    if(r.status===401){signedOut();return;}
     if(!r.ok)throw new Error('subscription_unavailable');
     const value:Subscription=await r.json();
     if(stopped||subscriptionGeneration!==generation)return;
@@ -151,29 +159,31 @@ function BusinessSession({children}:{children:React.ReactNode}){
    if(!response)return;
    if(!response.ok){authority=null;businessAllowed=false;generation++;setSession(old=>old?{...old,authority_state:'unavailable'}:old);throw new Error('会话确认暂不可用');}
    const next:Session=await response.json();if(stopped||confirmationGeneration!==generation)return;
-   if(sessionScopeKey(authority)!==sessionScopeKey(next)){generation++;businessAllowed=false;setSubscription(null);setSession({...next,authority_state:'checking'});}
+   if(!next.authenticated){signedOut();return;}
+   if(sessionScopeKey(authority)!==sessionScopeKey(next)||csrf!==(next.csrf||'')){if(csrf!==(next.csrf||''))retained.current=null;generation++;businessAllowed=false;window.dispatchEvent(new Event('cospace:access-invalidated'));setSubscription(null);setSession({...next,authority_state:'checking'});}
    authority=next;csrf=next.csrf||'';acceptDeadline(next,started);
    if(!sessionConfirmed(next)){businessAllowed=false;setSession(next);if(next.authenticated)throw new Error('会话确认暂不可用');return;}
    const acceptedGeneration=generation;
    setError('');await checkSubscription(forceAccess);if(!stopped&&acceptedGeneration===generation)setSession(next);
   };
-  const recheck=(notify=false,forceAccess=false)=>{if(confirming)return;confirming=confirm(forceAccess).then(()=>{if(notify&&!stopped&&sessionConfirmed(authority)&&businessAllowed)window.dispatchEvent(new Event('cospace:session-confirmed'));}).catch(()=>{if(!stopped){authority=null;businessAllowed=false;generation++;setSession(old=>old?{...old,authority_state:'unavailable'}:old);setError('平台暂不可用，未保存修改保留在当前标签页。');}}).finally(()=>{confirming=null;});};
+  const recheck=(notify=false,forceAccess=false)=>{if(confirming)return;const attempt=generation;confirming=confirm(forceAccess).then(()=>{if(notify&&!stopped&&sessionConfirmed(authority)&&businessAllowed)window.dispatchEvent(new Event('cospace:session-confirmed'));}).catch(()=>{if(!stopped&&attempt===generation){authority=null;businessAllowed=false;generation++;setSession(old=>old?{...old,authority_state:'unavailable'}:old);setError('平台暂不可用，未保存修改保留在当前标签页。');}}).finally(()=>{confirming=null;});};
   const activity=(event:Event)=>{if(!event.isTrusted||document.visibilityState!=='visible'||performance.now()<confirmAfter)return;recheck();};
   const resume=(event:Event)=>{if(!event.isTrusted||document.visibilityState!=='visible'||performance.now()<confirmAfter)return;recheck(true);};
   const retry=()=>recheck(true,true);
   const otherTabLogout=(event:StorageEvent)=>{
    if(event.key!=='cospace.session.logout'||!event.newValue)return;
-   window.dispatchEvent(new Event('cospace:access-invalidated'));authority=null;businessAllowed=false;csrf='';generation++;
-   setSession({authenticated:false,authority_state:'signed_out'});setError('');
+   signedOut();
   };
   const bootstrapAuthority=async()=>{
-   const started=performance.now();
-   const response=await nativeFetch('/api/auth/session',{cache:'no-store'});
+   const started=performance.now(),bootstrapGeneration=generation;
+   const response=await nativeFetch('/api/auth/session?fresh=1',{cache:'no-store'});
    if(!response.ok)throw new Error('无法读取平台会话');
-   const next:Session=await response.json();csrf=next.csrf||'';authority=next;
+   const next:Session=await response.json();if(stopped||bootstrapGeneration!==generation)return;csrf=next.csrf||'';authority=next;
    if(next.authenticated){
     try{sessionStorage.removeItem('cospace.entry.signed-out');}catch{}
-    try{if(sessionConfirmed(next)&&next.confirmation_max_age_s&&next.confirmation_max_age_s>0){acceptDeadline(next,started);await checkSubscription();if(!stopped)setSession(next);}else await confirm();}catch{if(!stopped){setSession({...next,authority_state:'unavailable'});setError('平台会话暂不可用，重新检查后继续。');}}
+    acceptDeadline(next,started);
+    if(sessionConfirmed(next))await checkSubscription();
+    if(!stopped&&bootstrapGeneration===generation)setSession(next);
    }else if(!stopped)setSession(next);
   };
   const bootstrap=async()=>{
@@ -196,18 +206,23 @@ function BusinessSession({children}:{children:React.ReactNode}){
     if(!['GET','HEAD'].includes(method)&&csrf)headers.set('X-CoSpace-CSRF',csrf);
     const result=await nativeFetch(input,{...init,headers});
     if(requestGeneration!==generation)return new Response(JSON.stringify({detail:'session_scope_changed'}),{status:409,headers:{'Content-Type':'application/json'}});
-    if(needsSubscription&&[403,409,503].includes(result.status)){
+    if(business&&[403,409,503].includes(result.status)){
      const body=await result.clone().json().catch(()=>({}));
+     if(stopped||requestGeneration!==generation)return new Response(JSON.stringify({detail:'session_scope_changed'}),{status:409,headers:{'Content-Type':'application/json'}});
+     if(result.status===503&&['accounts_confirmation_required','platform_identity_unavailable','session_store_unavailable'].includes(body.detail)){
+      authority=null;businessAllowed=false;generation++;window.dispatchEvent(new Event('cospace:access-invalidated'));
+      setSession(old=>old?{...old,authority_state:'unavailable'}:old);
+     }
      const quotaMessage=productQuotaMessage(body.code||body.detail);
      if(quotaMessage){setQuotaError(quotaMessage);}
-     if(body.detail==='subscription_required'||body.detail==='subscription_unavailable'||body.detail==='application_access_required'){window.dispatchEvent(new Event('cospace:access-invalidated'));await checkSubscription();}
+     if(needsSubscription&&(body.detail==='subscription_required'||body.detail==='subscription_unavailable'||body.detail==='application_access_required')){window.dispatchEvent(new Event('cospace:access-invalidated'));await checkSubscription();}
     }
-    if(result.status===401&&!url.pathname.startsWith('/api/auth/')){window.dispatchEvent(new Event('cospace:access-invalidated'));authority=null;businessAllowed=false;csrf='';generation++;setSession({authenticated:false,authority_state:'signed_out'});setError('');}
+    if(result.status===401&&business)signedOut();
     if(result.ok&&!['GET','HEAD'].includes(method)&&url.pathname.startsWith('/api/')&&!url.pathname.startsWith('/api/auth/')&&!/comparisons|\/query(?:-range)?$/.test(url.pathname))window.dispatchEvent(new Event('cospace:records-changed'));
     return result;
    };
-   setReady(true);window.addEventListener('pointerdown',activity);window.addEventListener('keydown',activity);window.addEventListener('focus',resume);document.addEventListener('visibilitychange',resume);window.addEventListener('cospace:confirm-session',retry);window.addEventListener('storage',otherTabLogout);
-  };bootstrap().catch(()=>{if(!stopped)setError('平台会话暂不可用，请刷新重试。');});
+   setReady(true);window.addEventListener('pointerdown',activity);window.addEventListener('keydown',activity);window.addEventListener('focus',resume);document.addEventListener('visibilitychange',resume);window.addEventListener('cospace:confirm-session',retry);
+  };window.addEventListener('storage',otherTabLogout);bootstrap().catch(()=>{if(!stopped)setError('平台会话暂不可用，请刷新重试。');});
   return()=>{stopped=true;window.fetch=nativeFetch;window.removeEventListener('pointerdown',activity);window.removeEventListener('keydown',activity);window.removeEventListener('focus',resume);document.removeEventListener('visibilitychange',resume);window.removeEventListener('cospace:confirm-session',retry);window.removeEventListener('storage',otherTabLogout);};
  },[]);
  if(error&&!ready)return <HomeLayout><EntryStatus state="unavailable" onRetry={()=>location.reload()}/></HomeLayout>;

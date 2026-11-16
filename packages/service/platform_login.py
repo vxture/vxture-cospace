@@ -25,6 +25,18 @@ class PlatformLogin:
         self.transport = transport or PlatformHttp(config)
         self.verifier = verifier or PlatformTokenVerifier(config.verifier_config, now=now)
 
+    def _logout_key(self, sid):
+        return '\n'.join((self.config.issuer, self.config.client_id, sid))
+
+    def _central_ended(self, sid):
+        return self.store.get('central_logout', self._logout_key(sid)) is not None
+
+    def backchannel_logout(self, token):
+        sid = self.verifier.verify_logout(token)
+        # An issuer/client-scoped tombstone also covers sessions being written by
+        # a callback or rotating credentials in another process.
+        self.store.put('central_logout', self._logout_key(sid), {'ended': True})
+
     def begin(self, return_to, browser=None, *, select_account=False, tenant_hint=None, workspace_hint=None):
         return_to = safe_return(return_to)
         hints = {}
@@ -87,7 +99,8 @@ class PlatformLogin:
                (('tenant_hint', 'org_id'), ('workspace_hint', 'workspace_id')) if name in hints):
             raise IdentityRejected('login_context_mismatch')
         status = self.transport.status(session['sid'], True, self.now())
-        if not status['valid']: raise IdentityRejected('accounts_session_ended')
+        if not status['valid'] or self._central_ended(session['sid']):
+            raise IdentityRejected('accounts_session_ended')
         session.update(next_check_at=status['next_check_at'], retry_at=0, csrf=opaque(),
                        issuer=self.config.issuer, client_id=self.config.client_id)
         rpsid = opaque(); self.store.put('session', rpsid, session)
@@ -96,18 +109,22 @@ class PlatformLogin:
             with self.store.lock(old_session): self.store.delete('session', old_session)
         return rpsid, pending['return_to']
 
-    def resolve(self, rpsid, *, active=False, require_access=False):
+    def resolve(self, rpsid, *, active=False, require_access=False, fresh=False):
         if not valid_opaque(rpsid): return None, 'signed_out'
         with self.store.lock(rpsid):
             session = self.store.get('session', rpsid)
             if session is None: return None, 'signed_out'
             if (session.get('issuer'), session.get('client_id')) != (self.config.issuer, self.config.client_id):
                 raise IdentityUnavailable('session_client_configuration_mismatch')
+            if self._central_ended(session['sid']):
+                self.store.delete('session', rpsid); return None, 'signed_out'
             state = 'unavailable' if session.get('retry_at', 0) else 'cached'
-            if active and self.now() >= max(session['next_check_at'], session.get('retry_at', 0)):
+            if ((fresh or active and self.now() >= session['next_check_at'])
+                    and self.now() >= session.get('retry_at', 0)):
                 try:
-                    status = self.transport.status(session['sid'], True, self.now())
+                    status = self.transport.status(session['sid'], active, self.now())
                     if status['valid'] is False:
+                        self.store.put('central_logout', self._logout_key(session['sid']), {'ended': True})
                         self.store.delete('session', rpsid); return None, 'signed_out'
                     session.update(next_check_at=status['next_check_at'], retry_at=0)
                     state = 'confirmed'
@@ -115,6 +132,8 @@ class PlatformLogin:
                     # Retry schedule, never a login lifetime; retain encrypted session.
                     session['retry_at'] = self.now()+30; state = 'unavailable'
                 self.store.put('session', rpsid, session)
+            if self._central_ended(session['sid']):
+                self.store.delete('session', rpsid); return None, 'signed_out'
             if require_access:
                 if state == 'unavailable' or self.now() >= session['next_check_at']:
                     raise IdentityUnavailable('accounts_confirmation_required')
@@ -141,6 +160,8 @@ class PlatformLogin:
                     self.store.put('session', rpsid, session)
                 except (IdentityRejected, IdentityUnavailable):
                     pass
+            if self._central_ended(session['sid']):
+                self.store.delete('session', rpsid); return None, 'signed_out'
             return session, state
 
     def csrf_matches(self, rpsid, value):

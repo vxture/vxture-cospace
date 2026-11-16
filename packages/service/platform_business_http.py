@@ -289,11 +289,14 @@ class BusinessAccess:
             # an unhandled auth-looking path fall through to the inner static mount.
             if path=='/workbench' or path.startswith('/workbench/') or path=='/index.html':
                 return deny(404,'page_not_found')
-            if path in ('/auth/login','/auth/callback','/auth/logout','/api/auth/config','/api/auth/session','/api/auth/logout','/api/subscription','/api/webhooks/vxture') or path in APP_ROUTES or path.startswith('/assets/'):
+            if path in ('/auth/login','/auth/callback','/auth/logout','/auth/backchannel-logout','/api/auth/config','/api/auth/session','/api/auth/logout','/api/subscription','/api/webhooks/vxture') or path in APP_ROUTES or path.startswith('/assets/'):
                 return await call_next(request)
             if any(len(request.query_params.getlist(k))>1 for k in request.query_params):return deny(403,'space_access_denied')
             rpsid=request.cookies.get(self.rp.config.cookie_name)
-            session,_=await run_in_threadpool(timed_call,'rp_session',self.rp.resolve,rpsid,active=False,require_access=True)
+            try:
+                session,_=await run_in_threadpool(timed_call,'rp_session',self.rp.resolve,rpsid,active=False,require_access=True)
+            except IdentityUnavailable:
+                return deny(503,'accounts_confirmation_required')
             if session is None:return deny(401,'authentication_required')
             if request.method not in ('GET','HEAD'):
                 if (request.headers.get('origin')!=self.rp.config.origin or request.headers.get('sec-fetch-site')=='cross-site'

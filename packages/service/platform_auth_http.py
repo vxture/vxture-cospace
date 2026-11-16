@@ -127,8 +127,8 @@ def create_auth_app(rp, workbench=Path('apps/workbench/dist'), business=None, ac
         set_cookie(response, cookie, rpsid); clear_cookie(response, browser_cookie)
         return response
 
-    def public_session(request, active=False):
-        session, state = rp.resolve(session_id(request), active=active)
+    def public_session(request, active=False, fresh=False):
+        session, state = rp.resolve(session_id(request), active=active, fresh=fresh)
         payload = {'enabled': True, 'authenticated': session is not None, 'authority_state': state,
                    'mode': mode, 'business_authorization': business is not None}
         if session:
@@ -139,12 +139,11 @@ def create_auth_app(rp, workbench=Path('apps/workbench/dist'), business=None, ac
                            and not session.get('refresh_blocked') and not session.get('refresh_pending'))
             payload['confirmation_max_age_s']=max(0,session['next_check_at']-rp.now()) if not session.get('retry_at',0) else 0
             payload['user'].update(session.get('profile', {}))
-        response = JSONResponse(payload)
-        if not session and session_id(request): clear_cookie(response, cookie)
-        return response
+        # A late probe for an old cookie must not clear a newer login cookie.
+        return JSONResponse(payload)
 
     @app.get('/api/auth/session')
-    def session(request: Request): return public_session(request)
+    def session(request: Request, fresh: bool = False): return public_session(request, fresh=fresh)
 
     @app.post('/api/auth/session')
     def activity(request: Request):
@@ -152,6 +151,23 @@ def create_auth_app(rp, workbench=Path('apps/workbench/dist'), business=None, ac
         if not rp.csrf_matches(session_id(request), request.headers.get('x-cospace-csrf')):
             raise HTTPException(403, 'csrf_rejected')
         return public_session(request, active=True)
+
+    @app.post('/auth/backchannel-logout')
+    async def backchannel_logout(request: Request):
+        if request.query_params or request.headers.get('content-type', '').split(';')[0].lower() != 'application/x-www-form-urlencoded':
+            raise HTTPException(400, 'logout_request_rejected')
+        raw = bytearray()
+        async for chunk in request.stream():
+            raw.extend(chunk)
+            if len(raw) > 36_864: raise HTTPException(413, 'logout_request_budget')
+        try:
+            fields = parse_qs(raw.decode('ascii'), strict_parsing=True, max_num_fields=1)
+        except (ValueError, UnicodeError) as exc:
+            raise HTTPException(400, 'logout_request_rejected') from exc
+        if set(fields) != {'logout_token'} or len(fields['logout_token']) != 1:
+            raise HTTPException(400, 'logout_request_rejected')
+        await run_in_threadpool(rp.backchannel_logout, fields['logout_token'][0])
+        return JSONResponse({})
 
     @app.post('/auth/logout')
     async def logout(request: Request):
