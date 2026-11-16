@@ -52,8 +52,7 @@ def _panel(points, axes, title, x, y, *, mesh):
             f'<text x="14" y="{HEIGHT-10}" font-size="12">{footer}</text></g>')
 
 
-def compare_sources(ifc_root, cloud_root, *, expected_ifc_sha256, expected_cloud_sha256):
-    """Read sealed inputs; return SVG and an empty, explicitly unverified worksheet."""
+def _read_sources(ifc_root, cloud_root, *, expected_ifc_sha256, expected_cloud_sha256):
     raw, catalog = read_json(ifc_root / 'ifc.json', 8*1024*1024)
     if sha(raw) != expected_ifc_sha256:
         raise ValueError('comparison_ifc_digest')
@@ -63,6 +62,14 @@ def compare_sources(ifc_root, cloud_root, *, expected_ifc_sha256, expected_cloud
     cloud_sha = facts['cloud_sha256']
     if cloud_sha != expected_cloud_sha256:
         raise ValueError('comparison_cloud_digest')
+    return catalog, facts, points
+
+
+def compare_sources(ifc_root, cloud_root, *, expected_ifc_sha256, expected_cloud_sha256):
+    """Read sealed inputs; return SVG and an empty, explicitly unverified worksheet."""
+    catalog, facts, points = _read_sources(
+        ifc_root, cloud_root, expected_ifc_sha256=expected_ifc_sha256,
+        expected_cloud_sha256=expected_cloud_sha256)
     triangles = _triangles(ifc_root, catalog)
     cloud = _sample(points, MAX_POINTS)
     columns = [('IFC 结构网格', triangles, 18, True), ('LAZ 派生点云', cloud, 610, False)]
@@ -78,7 +85,7 @@ def compare_sources(ifc_root, cloud_root, *, expected_ifc_sha256, expected_cloud
     return svg, {'profile': 'cospace.ifc-control-review/0.1', 'status': 'not_aligned',
                  'ifc': {'frame_id': catalog['frame_id'], 'artifact_sha256': expected_ifc_sha256,
                          'unit': 'm'},
-                 'cloud': {'frame_id': facts['frame_id'], 'artifact_sha256': cloud_sha,
+                 'cloud': {'frame_id': facts['frame_id'], 'artifact_sha256': expected_cloud_sha256,
                            'unit': facts['unit']},
                  'cloud_unit_verified': False, 'alignment_verified': False, 'pairs': [],
                  'rendered': {'triangles': len(triangles), 'points': len(cloud)}}

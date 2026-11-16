@@ -1,6 +1,7 @@
 import pytest
 
 from experiments.scripts.ifc_control_review import compare_sources
+from experiments.scripts.ifc_control_picker import picker_data
 from packages.data.ifc_inspection import digest
 from test_ifc_inspection import assets_at
 from test_preview_pointcloud import specimen
@@ -37,3 +38,14 @@ def test_original_ifc_tampering_rejected(sources):
     (ifc / 'source.ifc').write_bytes(b'changed')
     with pytest.raises(ValueError, match='^ifc_source_changed$'):
         compare_sources(ifc, cloud, **pins)
+
+
+def test_picker_preserves_native_coordinates_and_traceable_indices(sources, monkeypatch):
+    ifc, cloud, pins = sources
+    monkeypatch.setattr('experiments.scripts.ifc_control_picker.POINT_BUDGET', 1)
+    result = picker_data(ifc, cloud, **pins)
+    assert result['ifc']['elements'] == [{'start': 0, 'global_id': 'wall', 'ifc_type': 'IfcWall'}]
+    assert result['ifc']['vertices'][3] == [0, 0, 4]
+    assert result['cloud'] == {'vertices': [[1, 2, .5]], 'stride': 2, 'total': 2}
+    assert result['worksheet']['pairs'] == []
+    assert result['worksheet']['cloud_unit_verified'] is False
