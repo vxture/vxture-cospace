@@ -109,59 +109,82 @@ class PlatformLogin:
             with self.store.lock(old_session): self.store.delete('session', old_session)
         return rpsid, pending['return_to']
 
+    def _confirm_session(self, rpsid, session, *, active, fresh):
+        now = self.now()
+        retry_at = session.get('retry_at', 0)
+        if now < retry_at or not (fresh or active and now >= session['next_check_at']):
+            return 'unavailable' if retry_at else 'cached'
+        try:
+            status = self.transport.status(session['sid'], active, now)
+        except IdentityUnavailable:
+            # Retry schedule, never a login lifetime; retain encrypted session.
+            session['retry_at'] = self.now()+30
+            self.store.put('session', rpsid, session)
+            return 'unavailable'
+        if not status['valid']:
+            self.store.put('central_logout', self._logout_key(session['sid']), {'ended': True})
+            return 'signed_out'
+        session.update(next_check_at=status['next_check_at'], retry_at=0)
+        self.store.put('session', rpsid, session)
+        return 'confirmed'
+
+    def _ensure_access(self, rpsid, session, state):
+        if state == 'unavailable' or self.now() >= session['next_check_at']:
+            raise IdentityUnavailable('accounts_confirmation_required')
+        if session['access_expires_at'] <= self.now()+60:
+            self._refresh_access(rpsid, session)
+        self.verifier.verify(session['access_token'])
+
+    def _refresh_access(self, rpsid, session):
+        if session.get('refresh_pending') or session.get('refresh_blocked'):
+            raise IdentityUnavailable('grant_reauthorization_required')
+        # Commit before calling accounts; never reuse a possibly consumed refresh token.
+        session['refresh_pending'] = True
+        self.store.put('session', rpsid, session)
+        try:
+            renewed = self._tokens(self.transport.refresh(session['refresh_token']), prior=session)
+        except (IdentityRejected, IdentityUnavailable):
+            session['refresh_blocked'] = True
+            self.store.put('session', rpsid, session)
+            raise IdentityUnavailable('grant_reauthorization_required') from None
+        session.update(renewed)
+        self.store.put('session', rpsid, session)
+
+    def _upgrade_profile(self, rpsid, session):
+        # Optional display fields never affect session validity or permissions.
+        if 'profile' in session or session['access_expires_at'] <= self.now():
+            return
+        try:
+            session['profile'] = profile_claims(self.verifier.verified_claims(session['access_token']))
+            self.store.put('session', rpsid, session)
+        except (IdentityRejected, IdentityUnavailable):
+            pass
+
+    def _discard_ended(self, rpsid, session, state=None):
+        if state != 'signed_out' and not self._central_ended(session['sid']):
+            return False
+        self.store.delete('session', rpsid)
+        return True
+
     def resolve(self, rpsid, *, active=False, require_access=False, fresh=False):
-        if not valid_opaque(rpsid): return None, 'signed_out'
+        if not valid_opaque(rpsid):
+            return None, 'signed_out'
         with self.store.lock(rpsid):
             session = self.store.get('session', rpsid)
-            if session is None: return None, 'signed_out'
+            if session is None:
+                return None, 'signed_out'
             if (session.get('issuer'), session.get('client_id')) != (self.config.issuer, self.config.client_id):
                 raise IdentityUnavailable('session_client_configuration_mismatch')
-            if self._central_ended(session['sid']):
-                self.store.delete('session', rpsid); return None, 'signed_out'
-            state = 'unavailable' if session.get('retry_at', 0) else 'cached'
-            if ((fresh or active and self.now() >= session['next_check_at'])
-                    and self.now() >= session.get('retry_at', 0)):
-                try:
-                    status = self.transport.status(session['sid'], active, self.now())
-                    if status['valid'] is False:
-                        self.store.put('central_logout', self._logout_key(session['sid']), {'ended': True})
-                        self.store.delete('session', rpsid); return None, 'signed_out'
-                    session.update(next_check_at=status['next_check_at'], retry_at=0)
-                    state = 'confirmed'
-                except IdentityUnavailable:
-                    # Retry schedule, never a login lifetime; retain encrypted session.
-                    session['retry_at'] = self.now()+30; state = 'unavailable'
-                self.store.put('session', rpsid, session)
-            if self._central_ended(session['sid']):
-                self.store.delete('session', rpsid); return None, 'signed_out'
+            if self._discard_ended(rpsid, session):
+                return None, 'signed_out'
+            state = self._confirm_session(rpsid, session, active=active, fresh=fresh)
+            if state != 'cached' and self._discard_ended(rpsid, session, state):
+                return None, 'signed_out'
             if require_access:
-                if state == 'unavailable' or self.now() >= session['next_check_at']:
-                    raise IdentityUnavailable('accounts_confirmation_required')
-                if session['access_expires_at'] <= self.now()+60:
-                    if session.get('refresh_pending') or session.get('refresh_blocked'):
-                        raise IdentityUnavailable('grant_reauthorization_required')
-                    # Commit BEFORE calling accounts. Crash/lost reply must never reuse a
-                    # possibly consumed rotating refresh token after restart.
-                    session['refresh_pending'] = True
-                    self.store.put('session', rpsid, session)
-                    try:
-                        renewed = self._tokens(self.transport.refresh(session['refresh_token']), prior=session)
-                    except (IdentityRejected, IdentityUnavailable):
-                        session['refresh_blocked'] = True
-                        self.store.put('session', rpsid, session)
-                        raise IdentityUnavailable('grant_reauthorization_required') from None
-                    session.update(renewed); self.store.put('session', rpsid, session)
-                self.verifier.verify(session['access_token'])
-            # Upgrade existing encrypted sessions using a still-valid signed token.
-            # Optional display fields never affect session validity or permissions.
-            if 'profile' not in session and session['access_expires_at'] > self.now():
-                try:
-                    session['profile'] = profile_claims(self.verifier.verified_claims(session['access_token']))
-                    self.store.put('session', rpsid, session)
-                except (IdentityRejected, IdentityUnavailable):
-                    pass
-            if self._central_ended(session['sid']):
-                self.store.delete('session', rpsid); return None, 'signed_out'
+                self._ensure_access(rpsid, session, state)
+            self._upgrade_profile(rpsid, session)
+            if self._discard_ended(rpsid, session):
+                return None, 'signed_out'
             return session, state
 
     def csrf_matches(self, rpsid, value):

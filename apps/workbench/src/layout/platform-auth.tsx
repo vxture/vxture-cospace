@@ -158,15 +158,32 @@ function BusinessSession({children}:{children:React.ReactNode}){
    const response=await requestSessionConfirmation(nativeFetch,csrf,()=>!stopped&&confirmationGeneration===generation);
    if(!response)return;
    if(!response.ok){authority=null;businessAllowed=false;generation++;setSession(old=>old?{...old,authority_state:'unavailable'}:old);throw new Error('会话确认暂不可用');}
-   const next:Session=await response.json();if(stopped||confirmationGeneration!==generation)return;
+   const next:Session=await response.json();
+   if(stopped||confirmationGeneration!==generation){return;}
    if(!next.authenticated){signedOut();return;}
-   if(sessionScopeKey(authority)!==sessionScopeKey(next)||csrf!==(next.csrf||'')){if(csrf!==(next.csrf||''))retained.current=null;generation++;businessAllowed=false;window.dispatchEvent(new Event('cospace:access-invalidated'));setSubscription(null);setSession({...next,authority_state:'checking'});}
+   const cookieChanged=csrf!==(next.csrf||'');
+   if(sessionScopeKey(authority)!==sessionScopeKey(next)||cookieChanged){
+    if(cookieChanged){retained.current=null;}
+    generation++;businessAllowed=false;window.dispatchEvent(new Event('cospace:access-invalidated'));
+    setSubscription(null);setSession({...next,authority_state:'checking'});
+   }
    authority=next;csrf=next.csrf||'';acceptDeadline(next,started);
    if(!sessionConfirmed(next)){businessAllowed=false;setSession(next);if(next.authenticated)throw new Error('会话确认暂不可用');return;}
    const acceptedGeneration=generation;
    setError('');await checkSubscription(forceAccess);if(!stopped&&acceptedGeneration===generation)setSession(next);
   };
-  const recheck=(notify=false,forceAccess=false)=>{if(confirming)return;const attempt=generation;confirming=confirm(forceAccess).then(()=>{if(notify&&!stopped&&sessionConfirmed(authority)&&businessAllowed)window.dispatchEvent(new Event('cospace:session-confirmed'));}).catch(()=>{if(!stopped&&attempt===generation){authority=null;businessAllowed=false;generation++;setSession(old=>old?{...old,authority_state:'unavailable'}:old);setError('平台暂不可用，未保存修改保留在当前标签页。');}}).finally(()=>{confirming=null;});};
+  const recheck=(notify=false,forceAccess=false)=>{
+   if(confirming){return;}
+   const attempt=generation;
+   confirming=confirm(forceAccess).then(()=>{
+    if(notify&&!stopped&&sessionConfirmed(authority)&&businessAllowed){window.dispatchEvent(new Event('cospace:session-confirmed'));}
+   }).catch(()=>{
+    if(stopped||attempt!==generation){return;}
+    authority=null;businessAllowed=false;generation++;
+    setSession(old=>old?{...old,authority_state:'unavailable'}:old);
+    setError('平台暂不可用，未保存修改保留在当前标签页。');
+   }).finally(()=>{confirming=null;});
+  };
   const activity=(event:Event)=>{if(!event.isTrusted||document.visibilityState!=='visible'||performance.now()<confirmAfter)return;recheck();};
   const resume=(event:Event)=>{if(!event.isTrusted||document.visibilityState!=='visible'||performance.now()<confirmAfter)return;recheck(true);};
   const retry=()=>recheck(true,true);
@@ -178,7 +195,9 @@ function BusinessSession({children}:{children:React.ReactNode}){
    const started=performance.now(),bootstrapGeneration=generation;
    const response=await nativeFetch('/api/auth/session?fresh=1',{cache:'no-store'});
    if(!response.ok)throw new Error('无法读取平台会话');
-   const next:Session=await response.json();if(stopped||bootstrapGeneration!==generation)return;csrf=next.csrf||'';authority=next;
+   const next:Session=await response.json();
+   if(stopped||bootstrapGeneration!==generation){return;}
+   csrf=next.csrf||'';authority=next;
    if(next.authenticated){
     try{sessionStorage.removeItem('cospace.entry.signed-out');}catch{}
     acceptDeadline(next,started);

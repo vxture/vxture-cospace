@@ -152,7 +152,11 @@ def create_auth_app(rp, workbench=Path('apps/workbench/dist'), business=None, ac
             raise HTTPException(403, 'csrf_rejected')
         return public_session(request, active=True)
 
-    @app.post('/auth/backchannel-logout')
+    @app.post('/auth/backchannel-logout', responses={
+        400: {'description': 'Invalid logout form or token'},
+        413: {'description': 'Logout form exceeds the request budget'},
+        503: {'description': 'Verification or session storage unavailable'},
+    })
     async def backchannel_logout(request: Request):
         if request.query_params or request.headers.get('content-type', '').split(';')[0].lower() != 'application/x-www-form-urlencoded':
             raise HTTPException(400, 'logout_request_rejected')
@@ -162,7 +166,7 @@ def create_auth_app(rp, workbench=Path('apps/workbench/dist'), business=None, ac
             if len(raw) > 36_864: raise HTTPException(413, 'logout_request_budget')
         try:
             fields = parse_qs(raw.decode('ascii'), strict_parsing=True, max_num_fields=1)
-        except (ValueError, UnicodeError) as exc:
+        except ValueError as exc:
             raise HTTPException(400, 'logout_request_rejected') from exc
         if set(fields) != {'logout_token'} or len(fields['logout_token']) != 1:
             raise HTTPException(400, 'logout_request_rejected')

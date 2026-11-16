@@ -91,9 +91,11 @@ def test_reload_checks_bound_central_session_even_under_live_lease(runtime):
     before = len(accounts.calls)
     response = client.get('/api/auth/session?fresh=1')
     assert response.json()['authority_state'] == 'signed_out'
-    assert 'user' not in response.json() and 'set-cookie' not in response.headers
+    assert 'user' not in response.json()
+    assert 'set-cookie' not in response.headers
     assert len(accounts.calls) == before + 1
-    assert accounts.calls[-1]['sid'] == session['sid'] and accounts.calls[-1]['active'] is False
+    assert accounts.calls[-1]['sid'] == session['sid']
+    assert accounts.calls[-1]['active'] is False
     assert rp.store.get('session', cookie) is None
 
 

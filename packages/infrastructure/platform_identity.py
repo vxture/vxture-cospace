@@ -17,7 +17,8 @@ from joserfc.errors import JoseError
 from joserfc.jwk import RSAKey
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-LOGOUT_EVENT = 'http://schemas.openid.net/event/backchannel-logout'
+# Standard JWT event identifier, never an HTTP request destination.
+LOGOUT_EVENT = 'http://schemas.openid.net/event/backchannel-logout'  # NOSONAR
 
 
 class IdentityRejected(ValueError):
