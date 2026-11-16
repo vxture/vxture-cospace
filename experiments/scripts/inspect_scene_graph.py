@@ -3,8 +3,10 @@ import argparse
 import json
 from pathlib import Path
 
+from experiments.scripts.scene_input_boundary import read_source
 from packages.spatial.scene_graph import MAX_DOCUMENT_BYTES, SceneGraphReader
 
+SOURCE_ROOT = Path(__file__).resolve().parents[2] / 'examples/scene-graph'
 
 def unique_keys(pairs):
     result = {}
@@ -15,11 +17,9 @@ def unique_keys(pairs):
     return result
 
 
-def load_graph(path):
-    with Path(path).open('rb') as stream:
-        raw = stream.read(MAX_DOCUMENT_BYTES+1)
-    if len(raw) > MAX_DOCUMENT_BYTES:
-        raise ValueError('document_byte_budget')
+def load_graph(path, *, root=None):
+    raw = read_source(path, root=SOURCE_ROOT if root is None else root,
+                      suffix='.json', max_bytes=MAX_DOCUMENT_BYTES)
     return json.loads(raw, object_pairs_hook=unique_keys)
 
 

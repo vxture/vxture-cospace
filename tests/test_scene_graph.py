@@ -9,6 +9,7 @@ import pytest
 from experiments.scripts.inspect_scene_graph import load_graph, main
 from experiments.scripts.inventory_scene_structure import inventory
 from experiments.scripts.scene_graph_sample import sample
+from experiments.scripts.scene_input_boundary import read_source
 from packages.spatial.scene_graph import MAX_DOCUMENT_BYTES, SceneGraph, SceneGraphReader, validate_scene_graph
 
 SCHEMA = Path('contracts/schemas/synthetic-scene-graph-v0.1.schema.json')
@@ -196,13 +197,14 @@ def test_document_budget_and_duplicate_keys(tmp_path):
     path = tmp_path/'input.json'
     path.write_bytes(b' '*(MAX_DOCUMENT_BYTES+1))
     with pytest.raises(ValueError, match='document_byte_budget'):
-        load_graph(path)
+        load_graph(path, root=tmp_path)
     path.write_text('{"profile":1,"profile":2}', encoding='utf-8')
     with pytest.raises(ValueError, match='duplicate_json_key'):
-        load_graph(path)
+        load_graph(path, root=tmp_path)
 
 
 def test_cli_read_only_success_and_error(monkeypatch, capsys, tmp_path):
+    monkeypatch.setattr('experiments.scripts.inspect_scene_graph.SOURCE_ROOT', tmp_path)
     path = tmp_path/'sample.json'
     path.write_text(json.dumps(sample()), encoding='utf-8')
     before = path.read_bytes()
@@ -221,8 +223,39 @@ def test_ifc_inventory_counts_not_strings_and_does_not_claim_geometry(tmp_path):
     path.write_text("FILE_SCHEMA(('IFC4'));\n#1=IFCSPACE('name #2=IFCDOOR( )');\n"
                     "/* #3=IFCSTAIR(); */\n#4=IFCBUILDINGSTOREY();", encoding='utf-8')
     before = path.read_bytes()
-    result = inventory(path)
+    result = inventory(path, root=tmp_path)
     assert result['declaration_counts']['IFCSPACE'] == 1
     assert result['declaration_counts']['IFCDOOR'] == result['declaration_counts']['IFCSTAIR'] == 0
-    assert not result['geometry_decoded'] and not result['alignment_verified']
+    assert not result['geometry_decoded']
+    assert not result['alignment_verified']
     assert path.read_bytes() == before
+
+
+@pytest.mark.parametrize('relative', ['../outside.json', '../allowed-other/data.json'])
+def test_local_reader_rejects_traversal_and_sibling_prefix(tmp_path, relative):
+    allowed = tmp_path/'allowed'
+    allowed.mkdir()
+    target = (allowed/relative).resolve()
+    target.parent.mkdir(exist_ok=True)
+    target.write_text('{}', encoding='utf-8')
+    with pytest.raises(ValueError, match='source_outside_allowed_root'):
+        read_source(allowed/relative, root=allowed, suffix='.json', max_bytes=1024)
+
+
+def test_cli_default_root_cannot_read_other_local_json(tmp_path):
+    path = tmp_path/'private.json'
+    path.write_text('{}', encoding='utf-8')
+    with pytest.raises(ValueError, match='source_outside_allowed_root'):
+        load_graph(path)
+
+
+def test_read_boundary_requires_configuration_and_file_type(tmp_path, monkeypatch):
+    path = tmp_path/'data.ifc'
+    path.write_text('not an IFC', encoding='utf-8')
+    monkeypatch.delenv('COSPACE_SCENE_INPUT_ROOT', raising=False)
+    with pytest.raises(ValueError, match='source_root_not_configured'):
+        inventory(path)
+    with pytest.raises(ValueError, match='source_type_invalid'):
+        read_source(path, root=tmp_path, suffix='.json', max_bytes=1024)
+    with pytest.raises(ValueError, match='source_type_invalid'):
+        read_source(tmp_path, root=tmp_path, suffix='.json', max_bytes=1024)

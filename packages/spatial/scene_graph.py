@@ -181,23 +181,21 @@ def utc(value):
     return parsed
 
 
-def _references(graph):
-    types = unique(graph.ontology.types, 'type')
-    entities = unique(graph.entities, 'entity')
-    geometry = unique(graph.geometry, 'geometry')
-    evidence = unique(graph.evidence, 'evidence')
-    unique(graph.relations, 'relation')
-    unique(graph.connections, 'connection')
-    unique(graph.observations, 'observation')
-    unique(graph.sources, 'source')
+def _type_roles(types):
     expected_kind = {'building': 'building', 'level': 'level', 'room': 'space',
                      'corridor': 'space', 'door': 'element', 'stair': 'element', 'cabinet': 'asset'}
     if any(t.kind != expected_kind[t.role] for t in types.values()):
         raise ValueError('ontology_role_kind')
+
+
+def _evidence_references(graph, evidence):
     for item in [*graph.entities, *graph.geometry, *graph.relations,
                  *graph.connections, *graph.observations]:
         if len(set(item.evidence_ids)) != len(item.evidence_ids) or set(item.evidence_ids) - evidence.keys():
             raise ValueError('invalid_evidence_reference')
+
+
+def _geometry_references(graph, types, entities, geometry):
     for entity in entities.values():
         if entity.type_id not in types or types[entity.type_id].kind != entity.kind:
             raise ValueError('entity_type_kind')
@@ -210,35 +208,55 @@ def _references(graph):
             raise ValueError('geometry_frame_mismatch')
         if item.entity_id not in entities or item.id not in entities[item.entity_id].geometry_ids:
             raise ValueError('geometry_entity_binding')
+
+
+def _references(graph):
+    types = unique(graph.ontology.types, 'type')
+    entities = unique(graph.entities, 'entity')
+    geometry = unique(graph.geometry, 'geometry')
+    evidence = unique(graph.evidence, 'evidence')
+    for name in ('relations', 'connections', 'observations', 'sources'):
+        unique(getattr(graph, name), name[:-1])
+    _type_roles(types)
+    _evidence_references(graph, evidence)
+    _geometry_references(graph, types, entities, geometry)
     return types, entities, geometry
 
 
-def _relations(graph, entities):
-    parents = {'contains': {}, 'part_of': {}}
-    assertions = set()
-    contains_kinds = {'building': {'level', 'element'}, 'level': {'space', 'element', 'asset'},
-                      'space': {'element', 'asset'}}
-    for relation in graph.relations:
-        a, b = relation.source_id, relation.target_id
-        if a not in entities or b not in entities or a == b:
-            raise ValueError('relation_endpoint')
-        ka, kb = entities[a].kind, entities[b].kind
-        if ((relation.type == 'contains' and kb not in contains_kinds.get(ka, set()))
-                or (relation.type == 'part_of' and (ka != 'element' or kb not in {'element', 'building'}))
-                or (relation.type == 'adjacent_to' and (ka, kb) != ('space', 'space'))
-                or (relation.type == 'bounds_space' and (ka, kb) != ('element', 'space'))
-                or (relation.type == 'installed_on' and (ka, kb) != ('asset', 'element'))):
-            raise ValueError('relation_endpoint_kind')
-        key = (relation.type, *sorted((a, b))) if relation.type == 'adjacent_to' else (relation.type, a, b)
-        if key in assertions:
-            raise ValueError('duplicate_relation_assertion')
-        assertions.add(key)
-        if relation.type in parents:
-            parent, child = (a, b) if relation.type == 'contains' else (b, a)
-            family = parents[relation.type]
-            if child in family and family[child] != parent:
-                raise ValueError('multiple_parents')
-            family[child] = parent
+def _relation_endpoints(relation, entities):
+    a, b = relation.source_id, relation.target_id
+    if a not in entities or b not in entities or a == b:
+        raise ValueError('relation_endpoint')
+    allowed = {
+        'contains': {('building', 'level'), ('building', 'element'), ('level', 'space'),
+                     ('level', 'element'), ('level', 'asset'), ('space', 'element'), ('space', 'asset')},
+        'part_of': {('element', 'element'), ('element', 'building')},
+        'adjacent_to': {('space', 'space')},
+        'bounds_space': {('element', 'space')},
+        'installed_on': {('asset', 'element')},
+    }
+    if (entities[a].kind, entities[b].kind) not in allowed[relation.type]:
+        raise ValueError('relation_endpoint_kind')
+    return a, b
+
+
+def _remember(assertions, key, error):
+    if key in assertions:
+        raise ValueError(error)
+    assertions.add(key)
+
+
+def _record_parent(parents, relation, a, b):
+    if relation.type not in parents:
+        return
+    parent, child = (a, b) if relation.type == 'contains' else (b, a)
+    family = parents[relation.type]
+    if child in family and family[child] != parent:
+        raise ValueError('multiple_parents')
+    family[child] = parent
+
+
+def _acyclic(parents):
     for family in parents.values():
         for child in family:
             visited = set()
@@ -249,6 +267,60 @@ def _relations(graph, entities):
                 child = family[child]
 
 
+def _relations(graph, entities):
+    parents = {'contains': {}, 'part_of': {}}
+    assertions = set()
+    for relation in graph.relations:
+        a, b = _relation_endpoints(relation, entities)
+        key = (relation.type, *sorted((a, b))) if relation.type == 'adjacent_to' else (relation.type, a, b)
+        _remember(assertions, key, 'duplicate_relation_assertion')
+        _record_parent(parents, relation, a, b)
+    _acyclic(parents)
+
+
+def _connection_spaces(connection, types, entities):
+    connector = entities.get(connection.connector_id)
+    expected = 'door' if connection.mode == 'opening' else 'stair'
+    if connector is None or types[connector.type_id].role != expected:
+        raise ValueError('connection_connector_role')
+    spaces = [port.space_id for port in connection.ports]
+    if len(set(spaces)) != 2 or any(s not in entities or entities[s].kind != 'space' for s in spaces):
+        raise ValueError('connection_spaces')
+    return spaces
+
+
+def _connection_ports(connection, geometry):
+    if len({port.geometry_id for port in connection.ports}) != 2:
+        raise ValueError('duplicate_connection_port')
+    for port in connection.ports:
+        value = geometry.get(port.geometry_id)
+        if value is None or value.entity_id != connection.connector_id or value.role != 'connection_port':
+            raise ValueError('connection_port_binding')
+
+
+def _connections(graph, types, entities, geometry):
+    assertions = set()
+    for connection in graph.connections:
+        spaces = _connection_spaces(connection, types, entities)
+        key = (connection.connector_id, *sorted(spaces))
+        _remember(assertions, key, 'duplicate_connection_assertion')
+        _connection_ports(connection, geometry)
+
+
+def _observations(graph, types, entities):
+    sources = {source.id for source in graph.sources}
+    for observation in graph.observations:
+        entity = entities.get(observation.entity_id)
+        if entity is None or types[entity.type_id].role != 'door':
+            raise ValueError('observation_subject_role')
+        if utc(observation.valid_until) <= utc(observation.observed_at):
+            raise ValueError('invalid_observation_interval')
+        if observation.source_id not in sources:
+            raise ValueError('observation_source')
+        if utc(observation.received_at) < utc(observation.observed_at):
+            raise ValueError('observation_received_before_observed')
+
+
 def validate_scene_graph(document):
     """Validate bounded synthetic metadata and references; verify no field truth."""
     try:
@@ -257,35 +329,8 @@ def validate_scene_graph(document):
         raise ValueError('scene_graph_structure:' + str(exc)) from exc
     types, entities, geometry = _references(graph)
     _relations(graph, entities)
-    assertions = set()
-    for connection in graph.connections:
-        connector = entities.get(connection.connector_id)
-        expected = 'door' if connection.mode == 'opening' else 'stair'
-        if connector is None or types[connector.type_id].role != expected:
-            raise ValueError('connection_connector_role')
-        spaces = [port.space_id for port in connection.ports]
-        if len(set(spaces)) != 2 or any(s not in entities or entities[s].kind != 'space' for s in spaces):
-            raise ValueError('connection_spaces')
-        key = (connection.connector_id, *sorted(spaces))
-        if key in assertions:
-            raise ValueError('duplicate_connection_assertion')
-        assertions.add(key)
-        if len({port.geometry_id for port in connection.ports}) != 2:
-            raise ValueError('duplicate_connection_port')
-        for port in connection.ports:
-            value = geometry.get(port.geometry_id)
-            if value is None or value.entity_id != connector.id or value.role != 'connection_port':
-                raise ValueError('connection_port_binding')
-    for observation in graph.observations:
-        entity = entities.get(observation.entity_id)
-        if entity is None or types[entity.type_id].role != 'door':
-            raise ValueError('observation_subject_role')
-        if utc(observation.valid_until) <= utc(observation.observed_at):
-            raise ValueError('invalid_observation_interval')
-        if observation.source_id not in {source.id for source in graph.sources}:
-            raise ValueError('observation_source')
-        if utc(observation.received_at) < utc(observation.observed_at):
-            raise ValueError('observation_received_before_observed')
+    _connections(graph, types, entities, geometry)
+    _observations(graph, types, entities)
     return {'profile': PROFILE, 'scene_id': graph.scene_id, 'snapshot_id': graph.snapshot_id,
             'metadata_valid': True, 'data_kind': 'synthetic',
             'counts': {name: len(getattr(graph, name)) for name in

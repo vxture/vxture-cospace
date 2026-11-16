@@ -3,20 +3,21 @@ from collections import Counter
 import argparse
 import hashlib
 import json
+import os
 from pathlib import Path
 import re
+
+from experiments.scripts.scene_input_boundary import read_source
 
 MAX_IFC_BYTES = 128 * 1024 * 1024
 
 
-def inventory(path):
+def inventory(path, *, root=None):
     path = Path(path)
     if path.suffix.lower() != '.ifc':
         raise ValueError('ifc_required')
-    with path.open('rb') as stream:
-        raw = stream.read(MAX_IFC_BYTES+1)
-    if len(raw) > MAX_IFC_BYTES:
-        raise ValueError('ifc_byte_budget')
+    raw = read_source(path, root=root if root is not None else os.environ.get('COSPACE_SCENE_INPUT_ROOT'),
+                      suffix='.ifc', max_bytes=MAX_IFC_BYTES)
     # Deliberately not an IFC parser: ignore comments and strings before counting instances.
     text = raw.decode('utf-8-sig')
     schema = re.search(r"FILE_SCHEMA\s*\(\s*\(\s*'([^']+)'", text, re.I)
