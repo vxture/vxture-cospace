@@ -20,5 +20,6 @@ def test_recovers_known_rigid_geometry_without_claiming_verification():
 @pytest.mark.parametrize('points', [np.zeros((12, 3)), np.zeros((11, 3)), np.zeros((6001, 3)),
                                   np.full((12, 3), np.nan), np.ones((12, 2))])
 def test_invalid_geometry_and_budgets_rejected(points):
+    target = np.random.default_rng(1).normal(size=(15, 3))
     with pytest.raises(ValueError, match='proposal_'):
-        registration_proposals(points, np.random.default_rng(1).normal(size=(15, 3)))
+        registration_proposals(points, target)

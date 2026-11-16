@@ -57,8 +57,7 @@ def main():
     report = registration_proposals(source, target)
     report.update(source_catalog_sha256=args.ifc_sha256, cloud_sha256=args.cloud_sha256,
                   ifc_frame_id=catalog['frame_id'], cloud_frame_id=facts['frame_id'],
-                  samples=dict(method='triangle_centroids_and_ply_stride', source_sha256=content_digest(source.tolist()),
-                               target_sha256=content_digest(target.tolist())))
+                  samples={'method': 'triangle_centroids_and_ply_stride', 'source_sha256': content_digest(source.tolist()), 'target_sha256': content_digest(target.tolist())})
     with args.output.open('x', encoding='utf-8') as stream:
         stream.write(json.dumps(report, ensure_ascii=False, indent=2, allow_nan=False) + '\n')
     if args.overlay:

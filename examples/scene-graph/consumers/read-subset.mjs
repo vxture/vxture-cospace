@@ -4,7 +4,7 @@ import { resolve, relative, isAbsolute } from 'node:path';
 import { createHash } from 'node:crypto';
 import { pathToFileURL } from 'node:url';
 
-const roles = ['entities', 'geometry', 'structure', 'observations'];
+const roles = new Set(['entities', 'geometry', 'structure', 'observations']);
 const dependencies = { entities: [], geometry: ['entities'], structure: ['entities', 'geometry'], observations: ['entities'] };
 const idPattern = /^[a-zA-Z0-9][a-zA-Z0-9_.:-]{0,159}$/;
 function requireThat(test, message) { if (!test) throw new Error(message); }
@@ -51,6 +51,15 @@ function pin(value) {
   requireThat(typeof value.sha256 === 'string' && /^[a-f0-9]{64}$/.test(value.sha256), 'invalid_source_pin');
   return [value.scene_id, value.snapshot_id, value.sha256];
 }
+function connectionReferences(structure, entities, geometry) {
+  for (const row of indexed(structure.connections, 1000).values()) {
+    requireThat(entities.has(row.connector_id) && array(row.ports, 2).length === 2, 'connection_reference');
+    for (const port of row.ports) {
+      requireThat(entities.get(port.space_id)?.kind === 'space', 'port_space');
+      requireThat(geometry.get(port.geometry_id)?.entity_id === row.connector_id, 'port_geometry');
+    }
+  }
+}
 function references(payloads, manifest) {
   const catalog = payloads.entities;
   requireThat(catalog.profile === 'cospace.synthetic-scene-graph/0.1' && catalog.data_kind === 'synthetic', 'synthetic_only');
@@ -71,13 +80,7 @@ function references(payloads, manifest) {
   for (const row of indexed(structure.relations, 4000).values()) {
     requireThat(entities.has(row.source_id) && entities.has(row.target_id), 'relation_reference');
   }
-  for (const row of indexed(structure.connections, 1000).values()) {
-    requireThat(entities.has(row.connector_id) && array(row.ports, 2).length === 2, 'connection_reference');
-    for (const port of row.ports) {
-      requireThat(entities.get(port.space_id)?.kind === 'space', 'port_space');
-      requireThat(geometry.get(port.geometry_id)?.entity_id === row.connector_id, 'port_geometry');
-    }
-  }
+  connectionReferences(structure, entities, geometry);
   const sources = indexed(catalog.sources, 64);
   for (const row of indexed(payloads.observations, 2000).values()) {
     requireThat(entities.has(row.entity_id) && sources.has(row.source_id), 'observation_reference');
@@ -94,18 +97,18 @@ export async function consume(directory, expectedSource, operation, identityValu
   requireThat(JSON.stringify(pin(manifest.source)) === JSON.stringify(pin(expectedSource)), 'source_binding');
   const components = array(manifest.components, 4);
   requireThat(components.length === 4 && new Set(components.map(c => c.role)).size === 4, 'component_roles');
-  const payloads = {};
-  let total = 0;
   for (const component of components) {
-    requireThat(roles.includes(component.role), 'unsupported_component');
+    requireThat(roles.has(component.role), 'unsupported_component');
     requireThat(JSON.stringify(component.depends_on) === JSON.stringify(dependencies[component.role]), 'component_dependencies');
     requireThat(Number.isInteger(component.bytes) && component.bytes > 0 && component.bytes <= 2 * 1024 * 1024, 'component_byte_budget');
-    const raw = await bytes(await member(root, `${component.role}.json`), component.bytes);
-    total += raw.length;
-    requireThat(total <= 4 * 1024 * 1024, 'package_byte_budget');
-    requireThat(raw.length === component.bytes && createHash('sha256').update(raw).digest('hex') === component.sha256, 'component_integrity');
-    payloads[component.role] = parse(raw);
   }
+  requireThat(components.reduce((sum,c) => sum+c.bytes,0) <= 4 * 1024 * 1024, 'package_byte_budget');
+  const entries = await Promise.all(components.map(async component => {
+    const raw = await bytes(await member(root, `${component.role}.json`), component.bytes);
+    requireThat(raw.length === component.bytes && createHash('sha256').update(raw).digest('hex') === component.sha256, 'component_integrity');
+    return [component.role, parse(raw)];
+  }));
+  const payloads = Object.fromEntries(entries);
   const entities = references(payloads, manifest);
   const id = identity(identityValue);
   requireThat(['entity', 'connections'].includes(operation), 'unsupported_operation');
@@ -114,7 +117,10 @@ export async function consume(directory, expectedSource, operation, identityValu
     items = operation === 'entity' ? [{entity: entities.get(id), geometry: payloads.geometry.filter(g => g.entity_id === id)}] :
       payloads.structure.connections.filter(c => c.connector_id === id || c.ports.some(p => p.space_id === id));
   }
-  return { outcome: !entities.has(id) ? 'out_of_scope' : items.length ? 'found' : 'no_match', items,
+  let outcome = 'found';
+  if (!entities.has(id)) outcome = 'out_of_scope';
+  else if (!items.length) outcome = 'no_match';
+  return { outcome, items,
     source: manifest.source, subset_snapshot_id: manifest.subset_snapshot_id, data_kind: 'synthetic',
     validation_scope: 'byte_integrity_and_reference_closure_only', query_scope: 'package_only',
     source_content_verified: false, incident_connections_complete: false, full_scene_coverage: false,

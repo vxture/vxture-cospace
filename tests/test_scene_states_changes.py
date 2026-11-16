@@ -120,7 +120,8 @@ def test_matching_proposes_both_split_spaces_without_adoption():
     assert row['status'] == 'unresolved'
     assert result['automatic_adoption'] is result['identity_verified'] is False
     limited = propose_identity_matches(base, target, maximum_distance_m=10, top_k=1)['proposals'][0]
-    assert limited['truncated'] and limited['candidate_count_before_limit'] == 2
+    assert limited['truncated']
+    assert limited['candidate_count_before_limit'] == 2
     assert not propose_identity_matches(base, target, maximum_distance_m=.1)['proposals'][0]['candidates']
     for value in (0, True, float('nan')):
         with pytest.raises(ValueError, match='configuration'):

@@ -39,12 +39,5 @@ def resolve_opening_state(document, identity, *, as_of, known_at):
     else:
         status = 'known'
     pin = snapshot_ref(document)
-    return dict(profile='cospace.synthetic-state-result/0.1', data_kind='synthetic', source=pin,
-                entity_id=identity, property='opening_state', as_of=as_of, known_at=known_at,
-                policy=POLICY, status=status, value=next(iter(values)) if status == 'known' else None,
-                observation_ids=[row['id'] for row in active],
-                expired_observation_ids=[row['id'] for row in latest if row not in active],
-                cursor=content_digest(dict(source=pin, policy=POLICY, as_of=as_of, known_at=known_at)),
-                assessment='unverified', evidence_content_verified=False, real_release_ready=False,
-                limitations=['no_source_priority', 'no_clock_quality_verification', 'no_correction_event_support',
-                             'latest_expired_does_not_revive_older_state', 'no_navigation_or_traversability'])
+    return {'profile': 'cospace.synthetic-state-result/0.1', 'data_kind': 'synthetic', 'source': pin, 'entity_id': identity, 'property': 'opening_state', 'as_of': as_of, 'known_at': known_at, 'policy': POLICY, 'status': status, 'value': next(iter(values)) if status == 'known' else None, 'observation_ids': [row['id'] for row in active], 'expired_observation_ids': [row['id'] for row in latest if row not in active], 'cursor': content_digest({'source': pin, 'policy': POLICY, 'as_of': as_of, 'known_at': known_at}), 'assessment': 'unverified', 'evidence_content_verified': False, 'real_release_ready': False, 'limitations': ['no_source_priority', 'no_clock_quality_verification', 'no_correction_event_support',
+                             'latest_expired_does_not_revive_older_state', 'no_navigation_or_traversability']}

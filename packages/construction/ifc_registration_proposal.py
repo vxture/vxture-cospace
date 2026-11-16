@@ -54,18 +54,10 @@ def registration_proposals(source, target):
         forward = tree.query(moved, workers=1)[0]
         reverse = cKDTree(moved).query(target, workers=1)[0]
         trimmed = np.sort(forward)[:max(6, int(len(source) * .7))]
-        rows.append(dict(seed=seed, iterations=iteration + 1, ifc_to_cloud_numeric=matrix.tolist(),
-                         trimmed_rmse=float(np.sqrt(np.mean(trimmed ** 2))),
-                         source_to_cloud_median=float(np.median(forward)),
-                         cloud_to_source_median=float(np.median(reverse))))
+        rows.append({'seed': seed, 'iterations': iteration + 1, 'ifc_to_cloud_numeric': matrix.tolist(), 'trimmed_rmse': float(np.sqrt(np.mean(trimmed ** 2))), 'source_to_cloud_median': float(np.median(forward)), 'cloud_to_source_median': float(np.median(reverse))})
     if not rows:
         raise ValueError('proposal_no_nondegenerate_solution')
     rows.sort(key=lambda row: (row['source_to_cloud_median'] + row['cloud_to_source_median'], row['seed']))
-    return dict(profile='cospace.ifc-geometric-proposals/0.1', candidates=rows,
-                source_points=len(source), cloud_points=len(target), initializations=24,
-                method='pca_proper_axis_permutations_trimmed_point_icp',
-                cloud_numeric_units_per_ifc_m_hypothesis=1.0, unit_verified=False,
-                independent_control_count=0, alignment_verified=False, real_release_ready=False,
-                limitations=['no_scale_estimation', 'no_unit_or_gravity_evidence', 'no_independent_controls',
+    return {'profile': 'cospace.ifc-geometric-proposals/0.1', 'candidates': rows, 'source_points': len(source), 'cloud_points': len(target), 'initializations': 24, 'method': 'pca_proper_axis_permutations_trimmed_point_icp', 'cloud_numeric_units_per_ifc_m_hypothesis': 1.0, 'unit_verified': False, 'independent_control_count': 0, 'alignment_verified': False, 'real_release_ready': False, 'limitations': ['no_scale_estimation', 'no_unit_or_gravity_evidence', 'no_independent_controls',
                              'sample_residuals_not_alignment_accuracy', 'local_minima_and_symmetry_possible',
-                             'not_a_semantic_or_field_confirmation', 'no_automatic_transform_adoption'])
+                             'not_a_semantic_or_field_confirmation', 'no_automatic_transform_adoption']}
