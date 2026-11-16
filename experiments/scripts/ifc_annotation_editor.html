@@ -49,10 +49,11 @@ output{display:block;overflow-wrap:anywhere;line-height:1.6;min-height:2em}li{ma
     <button id="save-endpoint">保存端点草稿</button>
   </fieldset>
   <button id="export" class="primary">导出标注工作表</button>
-  <p>请及时导出。刷新或关闭页面会丢失当前草稿。</p>
+  <p>请及时导出。刷新或关闭会丢失未导出的草稿；可通过生成器的 --worksheet 参数载入导出文件续编。</p>
   <output id="status" aria-live="polite"></output>
 </aside>
 </div>
+__SECTION_TEMPLATES__
 <script type="application/json" id="editor-data">__EDITOR_DATA__</script>
 <script>
 'use strict';
@@ -61,6 +62,10 @@ const sheet = data.worksheet;
 const $ = id => document.getElementById(id);
 const identity = /^[a-zA-Z0-9][a-zA-Z0-9_.:-]{0,159}$/;
 let selected = [], nextArea = 1;
+function areaId() {
+  while(sheet.areas.some(area=>area.id===`area-${nextArea}`))nextArea++;
+  return `area-${nextArea++}`;
+}
 function option(select, value, label) {
   const element = document.createElement('option');
   element.value = value; element.textContent = label; select.append(element);
@@ -105,8 +110,8 @@ function overlay() {
 }
 function showView() {
   selected = [];
-  // This SVG is generated and escaped from sealed source meshes, never imported HTML.
-  $('map').innerHTML = current().svg;
+  const template = document.getElementById(`section-view-${$('slice').value}`);
+  $('map').replaceChildren(template.content.cloneNode(true));
   const svg = $('map').querySelector('svg');
   const group = document.createElementNS('http://www.w3.org/2000/svg','g');
   group.id='overlay'; group.style.pointerEvents='none'; svg.append(group);
@@ -165,7 +170,7 @@ $('save-area').onclick=()=>act(()=>{
   if(!$('z-min').value||!$('z-max').value||!Number.isFinite(lo)||!Number.isFinite(hi)||lo>=hi||Math.max(Math.abs(lo),Math.abs(hi))>1000000)throw new Error('请填写有效原坐标高度区间。');
   if(selected.some(p=>p.some(n=>!Number.isFinite(n)||Math.abs(n)>1000000)))throw new Error('坐标超出工作表范围。');
   if(sheet.areas.length>=512)throw new Error('区域数量已达到工作表上限。');
-  sheet.areas.push({id:`area-${nextArea++}`,name,level_id:level,footprint_xy_m:selected.map(p=>[...p]),z_range_m:[lo,hi],evidence_ids:[proof.id]});
+  sheet.areas.push({id:areaId(),name,level_id:level,footprint_xy_m:selected.map(p=>[...p]),z_range_m:[lo,hi],evidence_ids:[proof.id]});
   commitEvidence(proof);selected=[];refresh();$('status').textContent='区域草稿已记录，尚未通过几何校验。';
 });
 $('save-endpoint').onclick=()=>act(()=>{
