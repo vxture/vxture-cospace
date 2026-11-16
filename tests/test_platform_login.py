@@ -5,9 +5,10 @@ from urllib.parse import parse_qs, urlsplit
 import pytest
 from cryptography.fernet import Fernet
 from fastapi.testclient import TestClient
+from joserfc import jwt
 from pydantic import SecretStr, ValidationError
 from experiments.scripts.platform_auth_fixture import MockAccounts
-from packages.infrastructure.platform_identity import IdentityRejected, IdentityUnavailable, PlatformTokenVerifier
+from packages.infrastructure.platform_identity import IdentityRejected, IdentityUnavailable, LOGOUT_EVENT, PlatformTokenVerifier
 from packages.infrastructure.platform_rp import RpConfig, safe_return
 from packages.infrastructure.platform_session_store import LocalRpStore
 from packages.service.platform_login import PlatformLogin,LOGIN_SCOPES
@@ -70,6 +71,77 @@ def login(rp, client, accounts):
 def activity(rp, client):
     session = client.get('/api/auth/session').json()
     return client.post('/api/auth/session', headers={'Origin':rp.config.origin,'X-CoSpace-CSRF':session['csrf']})
+
+
+def logout_token(accounts, **claims):
+    return jwt.encode({'alg':'RS256','kid':accounts.key.kid},
+        {'iss':accounts.issuer,'aud':accounts.client_id,'iat':NOW,'exp':NOW+120,'jti':'logout-id',
+         'sid':'mock-central-session','events':{LOGOUT_EVENT:{}}, **claims}, accounts.key)
+
+
+def notify_logout(client, accounts, **claims):
+    return client.post('/auth/backchannel-logout', data={'logout_token':logout_token(accounts, **claims)})
+
+
+def test_reload_checks_bound_central_session_even_under_live_lease(runtime):
+    rp, client, accounts, _ = runtime
+    _, cookie = login(rp, client, accounts)
+    session = rp.store.get('session', cookie)
+    accounts.valid = False
+    before = len(accounts.calls)
+    response = client.get('/api/auth/session?fresh=1')
+    assert response.json()['authority_state'] == 'signed_out'
+    assert 'user' not in response.json()
+    assert 'set-cookie' not in response.headers
+    assert len(accounts.calls) == before + 1
+    assert accounts.calls[-1]['sid'] == session['sid']
+    assert accounts.calls[-1]['active'] is False
+    assert rp.store.get('session', cookie) is None
+
+
+def test_backchannel_is_idempotent_scoped_and_survives_restart(runtime):
+    rp, client, accounts, _ = runtime
+    _, current = login(rp, client, accounts)
+    assert notify_logout(client, accounts, sid='different-session').status_code == 200
+    assert rp.resolve(current, require_access=True)[0]
+    assert notify_logout(client, accounts).status_code == 200
+    assert notify_logout(client, accounts).status_code == 200
+    restarted = PlatformLogin(rp.config, LocalRpStore(rp.store.root,rp.config.encryption_key.get_secret_value()),now=rp.now)
+    assert restarted.resolve(current, require_access=True) == (None, 'signed_out')
+    assert rp.store.get('session',current) is None
+
+
+@pytest.mark.parametrize('claims', [
+    {'iss':'https://unexpected.example'}, {'aud':'other-client'}, {'events':{}}, {'nonce':'unexpected'},
+    {'sid':''}, {'jti':''}, {'iat':NOW-100,'exp':NOW-1}, {'iat':NOW+120,'exp':NOW+240},
+])
+def test_invalid_backchannel_claims_do_not_revoke_session(runtime, claims):
+    rp, client, accounts, _ = runtime
+    _, current = login(rp, client, accounts)
+    assert notify_logout(client, accounts, **claims).status_code == 400
+    assert rp.resolve(current, require_access=True)[0]
+
+
+def test_logout_notice_wins_over_inflight_positive_status(runtime, monkeypatch):
+    rp, client, accounts, _ = runtime
+    _, current = login(rp, client, accounts)
+    status = rp.transport.status
+    def delayed_result(*args):
+        result = status(*args)
+        assert notify_logout(client, accounts).status_code == 200
+        return result
+    monkeypatch.setattr(rp.transport, 'status', delayed_result)
+    assert rp.resolve(current, fresh=True) == (None, 'signed_out')
+
+
+def test_backchannel_rejects_browser_json_duplicate_form_and_oversize_body(runtime):
+    _, client, accounts, _ = runtime
+    endpoint = '/auth/backchannel-logout'
+    token = logout_token(accounts)
+    headers = {'Content-Type':'application/x-www-form-urlencoded'}
+    assert client.post(endpoint, json={'logout_token':token}).status_code == 400
+    assert client.post(endpoint, headers=headers, content=f'logout_token={token}&logout_token={token}').status_code == 400
+    assert client.post(endpoint, headers=headers, content='logout_token=' + 'x' * 37_000).status_code == 413
 
 
 def test_authorize_scopes_fit_platform_default_and_refresh_still_rotates(runtime):
