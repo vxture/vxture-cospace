@@ -41,7 +41,8 @@ def test_authorized_read_does_not_create_registration_and_rejects_stale_catalog(
     result = client.get(ROUTE, params=params)
     assert result.status_code == 200, result.text
     assert result.headers['cache-control'] == 'no-store'
-    assert result.json()['configured'] is False and result.json()['status'] == 'unavailable'
+    assert result.json()['configured'] is False
+    assert result.json()['status'] == 'unavailable'
     assert not access.ifc_observations.journal.path.exists()
     for change, status in [({'space_id': spaces[1]['id']}, 403), ({'catalog_sha256': '0' * 64}, 409),
                            ({'element_id': 'e00000'}, 409), ({'as_of': 'client-time'}, 422)]:
@@ -79,12 +80,15 @@ def test_registered_reports_are_scoped_to_authenticated_tenant_and_not_geometry(
         pytest.fail('observation read loaded geometry')
     monkeypatch.setattr('packages.data.ifc_workspace.load_mesh', no_mesh)
     value = client.get(ROUTE, params=params).json()
-    assert value['configured'] is True and value['status'] == 'reported' and value['value'] == 'closed'
+    assert value['configured'] is True
+    assert value['status'] == 'reported'
+    assert value['value'] == 'closed'
     assert value['source_content_verified'] is value['real_release_ready'] is False
     assert value['catalog_content_verified'] is True
     assert value['reported_at'] == '2026-11-17T00:01:00Z'
     assert value['active_count'] == 1
-    assert 'report' not in value and str(root) not in json.dumps(value)
+    assert 'report' not in value
+    assert str(root) not in json.dumps(value)
     assert journal.registered(scope | {'workspace': 'other-workspace'}) is False
     journal.clock = lambda: '2026-11-17T00:02:00Z'
     journal.append(scope, report('late-old', entity_id='wall', observed_at='2026-11-16T23:59:00Z', value='open'),
