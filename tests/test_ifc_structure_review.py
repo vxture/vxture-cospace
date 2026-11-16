@@ -85,3 +85,17 @@ def test_cli_export_does_not_overwrite(structure_source, tmp_path, monkeypatch):
     with pytest.raises(FileExistsError):
         main()
     assert output.read_bytes() == original
+
+
+def test_atlas_escapes_names_and_preserves_source_identity(structure_source):
+    from experiments.scripts.ifc_structure_atlas import build_atlas
+    root, doc = structure_source
+    doc['products'][2]['name'] = '<script>alert(1)</script>'
+    (root / 'ifc.json').write_text(json.dumps(doc), encoding='utf-8')
+    html = build_atlas(root, expected_catalog_sha256=digest(root / 'ifc.json'))
+    assert '<script>' not in html
+    assert '&lt;script&gt;' in html
+    assert html.count('<section id="task-') == 2
+    assert html.count('<svg ') == 3  # Stair fixture has no child mesh.
+    assert 'door · 待复核' in html
+    assert 'opening_in' in html
