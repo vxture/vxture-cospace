@@ -1,0 +1,80 @@
+{
+  "$defs": {
+    "TypeMapping": {
+      "additionalProperties": false,
+      "properties": {
+        "source_type_id": {
+          "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_.:-]{0,159}$",
+          "title": "Source Type Id",
+          "type": "string"
+        },
+        "target_type_id": {
+          "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_.:-]{0,159}$",
+          "title": "Target Type Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "source_type_id",
+        "target_type_id"
+      ],
+      "title": "TypeMapping",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "profile": {
+      "const": "cospace.legacy-anchor-mapping/0.1",
+      "title": "Profile",
+      "type": "string"
+    },
+    "source_document_sha256": {
+      "pattern": "^[a-f0-9]{64}$",
+      "title": "Source Document Sha256",
+      "type": "string"
+    },
+    "source_space_id": {
+      "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_.:-]{0,159}$",
+      "title": "Source Space Id",
+      "type": "string"
+    },
+    "source_model_id": {
+      "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_.:-]{0,159}$",
+      "title": "Source Model Id",
+      "type": "string"
+    },
+    "source_model_sha256": {
+      "pattern": "^[a-f0-9]{64}$",
+      "title": "Source Model Sha256",
+      "type": "string"
+    },
+    "source_frame_id": {
+      "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_.:-]{0,159}$",
+      "title": "Source Frame Id",
+      "type": "string"
+    },
+    "mappings": {
+      "items": {
+        "$ref": "#/$defs/TypeMapping"
+      },
+      "maxItems": 100,
+      "minItems": 1,
+      "title": "Mappings",
+      "type": "array"
+    }
+  },
+  "required": [
+    "profile",
+    "source_document_sha256",
+    "source_space_id",
+    "source_model_id",
+    "source_model_sha256",
+    "source_frame_id",
+    "mappings"
+  ],
+  "title": "AnchorMapping",
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vxture.local/schemas/legacy-anchor-mapping-v0.1"
+}

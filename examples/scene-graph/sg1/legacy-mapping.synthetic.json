@@ -1,0 +1,14 @@
+{
+  "profile": "cospace.legacy-anchor-mapping/0.1",
+  "source_document_sha256": "49d4ca741e8dc8f8122f7e6ad1c79eaccf8b705cb34d7650a3ee0fdedc45576b",
+  "source_space_id": "space-3333333333333333",
+  "source_model_id": "build-1111111111111111",
+  "source_model_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "source_frame_id": "synthetic-local",
+  "mappings": [
+    {
+      "source_type_id": "old-cabinet",
+      "target_type_id": "cabinet"
+    }
+  ]
+}

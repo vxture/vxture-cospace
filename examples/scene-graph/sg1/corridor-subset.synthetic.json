@@ -1,0 +1,525 @@
+{
+  "manifest": {
+    "profile": "cospace.synthetic-scene-subset/0.1",
+    "data_kind": "synthetic",
+    "source": {
+      "scene_id": "synthetic-building",
+      "snapshot_id": "synthetic-snapshot-01",
+      "sha256": "1a82ffb87511593d245e6a4b9346f7182b565491d943668a1ac812ab5fa6ef07"
+    },
+    "subset_snapshot_id": "subset-5449d072ae06619949ef8cd75a86ec50",
+    "requested_ids": [
+      "corridor-l1"
+    ],
+    "dependency_ids": [
+      "corridor-l2",
+      "door-l1",
+      "room-l1",
+      "stair"
+    ],
+    "components": [
+      {
+        "role": "entities",
+        "sha256": "107f8bc8d8451a8a2820d621b31aaff13b274c6d754e23ddc9fdb974e0035e2c",
+        "bytes": 1774,
+        "depends_on": []
+      },
+      {
+        "role": "geometry",
+        "sha256": "351c3ea1e644a46a7d466a16e58c2aa4fb6c6bdb5b883eba52a430918c6ef971",
+        "bytes": 1767,
+        "depends_on": [
+          "entities"
+        ]
+      },
+      {
+        "role": "structure",
+        "sha256": "35c71eee834bb6a093dbf479bbf8fe1413cf3ced5d9ad90b4a6f77cdd5916a92",
+        "bytes": 670,
+        "depends_on": [
+          "entities",
+          "geometry"
+        ]
+      },
+      {
+        "role": "observations",
+        "sha256": "dc74d11717032671b87ba4ca79da54605f606aab0f0fd33810322602b04b6bde",
+        "bytes": 259,
+        "depends_on": [
+          "entities"
+        ]
+      }
+    ],
+    "selection": "explicit_entities_with_incident_connection_closure"
+  },
+  "payloads": {
+    "entities": {
+      "profile": "cospace.synthetic-scene-graph/0.1",
+      "data_kind": "synthetic",
+      "scene_id": "synthetic-building",
+      "snapshot_id": "subset-5449d072ae06619949ef8cd75a86ec50",
+      "frame": {
+        "id": "synthetic-local",
+        "unit": "m",
+        "axes": "right_forward_up"
+      },
+      "ontology": {
+        "id": "synthetic-building-types",
+        "version": "0.1.0",
+        "types": [
+          {
+            "id": "building",
+            "kind": "building",
+            "role": "building"
+          },
+          {
+            "id": "level",
+            "kind": "level",
+            "role": "level"
+          },
+          {
+            "id": "room",
+            "kind": "space",
+            "role": "room"
+          },
+          {
+            "id": "corridor",
+            "kind": "space",
+            "role": "corridor"
+          },
+          {
+            "id": "door",
+            "kind": "element",
+            "role": "door"
+          },
+          {
+            "id": "stair",
+            "kind": "element",
+            "role": "stair"
+          },
+          {
+            "id": "cabinet",
+            "kind": "asset",
+            "role": "cabinet"
+          }
+        ]
+      },
+      "evidence": [
+        {
+          "id": "fixture",
+          "kind": "synthetic_fixture",
+          "description": "Invented D0 example; not surveyed, not a real building."
+        }
+      ],
+      "sources": [
+        {
+          "id": "synthetic-source",
+          "kind": "synthetic_fixture"
+        }
+      ],
+      "entities": [
+        {
+          "id": "corridor-l1",
+          "kind": "space",
+          "type_id": "corridor",
+          "name": "楼道",
+          "revision": 1,
+          "geometry_ids": [
+            "corridor-l1-bounds"
+          ],
+          "evidence_ids": [
+            "fixture"
+          ],
+          "assessment": "unverified"
+        },
+        {
+          "id": "room-l1",
+          "kind": "space",
+          "type_id": "room",
+          "name": "设备间",
+          "revision": 1,
+          "geometry_ids": [
+            "room-l1-bounds"
+          ],
+          "evidence_ids": [
+            "fixture"
+          ],
+          "assessment": "unverified"
+        },
+        {
+          "id": "door-l1",
+          "kind": "element",
+          "type_id": "door",
+          "name": "设备间门",
+          "revision": 1,
+          "geometry_ids": [
+            "door-l1-bounds",
+            "door-l1-port-a",
+            "door-l1-port-b"
+          ],
+          "evidence_ids": [
+            "fixture"
+          ],
+          "assessment": "unverified"
+        },
+        {
+          "id": "corridor-l2",
+          "kind": "space",
+          "type_id": "corridor",
+          "name": "楼道",
+          "revision": 1,
+          "geometry_ids": [
+            "corridor-l2-bounds"
+          ],
+          "evidence_ids": [
+            "fixture"
+          ],
+          "assessment": "unverified"
+        },
+        {
+          "id": "stair",
+          "kind": "element",
+          "type_id": "stair",
+          "name": "跨层楼梯",
+          "revision": 1,
+          "geometry_ids": [
+            "stair-bounds",
+            "stair-port-l1",
+            "stair-port-l2"
+          ],
+          "evidence_ids": [
+            "fixture"
+          ],
+          "assessment": "unverified"
+        }
+      ]
+    },
+    "geometry": [
+      {
+        "id": "corridor-l1-bounds",
+        "entity_id": "corridor-l1",
+        "frame_id": "synthetic-local",
+        "role": "approximate_bounds",
+        "value": {
+          "shape": "aabb",
+          "bounds": [
+            [
+              0,
+              0,
+              0
+            ],
+            [
+              12,
+              2,
+              3
+            ]
+          ]
+        },
+        "evidence_ids": [
+          "fixture"
+        ]
+      },
+      {
+        "id": "room-l1-bounds",
+        "entity_id": "room-l1",
+        "frame_id": "synthetic-local",
+        "role": "approximate_bounds",
+        "value": {
+          "shape": "aabb",
+          "bounds": [
+            [
+              0,
+              2,
+              0
+            ],
+            [
+              8,
+              8,
+              3
+            ]
+          ]
+        },
+        "evidence_ids": [
+          "fixture"
+        ]
+      },
+      {
+        "id": "door-l1-bounds",
+        "entity_id": "door-l1",
+        "frame_id": "synthetic-local",
+        "role": "approximate_bounds",
+        "value": {
+          "shape": "aabb",
+          "bounds": [
+            [
+              3,
+              1.9,
+              0
+            ],
+            [
+              4,
+              2.1,
+              2.2
+            ]
+          ]
+        },
+        "evidence_ids": [
+          "fixture"
+        ]
+      },
+      {
+        "id": "door-l1-port-a",
+        "entity_id": "door-l1",
+        "frame_id": "synthetic-local",
+        "role": "connection_port",
+        "value": {
+          "shape": "rectangle",
+          "vertices": [
+            [
+              3,
+              1.9,
+              0
+            ],
+            [
+              4,
+              1.9,
+              0
+            ],
+            [
+              4,
+              1.9,
+              2.2
+            ],
+            [
+              3,
+              1.9,
+              2.2
+            ]
+          ]
+        },
+        "evidence_ids": [
+          "fixture"
+        ]
+      },
+      {
+        "id": "door-l1-port-b",
+        "entity_id": "door-l1",
+        "frame_id": "synthetic-local",
+        "role": "connection_port",
+        "value": {
+          "shape": "rectangle",
+          "vertices": [
+            [
+              3,
+              2.1,
+              0
+            ],
+            [
+              4,
+              2.1,
+              0
+            ],
+            [
+              4,
+              2.1,
+              2.2
+            ],
+            [
+              3,
+              2.1,
+              2.2
+            ]
+          ]
+        },
+        "evidence_ids": [
+          "fixture"
+        ]
+      },
+      {
+        "id": "corridor-l2-bounds",
+        "entity_id": "corridor-l2",
+        "frame_id": "synthetic-local",
+        "role": "approximate_bounds",
+        "value": {
+          "shape": "aabb",
+          "bounds": [
+            [
+              0,
+              0,
+              3
+            ],
+            [
+              12,
+              2,
+              6
+            ]
+          ]
+        },
+        "evidence_ids": [
+          "fixture"
+        ]
+      },
+      {
+        "id": "stair-bounds",
+        "entity_id": "stair",
+        "frame_id": "synthetic-local",
+        "role": "approximate_bounds",
+        "value": {
+          "shape": "aabb",
+          "bounds": [
+            [
+              10,
+              0,
+              0
+            ],
+            [
+              12,
+              2,
+              6
+            ]
+          ]
+        },
+        "evidence_ids": [
+          "fixture"
+        ]
+      },
+      {
+        "id": "stair-port-l1",
+        "entity_id": "stair",
+        "frame_id": "synthetic-local",
+        "role": "connection_port",
+        "value": {
+          "shape": "rectangle",
+          "vertices": [
+            [
+              10,
+              0,
+              0
+            ],
+            [
+              12,
+              0,
+              0
+            ],
+            [
+              12,
+              2,
+              0
+            ],
+            [
+              10,
+              2,
+              0
+            ]
+          ]
+        },
+        "evidence_ids": [
+          "fixture"
+        ]
+      },
+      {
+        "id": "stair-port-l2",
+        "entity_id": "stair",
+        "frame_id": "synthetic-local",
+        "role": "connection_port",
+        "value": {
+          "shape": "rectangle",
+          "vertices": [
+            [
+              10,
+              0,
+              3
+            ],
+            [
+              12,
+              0,
+              3
+            ],
+            [
+              12,
+              2,
+              3
+            ],
+            [
+              10,
+              2,
+              3
+            ]
+          ]
+        },
+        "evidence_ids": [
+          "fixture"
+        ]
+      }
+    ],
+    "structure": {
+      "relations": [
+        {
+          "id": "relation-5",
+          "type": "adjacent_to",
+          "source_id": "corridor-l1",
+          "target_id": "room-l1",
+          "evidence_ids": [
+            "fixture"
+          ],
+          "assessment": "unverified"
+        }
+      ],
+      "connections": [
+        {
+          "id": "connection-door-l1",
+          "connector_id": "door-l1",
+          "mode": "opening",
+          "ports": [
+            {
+              "space_id": "corridor-l1",
+              "geometry_id": "door-l1-port-a"
+            },
+            {
+              "space_id": "room-l1",
+              "geometry_id": "door-l1-port-b"
+            }
+          ],
+          "evidence_ids": [
+            "fixture"
+          ],
+          "assessment": "unverified"
+        },
+        {
+          "id": "connection-stair",
+          "connector_id": "stair",
+          "mode": "stair_transition",
+          "ports": [
+            {
+              "space_id": "corridor-l1",
+              "geometry_id": "stair-port-l1"
+            },
+            {
+              "space_id": "corridor-l2",
+              "geometry_id": "stair-port-l2"
+            }
+          ],
+          "evidence_ids": [
+            "fixture"
+          ],
+          "assessment": "unverified"
+        }
+      ]
+    },
+    "observations": [
+      {
+        "id": "door-state-01",
+        "entity_id": "door-l1",
+        "property": "opening_state",
+        "value": "closed",
+        "observed_at": "2026-11-16T00:00:00Z",
+        "received_at": "2026-11-16T00:00:02Z",
+        "valid_until": "2026-11-16T00:05:00Z",
+        "source_id": "synthetic-source",
+        "evidence_ids": [
+          "fixture"
+        ]
+      }
+    ]
+  }
+}
