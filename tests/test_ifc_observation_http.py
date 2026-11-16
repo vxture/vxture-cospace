@@ -1,8 +1,8 @@
 import json
+import sqlite3
 
 import pytest
 
-from packages.data.ifc_inspection import digest
 from packages.service.ifc_opening_observations import observation_scope
 from test_ifc_structure_http import declare
 from test_ifc_workspace import ifc_secured
@@ -18,7 +18,7 @@ def door_source(root, config):
     catalog = json.loads(path.read_bytes())
     catalog['products'][1]['ifc_type'] = 'IfcDoor'
     path.write_text(json.dumps(catalog), encoding='utf-8')
-    sha = declare(root, config)
+    declare(root, config)
     catalog = json.loads(path.read_bytes())
     catalog['structure']['entities'][1]['role'] = 'door'
     return declare(root, config, catalog['structure'])
@@ -52,12 +52,12 @@ def test_authorized_read_does_not_create_registration_and_rejects_stale_catalog(
     assert client.get(ROUTE, params=params).status_code == 409
 
 
-def test_registered_reports_are_scoped_to_authenticated_tenant_and_not_geometry(ifc_secured, monkeypatch):
+@pytest.fixture
+def registered_door(ifc_secured, monkeypatch):
     env, access, root, config = ifc_secured
     rp, client, _, _, _, _, spaces, *_ = env
     sha = door_source(root, config)
     sign_in(env, 'usr_engineer')
-    # Use the same principal the verifier returns, not caller-selected query scope.
     original = rp.verifier.verify
     captured = []
     def capture(token):
@@ -67,15 +67,19 @@ def test_registered_reports_are_scoped_to_authenticated_tenant_and_not_geometry(
     monkeypatch.setattr(rp.verifier, 'verify', capture)
     params = {'space_id': spaces[0]['id'], 'element_id': 'e00001', 'catalog_sha256': sha}
     assert client.get(ROUTE, params=params).status_code == 200
-    principal = captured[-1]
-    scope = observation_scope(principal, spaces[0]['id'], sha)
+    scope = observation_scope(captured[-1], spaces[0]['id'], sha)
     journal = access.ifc_observations.journal
-    journal.register({'profile': 'cospace.opening-observation-registration/0.1', 'scope': scope,
-                      'data_kind': 'ifc_design_candidate', 'subjects': [{'entity_id': 'wall', 'role': 'door'}],
-                      'producers': ['sensor-a']})
+    doc = {'profile': 'cospace.opening-observation-registration/0.1', 'scope': scope,
+           'data_kind': 'ifc_design_candidate', 'subjects': [{'entity_id': 'wall', 'role': 'door'}], 'producers': ['sensor-a']}
+    journal.register(doc)
     access.ifc_observations.clock = lambda: '2026-11-17T00:05:00Z'
     journal.clock = lambda: '2026-11-17T00:01:00Z'
     journal.append(scope, report(entity_id='wall'), authenticated_producer='sensor-a')
+    return client, journal, root, params, scope, doc
+
+
+def test_registered_reports_are_scoped_to_authenticated_tenant_and_not_geometry(registered_door, monkeypatch):
+    client, journal, root, params, scope, _ = registered_door
     def no_mesh(*args):
         pytest.fail('observation read loaded geometry')
     monkeypatch.setattr('packages.data.ifc_workspace.load_mesh', no_mesh)
@@ -109,5 +113,23 @@ def test_storage_failure_is_unavailable_not_normal(ifc_secured):
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_bytes(b'broken database')
     response = client.get(ROUTE, params={'space_id': spaces[0]['id'], 'element_id': 'e00001', 'catalog_sha256': sha})
+    assert response.status_code == 503
+    assert response.json()['detail'] == 'observation_storage_unavailable'
+
+
+@pytest.mark.parametrize('corruption', ['registration', 'record', 'received_time', 'scope_binding'])
+def test_corrupted_persisted_data_is_not_a_client_parameter_error(registered_door, corruption):
+    client, journal, _, params, _, doc = registered_door
+    with sqlite3.connect(journal.path) as db:
+        if corruption == 'registration':
+            db.execute('UPDATE registrations SET document=?', (b'{}',))
+        elif corruption == 'record':
+            db.execute('UPDATE reports SET document=?', (b'{}',))
+        elif corruption == 'received_time':
+            db.execute('UPDATE reports SET received_at=?', ('bad-time',))
+        else:
+            doc['scope']['workspace'] = 'wrong-workspace'
+            db.execute('UPDATE registrations SET document=?', (json.dumps(doc).encode(),))
+    response = client.get(ROUTE, params=params)
     assert response.status_code == 503
     assert response.json()['detail'] == 'observation_storage_unavailable'

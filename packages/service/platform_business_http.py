@@ -39,6 +39,7 @@ from packages.service.scene_overview import overview as scene_overview
 from packages.service.amap_gateway import AmapGateway
 from packages.service.globe_runtime import GlobeRuntime
 from packages.data.workspace_catalog import catalog as workspace_catalog, CatalogQuery, CatalogUnavailable
+from packages.infrastructure.spatial_observation_store import ObservationStorageUnavailable
 
 
 DATA_MANAGE='data.manage'
@@ -453,7 +454,7 @@ class BusinessAccess:
                     else:result=await run_in_threadpool(self.scene_ifc.preview,request.query_params['space_id'],request.query_params['element_id'],request.query_params['catalog_sha256'])
                     return JSONResponse(result,headers={'Cache-Control':'no-store'})
                 except ValidationError:return deny(422,'ifc_invalid_request')
-                except sqlite3.Error:return deny(503,'observation_storage_unavailable')
+                except (sqlite3.Error,ObservationStorageUnavailable):return deny(503,'observation_storage_unavailable')
                 except (ValueError,KeyError,OSError,TypeError,zipfile.BadZipFile):return deny(409,'ifc_evidence_unavailable')
             if path.startswith('/api/scene-pointclouds'):
                 from fastapi.responses import Response

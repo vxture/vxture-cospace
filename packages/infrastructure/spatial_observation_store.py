@@ -13,6 +13,28 @@ MAX_EVENTS = 5000
 MAX_BATCH = 128
 
 
+class ObservationStorageUnavailable(RuntimeError):
+    """Persisted data cannot be interpreted; never a normal business state."""
+
+
+def _decode_registration(raw, key):
+    try:
+        value = Registration.model_validate_json(raw)
+        if scope_key(value.scope) != key:
+            raise ValueError('persisted_scope_binding')
+        return value
+    except ValueError as exc:
+        raise ObservationStorageUnavailable('observation_registration_invalid') from exc
+
+
+def _decode_record(seq, received, raw):
+    try:
+        utc(received)
+        return {'sequence': seq, 'received_at': received, 'report': Report.model_validate_json(raw).model_dump()}
+    except (ValueError, TypeError) as exc:
+        raise ObservationStorageUnavailable('observation_record_invalid') from exc
+
+
 def _initialize(db):
     db.execute('CREATE TABLE IF NOT EXISTS registrations (scope TEXT PRIMARY KEY, document BLOB NOT NULL)')
     db.execute('''CREATE TABLE IF NOT EXISTS reports (
@@ -26,7 +48,7 @@ def _registration(db, key):
     row = db.execute('SELECT document FROM registrations WHERE scope=?', (key,)).fetchone()
     if row is None:
         raise ValueError('observation_scope_not_registered')
-    return Registration.model_validate_json(row[0])
+    return _decode_registration(row[0], key)
 
 
 def _records(db, key):
@@ -34,8 +56,7 @@ def _records(db, key):
                       (key, MAX_EVENTS + 1)).fetchall()
     if len(rows) > MAX_EVENTS:
         raise ValueError('observation_read_budget')
-    return [{'sequence': seq, 'received_at': received,
-             'report': Report.model_validate_json(raw).model_dump()} for seq, received, raw in rows]
+    return [_decode_record(seq, received, raw) for seq, received, raw in rows]
 
 
 def _event(db, key, producer, event_id):
@@ -43,7 +64,7 @@ def _event(db, key, producer, event_id):
                      (key, producer, event_id)).fetchone()
     if row is None:
         return None
-    return {'sequence': row[0], 'received_at': row[1], 'report': Report.model_validate_json(row[2]).model_dump()}
+    return _decode_record(*row)
 
 
 def _check_correction(db, key, report):
@@ -83,7 +104,7 @@ class ObservationJournal:
             row = db.execute('SELECT document FROM registrations WHERE scope=?', (key,)).fetchone()
             if row is None:
                 return False
-            registration = Registration.model_validate_json(row[0])
+            registration = _decode_registration(row[0], key)
             return entity is None or entity in {s.entity_id for s in registration.subjects}
 
     def append(self, scope, document, *, authenticated_producer):
