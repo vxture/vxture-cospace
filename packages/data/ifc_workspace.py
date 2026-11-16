@@ -8,7 +8,7 @@ from typing import Literal
 import zipfile
 
 import numpy as np
-from pydantic import BaseModel,ConfigDict,Field
+from pydantic import BaseModel,ConfigDict,Field,ValidationError
 from packages.data.ifc_inspection import PROFILE,MAX_PRODUCTS,MAX_VERTICES,MAX_FACES,MAX_SOURCE_BYTES,digest,mesh_arrays
 
 
@@ -107,7 +107,23 @@ class IfcWorkspace:
         if binding is None:return dict(profile='cospace.ifc-workspace/0.1',space_id=space,configured=False)
         return {k:v for k,v in doc.items() if k!='products'}|dict(profile='cospace.ifc-workspace/0.1',space_id=space,
             configured=True,catalog_sha256=binding.catalog_sha256,
-            products=[{k:v for k,v in p.items() if k not in ('mesh','placement_m')}|dict(element_id=f'e{i:05}') for i,p in enumerate(doc['products'])])
+            products=[{k:v for k,v in p.items() if k not in ('mesh','placement_m')}|{'element_id': f'e{i:05}'} for i,p in enumerate(doc['products'])])
+
+    def structure_view(self,space,expected):
+        from collections import Counter
+        from packages.data.ifc_structure_read import validate_structure
+        binding,doc=self.catalog(space,expected)
+        result={'profile': 'cospace.ifc-structure-view/0.1', 'space_id': space, 'configured': binding is not None, 'structure_available': False, 'data_kind': 'ifc_design_candidate', 'assessment': 'unverified', 'alignment_verified': False, 'ontology_bound': False, 'confirmed_connections': [], 'real_release_ready': False, 'geometry_integrity_checked': False, 'entities': [], 'relations': [], 'declared_role_counts': {}, 'limitations': ['selected_ifc_classes_only','source_declarations_not_field_facts',
+                                 'no_inferred_space_connections','no_ontology_binding','mesh_integrity_checked_on_geometry_read']}
+        if binding is None:return result
+        result.update(catalog_sha256=binding.catalog_sha256,frame_id=doc['frame_id'],unit='m')
+        if 'structure' not in doc:return result
+        try:entities,relations,products=validate_structure(doc)
+        except ValidationError as exc:raise ValueError('ifc_structure_evidence_invalid') from exc
+        indices={p['global_id']:f'e{i:05}' for i,p in enumerate(doc['products'])}
+        rows=[{'entity_id': e.entity_id, 'ifc_type': e.ifc_type, 'source_role': e.role, 'element_id': indices[e.entity_id], 'name': products[e.entity_id]['name'], 'geometry_status': products[e.entity_id]['geometry_status']} for e in entities]
+        return result|dict(structure_available=True,entities=rows,relations=relations,
+                           declared_role_counts=dict(sorted(Counter(e.role for e in entities).items())))
 
     def element(self,space,identity,expected):
         binding,doc=self.catalog(space,expected)
