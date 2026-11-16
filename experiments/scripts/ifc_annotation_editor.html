@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SG3 · 空间标注草稿</title>
+<style>
+*{box-sizing:border-box}body{max-width:1472px;margin:24px auto;padding:0 24px;font:15px system-ui;color:#19324a;background:#f3f6fa}
+h1{margin:0 0 8px}h2{font-size:18px;margin-top:0}p{line-height:1.6}
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:16px}
+section,aside{background:white;border:1px solid #d5e1ea;border-radius:12px;padding:16px}
+aside{align-self:start}fieldset{border:0;padding:0;margin:20px 0}label{display:block;margin:8px 0}
+input,select,button{font:inherit;border:1px solid #b3c4d5;border-radius:6px;padding:6px 10px;color:inherit;background:#fff}
+input,select{width:100%}button{cursor:pointer}button.primary{background:#18568c;color:white}
+.actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:12px 0}.map{overflow:auto}.map svg{display:block;width:100%;min-width:600px;cursor:crosshair}
+.map svg .draft{fill:#176eaa20;stroke:#176eaa;stroke-width:2;pointer-events:none}
+output{display:block;overflow-wrap:anywhere;line-height:1.6;min-height:2em}li{margin-bottom:10px;overflow-wrap:anywhere}
+@media(max-width:900px){.layout{grid-template-columns:1fr}.map svg{min-width:450px}}
+</style>
+<h1>SG3 · 空间标注草稿</h1>
+<p>在原 IFC 坐标剖面上记录区域与端点。图上点击为手工草稿，无自动吸附。导出后仍需校验与人工复核。</p>
+<div class="layout">
+<section>
+  <div class="actions"><label>观察切面 <select id="slice"></select></label><button id="undo">撤销末点</button><button id="clear">清空当前选点</button></div>
+  <div id="map" class="map"></div>
+  <output id="coordinates" aria-live="polite">尚未选点</output>
+  <h2>已记录区域</h2><ul id="areas"></ul>
+  <h2>连接端点草稿</h2><ul id="connections"></ul>
+</section>
+<aside>
+  <h2>1 · 定位依据</h2>
+  <p>请先填写依据 ID 和文件 SHA-256。文件内容由后续人工核对。</p>
+  <label>依据 ID <input id="evidence-id" maxlength="160"></label>
+  <label>文件 SHA-256 <input id="evidence-sha" maxlength="64"></label>
+  <fieldset>
+    <h2>2 · 区域边界</h2>
+    <p>在图上依次选角点，不重复首点；再保存区域。</p>
+    <label>区域名称 <input id="area-name" maxlength="160"></label>
+    <label>所属 IFC 楼层 <select id="level"></select></label>
+    <label>高度下界（原坐标 m）<input id="z-min" type="number" step="any"></label>
+    <label>高度上界（原坐标 m）<input id="z-max" type="number" step="any"></label>
+    <button id="save-area">保存区域草稿</button>
+  </fieldset>
+  <fieldset>
+    <h2>3 · 连接端点</h2>
+    <p>清空选点后，选一个端点。Z 使用当前切面高度，不自动认定地面或接口。</p>
+    <label>门 / 楼梯 <select id="task"></select></label>
+    <label>端点角色 <select id="role"></select></label>
+    <label>所在区域 <select id="endpoint-area"></select></label>
+    <button id="save-endpoint">保存端点草稿</button>
+  </fieldset>
+  <button id="export" class="primary">导出标注工作表</button>
+  <p>请及时导出。刷新或关闭页面会丢失当前草稿。</p>
+  <output id="status" aria-live="polite"></output>
+</aside>
+</div>
+<script type="application/json" id="editor-data">__EDITOR_DATA__</script>
+<script>
+'use strict';
+const data = JSON.parse(document.getElementById('editor-data').textContent);
+const sheet = data.worksheet;
+const $ = id => document.getElementById(id);
+const identity = /^[a-zA-Z0-9][a-zA-Z0-9_.:-]{0,159}$/;
+let selected = [], nextArea = 1;
+function option(select, value, label) {
+  const element = document.createElement('option');
+  element.value = value; element.textContent = label; select.append(element);
+}
+data.views.forEach((v, i) => option($('slice'), String(i), `Z = ${v.z} m`));
+data.levels.forEach(row => option($('level'), row.global_id, row.name || row.global_id));
+data.tasks.forEach(row => option($('task'), row.id, row.name || row.id));
+function current() { return data.views[Number($('slice').value)]; }
+function task() { return data.tasks.find(row => row.id === $('task').value); }
+function roles() {
+  $('role').replaceChildren();
+  (task()?.ifc_type === 'IfcDoor' ? [['side_a','门侧 A'],['side_b','门侧 B']] :
+    [['lower','楼梯下端'],['upper','楼梯上端']]).forEach(([value,label]) => option($('role'),value,label));
+}
+function screen(point) {
+  const {lo,scale} = current();
+  return [50 + (point[0]-lo[0])*scale, 700 - (point[1]-lo[1])*scale];
+}
+function overlay() {
+  const group = $('map').querySelector('#overlay');
+  group.replaceChildren();
+  const add = (tag, attrs) => {
+    const el = document.createElementNS('http://www.w3.org/2000/svg',tag);
+    Object.entries(attrs).forEach(([key,value])=>el.setAttribute(key,String(value)));
+    group.append(el);
+  };
+  for (const area of sheet.areas) {
+    if (current().z < area.z_range_m[0] || current().z > area.z_range_m[1]) continue;
+    add('polygon',{points:area.footprint_xy_m.map(screen).map(p=>p.join(',')).join(' '),class:'draft'});
+  }
+  for (const pair of sheet.connections) for (const end of pair.endpoints) {
+    if (end.point_xyz_m[2] !== current().z) continue;
+    const [cx,cy] = screen(end.point_xyz_m);
+    add('circle',{cx,cy,r:5,fill:'#a75b17'});
+  }
+  if (selected.length) {
+    add('polyline',{points:selected.map(screen).map(p=>p.join(',')).join(' '),fill:'none',stroke:'#18568c','stroke-width':2});
+    selected.map(screen).forEach(([cx,cy])=>add('circle',{cx,cy,r:4,fill:'#18568c'}));
+  }
+  $('coordinates').textContent = selected.length ?
+    `${selected.length} 个选点 · 最后一点 XYZ：${[...selected.at(-1),current().z].map(n=>n.toFixed(4)).join(', ')}` : '尚未选点';
+}
+function showView() {
+  selected = [];
+  // This SVG is generated and escaped from sealed source meshes, never imported HTML.
+  $('map').innerHTML = current().svg;
+  const svg = $('map').querySelector('svg');
+  const group = document.createElementNS('http://www.w3.org/2000/svg','g');
+  group.id='overlay'; group.style.pointerEvents='none'; svg.append(group);
+  svg.addEventListener('click',event=>{
+    if (selected.length>=128) { $('status').textContent='每个区域最多 128 点。'; return; }
+    const matrix=svg.getScreenCTM();
+    if (!matrix) return;
+    const p=new DOMPoint(event.clientX,event.clientY).matrixTransform(matrix.inverse());
+    if(p.x<50||p.x>1150||p.y<50||p.y>700)return;
+    const {lo,scale}=current();
+    selected.push([lo[0]+(p.x-50)/scale,lo[1]+(700-p.y)/scale]);
+    overlay();
+  });
+  overlay();
+}
+function evidence() {
+  const id=$('evidence-id').value.trim(), hash=$('evidence-sha').value.trim().toLowerCase();
+  if (!identity.test(id)||!/^[a-f0-9]{64}$/.test(hash)) throw new Error('请填写有效依据 ID 和 64 位 SHA-256。');
+  const existing=sheet.evidence.find(row=>row.id===id);
+  if(existing&&existing.sha256!==hash)throw new Error('该依据 ID 已绑定其他摘要。');
+  return {id,sha256:hash};
+}
+function commitEvidence(row) { if(!sheet.evidence.some(item=>item.id===row.id))sheet.evidence.push(row); }
+function act(callback) { try { callback(); } catch(error) { $('status').textContent=error.message; } }
+function refresh() {
+  const previous=$('endpoint-area').value;
+  $('areas').replaceChildren(); $('endpoint-area').replaceChildren(); $('connections').replaceChildren();
+  sheet.areas.forEach(area=>{
+    option($('endpoint-area'),area.id,area.name);
+    const row=document.createElement('li'), button=document.createElement('button');
+    row.textContent=`${area.name} · ${area.footprint_xy_m.length} 点 · Z ${area.z_range_m.join('…')} m `;
+    button.textContent='移除区域';
+    button.onclick=()=>act(()=>{
+      if(sheet.connections.some(c=>c.endpoints.some(e=>e.area_id===area.id)))throw new Error('该区域已有关联端点，请先移除端点。');
+      sheet.areas=sheet.areas.filter(a=>a!==area); refresh();
+    });
+    row.append(button); $('areas').append(row);
+  });
+  if(sheet.areas.some(a=>a.id===previous))$('endpoint-area').value=previous;
+  sheet.connections.forEach(connection=>connection.endpoints.forEach(endpoint=>{
+    const row=document.createElement('li'), button=document.createElement('button');
+    row.textContent=`${data.tasks.find(t=>t.id===connection.source_entity_id)?.name||connection.source_entity_id} · ${endpoint.role} → ${endpoint.area_id} `;
+    button.textContent='移除端点'; button.onclick=()=>{
+      connection.endpoints=connection.endpoints.filter(e=>e!==endpoint);
+      if(!connection.endpoints.length)connection.evidence_ids=[];
+      refresh();
+    };
+    row.append(button); $('connections').append(row);
+  }));
+  overlay();
+}
+$('save-area').onclick=()=>act(()=>{
+  const name=$('area-name').value.trim(), level=$('level').value;
+  const lo=Number($('z-min').value),hi=Number($('z-max').value), proof=evidence();
+  if(!name||!level||selected.length<3)throw new Error('请填写名称、楼层，并至少选择三个角点。');
+  if(!$('z-min').value||!$('z-max').value||!Number.isFinite(lo)||!Number.isFinite(hi)||lo>=hi||Math.max(Math.abs(lo),Math.abs(hi))>1000000)throw new Error('请填写有效原坐标高度区间。');
+  if(selected.some(p=>p.some(n=>!Number.isFinite(n)||Math.abs(n)>1000000)))throw new Error('坐标超出工作表范围。');
+  if(sheet.areas.length>=512)throw new Error('区域数量已达到工作表上限。');
+  sheet.areas.push({id:`area-${nextArea++}`,name,level_id:level,footprint_xy_m:selected.map(p=>[...p]),z_range_m:[lo,hi],evidence_ids:[proof.id]});
+  commitEvidence(proof);selected=[];refresh();$('status').textContent='区域草稿已记录，尚未通过几何校验。';
+});
+$('save-endpoint').onclick=()=>act(()=>{
+  const area=sheet.areas.find(a=>a.id===$('endpoint-area').value), proof=evidence();
+  if(selected.length!==1||!area||!task())throw new Error('请选择区域、任务，并只选一个端点。');
+  const connection=sheet.connections.find(c=>c.source_entity_id===task().id), role=$('role').value;
+  if(connection.endpoints.some(e=>e.role===role))throw new Error('该角色已有端点，请先移除原端点。');
+  connection.endpoints.push({role,area_id:area.id,point_xyz_m:[...selected[0],current().z]});
+  if(!connection.evidence_ids.includes(proof.id))connection.evidence_ids.push(proof.id);
+  commitEvidence(proof);selected=[];refresh();$('status').textContent='端点草稿已记录，尚未核实连接。';
+});
+$('slice').onchange=showView;$('task').onchange=roles;
+$('undo').onclick=()=>{selected.pop();overlay();};
+$('clear').onclick=()=>{selected=[];overlay();};
+$('export').onclick=()=>{
+  const url=URL.createObjectURL(new Blob([JSON.stringify(sheet,null,2)],{type:'application/json'}));
+  const a=document.createElement('a');a.href=url;a.download='spatial-annotations.json';a.click();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+  $('status').textContent='已导出草稿。请运行 ifc_spatial_annotation 校验，再核对真实几何与证据。';
+};
+roles();showView();refresh();
+</script>
+</html>

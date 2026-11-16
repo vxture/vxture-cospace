@@ -4,6 +4,7 @@ import pytest
 from experiments.scripts.ifc_sections import cut_sections, triangle_section
 from packages.data.ifc_inspection import digest
 from test_ifc_inspection import assets_at
+from test_ifc_structure_review import structure_source
 
 
 @pytest.mark.parametrize('triangle,z,kind', [
@@ -49,3 +50,19 @@ def test_changed_catalog_rejected(tmp_path):
     _, _, root = assets_at(tmp_path, 'space-' + '1' * 16)
     with pytest.raises(ValueError, match='ifc_section_catalog_digest'):
         cut_sections(root, expected_catalog_sha256='0' * 64, heights=[1.])
+
+
+def test_editor_seeds_pinned_empty_annotations(structure_source):
+    import json
+    from experiments.scripts.ifc_annotation_editor import editor_html
+    root, _ = structure_source
+    html = editor_html(root, expected_catalog_sha256=digest(root / 'ifc.json'), heights=[1.])
+    encoded = html.split('<script type="application/json" id="editor-data">', 1)[1].split('</script>', 1)[0]
+    data = json.loads(encoded)
+    assert data['worksheet']['areas'] == []
+    assert data['worksheet']['assessment'] == 'unverified'
+    assert len(data['worksheet']['connections']) == 2
+    assert data['views'][0]['z'] == 1.
+    assert data['views'][0]['scale'] > 0
+    assert data['section_sha256']
+    assert all(not row['endpoints'] for row in data['worksheet']['connections'])
