@@ -36,4 +36,3 @@ function validateCounts(counts:Record<string,number>,entities:Entity[]){
  if(Object.keys(counts).length!==actual.size)throw Error('结构统计不一致。');
  for(const [role,count] of Object.entries(counts))if(!Number.isSafeInteger(count)||count<0||actual.get(role)!==count)throw Error('结构统计不一致。');
 }
-
