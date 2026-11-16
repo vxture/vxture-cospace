@@ -173,3 +173,12 @@ def verify_subset_against_source(package, source_document):
     if canonical(expected) != canonical(package):
         raise ValueError('subset_differs_from_source_selection')
     return report | {'source_content_verified': True, 'selection_boundary_complete': True}
+
+
+def read_scene_subset(package, expected_source, *, source_document=None):
+    """Return an isolated, validated graph; the expected source must come from the caller."""
+    pinned = deepcopy(package)
+    report = validate_scene_subset(pinned, expected_source)
+    if source_document is not None:
+        report = verify_subset_against_source(pinned, source_document)
+    return _reconstruct(pinned['payloads']), report
