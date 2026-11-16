@@ -1,0 +1,99 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "profile": {
+      "const": "cospace.opening-observation-report/0.1",
+      "title": "Profile",
+      "type": "string"
+    },
+    "event_id": {
+      "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_.:-]{0,159}$",
+      "title": "Event Id",
+      "type": "string"
+    },
+    "producer": {
+      "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_.:-]{0,159}$",
+      "title": "Producer",
+      "type": "string"
+    },
+    "entity_id": {
+      "maxLength": 255,
+      "minLength": 1,
+      "title": "Entity Id",
+      "type": "string"
+    },
+    "operation": {
+      "default": "assert",
+      "enum": [
+        "assert",
+        "retract"
+      ],
+      "title": "Operation",
+      "type": "string"
+    },
+    "value": {
+      "anyOf": [
+        {
+          "enum": [
+            "open",
+            "closed",
+            "partially_open",
+            "unknown"
+          ],
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Value"
+    },
+    "observed_at": {
+      "maxLength": 40,
+      "minLength": 20,
+      "title": "Observed At",
+      "type": "string"
+    },
+    "valid_until": {
+      "maxLength": 40,
+      "minLength": 20,
+      "title": "Valid Until",
+      "type": "string"
+    },
+    "evidence_sha256": {
+      "items": {
+        "pattern": "^[a-f0-9]{64}$",
+        "type": "string"
+      },
+      "maxItems": 16,
+      "minItems": 1,
+      "title": "Evidence Sha256",
+      "type": "array"
+    },
+    "supersedes": {
+      "anyOf": [
+        {
+          "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_.:-]{0,159}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Supersedes"
+    }
+  },
+  "required": [
+    "profile",
+    "event_id",
+    "producer",
+    "entity_id",
+    "value",
+    "observed_at",
+    "valid_until",
+    "evidence_sha256"
+  ],
+  "title": "Report",
+  "type": "object"
+}

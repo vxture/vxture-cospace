@@ -1,0 +1,113 @@
+{
+  "$defs": {
+    "Scope": {
+      "additionalProperties": false,
+      "properties": {
+        "issuer": {
+          "maxLength": 512,
+          "minLength": 1,
+          "title": "Issuer",
+          "type": "string"
+        },
+        "organization": {
+          "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_.:-]{0,159}$",
+          "title": "Organization",
+          "type": "string"
+        },
+        "workspace": {
+          "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_.:-]{0,159}$",
+          "title": "Workspace",
+          "type": "string"
+        },
+        "space_id": {
+          "pattern": "^space-[a-f0-9]{16}$",
+          "title": "Space Id",
+          "type": "string"
+        },
+        "catalog_sha256": {
+          "pattern": "^[a-f0-9]{64}$",
+          "title": "Catalog Sha256",
+          "type": "string"
+        }
+      },
+      "required": [
+        "issuer",
+        "organization",
+        "workspace",
+        "space_id",
+        "catalog_sha256"
+      ],
+      "title": "Scope",
+      "type": "object"
+    },
+    "Subject": {
+      "additionalProperties": false,
+      "properties": {
+        "entity_id": {
+          "maxLength": 255,
+          "minLength": 1,
+          "title": "Entity Id",
+          "type": "string"
+        },
+        "role": {
+          "const": "door",
+          "title": "Role",
+          "type": "string"
+        }
+      },
+      "required": [
+        "entity_id",
+        "role"
+      ],
+      "title": "Subject",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "profile": {
+      "const": "cospace.opening-observation-registration/0.1",
+      "title": "Profile",
+      "type": "string"
+    },
+    "scope": {
+      "$ref": "#/$defs/Scope"
+    },
+    "data_kind": {
+      "enum": [
+        "ifc_design_candidate",
+        "synthetic"
+      ],
+      "title": "Data Kind",
+      "type": "string"
+    },
+    "subjects": {
+      "items": {
+        "$ref": "#/$defs/Subject"
+      },
+      "maxItems": 1000,
+      "minItems": 1,
+      "title": "Subjects",
+      "type": "array"
+    },
+    "producers": {
+      "items": {
+        "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_.:-]{0,159}$",
+        "type": "string"
+      },
+      "maxItems": 64,
+      "minItems": 1,
+      "title": "Producers",
+      "type": "array"
+    }
+  },
+  "required": [
+    "profile",
+    "scope",
+    "data_kind",
+    "subjects",
+    "producers"
+  ],
+  "title": "Registration",
+  "type": "object"
+}
