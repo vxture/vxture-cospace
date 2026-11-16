@@ -1,0 +1,707 @@
+{
+  "$defs": {
+    "Bounds": {
+      "additionalProperties": false,
+      "properties": {
+        "shape": {
+          "const": "aabb",
+          "title": "Shape",
+          "type": "string"
+        },
+        "bounds": {
+          "items": {
+            "items": {
+              "maximum": 1000000,
+              "minimum": -1000000,
+              "type": "number"
+            },
+            "maxItems": 3,
+            "minItems": 3,
+            "type": "array"
+          },
+          "maxItems": 2,
+          "minItems": 2,
+          "title": "Bounds",
+          "type": "array"
+        }
+      },
+      "required": [
+        "shape",
+        "bounds"
+      ],
+      "title": "Bounds",
+      "type": "object"
+    },
+    "Connection": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_.:-]{0,159}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "connector_id": {
+          "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_.:-]{0,159}$",
+          "title": "Connector Id",
+          "type": "string"
+        },
+        "mode": {
+          "enum": [
+            "opening",
+            "stair_transition"
+          ],
+          "title": "Mode",
+          "type": "string"
+        },
+        "ports": {
+          "items": {
+            "$ref": "#/$defs/Port"
+          },
+          "maxItems": 2,
+          "minItems": 2,
+          "title": "Ports",
+          "type": "array"
+        },
+        "evidence_ids": {
+          "items": {
+            "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_.:-]{0,159}$",
+            "type": "string"
+          },
+          "maxItems": 32,
+          "minItems": 1,
+          "title": "Evidence Ids",
+          "type": "array"
+        },
+        "assessment": {
+          "const": "unverified",
+          "title": "Assessment",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "connector_id",
+        "mode",
+        "ports",
+        "evidence_ids",
+        "assessment"
+      ],
+      "title": "Connection",
+      "type": "object"
+    },
+    "Entity": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_.:-]{0,159}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "building",
+            "level",
+            "space",
+            "element",
+            "asset"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "type_id": {
+          "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_.:-]{0,159}$",
+          "title": "Type Id",
+          "type": "string"
+        },
+        "name": {
+          "maxLength": 160,
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "revision": {
+          "maximum": 1000000,
+          "minimum": 1,
+          "title": "Revision",
+          "type": "integer"
+        },
+        "geometry_ids": {
+          "items": {
+            "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_.:-]{0,159}$",
+            "type": "string"
+          },
+          "maxItems": 32,
+          "minItems": 1,
+          "title": "Geometry Ids",
+          "type": "array"
+        },
+        "evidence_ids": {
+          "items": {
+            "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_.:-]{0,159}$",
+            "type": "string"
+          },
+          "maxItems": 32,
+          "minItems": 1,
+          "title": "Evidence Ids",
+          "type": "array"
+        },
+        "assessment": {
+          "const": "unverified",
+          "title": "Assessment",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "type_id",
+        "name",
+        "revision",
+        "geometry_ids",
+        "evidence_ids",
+        "assessment"
+      ],
+      "title": "Entity",
+      "type": "object"
+    },
+    "Evidence": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_.:-]{0,159}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "kind": {
+          "const": "synthetic_fixture",
+          "title": "Kind",
+          "type": "string"
+        },
+        "description": {
+          "maxLength": 512,
+          "minLength": 1,
+          "title": "Description",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "description"
+      ],
+      "title": "Evidence",
+      "type": "object"
+    },
+    "Frame": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_.:-]{0,159}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "unit": {
+          "const": "m",
+          "title": "Unit",
+          "type": "string"
+        },
+        "axes": {
+          "const": "right_forward_up",
+          "title": "Axes",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "unit",
+        "axes"
+      ],
+      "title": "Frame",
+      "type": "object"
+    },
+    "Geometry": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_.:-]{0,159}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "entity_id": {
+          "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_.:-]{0,159}$",
+          "title": "Entity Id",
+          "type": "string"
+        },
+        "frame_id": {
+          "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_.:-]{0,159}$",
+          "title": "Frame Id",
+          "type": "string"
+        },
+        "role": {
+          "enum": [
+            "approximate_bounds",
+            "reference_point",
+            "connection_port"
+          ],
+          "title": "Role",
+          "type": "string"
+        },
+        "value": {
+          "discriminator": {
+            "mapping": {
+              "aabb": "#/$defs/Bounds",
+              "point": "#/$defs/Point",
+              "rectangle": "#/$defs/Rectangle"
+            },
+            "propertyName": "shape"
+          },
+          "oneOf": [
+            {
+              "$ref": "#/$defs/Bounds"
+            },
+            {
+              "$ref": "#/$defs/Point"
+            },
+            {
+              "$ref": "#/$defs/Rectangle"
+            }
+          ],
+          "title": "Value"
+        },
+        "evidence_ids": {
+          "items": {
+            "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_.:-]{0,159}$",
+            "type": "string"
+          },
+          "maxItems": 32,
+          "minItems": 1,
+          "title": "Evidence Ids",
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "entity_id",
+        "frame_id",
+        "role",
+        "value",
+        "evidence_ids"
+      ],
+      "title": "Geometry",
+      "type": "object"
+    },
+    "Observation": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_.:-]{0,159}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "entity_id": {
+          "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_.:-]{0,159}$",
+          "title": "Entity Id",
+          "type": "string"
+        },
+        "property": {
+          "const": "opening_state",
+          "title": "Property",
+          "type": "string"
+        },
+        "value": {
+          "enum": [
+            "open",
+            "closed",
+            "partially_open",
+            "unknown"
+          ],
+          "title": "Value",
+          "type": "string"
+        },
+        "observed_at": {
+          "maxLength": 40,
+          "minLength": 20,
+          "title": "Observed At",
+          "type": "string"
+        },
+        "received_at": {
+          "maxLength": 40,
+          "minLength": 20,
+          "title": "Received At",
+          "type": "string"
+        },
+        "valid_until": {
+          "maxLength": 40,
+          "minLength": 20,
+          "title": "Valid Until",
+          "type": "string"
+        },
+        "source_id": {
+          "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_.:-]{0,159}$",
+          "title": "Source Id",
+          "type": "string"
+        },
+        "evidence_ids": {
+          "items": {
+            "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_.:-]{0,159}$",
+            "type": "string"
+          },
+          "maxItems": 32,
+          "minItems": 1,
+          "title": "Evidence Ids",
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "entity_id",
+        "property",
+        "value",
+        "observed_at",
+        "received_at",
+        "valid_until",
+        "source_id",
+        "evidence_ids"
+      ],
+      "title": "Observation",
+      "type": "object"
+    },
+    "Ontology": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_.:-]{0,159}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "version": {
+          "const": "0.1.0",
+          "title": "Version",
+          "type": "string"
+        },
+        "types": {
+          "items": {
+            "$ref": "#/$defs/TypeDefinition"
+          },
+          "maxItems": 64,
+          "minItems": 1,
+          "title": "Types",
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "version",
+        "types"
+      ],
+      "title": "Ontology",
+      "type": "object"
+    },
+    "Point": {
+      "additionalProperties": false,
+      "properties": {
+        "shape": {
+          "const": "point",
+          "title": "Shape",
+          "type": "string"
+        },
+        "position": {
+          "items": {
+            "maximum": 1000000,
+            "minimum": -1000000,
+            "type": "number"
+          },
+          "maxItems": 3,
+          "minItems": 3,
+          "title": "Position",
+          "type": "array"
+        }
+      },
+      "required": [
+        "shape",
+        "position"
+      ],
+      "title": "Point",
+      "type": "object"
+    },
+    "Port": {
+      "additionalProperties": false,
+      "properties": {
+        "space_id": {
+          "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_.:-]{0,159}$",
+          "title": "Space Id",
+          "type": "string"
+        },
+        "geometry_id": {
+          "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_.:-]{0,159}$",
+          "title": "Geometry Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "space_id",
+        "geometry_id"
+      ],
+      "title": "Port",
+      "type": "object"
+    },
+    "Rectangle": {
+      "additionalProperties": false,
+      "properties": {
+        "shape": {
+          "const": "rectangle",
+          "title": "Shape",
+          "type": "string"
+        },
+        "vertices": {
+          "items": {
+            "items": {
+              "maximum": 1000000,
+              "minimum": -1000000,
+              "type": "number"
+            },
+            "maxItems": 3,
+            "minItems": 3,
+            "type": "array"
+          },
+          "maxItems": 4,
+          "minItems": 4,
+          "title": "Vertices",
+          "type": "array"
+        }
+      },
+      "required": [
+        "shape",
+        "vertices"
+      ],
+      "title": "Rectangle",
+      "type": "object"
+    },
+    "Relation": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_.:-]{0,159}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "type": {
+          "enum": [
+            "contains",
+            "part_of",
+            "adjacent_to",
+            "bounds_space",
+            "installed_on"
+          ],
+          "title": "Type",
+          "type": "string"
+        },
+        "source_id": {
+          "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_.:-]{0,159}$",
+          "title": "Source Id",
+          "type": "string"
+        },
+        "target_id": {
+          "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_.:-]{0,159}$",
+          "title": "Target Id",
+          "type": "string"
+        },
+        "evidence_ids": {
+          "items": {
+            "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_.:-]{0,159}$",
+            "type": "string"
+          },
+          "maxItems": 32,
+          "minItems": 1,
+          "title": "Evidence Ids",
+          "type": "array"
+        },
+        "assessment": {
+          "const": "unverified",
+          "title": "Assessment",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "type",
+        "source_id",
+        "target_id",
+        "evidence_ids",
+        "assessment"
+      ],
+      "title": "Relation",
+      "type": "object"
+    },
+    "Source": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_.:-]{0,159}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "kind": {
+          "const": "synthetic_fixture",
+          "title": "Kind",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "kind"
+      ],
+      "title": "Source",
+      "type": "object"
+    },
+    "TypeDefinition": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_.:-]{0,159}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "building",
+            "level",
+            "space",
+            "element",
+            "asset"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "role": {
+          "enum": [
+            "building",
+            "level",
+            "room",
+            "corridor",
+            "door",
+            "stair",
+            "cabinet"
+          ],
+          "title": "Role",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "role"
+      ],
+      "title": "TypeDefinition",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "profile": {
+      "const": "cospace.synthetic-scene-graph/0.1",
+      "title": "Profile",
+      "type": "string"
+    },
+    "data_kind": {
+      "const": "synthetic",
+      "title": "Data Kind",
+      "type": "string"
+    },
+    "scene_id": {
+      "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_.:-]{0,159}$",
+      "title": "Scene Id",
+      "type": "string"
+    },
+    "snapshot_id": {
+      "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_.:-]{0,159}$",
+      "title": "Snapshot Id",
+      "type": "string"
+    },
+    "frame": {
+      "$ref": "#/$defs/Frame"
+    },
+    "ontology": {
+      "$ref": "#/$defs/Ontology"
+    },
+    "evidence": {
+      "items": {
+        "$ref": "#/$defs/Evidence"
+      },
+      "maxItems": 128,
+      "minItems": 1,
+      "title": "Evidence",
+      "type": "array"
+    },
+    "sources": {
+      "items": {
+        "$ref": "#/$defs/Source"
+      },
+      "maxItems": 64,
+      "minItems": 1,
+      "title": "Sources",
+      "type": "array"
+    },
+    "entities": {
+      "items": {
+        "$ref": "#/$defs/Entity"
+      },
+      "maxItems": 1000,
+      "minItems": 1,
+      "title": "Entities",
+      "type": "array"
+    },
+    "geometry": {
+      "items": {
+        "$ref": "#/$defs/Geometry"
+      },
+      "maxItems": 4000,
+      "minItems": 1,
+      "title": "Geometry",
+      "type": "array"
+    },
+    "relations": {
+      "items": {
+        "$ref": "#/$defs/Relation"
+      },
+      "maxItems": 4000,
+      "title": "Relations",
+      "type": "array"
+    },
+    "connections": {
+      "items": {
+        "$ref": "#/$defs/Connection"
+      },
+      "maxItems": 1000,
+      "title": "Connections",
+      "type": "array"
+    },
+    "observations": {
+      "items": {
+        "$ref": "#/$defs/Observation"
+      },
+      "maxItems": 2000,
+      "title": "Observations",
+      "type": "array"
+    }
+  },
+  "required": [
+    "profile",
+    "data_kind",
+    "scene_id",
+    "snapshot_id",
+    "frame",
+    "ontology",
+    "evidence",
+    "sources",
+    "entities",
+    "geometry",
+    "relations",
+    "connections",
+    "observations"
+  ],
+  "title": "SceneGraph",
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vxture.local/schemas/synthetic-scene-graph-v0.1"
+}
