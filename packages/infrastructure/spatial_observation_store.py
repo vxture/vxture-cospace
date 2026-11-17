@@ -5,6 +5,7 @@ import sqlite3
 
 from packages.spatial.scene_graph import utc
 from packages.spatial.scene_identity import canonical, content_digest
+from packages.lifecycle.preview_control_lock import mutation_guard
 from packages.spatial.opening_observations import (
     Registration, Report, now_utc, scope_key, validate_correction, resolve_reports,
 )
@@ -87,7 +88,7 @@ class ObservationJournal:
         registration = Registration.model_validate(document)
         raw, key = canonical(registration.model_dump()), scope_key(registration.scope)
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        with closing(sqlite3.connect(self.path, timeout=5)) as db, db:
+        with mutation_guard(self.path.parent), closing(sqlite3.connect(self.path, timeout=5)) as db, db:
             db.execute('BEGIN IMMEDIATE')
             _initialize(db)
             current = db.execute('SELECT document FROM registrations WHERE scope=?', (key,)).fetchone()
@@ -116,7 +117,7 @@ class ObservationJournal:
         reports, key = [Report.model_validate(row) for row in documents], scope_key(scope)
         if any(report.producer != authenticated_producer for report in reports):
             raise ValueError('observation_producer_mismatch')
-        with closing(sqlite3.connect(self.path.as_uri() + '?mode=rw', uri=True, timeout=5)) as db, db:
+        with mutation_guard(self.path.parent), closing(sqlite3.connect(self.path.as_uri() + '?mode=rw', uri=True, timeout=5)) as db, db:
             db.execute('BEGIN IMMEDIATE')
             registration = _registration(db, key)
             subjects = {s.entity_id for s in registration.subjects}
