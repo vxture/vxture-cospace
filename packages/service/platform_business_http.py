@@ -43,6 +43,7 @@ from packages.data.workspace_catalog import catalog as workspace_catalog, Catalo
 from packages.infrastructure.spatial_observation_store import ObservationStorageUnavailable
 from packages.views.agent.ifc_structure_exchange import export_structure_snapshot
 from packages.views.agent.ifc_geometry_exchange import export_geometry_component
+from packages.service.ifc_type_proposals import TypeProposalRequest, type_proposals
 
 
 DATA_MANAGE='data.manage'
@@ -60,6 +61,7 @@ IFC_STRUCTURE_PATH = '/api/scene-ifc/structure'
 IFC_OBSERVATION_PATH = '/api/scene-ifc/opening-observation'
 IFC_SNAPSHOT_PATH = '/api/scene-ifc/structure-snapshot'
 IFC_GEOMETRY_PATH = '/api/scene-ifc/element-geometry'
+IFC_TYPES_PATH = '/api/scene-ifc/type-proposals'
 
 
 class BusinessAccess:
@@ -145,6 +147,8 @@ class BusinessAccess:
             space(q.get('space_id'),DATA_MANAGE);return {'principal':principal}
         if (path=='/api/scene-attachments' or re.fullmatch(r'/api/scene-attachments/attachment-[a-f0-9]{16}',path)) and method in ('GET','HEAD','POST'):
             space(q.get('space_id'),DATA_MANAGE);return {'principal':principal}
+        if path==IFC_TYPES_PATH and method=='POST':
+            space(body.get('space_id'),'association.edit');return {'principal':principal}
         if path in (IFC_CATALOG_PATH,'/api/scene-ifc/element',IFC_STRUCTURE_PATH,IFC_OBSERVATION_PATH,IFC_SNAPSHOT_PATH,IFC_GEOMETRY_PATH) and method in ('GET','HEAD'):
             space(q.get('space_id'),'association.edit');return {'principal':principal}
         if ((path=='/api/scene-pointclouds' or re.fullmatch(r'/api/scene-pointclouds/(tiles/t[0-9]{5}/[0-2]|compositions/compose-[a-f0-9]{24})',path)) and method in ('GET','HEAD')
@@ -450,6 +454,13 @@ class BusinessAccess:
                 return JSONResponse(result,headers={'Cache-Control':'no-store'})
             if path.startswith(IFC_CATALOG_PATH):
                 try:
+                    if path==IFC_TYPES_PATH:
+                        if request.query_params:return deny(422,'ifc_invalid_request')
+                        query=TypeProposalRequest.model_validate(body)
+                        shared=getattr(self.jobs,'ontology_store',None)
+                        rules=WorkspaceOntologies(shared.root if shared else self.jobs.root.parent/'preview-ontologies',context['principal'])
+                        result=await run_in_threadpool(type_proposals,self.scene_ifc,rules,query)
+                        return JSONResponse(result,headers={'Cache-Control':'no-store'})
                     expected={'space_id'} if path==IFC_CATALOG_PATH else {'space_id','element_id','catalog_sha256'}
                     if path in (IFC_STRUCTURE_PATH,IFC_SNAPSHOT_PATH):expected={'space_id','catalog_sha256'}
                     if set(request.query_params)!=expected or len(request.query_params.multi_items())!=len(expected):return deny(422,'ifc_invalid_request')

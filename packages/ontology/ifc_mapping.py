@@ -98,3 +98,29 @@ def propose_ifc_types(catalog_raw, *, expected_catalog_sha256, ontology_raw, map
             'mapping_sha256': content_digest(mapping.model_dump()), 'entities': rows,
             'assessment': 'unverified', 'instance_validated': False, 'relationships_mapped': False,
             'real_release_ready': False}
+
+
+def propose_structure_types(structure_raw, *, expected_structure_sha256, expected_source,
+                            ontology_raw, mapping_document):
+    """Independent type proposals for exchanged declarations; never mutate the source."""
+    from packages.views.agent.ifc_structure_exchange import inspect_structure_snapshot
+    mapping = Mapping.model_validate(mapping_document)
+    rules = _rules(mapping, ontology_raw)
+    snapshot = inspect_structure_snapshot(structure_raw, expected_sha256=expected_structure_sha256,
+                                          expected_source=expected_source)
+    rows = []
+    for entity in snapshot.entities:
+        target = rules.get(entity.ifc_type)
+        rows.append({'source_entity_id': entity.entity_id, 'element_id': entity.element_id,
+                     'ifc_type': entity.ifc_type, 'target_type_id': target,
+                     'status': 'proposed' if target else 'unmapped'})
+    return {'profile': 'cospace.ifc-structure-type-proposals/0.1',
+            'source': snapshot.source.model_dump(), 'structure_sha256': expected_structure_sha256,
+            'mapping': mapping.model_dump(),
+            'ontology_ref': mapping.ontology_ref.model_dump(),
+            'mapping_sha256': content_digest(mapping.model_dump()), 'entities': rows,
+            'proposed_count': sum(row['status'] == 'proposed' for row in rows),
+            'unmapped_count': sum(row['status'] == 'unmapped' for row in rows),
+            'data_kind': 'ifc_design_candidate', 'assessment': 'unverified',
+            'instance_validated': False, 'relationships_mapped': False, 'ontology_bound': False,
+            'alignment_verified': False, 'saved': False, 'real_release_ready': False}
