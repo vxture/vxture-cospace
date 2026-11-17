@@ -47,7 +47,7 @@ def business_member(name):
     parts=PurePosixPath(name).parts
     if (parts[0]=='setup' and name not in ('setup/sources.json','setup/workspace-scenes.json','setup/consumer-access.json','setup/scene-pointclouds.json','setup/scene-ifc.json')
             or parts[0]=='policy' and name not in ('policy/space-policy.sqlite3','policy/platform-events.sqlite3','policy/product-seats.sqlite3','policy/.workspace-scenes-required')
-            or parts[0]=='runtime' and not (name in ('runtime/preview-lifecycle.sqlite3','runtime/business-versions.sqlite3')
+            or parts[0]=='runtime' and not (name in ('runtime/preview-lifecycle.sqlite3','runtime/business-versions.sqlite3','runtime/spatial-observations.sqlite3')
                 or len(parts)>2 and parts[1] in RUNTIME_DIRS)):
         raise ValueError('backup_business_layout_only_no_sessions_or_credentials')
 
@@ -151,6 +151,10 @@ def validate_runtime(root,original_root=None):
     for p in root.rglob('*.sqlite3'):
         with closing(sqlite3.connect(p.resolve().as_uri()+'?mode=ro&immutable=1',uri=True)) as db:
             if db.execute('PRAGMA quick_check').fetchall()!=[('ok',)]:raise ValueError('backup_database_integrity')
+    observations=root/'runtime/spatial-observations.sqlite3'
+    if observations.exists():
+        from packages.infrastructure.observation_integrity import validate_observation_database
+        validate_observation_database(observations)
 
 
 def backup(root,output,*,actor,reason):
