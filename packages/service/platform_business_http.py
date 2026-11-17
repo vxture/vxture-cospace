@@ -44,6 +44,7 @@ from packages.infrastructure.spatial_observation_store import ObservationStorage
 from packages.views.agent.ifc_structure_exchange import export_structure_snapshot
 from packages.views.agent.ifc_geometry_exchange import export_geometry_component
 from packages.service.ifc_type_proposals import TypeProposalRequest, type_proposals
+from packages.views.agent.ifc_offline_package import export_design_package
 
 
 DATA_MANAGE='data.manage'
@@ -63,6 +64,7 @@ IFC_OBSERVATION_PATH = '/api/scene-ifc/opening-observation'
 IFC_SNAPSHOT_PATH = '/api/scene-ifc/structure-snapshot'
 IFC_GEOMETRY_PATH = '/api/scene-ifc/element-geometry'
 IFC_TYPES_PATH = '/api/scene-ifc/type-proposals'
+IFC_PACKAGE_PATH = '/api/scene-ifc/design-package'
 
 
 class BusinessAccess:
@@ -150,7 +152,7 @@ class BusinessAccess:
             space(q.get('space_id'),DATA_MANAGE);return {'principal':principal}
         if path==IFC_TYPES_PATH and method=='POST':
             space(body.get('space_id'),ASSOCIATION_EDIT);return {'principal':principal}
-        if path in (IFC_CATALOG_PATH,'/api/scene-ifc/element',IFC_STRUCTURE_PATH,IFC_OBSERVATION_PATH,IFC_SNAPSHOT_PATH,IFC_GEOMETRY_PATH) and method in ('GET','HEAD'):
+        if path in (IFC_CATALOG_PATH,'/api/scene-ifc/element',IFC_STRUCTURE_PATH,IFC_OBSERVATION_PATH,IFC_SNAPSHOT_PATH,IFC_GEOMETRY_PATH,IFC_PACKAGE_PATH) and method in ('GET','HEAD'):
             space(q.get('space_id'),ASSOCIATION_EDIT);return {'principal':principal}
         if ((path=='/api/scene-pointclouds' or re.fullmatch(r'/api/scene-pointclouds/(tiles/t[0-9]{5}/[0-2]|compositions/compose-[a-f0-9]{24})',path)) and method in ('GET','HEAD')
                 or (path=='/api/scene-pointclouds/compositions' or re.fullmatch(r'/api/scene-pointclouds/compositions/compose-[a-f0-9]{24}/register',path)) and method=='POST'):
@@ -463,9 +465,16 @@ class BusinessAccess:
                         result=await run_in_threadpool(type_proposals,self.scene_ifc,rules,query)
                         return JSONResponse(result,headers={'Cache-Control':'no-store'})
                     expected={'space_id'} if path==IFC_CATALOG_PATH else {'space_id','element_id','catalog_sha256'}
-                    if path in (IFC_STRUCTURE_PATH,IFC_SNAPSHOT_PATH):expected={'space_id','catalog_sha256'}
+                    if path in (IFC_STRUCTURE_PATH,IFC_SNAPSHOT_PATH,IFC_PACKAGE_PATH):expected={'space_id','catalog_sha256'}
                     if set(request.query_params)!=expected or len(request.query_params.multi_items())!=len(expected):return deny(422,'ifc_invalid_request')
-                    if path in (IFC_STRUCTURE_PATH,IFC_SNAPSHOT_PATH) and not re.fullmatch('[a-f0-9]{64}',request.query_params['catalog_sha256']):return deny(422,'ifc_invalid_request')
+                    if path in (IFC_STRUCTURE_PATH,IFC_SNAPSHOT_PATH,IFC_PACKAGE_PATH) and not re.fullmatch('[a-f0-9]{64}',request.query_params['catalog_sha256']):return deny(422,'ifc_invalid_request')
+                    if path==IFC_PACKAGE_PATH:
+                        import hashlib
+                        raw=await run_in_threadpool(export_design_package,self.scene_ifc,request.query_params['space_id'],request.query_params['catalog_sha256'])
+                        digest=hashlib.sha256(raw).hexdigest()
+                        return ByteResponse(raw,media_type=BINARY_MEDIA_TYPE,headers={'Cache-Control':'no-store',
+                            'Content-Disposition':f'attachment; filename="ifc-design-{digest}.bin"','X-Content-SHA256':digest,
+                            'X-Content-Type-Options':'nosniff'})
                     if path==IFC_GEOMETRY_PATH:
                         import hashlib
                         if (not re.fullmatch('[a-f0-9]{64}',request.query_params['catalog_sha256'])

@@ -55,6 +55,11 @@ def _budget(vertices, triangles):
 def build_geometry_component(root, space, pin, catalog, element):
     """Caller verifies source/catalog and authorization first; no mesh decimation."""
     structure_raw = build_structure_snapshot(space, pin, catalog)
+    return encode_geometry_component(root, catalog, element, structure_raw)
+
+
+def encode_geometry_component(root, catalog, element, structure_raw):
+    """Internal reuse after validating the same catalog/source; snapshot is not client input."""
     snapshot = StructureSnapshot.model_validate_json(structure_raw)
     subject = _subject(snapshot, element)
     product = catalog['products'][int(element[1:])]
