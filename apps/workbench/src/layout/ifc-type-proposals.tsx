@@ -17,7 +17,8 @@ function ProposalForm({space,pin,sources,selectedId}:Readonly<{space:string;pin:
  useEffect(()=>()=>active.current?.abort(),[]);
  useEffect(()=>{const controller=new AbortController();
   fetch(`${endpoint}/api/ontologies`,{signal:controller.signal,cache:'no-store'}).then(async r=>{
-   if(!r.ok)throw new Error('本体版本读取失败，请关闭后重试。');const body=await r.json();
+   if(!r.ok){throw new Error('本体版本读取失败，请关闭后重试。');}
+   const body=await r.json();
    if(!Array.isArray(body.ontologies))throw new Error('本体版本响应不完整。');
    return body.ontologies as Version[];
   }).then(v=>{if(!controller.signal.aborted)setVersions(v);}).catch(e=>{if(!controller.signal.aborted)setError(e.message);});
@@ -26,8 +27,10 @@ function ProposalForm({space,pin,sources,selectedId}:Readonly<{space:string;pin:
  const current=versions.find(v=>versionKey(v)===chosen);
  useEffect(()=>{const controller=new AbortController();setDefinition(null);
   if(current)fetch(`${endpoint}/api/ontologies/${encodeURIComponent(current.ontology_id)}/${encodeURIComponent(current.version)}?${new URLSearchParams({sha256:current.sha256})}`,{signal:controller.signal,cache:'no-store'}).then(async r=>{
-   if(!r.ok)throw new Error('固定本体版本读取失败，请重新选择。');const body=await r.json() as Definition;
-   if(body.integrity!=='verified'||versionKey(body.record)!==chosen||!body.definition?.types)throw new Error('本体版本响应不一致。');return body;
+   if(!r.ok){throw new Error('固定本体版本读取失败，请重新选择。');}
+   const body=await r.json() as Definition;
+   if(body.integrity!=='verified'||versionKey(body.record)!==chosen||!body.definition?.types){throw new Error('本体版本响应不一致。');}
+   return body;
   }).then(v=>{if(!controller.signal.aborted)setDefinition(v);}).catch(e=>{if(!controller.signal.aborted)setError(e.message);});
   return()=>controller.abort();
  },[current,chosen]);
@@ -57,6 +60,6 @@ function ProposalForm({space,pin,sources,selectedId}:Readonly<{space:string;pin:
   <label className="flex flex-col gap-xs text-body-small">固定本体版本<NativeSelect value={chosen} onChange={e=>{invalidate();setRules({});setChosen(e.target.value);}}><option value="">请选择本体版本</option>{versions.map(v=><option key={versionKey(v)} value={versionKey(v)}>{v.title} · {v.version}</option>)}</NativeSelect></label>
   {definition&&<><div className="grid grid-cols-1 md:grid-cols-2 gap-md">{types.map(type=><label key={type} className="flex flex-col gap-xs text-body-small">{type}<NativeSelect value={rules[type]||''} onChange={e=>{invalidate();setRules({...rules,[type]:e.target.value});}}><option value="">保留未映射</option>{Object.entries(definition.definition.types).map(([id,t])=><option key={id} value={id}>{t.title} · {id}</option>)}</NativeSelect></label>)}</div><Button variant="outline" size="sm" className="self-start" disabled={busy||!Object.values(rules).some(Boolean)||types.length>100} onClick={()=>void propose()}>{busy?'正在生成…':'生成类型提案'}</Button>{types.length>100&&<p className="text-body-small">源类型超过本次规则预算，请缩小资料范围。</p>}</>}
   {error&&<p role="alert" className="text-body-small">{error}</p>}
-  {result&&<div role="status" className="flex flex-col gap-xs text-body-small"><p>已生成 {result.proposed_count} 项类型提案 · {result.unmapped_count} 项未映射</p>{selected&&<p>当前构件：{selected.target_type_id?`${definition?.definition.types[selected.target_type_id]?.title||selected.target_type_id} · 待核验`:'未映射'}</p>}<p className="text-label-small text-muted-foreground">未保存 · 实例属性、空间连接与本体关系尚未核验</p><Button variant="ghost" size="sm" className="self-start" onClick={download}>导出提案</Button></div>}
+  {result&&<div className="flex flex-col gap-xs text-body-small"><output>已生成 {result.proposed_count} 项类型提案 · {result.unmapped_count} 项未映射</output>{selected&&<p>当前构件：{selected.target_type_id?`${definition?.definition.types[selected.target_type_id]?.title||selected.target_type_id} · 待核验`:'未映射'}</p>}<p className="text-label-small text-muted-foreground">未保存 · 实例属性、空间连接与本体关系尚未核验</p><Button variant="ghost" size="sm" className="self-start" onClick={download}>导出提案</Button></div>}
  </div>;
 }

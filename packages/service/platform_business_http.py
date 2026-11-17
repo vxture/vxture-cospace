@@ -48,6 +48,7 @@ from packages.service.ifc_type_proposals import TypeProposalRequest, type_propos
 
 DATA_MANAGE='data.manage'
 SPACE_PREVIEW='space.preview'
+ASSOCIATION_EDIT='association.edit'
 BINARY_MEDIA_TYPE='application/octet-stream'
 
 SELECTION_ROUTE='/api/selection'
@@ -148,9 +149,9 @@ class BusinessAccess:
         if (path=='/api/scene-attachments' or re.fullmatch(r'/api/scene-attachments/attachment-[a-f0-9]{16}',path)) and method in ('GET','HEAD','POST'):
             space(q.get('space_id'),DATA_MANAGE);return {'principal':principal}
         if path==IFC_TYPES_PATH and method=='POST':
-            space(body.get('space_id'),'association.edit');return {'principal':principal}
+            space(body.get('space_id'),ASSOCIATION_EDIT);return {'principal':principal}
         if path in (IFC_CATALOG_PATH,'/api/scene-ifc/element',IFC_STRUCTURE_PATH,IFC_OBSERVATION_PATH,IFC_SNAPSHOT_PATH,IFC_GEOMETRY_PATH) and method in ('GET','HEAD'):
-            space(q.get('space_id'),'association.edit');return {'principal':principal}
+            space(q.get('space_id'),ASSOCIATION_EDIT);return {'principal':principal}
         if ((path=='/api/scene-pointclouds' or re.fullmatch(r'/api/scene-pointclouds/(tiles/t[0-9]{5}/[0-2]|compositions/compose-[a-f0-9]{24})',path)) and method in ('GET','HEAD')
                 or (path=='/api/scene-pointclouds/compositions' or re.fullmatch(r'/api/scene-pointclouds/compositions/compose-[a-f0-9]{24}/register',path)) and method=='POST'):
             space(body.get('space_id') if method=='POST' else q.get('space_id'),DATA_MANAGE)
@@ -213,7 +214,7 @@ class BusinessAccess:
                     return {'principal':principal}
                 if suffix in ('/','/index.html','/human.ply','/views.js','/model.json','/objects.json','/ontology.json','/business.json','/relations.json',
                               '/api/preview','/api/thumbnail','/api/objects','/api/checklist','/api/lineage') or re.fullmatch(r'/api/objects/[^/]+',suffix):cap=SPACE_PREVIEW
-                elif suffix in ('/api/anchor','/api/anchor-preview') and kind=='candidate':cap='association.edit'
+                elif suffix in ('/api/anchor','/api/anchor-preview') and kind=='candidate':cap=ASSOCIATION_EDIT
                 elif re.fullmatch(r'/[^/]+',suffix):cap='space.export'
             if method=='POST' and suffix in ('/api/query','/api/query-range'):cap='space.query'
             if cap is None:raise PermissionError()
@@ -230,7 +231,7 @@ class BusinessAccess:
             caps={PUBLICATIONS_ROUTE:SPACE_PREVIEW,SELECTION_ROUTE:SPACE_PREVIEW,
                 '/api/workspace-model':SPACE_PREVIEW,'/api/workflow':SPACE_PREVIEW,
                 '/api/builds':'build.run',INPUTS_ROUTE:DATA_MANAGE,'/api/artifacts':DATA_MANAGE,
-                '/api/batches':DATA_MANAGE,'/api/ledger':'association.edit'}
+                '/api/batches':DATA_MANAGE,'/api/ledger':ASSOCIATION_EDIT}
             if path in caps:
                 wanted=q.get('space_id');space(wanted,caps[path])
                 if path in (SELECTION_ROUTE,'/api/workspace-model'):selected(wanted,caps[path])
@@ -266,8 +267,8 @@ class BusinessAccess:
                 artifact('input:'+str(previous.get('input_id','')),DATA_MANAGE,wanted)
                 return {'principal':principal}
             if re.fullmatch(r'/api/ontologies/[^/]+/[^/]+/validate',path):return {'principal':principal}
-            caps={'/api/ledger':'association.edit','/api/business-candidates':'association.edit',
-                '/api/relation-candidates':'association.edit','/api/semantic-candidates':'association.edit',
+            caps={'/api/ledger':ASSOCIATION_EDIT,'/api/business-candidates':ASSOCIATION_EDIT,
+                '/api/relation-candidates':ASSOCIATION_EDIT,'/api/semantic-candidates':ASSOCIATION_EDIT,
                 SELECTION_ROUTE:'build.run','/api/candidate-comparisons':'build.run','/api/candidate-reviews':'build.run',
                 '/api/publication-comparisons':SPACE_PREVIEW,PUBLICATIONS_ROUTE:PUBLICATION_MANAGE,
                 INPUTS_ROUTE:DATA_MANAGE,'/api/batches':DATA_MANAGE,'/api/builds':'build.run'}
@@ -698,7 +699,7 @@ class BusinessAccess:
                 except sqlite3.Error:return deny(503,'workflow_records_unavailable')
                 except (ValueError,OSError,KeyError,TypeError):return deny(409,'workflow_unavailable_refresh_required')
                 result['business_authorized']=True
-                required={'data':DATA_MANAGE,'build':'build.run','ontology':SPACE_PREVIEW,'association':'association.edit','delivery':SPACE_PREVIEW,'space':SPACE_PREVIEW}
+                required={'data':DATA_MANAGE,'build':'build.run','ontology':SPACE_PREVIEW,'association':ASSOCIATION_EDIT,'delivery':SPACE_PREVIEW,'space':SPACE_PREVIEW}
                 for stage in result['stages']:
                     stage['action']['allowed']=required[stage['action']['module']] in caps
                 result['next_action']['allowed']=required[result['next_action']['module']] in caps

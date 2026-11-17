@@ -59,7 +59,8 @@ def test_source_ontology_and_mapping_remain_separate(structure_source):
     assert value['proposed_count'] == 1
     assert value['unmapped_count'] == 5
     door = next(e for e in value['entities'] if e['source_entity_id'] == 'door')
-    assert door['target_type_id'] == 'door' and door['element_id'] == 'e00002'
+    assert door['target_type_id'] == 'door'
+    assert door['element_id'] == 'e00002'
     for field in ('saved', 'instance_validated', 'relationships_mapped', 'ontology_bound',
                   'alignment_verified', 'real_release_ready'):
         assert value[field] is False
