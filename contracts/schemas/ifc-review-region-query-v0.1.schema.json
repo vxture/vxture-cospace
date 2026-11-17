@@ -1,0 +1,40 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "snapshot_sha256": {
+      "pattern": "^[a-f0-9]{64}$",
+      "title": "Snapshot Sha256",
+      "type": "string"
+    },
+    "frame_id": {
+      "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_.:-]{0,159}$",
+      "title": "Frame Id",
+      "type": "string"
+    },
+    "point_xyz_m": {
+      "items": {
+        "maximum": 1000000,
+        "minimum": -1000000,
+        "type": "number"
+      },
+      "maxItems": 3,
+      "minItems": 3,
+      "title": "Point Xyz M",
+      "type": "array"
+    },
+    "boundary_tolerance_m": {
+      "maximum": 1,
+      "minimum": 0,
+      "title": "Boundary Tolerance M",
+      "type": "number"
+    }
+  },
+  "required": [
+    "snapshot_sha256",
+    "frame_id",
+    "point_xyz_m",
+    "boundary_tolerance_m"
+  ],
+  "title": "RegionQuery",
+  "type": "object"
+}
