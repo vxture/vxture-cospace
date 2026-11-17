@@ -36,7 +36,7 @@ Python 使用项目运行环境：
 python -m experiments.scripts.read_ifc_structure_snapshot <snapshot.json> <snapshot-sha256> <trusted-source.json>
 ```
 
-Node 只使用 Node 内置库，不依赖 Python 或 npm 包：
+Node 只使用 Node 内置库，不依赖 Python 或 npm 包。先进入文件所在的可信下载目录，下面的脚本路径可以使用绝对路径；两个 JSON 参数只接受当前目录的普通文件名，不接受目录、绝对路径或指向目录外的符号链接：
 
 ```text
 node examples/scene-graph/consumers/read-ifc-structure.mjs <snapshot.json> <snapshot-sha256> <trusted-source.json>

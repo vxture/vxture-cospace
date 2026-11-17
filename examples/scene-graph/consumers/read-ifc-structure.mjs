@@ -1,20 +1,23 @@
 // Independent consumer of canonical IFC declaration snapshots. No Python or npm dependencies.
-import {open} from 'node:fs/promises';
+import {open,realpath} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
 import {pathToFileURL} from 'node:url';
+import {dirname,join} from 'node:path';
 
 const profile='cospace.ifc-structure-snapshot/0.1';
 const roleSet=new Set(['building','level','space','door','stair','stair_flight','opening','wall','slab','distribution_board']);
 const kindSet=new Set(['aggregates','contained_in','opening_in','fills','space_boundary']);
 const geometrySet=new Set(['extracted','no_representation','extraction_failed']);
 function requireThat(ok,message){if(!ok)throw new Error(message);}
-function keys(value,expected){requireThat(value&&typeof value==='object'&&!Array.isArray(value),'object_required');requireThat(Object.keys(value).sort().join(',')===[...expected].sort().join(','),'unexpected_fields');}
+// Schema keys are ASCII; byte order must match Python, independent of host locale.
+function compareKeys(a,b){if(a<b)return -1;return Number(a>b);}
+function keys(value,expected){requireThat(value&&typeof value==='object'&&!Array.isArray(value),'object_required');requireThat(Object.keys(value).sort(compareKeys).join(',')===[...expected].sort(compareKeys).join(','),'unexpected_fields');}
 function string(value,maximum,minimum=1){requireThat(typeof value==='string'&&[...value].length>=minimum&&[...value].length<=maximum,'string_budget');}
 function array(value,maximum,minimum=0){requireThat(Array.isArray(value)&&value.length>=minimum&&value.length<=maximum,'array_budget');return value;}
 function digest(value){requireThat(typeof value==='string'&&/^[a-f0-9]{64}$/.test(value),'digest_required');}
 function canonical(value){
  if(Array.isArray(value))return `[${value.map(canonical).join(',')}]`;
- if(value&&typeof value==='object')return `{${Object.keys(value).sort().map(k=>`${JSON.stringify(k)}:${canonical(value[k])}`).join(',')}}`;
+ if(value&&typeof value==='object')return '{'+Object.keys(value).sort(compareKeys).map(k=>JSON.stringify(k)+':'+canonical(value[k])).join(',')+'}';
  return JSON.stringify(value);
 }
 function source(value){
@@ -29,7 +32,7 @@ function declarations(rows){
  for(const row of array(rows,10000,1)){
   keys(row,['entity_id','element_id','ifc_type','source_role','name','geometry_status']);
   string(row.entity_id,255);string(row.ifc_type,110);string(row.name,4096,0);
-  requireThat(/^e[0-9]{5}$/.test(row.element_id)&&typeof row.element_id==='string','element_id_required');
+  requireThat(/^e\d{5}$/.test(row.element_id)&&typeof row.element_id==='string','element_id_required');
   requireThat(/^Ifc[A-Za-z0-9]+$/.test(row.ifc_type)&&roleSet.has(row.source_role)&&geometrySet.has(row.geometry_status),'declaration_type');
   requireThat(!ids.has(row.entity_id)&&!elements.has(row.element_id),'duplicate_entity');
   ids.add(row.entity_id);elements.add(row.element_id);counts.set(row.source_role,(counts.get(row.source_role)||0)+1);
@@ -64,12 +67,15 @@ export function inspectStructure(raw,expectedSha256,expectedSource){
   data_kind:value.data_kind,assessment:value.assessment,original_ifc_content_verified:false,ontology_bound:false,
   geometry_included:false,alignment_verified:false,real_release_ready:false};
 }
-async function boundedFile(path,maximum){
+async function boundedFile(name,maximum){
+ requireThat(typeof name==='string'&&/^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,200}\.json$/.test(name),'plain_json_filename_required');
+ const root=await realpath(process.cwd()),path=await realpath(join(root,name));
+ requireThat(dirname(path)===root,'file_outside_working_directory');
  const file=await open(path,'r');
  try{
   const stat=await file.stat();requireThat(stat.isFile()&&stat.size<=maximum,'file_byte_budget');
   const raw=Buffer.alloc(maximum+1);let offset=0;
-  while(offset<=maximum){const part=await file.read(raw,offset,raw.length-offset,null);if(!part.bytesRead)break;offset+=part.bytesRead;}
+  while(offset<=maximum){const part=await file.read(raw,offset,raw.length-offset,null);if(!part.bytesRead){break;}offset+=part.bytesRead;}
   requireThat(offset<=maximum,'file_byte_budget');return raw.subarray(0,offset);
  }finally{await file.close();}
 }

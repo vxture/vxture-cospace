@@ -148,8 +148,8 @@ def node_read(root, raw, expected_source):
     path.write_bytes(raw)
     pin.write_bytes(canonical(expected_source))
     script = Path('examples/scene-graph/consumers/read-ifc-structure.mjs').resolve()
-    return subprocess.run([str(Path(node).resolve()), '--', str(script), str(path.resolve()),
-                           hashlib.sha256(raw).hexdigest(), str(pin.resolve())],
+    return subprocess.run([str(Path(node).resolve()), '--', str(script), path.name,
+                           hashlib.sha256(raw).hexdigest(), pin.name], cwd=root,
                           capture_output=True, text=True, timeout=15, check=False, shell=False)
 
 
@@ -186,3 +186,31 @@ def test_json_schema_matches_runtime_contract():
     from packages.views.agent.ifc_structure_exchange import StructureSnapshot
     document = json.loads(Path('contracts/schemas/ifc-structure-snapshot-v0.1.schema.json').read_text(encoding='utf-8'))
     assert document == StructureSnapshot.model_json_schema()
+
+
+@pytest.mark.parametrize('escape', ['parent', 'absolute', 'symlink'])
+def test_node_cli_rejects_files_outside_working_directory(tmp_path, escape):
+    node = shutil.which('node')
+    if node is None:
+        pytest.skip('Node runtime unavailable')
+    root = tmp_path / 'trusted'
+    root.mkdir()
+    outside = tmp_path / 'outside.json'
+    outside.write_text('{}', encoding='utf-8')
+    if escape == 'symlink':
+        link = root / 'linked.json'
+        try:
+            link.symlink_to(outside)
+        except OSError:
+            pytest.skip('Creating symlinks requires local permission')
+        name = link.name
+    else:
+        name = '../outside.json' if escape == 'parent' else str(outside.resolve())
+    script = Path('examples/scene-graph/consumers/read-ifc-structure.mjs').resolve()
+    result = subprocess.run([str(Path(node).resolve()), '--', str(script), name,
+                             '0' * 64, name], cwd=root, capture_output=True,
+                            text=True, timeout=15, check=False, shell=False)
+    assert result.returncode == 1
+    assert not result.stdout
+    expected = 'file_outside_working_directory' if escape == 'symlink' else 'plain_json_filename_required'
+    assert expected in result.stderr
