@@ -100,7 +100,7 @@ def inspect_review_snapshot(raw, *, expected_sha256, design_package, expected_so
         raise ValueError('review_snapshot_structure_binding')
     annotations = _check_annotations(snapshot, package['structure'])
     types = _types(snapshot, package, ontology_raw)
-    return {'snapshot': snapshot.model_dump(), 'annotation_check': annotations,
+    return {'snapshot': snapshot.model_dump(), 'structure': package['structure'], 'annotation_check': annotations,
             'annotation_check_context': 'snapshot_source_projection', 'type_proposals': types,
             'summary': {'profile': snapshot.profile, 'snapshot_sha256': expected_sha256,
                         'source': snapshot.source.model_dump(), 'source_entities': len(package['structure']['entities']),

@@ -1,0 +1,81 @@
+{
+  "$defs": {
+    "ObservationReplay": {
+      "additionalProperties": false,
+      "properties": {
+        "as_of": {
+          "maxLength": 27,
+          "minLength": 20,
+          "title": "As Of",
+          "type": "string"
+        },
+        "known_at": {
+          "maxLength": 27,
+          "minLength": 20,
+          "title": "Known At",
+          "type": "string"
+        },
+        "through_sequence": {
+          "pattern": "^(0|[1-9][0-9]{0,15})$",
+          "title": "Through Sequence",
+          "type": "string"
+        }
+      },
+      "required": [
+        "as_of",
+        "known_at",
+        "through_sequence"
+      ],
+      "title": "ObservationReplay",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "snapshot_sha256": {
+      "pattern": "^[a-f0-9]{64}$",
+      "title": "Snapshot Sha256",
+      "type": "string"
+    },
+    "element_ids": {
+      "items": {
+        "pattern": "^e[0-9]{5}$",
+        "type": "string"
+      },
+      "maxItems": 128,
+      "minItems": 1,
+      "title": "Element Ids",
+      "type": "array"
+    },
+    "replay": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ObservationReplay"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "expected_context_cursor": {
+      "anyOf": [
+        {
+          "pattern": "^[a-f0-9]{64}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Expected Context Cursor"
+    }
+  },
+  "required": [
+    "snapshot_sha256",
+    "element_ids"
+  ],
+  "title": "ReviewObservationQuery",
+  "type": "object"
+}
