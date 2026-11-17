@@ -4,6 +4,11 @@ import {businessEndpoint as endpoint} from './business-endpoint';
 import {checkedSurface,type SurfaceRequest,type SurfaceResult} from './ifc-surface-contract';
 
 type Subject={entity_id:string;element_id:string;ifc_type:string;name:string;geometry_status:string};
+function resultLabel(result:SurfaceResult){
+ if(result.match)return result.match.name||result.match.entity_id;
+ if(result.status==='geometry_unavailable')return '没有可查询的结构网格。';
+ return '指定半径内没有匹配的结构表面。';
+}
 export function IfcSurfaceQuery(props:Readonly<{space:string;pin:string;frame:string;subjects:Subject[];onSelect:(id:string)=>void}>){
  const [open,setOpen]=useState(false);
  return <section className="flex flex-col gap-md"><Button variant="ghost" size="sm" className="self-start" aria-expanded={open} onClick={()=>setOpen(!open)}>坐标查找构件{open?' · 收起':' · 查询'}</Button>{open&&<QueryForm {...props}/>}</section>;
@@ -33,7 +38,7 @@ function QueryForm({space,pin,frame,subjects,onSelect}:Readonly<{space:string;pi
   <Button type="submit" variant="outline" size="sm" className="self-start" disabled={busy}>{busy?'正在查询…':'查找最近构件'}</Button>
   {error&&<p role="alert" className="text-body-small">{error}</p>}
   {result&&<section aria-label="查询结果" className="flex flex-col gap-sm text-body-small">
-   <output>{result.match?(result.match.name||result.match.entity_id):(result.status==='geometry_unavailable'?'没有可查询的结构网格。':'指定半径内没有匹配的结构表面。')}</output>
+   <output>{resultLabel(result)}</output>
    {result.match&&<><p>{result.match.ifc_type} · 距离 {result.match.distance_m.toFixed(3)} m</p><Button type="button" variant="ghost" size="sm" className="self-start" onClick={()=>onSelect(result.match!.element_id)}>定位构件</Button></>}
    <p className="text-label-small text-muted-foreground">查询了 {result.tested_components} 个结构网格 · {result.without_geometry} 项无几何未参与 · 设计资料待核验</p>
   </section>}
