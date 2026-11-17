@@ -42,7 +42,10 @@ def _evidence(layer, pin, root):
             receipt = check_evidence_content(root, references, document_sha256=pin)
         except OSError:
             raise ValueError('review_evidence_unavailable') from None
-    return {'status': 'no_references' if not references else ('bytes_checked' if receipt else 'references_only'),
+    status = 'references_only' if references else 'no_references'
+    if receipt is not None:
+        status = 'bytes_checked'
+    return {'status': status,
             'reference_count': len(references),
             'used_evidence_ids': sorted(used),
             'unused_evidence_ids': sorted(row['id'] for row in references if row['id'] not in used),
