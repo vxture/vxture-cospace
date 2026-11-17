@@ -1,0 +1,420 @@
+{
+  "$defs": {
+    "AnnotationLayer": {
+      "additionalProperties": false,
+      "properties": {
+        "original_worksheet_sha256": {
+          "pattern": "^[a-f0-9]{64}$",
+          "title": "Original Worksheet Sha256",
+          "type": "string"
+        },
+        "original_review_sha256": {
+          "pattern": "^[a-f0-9]{64}$",
+          "title": "Original Review Sha256",
+          "type": "string"
+        },
+        "evidence": {
+          "items": {
+            "$ref": "#/$defs/Evidence"
+          },
+          "maxItems": 1024,
+          "title": "Evidence",
+          "type": "array"
+        },
+        "areas": {
+          "items": {
+            "$ref": "#/$defs/Area"
+          },
+          "maxItems": 512,
+          "title": "Areas",
+          "type": "array"
+        },
+        "connections": {
+          "items": {
+            "$ref": "#/$defs/ConnectionAnnotation"
+          },
+          "maxItems": 10000,
+          "title": "Connections",
+          "type": "array"
+        }
+      },
+      "required": [
+        "original_worksheet_sha256",
+        "original_review_sha256",
+        "evidence",
+        "areas",
+        "connections"
+      ],
+      "title": "AnnotationLayer",
+      "type": "object"
+    },
+    "Area": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_.:-]{0,159}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "name": {
+          "maxLength": 160,
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "level_id": {
+          "maxLength": 255,
+          "minLength": 1,
+          "title": "Level Id",
+          "type": "string"
+        },
+        "footprint_xy_m": {
+          "items": {
+            "items": {
+              "maximum": 1000000,
+              "minimum": -1000000,
+              "type": "number"
+            },
+            "maxItems": 2,
+            "minItems": 2,
+            "type": "array"
+          },
+          "maxItems": 128,
+          "minItems": 3,
+          "title": "Footprint Xy M",
+          "type": "array"
+        },
+        "z_range_m": {
+          "items": {
+            "maximum": 1000000,
+            "minimum": -1000000,
+            "type": "number"
+          },
+          "maxItems": 2,
+          "minItems": 2,
+          "title": "Z Range M",
+          "type": "array"
+        },
+        "evidence_ids": {
+          "items": {
+            "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_.:-]{0,159}$",
+            "type": "string"
+          },
+          "maxItems": 16,
+          "minItems": 1,
+          "title": "Evidence Ids",
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "level_id",
+        "footprint_xy_m",
+        "z_range_m",
+        "evidence_ids"
+      ],
+      "title": "Area",
+      "type": "object"
+    },
+    "ConnectionAnnotation": {
+      "additionalProperties": false,
+      "properties": {
+        "source_entity_id": {
+          "maxLength": 255,
+          "minLength": 1,
+          "title": "Source Entity Id",
+          "type": "string"
+        },
+        "endpoints": {
+          "items": {
+            "$ref": "#/$defs/Endpoint"
+          },
+          "maxItems": 2,
+          "minItems": 0,
+          "title": "Endpoints",
+          "type": "array"
+        },
+        "evidence_ids": {
+          "items": {
+            "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_.:-]{0,159}$",
+            "type": "string"
+          },
+          "maxItems": 16,
+          "title": "Evidence Ids",
+          "type": "array"
+        }
+      },
+      "required": [
+        "source_entity_id",
+        "endpoints",
+        "evidence_ids"
+      ],
+      "title": "ConnectionAnnotation",
+      "type": "object"
+    },
+    "Endpoint": {
+      "additionalProperties": false,
+      "properties": {
+        "role": {
+          "enum": [
+            "side_a",
+            "side_b",
+            "lower",
+            "upper"
+          ],
+          "title": "Role",
+          "type": "string"
+        },
+        "area_id": {
+          "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_.:-]{0,159}$",
+          "title": "Area Id",
+          "type": "string"
+        },
+        "point_xyz_m": {
+          "items": {
+            "maximum": 1000000,
+            "minimum": -1000000,
+            "type": "number"
+          },
+          "maxItems": 3,
+          "minItems": 3,
+          "title": "Point Xyz M",
+          "type": "array"
+        }
+      },
+      "required": [
+        "role",
+        "area_id",
+        "point_xyz_m"
+      ],
+      "title": "Endpoint",
+      "type": "object"
+    },
+    "Evidence": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_.:-]{0,159}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "sha256": {
+          "pattern": "^[a-f0-9]{64}$",
+          "title": "Sha256",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "sha256"
+      ],
+      "title": "Evidence",
+      "type": "object"
+    },
+    "Mapping": {
+      "additionalProperties": false,
+      "properties": {
+        "profile": {
+          "const": "cospace.ifc-ontology-mapping/0.1",
+          "title": "Profile",
+          "type": "string"
+        },
+        "ontology_ref": {
+          "$ref": "#/$defs/OntologyPin"
+        },
+        "rules": {
+          "items": {
+            "$ref": "#/$defs/Rule"
+          },
+          "maxItems": 100,
+          "minItems": 1,
+          "title": "Rules",
+          "type": "array"
+        }
+      },
+      "required": [
+        "profile",
+        "ontology_ref",
+        "rules"
+      ],
+      "title": "Mapping",
+      "type": "object"
+    },
+    "OntologyPin": {
+      "additionalProperties": false,
+      "properties": {
+        "ontology_id": {
+          "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_.:-]{0,159}$",
+          "title": "Ontology Id",
+          "type": "string"
+        },
+        "version": {
+          "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_.:-]{0,159}$",
+          "title": "Version",
+          "type": "string"
+        },
+        "sha256": {
+          "pattern": "^[a-f0-9]{64}$",
+          "title": "Sha256",
+          "type": "string"
+        }
+      },
+      "required": [
+        "ontology_id",
+        "version",
+        "sha256"
+      ],
+      "title": "OntologyPin",
+      "type": "object"
+    },
+    "Rule": {
+      "additionalProperties": false,
+      "properties": {
+        "ifc_type": {
+          "pattern": "^Ifc[A-Za-z0-9]{1,100}$",
+          "title": "Ifc Type",
+          "type": "string"
+        },
+        "target_type_id": {
+          "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_.:-]{0,159}$",
+          "title": "Target Type Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "ifc_type",
+        "target_type_id"
+      ],
+      "title": "Rule",
+      "type": "object"
+    },
+    "SourcePin": {
+      "additionalProperties": false,
+      "properties": {
+        "space_id": {
+          "pattern": "^space-[a-f0-9]{16}$",
+          "title": "Space Id",
+          "type": "string"
+        },
+        "catalog_sha256": {
+          "pattern": "^[a-f0-9]{64}$",
+          "title": "Catalog Sha256",
+          "type": "string"
+        },
+        "ifc_sha256": {
+          "pattern": "^[a-f0-9]{64}$",
+          "title": "Ifc Sha256",
+          "type": "string"
+        },
+        "ifc_bytes": {
+          "maximum": 134217728,
+          "minimum": 1,
+          "title": "Ifc Bytes",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "space_id",
+        "catalog_sha256",
+        "ifc_sha256",
+        "ifc_bytes"
+      ],
+      "title": "SourcePin",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "profile": {
+      "const": "cospace.ifc-review-snapshot/0.1",
+      "title": "Profile",
+      "type": "string"
+    },
+    "source": {
+      "$ref": "#/$defs/SourcePin"
+    },
+    "design_package_sha256": {
+      "pattern": "^[a-f0-9]{64}$",
+      "title": "Design Package Sha256",
+      "type": "string"
+    },
+    "structure_sha256": {
+      "pattern": "^[a-f0-9]{64}$",
+      "title": "Structure Sha256",
+      "type": "string"
+    },
+    "frame_id": {
+      "pattern": "^ifc_world_[a-f0-9]{16}$",
+      "title": "Frame Id",
+      "type": "string"
+    },
+    "annotations": {
+      "$ref": "#/$defs/AnnotationLayer"
+    },
+    "mapping": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Mapping"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "type_proposals_sha256": {
+      "anyOf": [
+        {
+          "pattern": "^[a-f0-9]{64}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Type Proposals Sha256"
+    },
+    "data_kind": {
+      "const": "ifc_design_candidate",
+      "title": "Data Kind",
+      "type": "string"
+    },
+    "assessment": {
+      "const": "unverified",
+      "title": "Assessment",
+      "type": "string"
+    },
+    "alignment_verified": {
+      "const": false,
+      "title": "Alignment Verified",
+      "type": "boolean"
+    },
+    "ontology_bound": {
+      "const": false,
+      "title": "Ontology Bound",
+      "type": "boolean"
+    },
+    "real_release_ready": {
+      "const": false,
+      "title": "Real Release Ready",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "profile",
+    "source",
+    "design_package_sha256",
+    "structure_sha256",
+    "frame_id",
+    "annotations",
+    "mapping",
+    "type_proposals_sha256",
+    "data_kind",
+    "assessment",
+    "alignment_verified",
+    "ontology_bound",
+    "real_release_ready"
+  ],
+  "title": "ReviewSnapshot",
+  "type": "object"
+}
