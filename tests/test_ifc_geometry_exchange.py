@@ -73,7 +73,8 @@ def test_full_mesh_roundtrip_is_deterministic_and_bound(structure_source):
 
 
 @pytest.mark.parametrize('damage', ['digest', 'magic', 'length', 'index', 'nan', 'trailing',
-                                  'binding', 'promote', 'duplicate', 'wrong_element'])
+                                  'binding', 'promote', 'duplicate', 'wrong_element',
+                                  'counts', 'noncanonical', 'extra_field'])
 def test_corruption_or_wrong_binding_is_rejected(structure_source, damage):
     raw, args = fixture_component(structure_source)
     size = struct.unpack_from('<I', raw, 8)[0]
@@ -99,9 +100,15 @@ def test_corruption_or_wrong_binding_is_rejected(structure_source, damage):
             header['structure_sha256'] = '0' * 64
         elif damage == 'promote':
             header['alignment_verified'] = True
+        elif damage == 'counts':
+            header['vertices'] = 200_001
+        elif damage == 'extra_field':
+            header['traversable'] = True
         metadata = canonical(header)
         if damage == 'duplicate':
             metadata = b'{"unit":"m",' + metadata[1:]
+        elif damage == 'noncanonical':
+            metadata = b' ' + metadata
         raw = raw[:8] + struct.pack('<I', len(metadata)) + metadata + payload
     if damage != 'digest':
         args['expected_sha256'] = hashlib.sha256(raw).hexdigest()
@@ -150,7 +157,12 @@ def test_export_authorization_integrity_and_head(ifc_secured, monkeypatch):
                            ({'space_id': spaces[1]['id']}, 403), ({'root': 'private'}, 422)]:
         assert client.get(ROUTE, params=params | change).status_code == status
     assert client.post(ROUTE, json={}).status_code == 403
-    (root / 'e00001.npz').write_bytes(b'changed')
+    mesh = root / 'e00001.npz'
+    original_mesh = mesh.read_bytes()
+    mesh.write_bytes(b'changed')
+    assert client.get(ROUTE, params=params).status_code == 409
+    mesh.write_bytes(original_mesh)
+    (root / 'source.ifc').write_bytes(b'changed')
     assert client.get(ROUTE, params=params).status_code == 409
 
 
@@ -158,7 +170,7 @@ def test_schema_matches_contract():
     assert json.loads(Path('contracts/schemas/ifc-element-geometry-v0.1.schema.json').read_text()) == GeometryHeader.model_json_schema()
 
 
-def test_absent_geometry_and_original_source_changes_are_rejected(structure_source):
+def test_absent_or_undeclared_geometry_is_rejected(structure_source):
     root, catalog = structure_source
     with pytest.raises(ValueError, match='extracted_declaration'):
         build_geometry_component(root, SPACE, digest(root / 'ifc.json'), catalog, 'e99999')

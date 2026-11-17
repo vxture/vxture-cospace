@@ -101,7 +101,10 @@ def inspect_geometry_component(raw, *, expected_sha256, structure_raw, expected_
     if not 1 <= size <= MAX_HEADER or 12 + size > len(raw):
         raise ValueError('geometry_header_budget')
     metadata = raw[12:12 + size]
-    header = GeometryHeader.model_validate(json.loads(metadata, object_pairs_hook=_unique))
+    try:
+        header = GeometryHeader.model_validate(json.loads(metadata, object_pairs_hook=_unique))
+    except RecursionError as exc:
+        raise ValueError('geometry_header_nesting') from exc
     if canonical(header.model_dump()) != metadata:
         raise ValueError('geometry_canonical_header')
     if (header.source != snapshot.source or header.structure_sha256 != expected_structure_sha256
