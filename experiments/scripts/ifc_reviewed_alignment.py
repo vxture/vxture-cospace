@@ -8,6 +8,7 @@ import numpy as np
 from pydantic import Field
 
 from experiments.scripts.ifc_control_review import _read_sources
+from packages.data.evidence_content import check_evidence_content
 from packages.construction.ifc_alignment import FramePin, Point, fit_ifc_alignment
 from packages.data.ifc_workspace import load_mesh, read_json
 from packages.spatial.scene_graph import Fixed, Identity
@@ -71,7 +72,7 @@ class Review(Fixed):
 
 
 def reviewed_candidate(document, review, ifc_root, cloud_root, *,
-                       expected_ifc_sha256, expected_cloud_sha256, max_check_error_m):
+                       expected_ifc_sha256, expected_cloud_sha256, max_check_error_m, evidence_root=None):
     """Evidence references are reviewer declarations, never automatic verification."""
     worksheet = Worksheet.model_validate(document)
     record = Review.model_validate(review)
@@ -110,8 +111,11 @@ def reviewed_candidate(document, review, ifc_root, cloud_root, *,
         dict(profile='cospace.ifc-alignment-input/0.1', ifc=expected_ifc, cloud=expected_cloud,
              max_check_error_m=max_check_error_m, pairs=pairs),
         expected_ifc=expected_ifc, expected_cloud=expected_cloud)
-    return result | {'review': record.model_dump(), 'review_sha256': content_digest(review),
-                     'evidence_content_verified': False}
+    result.update(review=record.model_dump(), review_sha256=content_digest(review), evidence_content_verified=False)
+    if evidence_root is not None:
+        refs = [record.unit_evidence.model_dump()] + [row.evidence.model_dump() for row in record.controls]
+        result['evidence_receipt'] = check_evidence_content(evidence_root, refs, document_sha256=content_digest(review))
+    return result
 
 
 def main():
@@ -121,13 +125,14 @@ def main():
     parser.add_argument('--ifc-sha256', required=True)
     parser.add_argument('--cloud-sha256', required=True)
     parser.add_argument('--max-check-error-m', type=float, required=True)
+    parser.add_argument('--evidence-root', type=Path, help='Check referenced evidence bytes without approving their meaning')
     args = parser.parse_args()
     _, document = read_json(args.worksheet, 1024 * 1024)
     _, review = read_json(args.review, 1024 * 1024)
     result = reviewed_candidate(
         document, review, args.ifc_root, args.cloud_root,
         expected_ifc_sha256=args.ifc_sha256, expected_cloud_sha256=args.cloud_sha256,
-        max_check_error_m=args.max_check_error_m)
+        max_check_error_m=args.max_check_error_m, evidence_root=args.evidence_root)
     with args.output.open('x', encoding='utf-8') as stream:
         stream.write(json.dumps(result, ensure_ascii=False, indent=2, allow_nan=False) + '\n')
 

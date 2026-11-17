@@ -138,7 +138,7 @@ def _validate_connection(connection, ifc_type, areas, evidence):
     return True
 
 
-def validate_annotations(document, review):
+def validate_annotations(document, review, *, evidence_root=None):
     worksheet = Worksheet.model_validate(document)
     if worksheet.source_review_sha256 != content_digest(review) or worksheet.frame_id != review['frame_id']:
         raise ValueError('annotation_source_binding')
@@ -156,12 +156,17 @@ def validate_annotations(document, review):
         raise ValueError('annotation_task_coverage')
     complete = [key for key, row in connections.items() if _validate_connection(row, tasks[key], areas, evidence)]
     completed = set(complete)
-    return dict(profile='cospace.ifc-spatial-annotation-check/0.1',
+    result = dict(profile='cospace.ifc-spatial-annotation-check/0.1',
                 worksheet_sha256=content_digest(document), source_review_sha256=worksheet.source_review_sha256,
                 area_count=len(areas), complete_annotation_ids=complete,
                 pending_annotation_ids=[key for key in tasks if key not in completed],
                 assessment='unverified', evidence_content_verified=False,
                 confirmed_connections=[], alignment_verified=False, real_release_ready=False)
+    if evidence_root is not None:
+        from packages.data.evidence_content import check_evidence_content
+        result['evidence_receipt'] = check_evidence_content(
+            evidence_root, [row.model_dump() for row in worksheet.evidence], document_sha256=content_digest(document))
+    return result
 
 
 def main():
@@ -170,11 +175,14 @@ def main():
     parser.add_argument('--ifc-sha256', required=True)
     parser.add_argument('--worksheet', type=Path, help='Check this worksheet instead of seeding one')
     parser.add_argument('--output', type=Path, required=True)
+    parser.add_argument('--evidence-root', type=Path, help='Check worksheet evidence bytes; requires --worksheet')
     args = parser.parse_args()
+    if args.evidence_root is not None and args.worksheet is None:
+        parser.error('--evidence-root requires --worksheet')
     review = structure_review(args.ifc_root, expected_catalog_sha256=args.ifc_sha256)
     if args.worksheet:
         _, document = read_json(args.worksheet, 8 * 1024 * 1024)
-        result = validate_annotations(document, review)
+        result = validate_annotations(document, review, evidence_root=args.evidence_root)
     else:
         result = seed(review)
     with args.output.open('x', encoding='utf-8') as stream:

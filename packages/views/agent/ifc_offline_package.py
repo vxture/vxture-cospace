@@ -108,7 +108,7 @@ def _read_members(raw, manifest, start):
     return result
 
 
-def read_design_package(raw, *, expected_sha256, expected_source):
+def read_design_package(raw, *, expected_sha256, expected_source, evidence_root=None):
     if not isinstance(raw, bytes) or not 12 < len(raw) <= MAX_BYTES:
         raise ValueError('ifc_package_byte_budget')
     if _sha(raw) != expected_sha256:
@@ -151,10 +151,20 @@ def read_design_package(raw, *, expected_sha256, expected_source):
             'assessment': 'unverified', 'original_ifc_content_verified': False,
             'original_mesh_content_verified': False, 'alignment_verified': False,
             'ontology_bound': False, 'real_release_ready': False}
-    return {'manifest': manifest.model_dump(), 'structure': snapshot.model_dump(),
-            'members': members, 'summary': summary}
+    result = {'manifest': manifest.model_dump(), 'structure': snapshot.model_dump(),
+              'members': members, 'summary': summary}
+    if evidence_root is not None:
+        from packages.data.evidence_content import check_evidence_content
+        receipt = check_evidence_content(
+            evidence_root, [{'id': 'original-ifc', 'sha256': manifest.source.ifc_sha256}],
+            document_sha256=expected_sha256)
+        if receipt['members'][0]['bytes'] != manifest.source.ifc_bytes:
+            raise ValueError('ifc_package_original_source_size')
+        result['evidence_receipt'] = receipt
+        summary['original_ifc_content_verified'] = True
+    return result
 
 
-def inspect_design_package(raw, *, expected_sha256, expected_source):
+def inspect_design_package(raw, *, expected_sha256, expected_source, evidence_root=None):
     return read_design_package(raw, expected_sha256=expected_sha256,
-                               expected_source=expected_source)['summary']
+                               expected_source=expected_source, evidence_root=evidence_root)['summary']

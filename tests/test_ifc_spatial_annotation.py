@@ -58,3 +58,19 @@ def test_stair_lower_and_upper_follow_source_z(annotations):
         validate_annotations(document, review)
     document['connections'][1]['endpoints'][1]['point_xyz_m'][2] = 3
     assert validate_annotations(document, review)['complete_annotation_ids'] == ['door', 'stair']
+
+
+def test_annotation_evidence_receipt_does_not_confirm_connections(annotations, tmp_path):
+    from test_evidence_content import put
+    from packages.spatial.scene_identity import content_digest
+    document, review = annotations
+    ref = put(tmp_path)
+    document['evidence'][0]['sha256'] = ref['sha256']
+    result = validate_annotations(document, review, evidence_root=tmp_path)
+    assert result['evidence_receipt']['document_sha256'] == content_digest(document)
+    assert result['confirmed_connections'] == []
+    assert result['evidence_content_verified'] is False
+    assert result['real_release_ready'] is False
+    (tmp_path / (ref['sha256'] + '.bin')).unlink()
+    with pytest.raises(FileNotFoundError):
+        validate_annotations(document, review, evidence_root=tmp_path)
