@@ -6,8 +6,8 @@ from pathlib import Path
 import numpy as np
 
 from experiments.scripts.ifc_sections import _svg, cut_sections
-from experiments.scripts.ifc_spatial_annotation import seed, validate_annotations
-from experiments.scripts.ifc_structure_review import structure_review
+from packages.spatial.ifc_annotations import seed, validate_annotations
+from packages.construction.ifc_structure_review import structure_review
 from packages.spatial.scene_identity import content_digest
 from packages.data.ifc_workspace import read_json
 

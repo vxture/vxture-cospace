@@ -5,7 +5,7 @@ from pathlib import Path
 
 import numpy as np
 
-from experiments.scripts.ifc_structure_review import structure_review
+from packages.construction.ifc_structure_review import structure_review
 from packages.data.ifc_workspace import load_mesh, read_json, sha
 
 COLORS = {'IfcDoor': '#176eaa', 'IfcOpeningElement': '#ab6517',
