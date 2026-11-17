@@ -1,0 +1,46 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "space_id": {
+      "pattern": "^space-[a-f0-9]{16}$",
+      "title": "Space Id",
+      "type": "string"
+    },
+    "catalog_sha256": {
+      "pattern": "^[a-f0-9]{64}$",
+      "title": "Catalog Sha256",
+      "type": "string"
+    },
+    "frame_id": {
+      "pattern": "^ifc_world_[a-f0-9]{16}$",
+      "title": "Frame Id",
+      "type": "string"
+    },
+    "point_xyz_m": {
+      "items": {
+        "maximum": 1000000,
+        "minimum": -1000000,
+        "type": "number"
+      },
+      "maxItems": 3,
+      "minItems": 3,
+      "title": "Point Xyz M",
+      "type": "array"
+    },
+    "max_distance_m": {
+      "exclusiveMinimum": 0,
+      "maximum": 1000,
+      "title": "Max Distance M",
+      "type": "number"
+    }
+  },
+  "required": [
+    "space_id",
+    "catalog_sha256",
+    "frame_id",
+    "point_xyz_m",
+    "max_distance_m"
+  ],
+  "title": "SurfaceQuery",
+  "type": "object"
+}

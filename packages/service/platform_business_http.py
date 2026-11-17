@@ -45,6 +45,7 @@ from packages.views.agent.ifc_structure_exchange import export_structure_snapsho
 from packages.views.agent.ifc_geometry_exchange import export_geometry_component
 from packages.service.ifc_type_proposals import TypeProposalRequest, type_proposals
 from packages.views.agent.ifc_offline_package import export_design_package
+from packages.service.ifc_surface_query import SurfaceQuery, query_surface
 
 
 DATA_MANAGE='data.manage'
@@ -65,6 +66,7 @@ IFC_SNAPSHOT_PATH = '/api/scene-ifc/structure-snapshot'
 IFC_GEOMETRY_PATH = '/api/scene-ifc/element-geometry'
 IFC_TYPES_PATH = '/api/scene-ifc/type-proposals'
 IFC_PACKAGE_PATH = '/api/scene-ifc/design-package'
+IFC_SURFACE_PATH = '/api/scene-ifc/nearest-surface'
 
 
 class BusinessAccess:
@@ -150,7 +152,7 @@ class BusinessAccess:
             space(q.get('space_id'),DATA_MANAGE);return {'principal':principal}
         if (path=='/api/scene-attachments' or re.fullmatch(r'/api/scene-attachments/attachment-[a-f0-9]{16}',path)) and method in ('GET','HEAD','POST'):
             space(q.get('space_id'),DATA_MANAGE);return {'principal':principal}
-        if path==IFC_TYPES_PATH and method=='POST':
+        if path in (IFC_TYPES_PATH,IFC_SURFACE_PATH) and method=='POST':
             space(body.get('space_id'),ASSOCIATION_EDIT);return {'principal':principal}
         if path in (IFC_CATALOG_PATH,'/api/scene-ifc/element',IFC_STRUCTURE_PATH,IFC_OBSERVATION_PATH,IFC_SNAPSHOT_PATH,IFC_GEOMETRY_PATH,IFC_PACKAGE_PATH) and method in ('GET','HEAD'):
             space(q.get('space_id'),ASSOCIATION_EDIT);return {'principal':principal}
@@ -457,6 +459,11 @@ class BusinessAccess:
                 return JSONResponse(result,headers={'Cache-Control':'no-store'})
             if path.startswith(IFC_CATALOG_PATH):
                 try:
+                    if path==IFC_SURFACE_PATH:
+                        if request.query_params:return deny(422,'ifc_invalid_request')
+                        query=SurfaceQuery.model_validate(body)
+                        result=await run_in_threadpool(query_surface,self.scene_ifc,query)
+                        return JSONResponse(result,headers={'Cache-Control':'no-store'})
                     if path==IFC_TYPES_PATH:
                         if request.query_params:return deny(422,'ifc_invalid_request')
                         query=TypeProposalRequest.model_validate(body)

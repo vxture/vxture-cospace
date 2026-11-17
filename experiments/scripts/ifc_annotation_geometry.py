@@ -3,8 +3,6 @@ import argparse
 import json
 from pathlib import Path
 
-import numpy as np
-
 from experiments.scripts.ifc_spatial_annotation import validate_annotations
 from experiments.scripts.ifc_structure_review import structure_review
 from packages.data.ifc_workspace import load_mesh, read_json, sha
@@ -16,41 +14,8 @@ CHUNK_SIZE = 8192
 
 
 def nearest_surface(point, vertices, faces):
-    """Unsigned Euclidean distance; ties use the first source triangle, not a unique interface."""
-    point = np.asarray(point, dtype=float)
-    best = None
-    for start in range(0, len(faces), CHUNK_SIZE):
-        a, b, c = np.moveaxis(vertices[faces[start:start + CHUNK_SIZE]], 1, 0)
-        nearest = a.copy()
-        distances = np.einsum('ij,ij->i', point - nearest, point - nearest)
-        for u, v in ((a, b), (b, c), (c, a)):
-            edge = v - u
-            length2 = np.einsum('ij,ij->i', edge, edge)
-            fraction = np.divide(np.einsum('ij,ij->i', point - u, edge), length2,
-                                 out=np.zeros_like(length2), where=length2 > 0)
-            candidate = u + np.clip(fraction, 0, 1)[:, None] * edge
-            delta = point - candidate
-            d2 = np.einsum('ij,ij->i', delta, delta)
-            take = d2 < distances
-            nearest[take], distances[take] = candidate[take], d2[take]
-        normal = np.cross(b - a, c - a)
-        norm2 = np.einsum('ij,ij->i', normal, normal)
-        offset = np.divide(np.einsum('ij,ij->i', point - a, normal), norm2,
-                           out=np.zeros_like(norm2), where=norm2 > 0)
-        projection = point - offset[:, None] * normal
-        inside = norm2 > 0
-        for u, v in ((a, b), (b, c), (c, a)):
-            inside &= np.einsum('ij,ij->i', np.cross(v - u, projection - u), normal) >= 0
-        delta = point - projection
-        d2 = np.einsum('ij,ij->i', delta, delta)
-        take = inside & (d2 < distances)
-        nearest[take], distances[take] = projection[take], d2[take]
-        index = int(np.argmin(distances))
-        if best is None or distances[index] < best[0]:
-            best = (float(distances[index]), start + index, nearest[index].tolist())
-    if best is None:
-        raise ValueError('annotation_geometry_empty_mesh')
-    return dict(distance_m=float(np.sqrt(best[0])), triangle_index=best[1], closest_point_xyz_m=best[2])
+    from packages.spatial.mesh_distance import nearest_surface as measure
+    return measure(point, vertices, faces, chunk_size=CHUNK_SIZE)
 
 
 def _task_endpoints(root, task, endpoints, products):

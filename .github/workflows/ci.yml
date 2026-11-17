@@ -47,7 +47,7 @@ jobs:
       - name: Fixed ontology version comparison tests
         run: node --experimental-strip-types --test tests/frontend/ontology-diff.test.mjs
       - name: IFC source declaration response boundaries
-        run: node --experimental-strip-types --test tests/frontend/ifc-structure-contract.test.mjs tests/frontend/ifc-observation-contract.test.mjs tests/frontend/ifc-type-proposals.test.mjs
+        run: node --experimental-strip-types --test tests/frontend/ifc-structure-contract.test.mjs tests/frontend/ifc-observation-contract.test.mjs tests/frontend/ifc-type-proposals.test.mjs tests/frontend/ifc-surface-query.test.mjs
       - name: Dangerous operation confirmation and impact boundaries
         run: node --experimental-strip-types --test tests/frontend/operation-confirmation.test.mjs
       - name: Public entry state routing and recovery boundaries

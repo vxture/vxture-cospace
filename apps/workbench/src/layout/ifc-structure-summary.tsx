@@ -4,9 +4,10 @@ import {businessEndpoint as endpoint} from './business-endpoint';
 
 import {checked,relations,type Structure} from './ifc-structure-contract';
 import {IfcOpeningObservation} from './ifc-opening-observation';
+import {IfcSurfaceQuery} from './ifc-surface-query';
 import {IfcTypeProposals} from './ifc-type-proposals';
 
-export function IfcStructureSummary({space,catalogSha256,selectedId,onSelect}:Readonly<{space:string;catalogSha256:string;selectedId?:string;onSelect:(id:string)=>void}>){
+export function IfcStructureSummary({space,catalogSha256,frameId,selectedId,onSelect}:Readonly<{space:string;catalogSha256:string;frameId:string;selectedId?:string;onSelect:(id:string)=>void}>){
  const [data,setData]=useState<Structure|null>(null),[error,setError]=useState(''),[revision,setRevision]=useState(0);
  useEffect(()=>{
   const controller=new AbortController();setData(null);setError('');
@@ -30,6 +31,7 @@ export function IfcStructureSummary({space,catalogSha256,selectedId,onSelect}:Re
    {edges.length>20&&<p className="text-label-small text-muted-foreground">显示前 20 项，共 {edges.length} 项。</p>}
    {selectedId&&entities.get(selectedId)?.geometry_status==='extracted'&&<Button variant="ghost" size="sm" className="self-start" asChild><a href={`${endpoint}/api/scene-ifc/element-geometry?${new URLSearchParams({space_id:space,catalog_sha256:catalogSha256,element_id:entities.get(selectedId)!.element_id})}`} download>导出构件网格</a></Button>}
    {selectedId&&entities.get(selectedId)?.source_role==='door'&&<IfcOpeningObservation key={`${space}:${catalogSha256}:${selectedId}`} space={space} pin={catalogSha256} element={entities.get(selectedId)!.element_id}/>}
+   <IfcSurfaceQuery key={`surface:${space}:${catalogSha256}`} space={space} pin={catalogSha256} frame={frameId} subjects={data.entities} onSelect={onSelect}/>
    <IfcTypeProposals key={`${space}:${catalogSha256}`} space={space} pin={catalogSha256} sources={data.entities} selectedId={selectedId}/>
   </>}
  </section>;
