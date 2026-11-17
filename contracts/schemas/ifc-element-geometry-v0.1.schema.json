@@ -1,0 +1,142 @@
+{
+  "$defs": {
+    "SourcePin": {
+      "additionalProperties": false,
+      "properties": {
+        "space_id": {
+          "pattern": "^space-[a-f0-9]{16}$",
+          "title": "Space Id",
+          "type": "string"
+        },
+        "catalog_sha256": {
+          "pattern": "^[a-f0-9]{64}$",
+          "title": "Catalog Sha256",
+          "type": "string"
+        },
+        "ifc_sha256": {
+          "pattern": "^[a-f0-9]{64}$",
+          "title": "Ifc Sha256",
+          "type": "string"
+        },
+        "ifc_bytes": {
+          "maximum": 134217728,
+          "minimum": 1,
+          "title": "Ifc Bytes",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "space_id",
+        "catalog_sha256",
+        "ifc_sha256",
+        "ifc_bytes"
+      ],
+      "title": "SourcePin",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "profile": {
+      "const": "cospace.ifc-element-geometry/0.1",
+      "title": "Profile",
+      "type": "string"
+    },
+    "source": {
+      "$ref": "#/$defs/SourcePin"
+    },
+    "structure_sha256": {
+      "pattern": "^[a-f0-9]{64}$",
+      "title": "Structure Sha256",
+      "type": "string"
+    },
+    "entity_id": {
+      "maxLength": 255,
+      "minLength": 1,
+      "title": "Entity Id",
+      "type": "string"
+    },
+    "element_id": {
+      "pattern": "^e[0-9]{5}$",
+      "title": "Element Id",
+      "type": "string"
+    },
+    "source_mesh_sha256": {
+      "pattern": "^[a-f0-9]{64}$",
+      "title": "Source Mesh Sha256",
+      "type": "string"
+    },
+    "frame_id": {
+      "pattern": "^ifc_world_[a-f0-9]{16}$",
+      "title": "Frame Id",
+      "type": "string"
+    },
+    "unit": {
+      "const": "m",
+      "title": "Unit",
+      "type": "string"
+    },
+    "encoding": {
+      "const": "float64le_xyz_uint32le_triangles",
+      "title": "Encoding",
+      "type": "string"
+    },
+    "vertices": {
+      "maximum": 200000,
+      "minimum": 1,
+      "title": "Vertices",
+      "type": "integer"
+    },
+    "triangles": {
+      "maximum": 400000,
+      "minimum": 1,
+      "title": "Triangles",
+      "type": "integer"
+    },
+    "data_kind": {
+      "const": "ifc_design_candidate",
+      "title": "Data Kind",
+      "type": "string"
+    },
+    "assessment": {
+      "const": "unverified",
+      "title": "Assessment",
+      "type": "string"
+    },
+    "alignment_verified": {
+      "const": false,
+      "title": "Alignment Verified",
+      "type": "boolean"
+    },
+    "ontology_bound": {
+      "const": false,
+      "title": "Ontology Bound",
+      "type": "boolean"
+    },
+    "real_release_ready": {
+      "const": false,
+      "title": "Real Release Ready",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "profile",
+    "source",
+    "structure_sha256",
+    "entity_id",
+    "element_id",
+    "source_mesh_sha256",
+    "frame_id",
+    "unit",
+    "encoding",
+    "vertices",
+    "triangles",
+    "data_kind",
+    "assessment",
+    "alignment_verified",
+    "ontology_bound",
+    "real_release_ready"
+  ],
+  "title": "GeometryHeader",
+  "type": "object"
+}

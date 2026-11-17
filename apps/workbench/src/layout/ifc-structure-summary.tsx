@@ -27,6 +27,7 @@ export function IfcStructureSummary({space,catalogSha256,selectedId,onSelect}:Re
    {selectedId&&!entities.has(selectedId)&&<p className="text-body-small text-muted-foreground">该构件未纳入结构提取范围。</p>}
    {entities.has(selectedId||'')&&(edges.length?<ul className="flex flex-col gap-sm">{edges.slice(0,20).map((r,index)=><li key={`${r.ifc_relation_id}:${index}`} className="flex flex-wrap items-center gap-xs text-body-small">{node(r.source_id)}<span className="text-label-small text-muted-foreground">{relations[r.kind]} →</span>{node(r.target_id)}</li>)}</ul>:<p className="text-body-small text-muted-foreground">当前构件没有已提取的结构关系。</p>)}
    {edges.length>20&&<p className="text-label-small text-muted-foreground">显示前 20 项，共 {edges.length} 项。</p>}
+   {selectedId&&entities.get(selectedId)?.geometry_status==='extracted'&&<Button variant="ghost" size="sm" className="self-start" asChild><a href={`${endpoint}/api/scene-ifc/element-geometry?${new URLSearchParams({space_id:space,catalog_sha256:catalogSha256,element_id:entities.get(selectedId)!.element_id})}`} download>导出构件网格</a></Button>}
    {selectedId&&entities.get(selectedId)?.source_role==='door'&&<IfcOpeningObservation key={`${space}:${catalogSha256}:${selectedId}`} space={space} pin={catalogSha256} element={entities.get(selectedId)!.element_id}/>}
   </>}
  </section>;
