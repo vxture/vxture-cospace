@@ -10,7 +10,10 @@ const kindSet=new Set(['aggregates','contained_in','opening_in','fills','space_b
 const geometrySet=new Set(['extracted','no_representation','extraction_failed']);
 function requireThat(ok,message){if(!ok)throw new Error(message);}
 // Schema keys are ASCII; byte order must match Python, independent of host locale.
-function compareKeys(a,b){if(a<b)return -1;return Number(a>b);}
+function compareKeys(a,b){
+ if(a<b){return -1;}
+ return Number(a>b);
+}
 function keys(value,expected){requireThat(value&&typeof value==='object'&&!Array.isArray(value),'object_required');requireThat(Object.keys(value).sort(compareKeys).join(',')===[...expected].sort(compareKeys).join(','),'unexpected_fields');}
 function string(value,maximum,minimum=1){requireThat(typeof value==='string'&&[...value].length>=minimum&&[...value].length<=maximum,'string_budget');}
 function array(value,maximum,minimum=0){requireThat(Array.isArray(value)&&value.length>=minimum&&value.length<=maximum,'array_budget');return value;}
@@ -68,9 +71,11 @@ export function inspectStructure(raw,expectedSha256,expectedSource){
   geometry_included:false,alignment_verified:false,real_release_ready:false};
 }
 async function boundedFile(name,maximum){
- requireThat(typeof name==='string'&&/^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,200}\.json$/.test(name),'plain_json_filename_required');
+ if(typeof name!=='string'||!/^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,200}\.json$/.test(name)){
+  throw new Error('plain_json_filename_required');
+ }
  const root=await realpath(process.cwd()),path=await realpath(join(root,name));
- requireThat(dirname(path)===root,'file_outside_working_directory');
+ if(dirname(path)!==root){throw new Error('file_outside_working_directory');}
  const file=await open(path,'r');
  try{
   const stat=await file.stat();requireThat(stat.isFile()&&stat.size<=maximum,'file_byte_budget');
