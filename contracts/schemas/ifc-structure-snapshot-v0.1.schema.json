@@ -1,0 +1,232 @@
+{
+  "$defs": {
+    "Declaration": {
+      "additionalProperties": false,
+      "properties": {
+        "entity_id": {
+          "maxLength": 255,
+          "minLength": 1,
+          "title": "Entity Id",
+          "type": "string"
+        },
+        "element_id": {
+          "pattern": "^e[0-9]{5}$",
+          "title": "Element Id",
+          "type": "string"
+        },
+        "ifc_type": {
+          "maxLength": 110,
+          "pattern": "^Ifc[A-Za-z0-9]+$",
+          "title": "Ifc Type",
+          "type": "string"
+        },
+        "source_role": {
+          "enum": [
+            "building",
+            "level",
+            "space",
+            "door",
+            "stair",
+            "stair_flight",
+            "opening",
+            "wall",
+            "slab",
+            "distribution_board"
+          ],
+          "title": "Source Role",
+          "type": "string"
+        },
+        "name": {
+          "maxLength": 4096,
+          "title": "Name",
+          "type": "string"
+        },
+        "geometry_status": {
+          "enum": [
+            "extracted",
+            "no_representation",
+            "extraction_failed"
+          ],
+          "title": "Geometry Status",
+          "type": "string"
+        }
+      },
+      "required": [
+        "entity_id",
+        "element_id",
+        "ifc_type",
+        "source_role",
+        "name",
+        "geometry_status"
+      ],
+      "title": "Declaration",
+      "type": "object"
+    },
+    "Relation": {
+      "additionalProperties": false,
+      "properties": {
+        "ifc_relation_id": {
+          "maxLength": 255,
+          "minLength": 1,
+          "title": "Ifc Relation Id",
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "aggregates",
+            "contained_in",
+            "opening_in",
+            "fills",
+            "space_boundary"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "source_id": {
+          "maxLength": 255,
+          "minLength": 1,
+          "title": "Source Id",
+          "type": "string"
+        },
+        "target_id": {
+          "maxLength": 255,
+          "minLength": 1,
+          "title": "Target Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "ifc_relation_id",
+        "kind",
+        "source_id",
+        "target_id"
+      ],
+      "title": "Relation",
+      "type": "object"
+    },
+    "SourcePin": {
+      "additionalProperties": false,
+      "properties": {
+        "space_id": {
+          "pattern": "^space-[a-f0-9]{16}$",
+          "title": "Space Id",
+          "type": "string"
+        },
+        "catalog_sha256": {
+          "pattern": "^[a-f0-9]{64}$",
+          "title": "Catalog Sha256",
+          "type": "string"
+        },
+        "ifc_sha256": {
+          "pattern": "^[a-f0-9]{64}$",
+          "title": "Ifc Sha256",
+          "type": "string"
+        },
+        "ifc_bytes": {
+          "maximum": 134217728,
+          "minimum": 1,
+          "title": "Ifc Bytes",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "space_id",
+        "catalog_sha256",
+        "ifc_sha256",
+        "ifc_bytes"
+      ],
+      "title": "SourcePin",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "profile": {
+      "const": "cospace.ifc-structure-snapshot/0.1",
+      "title": "Profile",
+      "type": "string"
+    },
+    "data_kind": {
+      "const": "ifc_design_candidate",
+      "title": "Data Kind",
+      "type": "string"
+    },
+    "assessment": {
+      "const": "unverified",
+      "title": "Assessment",
+      "type": "string"
+    },
+    "source": {
+      "$ref": "#/$defs/SourcePin"
+    },
+    "frame_id": {
+      "pattern": "^ifc_world_[a-f0-9]{16}$",
+      "title": "Frame Id",
+      "type": "string"
+    },
+    "unit": {
+      "const": "m",
+      "title": "Unit",
+      "type": "string"
+    },
+    "coverage": {
+      "const": "selected_ifc_classes_only",
+      "title": "Coverage",
+      "type": "string"
+    },
+    "geometry_included": {
+      "const": false,
+      "title": "Geometry Included",
+      "type": "boolean"
+    },
+    "alignment_verified": {
+      "const": false,
+      "title": "Alignment Verified",
+      "type": "boolean"
+    },
+    "ontology_bound": {
+      "const": false,
+      "title": "Ontology Bound",
+      "type": "boolean"
+    },
+    "real_release_ready": {
+      "const": false,
+      "title": "Real Release Ready",
+      "type": "boolean"
+    },
+    "entities": {
+      "items": {
+        "$ref": "#/$defs/Declaration"
+      },
+      "maxItems": 10000,
+      "minItems": 1,
+      "title": "Entities",
+      "type": "array"
+    },
+    "relations": {
+      "items": {
+        "$ref": "#/$defs/Relation"
+      },
+      "maxItems": 20000,
+      "title": "Relations",
+      "type": "array"
+    }
+  },
+  "required": [
+    "profile",
+    "data_kind",
+    "assessment",
+    "source",
+    "frame_id",
+    "unit",
+    "coverage",
+    "geometry_included",
+    "alignment_verified",
+    "ontology_bound",
+    "real_release_ready",
+    "entities",
+    "relations"
+  ],
+  "title": "StructureSnapshot",
+  "type": "object"
+}

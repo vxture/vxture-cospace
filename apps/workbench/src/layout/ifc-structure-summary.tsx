@@ -19,7 +19,7 @@ export function IfcStructureSummary({space,catalogSha256,selectedId,onSelect}:Re
  const edges=data?.relations.filter(r=>r.source_id===selectedId||r.target_id===selectedId)||[];
  const node=(id:string)=>{const e=entities.get(id);return <Button variant="ghost" size="sm" className="max-w-full truncate" onClick={()=>e&&onSelect(e.element_id)}>{e?.name||id}</Button>;};
  return <section aria-label="IFC 结构声明" aria-busy={!data&&!error} className="flex flex-col gap-md border-t pt-lg">
-  <header className="flex items-center justify-between gap-md"><h3 className="text-title-small">结构声明</h3><span className="text-label-small text-muted-foreground">设计资料 · 待核验</span></header>
+  <header className="flex flex-wrap items-center justify-between gap-md"><h3 className="text-title-small">结构声明</h3><div className="flex items-center gap-md"><span className="text-label-small text-muted-foreground">设计资料 · 待核验</span>{data?.structure_available&&<Button variant="ghost" size="sm" asChild><a href={`${endpoint}/api/scene-ifc/structure-snapshot?${new URLSearchParams({space_id:space,catalog_sha256:catalogSha256})}`} download>导出声明</a></Button>}</div></header>
   <dl className="grid grid-cols-2 md:grid-cols-4 gap-md text-body-small">{[['楼层','level'],['门','door'],['楼梯','stair'],['空间声明','space']].map(([label,key])=><div key={key}><dt className="text-muted-foreground">{label}</dt><dd>{data?.structure_available?data.declared_role_counts[key]||0:'—'}</dd></div>)}</dl>
   {error&&<div role="alert" className="flex items-center justify-between gap-md"><span>{error}</span><Button variant="outline" size="sm" onClick={()=>setRevision(v=>v+1)}>重新读取</Button></div>}
   {data&&!data.structure_available&&<p className="text-body-small text-muted-foreground">此目录尚未提供结构声明。</p>}
