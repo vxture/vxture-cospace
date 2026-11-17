@@ -35,7 +35,9 @@ python -m experiments.scripts.propose_ifc_registration --ifc-root <固定IFC目�
 | 旧中心采样首位 seed=11 | 2.6958 | 2.2620 | 32.7305 | 39.5123 |
 | 新表面采样首位 seed=0 | 0.5034 | 0.7155 | 2.4611 | 2.3460 |
 
-两种候选在相同评估点集上确有更好的数值贴合，但这些是最近邻样本距离，不是与三角面求交的精确距离，也不是测量精度。评估点与训练数据同源，仅改变采样位置，不是独立控制点；点云单位依然是假设。新候选仍存在约半米量级中位差异和两米以上长尾（按假设单位），不能据此关联具体门或确认场景边界。独立控制点数仍为 0，unit_verified、alignment_verified、real_release_ready 均为 false。
+新候选在相同评估点集上比旧候选有更好的数值贴合，但这些是最近邻样本距离，不是与三角面求交的精确距离，也不是测量精度。评估点与训练数据同源，仅改变采样位置，不是独立控制点；点云单位依然是假设。新候选仍存在约半米量级中位差异和两米以上长尾（按假设单位），不能据此关联具体门或确认场景边界。独立控制点数仍为 0，unit_verified、alignment_verified、real_release_ready 均为 false。
+
+另以 `--sampling legacy-centroids` 完整重跑旧流程，输出与原 `geometric-registration-proposals-v2.json` 解析后的全部字段完全相同，包括全部候选矩阵、残差及样本记录。这证明旧路径在本机固定输入下可复现，不构成旧候选正确性的证据。重跑结果留在忽略目录 `geometric-registration-legacy-replay-01.json`。
 
 结果只留 `output/sg3/anoeta/geometric-registration-surface-01.json`、叠加图及 `registration-common-evaluation-01.json`；不进入 Git。采样、原配准与固定来源读取专项 24 项通过，覆盖面积分配、三角形内点、可复现与刚体变换、零面积、体素真实输入点、密度去重、子类选择、超预算先拒绝、无源声明不回退等。
 
