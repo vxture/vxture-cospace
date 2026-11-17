@@ -65,10 +65,10 @@ def _candidates(labels, count, resolution, minimum_area):
         run_count += len(runs)
         if run_count > MAX_RUNS:
             raise ValueError('section_region_run_budget')
-        regions.append(dict(id=f'void-{len(regions) + 1}', grid_label=label, cells=int(sizes[label]),
-                            raster_area_m2=float(sizes[label] * resolution**2),
-                            bounds_cells=[int(cols.min()), int(rows.min()), int(cols.max()) + 1, int(rows.max()) + 1],
-                            runs=runs, source_segment_indices=[], source_entity_ids=[]))
+        regions.append({'id': f'void-{len(regions) + 1}', 'grid_label': label, 'cells': int(sizes[label]),
+                        'raster_area_m2': float(sizes[label] * resolution**2),
+                        'bounds_cells': [int(cols.min()), int(rows.min()), int(cols.max()) + 1, int(rows.max()) + 1],
+                        'runs': runs, 'source_segment_indices': [], 'source_entity_ids': []})
     return regions
 
 
@@ -100,9 +100,9 @@ def enclosed_section_regions(section, *, resolution, minimum_area=1.):
         raise ValueError('section_region_segment_budget')
     indices = [i for i, row in enumerate(all_segments) if row['ifc_type'] == 'IfcWall']
     segments = [all_segments[i] for i in indices]
-    result = dict(z_m=section['z_m'], resolution_m=resolution, minimum_area_m2=minimum_area,
-                  input_segment_count=len(all_segments), barrier_segment_count=len(segments),
-                  origin_xy_m=None, shape_rows_columns=[0, 0], blocked_cells=0, candidates=[])
+    result = {'z_m': section['z_m'], 'resolution_m': resolution, 'minimum_area_m2': minimum_area,
+              'input_segment_count': len(all_segments), 'barrier_segment_count': len(segments),
+              'origin_xy_m': None, 'shape_rows_columns': [0, 0], 'blocked_cells': 0, 'candidates': []}
     if not segments:
         return result
     points = np.asarray([row['points_m'] for row in segments], dtype=float)

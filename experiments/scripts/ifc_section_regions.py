@@ -15,16 +15,16 @@ def propose_regions(root, *, expected_catalog_sha256, heights, resolutions, mini
     sections = cut_sections(root, expected_catalog_sha256=expected_catalog_sha256, heights=heights)
     trials = [enclosed_section_regions(section, resolution=resolution, minimum_area=minimum_area)
               for section in sections['sections'] for resolution in resolutions]
-    return dict(profile='cospace.ifc-section-region-candidates/0.1',
-                source_catalog_sha256=expected_catalog_sha256, source_sections_sha256=content_digest(sections),
-                frame_id=sections['frame_id'], unit='m', algorithm='supercover_8_connected_voids/0.1',
-                sections=sections['sections'], trials=trials, missing_geometry_ids=sections['missing_geometry_ids'],
-                assessment='unverified', alignment_verified=False, ontology_bound=False,
-                real_release_ready=False, confirmed_spaces=[], confirmed_connections=[],
-                limitations=['ifc_design_sections_only', 'source_z_not_verified_gravity',
-                             'no_gap_repair_but_raster_can_close_subcell_gaps', 'only_ifcwall_sections_are_barriers',
-                             'voids_can_be_wall_interior_or_courtyard', 'no_room_or_corridor_classification',
-                             'no_height_extent_or_level_assignment', 'no_automatic_annotation_adoption'])
+    return {'profile': 'cospace.ifc-section-region-candidates/0.1',
+            'source_catalog_sha256': expected_catalog_sha256, 'source_sections_sha256': content_digest(sections),
+            'frame_id': sections['frame_id'], 'unit': 'm', 'algorithm': 'supercover_8_connected_voids/0.1',
+            'sections': sections['sections'], 'trials': trials, 'missing_geometry_ids': sections['missing_geometry_ids'],
+            'assessment': 'unverified', 'alignment_verified': False, 'ontology_bound': False,
+            'real_release_ready': False, 'confirmed_spaces': [], 'confirmed_connections': [],
+            'limitations': ['ifc_design_sections_only', 'source_z_not_verified_gravity',
+                            'no_gap_repair_but_raster_can_close_subcell_gaps', 'only_ifcwall_sections_are_barriers',
+                            'voids_can_be_wall_interior_or_courtyard', 'no_room_or_corridor_classification',
+                            'no_height_extent_or_level_assignment', 'no_automatic_annotation_adoption']}
 
 
 def _trial_svg(trial, section):

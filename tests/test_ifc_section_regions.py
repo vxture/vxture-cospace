@@ -35,7 +35,8 @@ def test_closed_void_runs_area_and_provenance_are_reproducible():
     origin = np.asarray(result['origin_xy_m'])
     for row, a, b in region['runs']:
         centers = origin + (np.array([[a, row], [b - 1, row]]) + .5) * .1
-        assert np.all(centers > 0) and np.all(centers < 4)
+        assert np.all(centers > 0)
+        assert np.all(centers < 4)
 
 
 def test_clear_gap_leaks_to_exterior_and_partition_creates_two_voids():
@@ -91,15 +92,17 @@ def test_subcell_gap_can_close_and_is_not_claimed_as_exact_boundary():
 
 @pytest.mark.parametrize('resolution', [True, 0, .001, 1., float('nan'), float('inf')])
 def test_bad_parameters_rejected(resolution):
+    source = section([])
     with pytest.raises(ValueError, match='parameters'):
-        enclosed_section_regions(section([]), resolution=resolution)
+        enclosed_section_regions(source, resolution=resolution)
 
 
 @pytest.mark.parametrize('budget', ['MAX_CELLS', 'MAX_STEPS', 'MAX_SEGMENTS', 'MAX_REGIONS', 'MAX_RUNS', 'MAX_REGION_SCAN'])
 def test_budgets_refuse_instead_of_truncating(monkeypatch, budget):
     monkeypatch.setattr('packages.construction.section_regions.' + budget, 0)
+    source = section(square())
     with pytest.raises(ValueError, match='budget'):
-        enclosed_section_regions(section(square()), resolution=.1)
+        enclosed_section_regions(source, resolution=.1)
 
 
 def test_empty_diagonal_and_degenerate_line_have_no_voids():
@@ -132,4 +135,3 @@ def test_pinned_source_roundtrip_escaped_html_and_rejects_changed_mesh(tmp_path)
     (root / 'e00001.npz').write_bytes(b'changed')
     with pytest.raises(ValueError, match='ifc_mesh_changed'):
         propose_regions(root, expected_catalog_sha256=pin, heights=[1.], resolutions=[.1])
-
