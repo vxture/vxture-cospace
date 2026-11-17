@@ -62,6 +62,7 @@ PUBLICATION_MANAGE='publication.manage'
 IFC_CATALOG_PATH = '/api/scene-ifc'
 IFC_STRUCTURE_PATH = '/api/scene-ifc/structure'
 IFC_OBSERVATION_PATH = '/api/scene-ifc/opening-observation'
+IFC_OBSERVATION_BATCH_PATH = '/api/scene-ifc/opening-observations'
 IFC_SNAPSHOT_PATH = '/api/scene-ifc/structure-snapshot'
 IFC_GEOMETRY_PATH = '/api/scene-ifc/element-geometry'
 IFC_TYPES_PATH = '/api/scene-ifc/type-proposals'
@@ -152,7 +153,7 @@ class BusinessAccess:
             space(q.get('space_id'),DATA_MANAGE);return {'principal':principal}
         if (path=='/api/scene-attachments' or re.fullmatch(r'/api/scene-attachments/attachment-[a-f0-9]{16}',path)) and method in ('GET','HEAD','POST'):
             space(q.get('space_id'),DATA_MANAGE);return {'principal':principal}
-        if path in (IFC_TYPES_PATH,IFC_SURFACE_PATH) and method=='POST':
+        if path in (IFC_TYPES_PATH,IFC_SURFACE_PATH,IFC_OBSERVATION_BATCH_PATH) and method=='POST':
             space(body.get('space_id'),ASSOCIATION_EDIT);return {'principal':principal}
         if path in (IFC_CATALOG_PATH,'/api/scene-ifc/element',IFC_STRUCTURE_PATH,IFC_OBSERVATION_PATH,IFC_SNAPSHOT_PATH,IFC_GEOMETRY_PATH,IFC_PACKAGE_PATH) and method in ('GET','HEAD'):
             space(q.get('space_id'),ASSOCIATION_EDIT);return {'principal':principal}
@@ -459,6 +460,12 @@ class BusinessAccess:
                 return JSONResponse(result,headers={'Cache-Control':'no-store'})
             if path.startswith(IFC_CATALOG_PATH):
                 try:
+                    if path==IFC_OBSERVATION_BATCH_PATH:
+                        from packages.service.ifc_opening_observations import ObservationBatchQuery
+                        if request.query_params:return deny(422,'ifc_invalid_request')
+                        query=ObservationBatchQuery.model_validate(body)
+                        result=await run_in_threadpool(self.ifc_observations.read_many,context['principal'],query)
+                        return JSONResponse(result,headers={'Cache-Control':'no-store'})
                     if path==IFC_SURFACE_PATH:
                         if request.query_params:return deny(422,'ifc_invalid_request')
                         query=SurfaceQuery.model_validate(body)

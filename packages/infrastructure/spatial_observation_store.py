@@ -147,12 +147,23 @@ class ObservationJournal:
         return {'sequence': cursor.lastrowid, 'received_at': received, 'report': report.model_dump()}
 
     def resolve(self, scope, entity, *, as_of, known_at, through_sequence=None):
-        key, when, known = scope_key(scope), utc(as_of), utc(known_at)
+        return self.resolve_many(scope, [entity], as_of=as_of, known_at=known_at,
+                                 through_sequence=through_sequence)['states'][0]
+
+    def resolve_many(self, scope, entities, *, as_of, known_at, through_sequence=None):
+        if (not isinstance(entities, list) or not 1 <= len(entities) <= MAX_BATCH
+                or any(not isinstance(entity, str) or not 1 <= len(entity) <= 255 for entity in entities)
+                or len(set(entities)) != len(entities)):
+            raise ValueError('observation_read_subject_budget_or_duplicates')
+        key, known = scope_key(scope), utc(known_at)
+        utc(as_of)
         if through_sequence is not None and (type(through_sequence) is not int or through_sequence < 0):
             raise ValueError('observation_invalid_sequence')
         with closing(sqlite3.connect(self.path.as_uri() + '?mode=ro', uri=True)) as db, db:
+            # Explicit read transaction pins registration and records to one SQLite snapshot.
+            db.execute('BEGIN')
             registration = _registration(db, key)
-            if entity not in {s.entity_id for s in registration.subjects}:
+            if set(entities) - {s.entity_id for s in registration.subjects}:
                 raise ValueError('observation_subject_not_registered')
             records = _records(db, key)
         ceiling = max((r['sequence'] for r in records), default=0)
@@ -161,17 +172,27 @@ class ObservationJournal:
                 raise ValueError('observation_sequence_unavailable')
             ceiling = through_sequence
         records = [r for r in records if r['sequence'] <= ceiling and utc(r['received_at']) <= known]
-        status, value, latest, active, retracted = resolve_reports(records, entity, when)
-        received_times = [r['received_at'] for r in records if r['report']['entity_id'] == entity
-                          and utc(r['report']['observed_at']) <= when]
-        context = {'scope': registration.scope.model_dump(), 'registration_sha256': content_digest(registration.model_dump()),
-                   'entity_id': entity, 'as_of': as_of, 'known_at': known_at, 'through_sequence': ceiling,
+        common = {'scope': registration.scope.model_dump(),
+                   'registration_sha256': content_digest(registration.model_dump()),
+                   'as_of': as_of, 'known_at': known_at, 'through_sequence': ceiling,
                    'policy': 'cospace.reported-opening-state/0.1', 'records_sha256': content_digest(records)}
-        return {'profile': 'cospace.reported-opening-state/0.1', **context, 'status': status, 'value': value,
-                'active': active, 'retracted': retracted,
-                'last_received_at': max(received_times, key=utc, default=None),
-                'expired': [r for r in latest if utc(r['report']['valid_until']) <= when], 'cursor': content_digest(context),
-                'data_kind': registration.data_kind, 'assessment': 'unverified', 'evidence_content_verified': False,
-                'source_content_verified': False, 'clock_quality_verified': False, 'real_release_ready': False,
-                'limitations': ['producer_reports_not_field_truth', 'no_source_priority', 'no_navigation_or_traversability',
-                                'no_automatic_rebuild', 'single_host_bounded_journal']}
+        states = [_resolved_state(registration, records, entity, common) for entity in entities]
+        context = common | {'entity_ids': entities}
+        return {'profile': 'cospace.reported-opening-state-batch/0.1', **context,
+                'cursor': content_digest(context), 'states': states}
+
+
+def _resolved_state(registration, records, entity, common):
+    when = utc(common['as_of'])
+    status, value, latest, active, retracted = resolve_reports(records, entity, when)
+    received_times = [r['received_at'] for r in records if r['report']['entity_id'] == entity
+                      and utc(r['report']['observed_at']) <= when]
+    context = common | {'entity_id': entity}
+    return {'profile': 'cospace.reported-opening-state/0.1', **context, 'status': status, 'value': value,
+            'active': active, 'retracted': retracted,
+            'last_received_at': max(received_times, key=utc, default=None),
+            'expired': [r for r in latest if utc(r['report']['valid_until']) <= when], 'cursor': content_digest(context),
+            'data_kind': registration.data_kind, 'assessment': 'unverified', 'evidence_content_verified': False,
+            'source_content_verified': False, 'clock_quality_verified': False, 'real_release_ready': False,
+            'limitations': ['producer_reports_not_field_truth', 'no_source_priority', 'no_navigation_or_traversability',
+                            'no_automatic_rebuild', 'single_host_bounded_journal']}
