@@ -1,1 +1,5 @@
-# Empty baseline. Fix findings or document a narrowly scoped exception.
+# Fix findings or document a narrowly scoped, expiring exception.
+[[IgnoredVulns]]
+id = "GHSA-fc5q-39xc-vjpf"
+ignoreUntil = 2026-11-25T00:00:00Z
+reason = "picomatch 4.0.7: no published fix on 2026-11-18; Vite build-only dependency in both npm locks, absent from production dependencies and final Python image. Builds use trusted repository globs, never HTTP/user patterns. Reassess before expiry; see docs/50-deployment/50-sg-release-review.md."
