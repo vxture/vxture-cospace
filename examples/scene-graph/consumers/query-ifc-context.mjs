@@ -1,18 +1,18 @@
 // Source-relation lookup over pinned declaration bytes. No geometry, routing or adoption.
 import {inspectStructure} from './read-ifc-structure.mjs';
 
-const kinds=['aggregates','contained_in','opening_in','fills','space_boundary'];
+const kinds=new Set(['aggregates','contained_in','opening_in','fills','space_boundary']);
 function check(ok,message){if(!ok){throw new Error(message);}}
 function validateQuery(query){
  check(query&&typeof query==='object'&&!Array.isArray(query),'context_query_object');
  check(Object.keys(query).every(key=>['element_id','max_hops','relation_kinds'].includes(key)),'context_query_fields');
  check(Object.hasOwn(query,'element_id')&&typeof query.element_id==='string'
-  &&/^e[0-9]{5}$/.test(query.element_id),'context_element_id');
+  &&/^e\d{5}$/.test(query.element_id),'context_element_id');
  const maximum=Object.hasOwn(query,'max_hops')?query.max_hops:1;
  const selected=Object.hasOwn(query,'relation_kinds')?query.relation_kinds:[...kinds];
  check(Number.isInteger(maximum)&&maximum>=1&&maximum<=4,'context_hop_budget');
  check(Array.isArray(selected)&&selected.length>=1&&selected.length<=5
-  &&Array.from(selected).every(kind=>kinds.includes(kind))&&new Set(selected).size===selected.length,'context_relation_kinds');
+  &&Array.from(selected).every(kind=>kinds.has(kind))&&new Set(selected).size===selected.length,'context_relation_kinds');
  return {element_id:query.element_id,max_hops:maximum,relation_kinds:[...selected]};
 }
 function addNeighbor(neighbors,identity,other){
@@ -26,8 +26,9 @@ function neighborhood(subject,relations,maximum){
   addNeighbor(neighbors,row.target_id,row.source_id);
  }
  const distances=new Map([[subject,0]]),pending=[subject];
- for(let i=0;i<pending.length;i++){
-  const identity=pending[i],distance=distances.get(identity);
+ // Array iteration also visits appended entries, preserving breadth-first queue order.
+ for(const identity of pending){
+  const distance=distances.get(identity);
   if(distance===maximum){continue;}
   for(const other of neighbors.get(identity)||[]){
    if(!distances.has(other)){
