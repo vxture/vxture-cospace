@@ -1,6 +1,24 @@
 """Read-only reported state for a pinned design object, after business authorization."""
+from typing import Annotated
+
+from pydantic import Field, ValidationInfo, model_validator
+
 from packages.infrastructure.spatial_observation_store import ObservationJournal
 from packages.spatial.opening_observations import now_utc
+from packages.spatial.scene_graph import Fixed, utc
+
+
+class ObservationReplay(Fixed):
+    as_of: Annotated[str, Field(min_length=20, max_length=27)]
+    known_at: Annotated[str, Field(min_length=20, max_length=27)]
+    through_sequence: Annotated[str, Field(pattern=r'^(0|[1-9][0-9]{0,15})$')]
+
+    @model_validator(mode='after')
+    def times(self, info: ValidationInfo):
+        observed, known = utc(self.as_of), utc(self.known_at)
+        if info.context and max(observed, known) > utc(info.context['now']):
+            raise ValueError('observation_replay_future')
+        return self
 
 
 def observation_scope(principal, space, pin):
@@ -14,7 +32,9 @@ class IfcOpeningObservations:
         self.ifc = ifc_workspace
         self.clock = clock
 
-    def read(self, principal, space, pin, element):
+    def read(self, principal, space, pin, element, *, replay=None):
+        when = self.clock()
+        query = ObservationReplay.model_validate(replay, context={'now': when}) if replay is not None else None
         structure = self.ifc.structure_view(space, pin)
         subject = next((e for e in structure['entities'] if e['element_id'] == element), None)
         if subject is None or subject['source_role'] != 'door':
@@ -28,13 +48,16 @@ class IfcOpeningObservations:
                   'active_count': 0, 'expired_count': 0, 'retracted_count': 0}
         scope = observation_scope(principal, space, pin)
         if not self.journal.registered(scope, subject['entity_id']):
+            if query is not None:
+                raise ValueError('observation_replay_registration_unavailable')
             return result
-        when = self.clock()
-        state = self.journal.resolve(scope, subject['entity_id'], as_of=when, known_at=when)
+        as_of, known_at = (query.as_of, query.known_at) if query else (when, when)
+        state = self.journal.resolve(scope, subject['entity_id'], as_of=as_of, known_at=known_at,
+                                     through_sequence=int(query.through_sequence) if query else None)
         if state['data_kind'] != 'ifc_design_candidate':
             raise ValueError('observation_source_kind_mismatch')
         return result | {'configured': True, 'status': state['status'], 'value': state['value'],
-                         'as_of': when, 'known_at': when, 'cursor': state['cursor'],
+                         'as_of': as_of, 'known_at': known_at, 'cursor': state['cursor'],
                          'through_sequence': state['through_sequence'],
                          'reported_at': state['last_received_at'],
                          'active_count': len(state['active']), 'expired_count': len(state['expired']),
