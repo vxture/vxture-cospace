@@ -44,6 +44,9 @@ def test_authorized_read_does_not_create_registration_and_rejects_stale_catalog(
     assert result.json()['configured'] is False
     assert result.json()['status'] == 'unavailable'
     assert not access.ifc_observations.journal.path.exists()
+    history = {'as_of': '2026-11-16T00:00:00Z', 'known_at': '2026-11-16T00:00:00Z', 'through_sequence': '0'}
+    assert client.get(ROUTE, params=params | history).status_code == 409
+    assert not access.ifc_observations.journal.path.exists()
     for change, status in [({'space_id': spaces[1]['id']}, 403), ({'catalog_sha256': '0' * 64}, 409),
                            ({'element_id': 'e00000'}, 409), ({'as_of': 'client-time'}, 422)]:
         assert client.get(ROUTE, params=params | change).status_code == status
@@ -115,6 +118,78 @@ def test_storage_failure_is_unavailable_not_normal(ifc_secured):
     response = client.get(ROUTE, params={'space_id': spaces[0]['id'], 'element_id': 'e00001', 'catalog_sha256': sha})
     assert response.status_code == 503
     assert response.json()['detail'] == 'observation_storage_unavailable'
+
+
+def replay_params(value):
+    return {key: str(value[key]) for key in ('as_of', 'known_at', 'through_sequence')}
+
+
+def test_http_replay_pins_same_time_corrections_and_retractions(registered_door):
+    client, journal, _, params, scope, _ = registered_door
+    first = client.get(ROUTE, params=params).json()
+    # A correction received at exactly the same instant is excluded by sequence.
+    journal.append(scope, report('corrected', entity_id='wall', value='open', supersedes='event-1'),
+                   authenticated_producer='sensor-a')
+    second = client.get(ROUTE, params=params).json()
+    assert second['value'] == 'open'
+    replay = client.get(ROUTE, params=params | replay_params(first))
+    assert replay.status_code == 200
+    assert replay.json() == first
+    assert replay.headers['cache-control'] == 'no-store'
+    journal.clock = lambda: '2026-11-17T00:03:00Z'
+    journal.append(scope, report('retracted', entity_id='wall', operation='retract', value=None,
+                                supersedes='corrected'), authenticated_producer='sensor-a')
+    assert client.get(ROUTE, params=params).json()['status'] == 'retracted'
+    assert client.get(ROUTE, params=params | replay_params(second)).json() == second
+    # Knowledge time also excludes the later retraction, independently of sequence.
+    latest = client.get(ROUTE, params=params).json()
+    historical = replay_params(latest) | {'known_at': '2026-11-17T00:02:00Z'}
+    assert client.get(ROUTE, params=params | historical).json()['value'] == 'open'
+    before_observed = historical | {'as_of': '2026-11-16T23:59:00Z'}
+    assert client.get(ROUTE, params=params | before_observed).json()['status'] == 'unavailable'
+    expired = historical | {'as_of': '2026-11-17T00:10:00Z'}
+    # Future query times are rejected rather than implying a prediction.
+    assert client.get(ROUTE, params=params | expired).status_code == 422
+
+
+@pytest.mark.parametrize('change', [
+    {'as_of': '2026-11-17T00:06:00Z'}, {'known_at': '2026-11-17T00:06:00Z'},
+    {'as_of': '2026-02-30T00:00:00Z'}, {'known_at': '2026-11-17T00:00:00+00:00'},
+    {'through_sequence': '-1'}, {'through_sequence': '1.0'}, {'through_sequence': '01'},
+    {'through_sequence': '10000000000000000'}, {'through_sequence': ''},
+])
+def test_replay_invalid_parameters(registered_door, change):
+    client, _, _, params, _, _ = registered_door
+    value = client.get(ROUTE, params=params).json()
+    assert client.get(ROUTE, params=params | replay_params(value) | change).status_code == 422
+
+
+def test_replay_requires_complete_unique_context_and_available_sequence(registered_door):
+    client, _, _, params, _, _ = registered_door
+    value = client.get(ROUTE, params=params).json()
+    context = replay_params(value)
+    for missing in context:
+        partial = {key: item for key, item in context.items() if key != missing}
+        assert client.get(ROUTE, params=params | partial).status_code == 422
+    duplicate = list((params | context).items()) + [('known_at', context['known_at'])]
+    # Shared request authorization rejects ambiguous duplicate query keys first.
+    assert client.get(ROUTE, params=duplicate).status_code == 403
+    assert client.get(ROUTE, params=params | context | {'extra': '1'}).status_code == 422
+    assert client.get(ROUTE, params=params | context | {'through_sequence': '999'}).status_code == 409
+    empty = client.get(ROUTE, params=params | context | {'through_sequence': '0'}).json()
+    assert empty['status'] == 'unavailable'
+    assert empty['reported_at'] is None
+    assert empty['through_sequence'] == 0
+
+
+def test_replay_is_authorized_before_storage(registered_door, monkeypatch):
+    client, _, _, params, _, _ = registered_door
+    value = client.get(ROUTE, params=params).json()
+    def denied(*args, **kwargs):
+        pytest.fail('unauthorized replay reached storage')
+    monkeypatch.setattr('packages.service.ifc_opening_observations.IfcOpeningObservations.read', denied)
+    unauthorized = params | replay_params(value) | {'space_id': 'space-' + '2' * 16}
+    assert client.get(ROUTE, params=unauthorized).status_code == 403
 
 
 @pytest.mark.parametrize('corruption', ['registration', 'record', 'received_time', 'scope_binding'])

@@ -473,6 +473,11 @@ class BusinessAccess:
                         return JSONResponse(result,headers={'Cache-Control':'no-store'})
                     expected={'space_id'} if path==IFC_CATALOG_PATH else {'space_id','element_id','catalog_sha256'}
                     if path in (IFC_STRUCTURE_PATH,IFC_SNAPSHOT_PATH,IFC_PACKAGE_PATH):expected={'space_id','catalog_sha256'}
+                    replay_keys={'as_of','known_at','through_sequence'}
+                    replay=None
+                    if path==IFC_OBSERVATION_PATH and replay_keys.intersection(request.query_params):
+                        expected=expected|replay_keys
+                        replay={key:request.query_params.get(key) for key in replay_keys}
                     if set(request.query_params)!=expected or len(request.query_params.multi_items())!=len(expected):return deny(422,'ifc_invalid_request')
                     if path in (IFC_STRUCTURE_PATH,IFC_SNAPSHOT_PATH,IFC_PACKAGE_PATH) and not re.fullmatch('[a-f0-9]{64}',request.query_params['catalog_sha256']):return deny(422,'ifc_invalid_request')
                     if path==IFC_PACKAGE_PATH:
@@ -500,7 +505,7 @@ class BusinessAccess:
                             'X-Content-Type-Options':'nosniff'})
                     if path==IFC_CATALOG_PATH:result=await run_in_threadpool(self.scene_ifc.directory_view,request.query_params['space_id'])
                     elif path==IFC_STRUCTURE_PATH:result=await run_in_threadpool(self.scene_ifc.structure_view,request.query_params['space_id'],request.query_params['catalog_sha256'])
-                    elif path==IFC_OBSERVATION_PATH:result=await run_in_threadpool(self.ifc_observations.read,context['principal'],request.query_params['space_id'],request.query_params['catalog_sha256'],request.query_params['element_id'])
+                    elif path==IFC_OBSERVATION_PATH:result=await run_in_threadpool(self.ifc_observations.read,context['principal'],request.query_params['space_id'],request.query_params['catalog_sha256'],request.query_params['element_id'],replay=replay)
                     else:result=await run_in_threadpool(self.scene_ifc.preview,request.query_params['space_id'],request.query_params['element_id'],request.query_params['catalog_sha256'])
                     return JSONResponse(result,headers={'Cache-Control':'no-store'})
                 except ValidationError:return deny(422,'ifc_invalid_request')
