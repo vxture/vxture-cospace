@@ -18,6 +18,20 @@ def _type_rows(value):
                                         for row in proposal['entities'] if row['target_type_id'] is not None])
 
 
+def _annotation_impact(a, b, sections):
+    affected_areas = _changed(sections['areas'])
+    changed_evidence = _changed(sections['evidence'])
+    for area in a['areas'] + b['areas']:
+        if changed_evidence.intersection(area['evidence_ids']):
+            affected_areas.add(area['id'])
+    affected_connections = _changed(sections['connections'])
+    for connection in a['connections'] + b['connections']:
+        if (changed_evidence.intersection(connection['evidence_ids'])
+                or any(endpoint['area_id'] in affected_areas for endpoint in connection['endpoints'])):
+            affected_connections.add(connection['source_entity_id'])
+    return affected_areas, affected_connections, changed_evidence
+
+
 def compare_review_snapshots(base_raw, target_raw, *, base_sha256, target_sha256, design_package,
                              expected_source, base_ontology=None, target_ontology=None):
     """Both snapshots must reference the same exact design package and source.
@@ -35,19 +49,10 @@ def compare_review_snapshots(base_raw, target_raw, *, base_sha256, target_sha256
     old_mapping, new_mapping = base['snapshot']['mapping'], target['snapshot']['mapping']
     ontology_changed = ((old_mapping['ontology_ref'] if old_mapping else None)
                         != (new_mapping['ontology_ref'] if new_mapping else None))
-    affected_areas = _changed(sections['areas'])
-    changed_evidence = _changed(sections['evidence'])
-    for area in a['areas'] + b['areas']:
-        if changed_evidence.intersection(area['evidence_ids']):
-            affected_areas.add(area['id'])
-    affected_connections = _changed(sections['connections'])
+    affected_areas, affected_connections, changed_evidence = _annotation_impact(a, b, sections)
     affected_source = _changed(sections['types'])
     if ontology_changed:
         affected_source.update(row['entity_id'] for row in _type_rows(base) + _type_rows(target))
-    for connection in a['connections'] + b['connections']:
-        if (changed_evidence.intersection(connection['evidence_ids'])
-                or any(endpoint['area_id'] in affected_areas for endpoint in connection['endpoints'])):
-            affected_connections.add(connection['source_entity_id'])
     affected_source.update(affected_connections)
     components = []
     if affected_areas:

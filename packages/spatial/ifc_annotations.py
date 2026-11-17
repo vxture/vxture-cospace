@@ -50,10 +50,10 @@ class Worksheet(Fixed):
 
 
 def seed(review):
-    return dict(profile=PROFILE, source_review_sha256=content_digest(review),
-                frame_id=review['frame_id'], unit='m', assessment='unverified', evidence=[], areas=[],
-                connections=[dict(source_entity_id=task['source_entity_id'], endpoints=[], evidence_ids=[])
-                             for task in review['tasks']])
+    return {'profile': PROFILE, 'source_review_sha256': content_digest(review),
+            'frame_id': review['frame_id'], 'unit': 'm', 'assessment': 'unverified', 'evidence': [], 'areas': [],
+            'connections': [{'source_entity_id': task['source_entity_id'], 'endpoints': [], 'evidence_ids': []}
+                            for task in review['tasks']]}
 
 
 def _cross(a, b, c):
@@ -151,12 +151,12 @@ def validate_annotations(document, review, *, evidence_root=None):
         raise ValueError('annotation_task_coverage')
     complete = [key for key, row in connections.items() if _validate_connection(row, tasks[key], areas, evidence)]
     completed = set(complete)
-    result = dict(profile='cospace.ifc-spatial-annotation-check/0.1',
-                worksheet_sha256=content_digest(document), source_review_sha256=worksheet.source_review_sha256,
-                area_count=len(areas), complete_annotation_ids=complete,
-                pending_annotation_ids=[key for key in tasks if key not in completed],
-                assessment='unverified', evidence_content_verified=False,
-                confirmed_connections=[], alignment_verified=False, real_release_ready=False)
+    result = {'profile': 'cospace.ifc-spatial-annotation-check/0.1',
+              'worksheet_sha256': content_digest(document), 'source_review_sha256': worksheet.source_review_sha256,
+              'area_count': len(areas), 'complete_annotation_ids': complete,
+              'pending_annotation_ids': [key for key in tasks if key not in completed],
+              'assessment': 'unverified', 'evidence_content_verified': False,
+              'confirmed_connections': [], 'alignment_verified': False, 'real_release_ready': False}
     if evidence_root is not None:
         from packages.data.evidence_content import check_evidence_content
         result['evidence_receipt'] = check_evidence_content(

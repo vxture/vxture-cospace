@@ -23,7 +23,6 @@ def structure_review(root, *, expected_catalog_sha256):
                            mesh_vertices=len(vertices), mesh_triangles=len(faces))
             geometry[identity] = row
         return geometry[identity]
-
     tasks = []
     for entity in entities:
         if entity.ifc_type not in ('IfcDoor', 'IfcStair'):
@@ -34,21 +33,21 @@ def structure_review(root, *, expected_catalog_sha256):
         children = {row['target_id'] for row in direct if row['kind'] == 'aggregates' and row['source_id'] == identity}
         opening_hosts = [row for row in relations if row['kind'] == 'opening_in' and row['source_id'] in openings]
         related = openings | children | {row['target_id'] for row in opening_hosts}
-        tasks.append(dict(
-            source_entity_id=identity, source=product_summary(identity),
-            source_relations=direct + opening_hosts,
-            related_geometry=[product_summary(key) for key in sorted(related)],
-            assessment='unverified',
-            review=dict(status='pending', space_endpoints=[], evidence_refs=[],
-                        required=['space_boundaries', 'opening_sides'] if entity.ifc_type == 'IfcDoor'
-                        else ['space_boundaries', 'flight_and_landing_interfaces', 'endpoint_levels'])))
+        tasks.append({
+            'source_entity_id': identity, 'source': product_summary(identity),
+            'source_relations': direct + opening_hosts,
+            'related_geometry': [product_summary(key) for key in sorted(related)],
+            'assessment': 'unverified',
+            'review': {'status': 'pending', 'space_endpoints': [], 'evidence_refs': [],
+                       'required': ['space_boundaries', 'opening_sides'] if entity.ifc_type == 'IfcDoor'
+                       else ['space_boundaries', 'flight_and_landing_interfaces', 'endpoint_levels']}})
     counts = dict(sorted(Counter(row.role for row in entities).items()))
-    return dict(profile='cospace.ifc-structure-review/0.1',
-                source_catalog_sha256=expected_catalog_sha256, frame_id=catalog['frame_id'], unit='m',
-                data_kind='ifc_design_candidate', declared_role_counts=counts,
-                missing_declared_roles=[role for role in ('space', 'door', 'stair', 'distribution_board') if not counts.get(role)],
-                declared_levels=[product_summary(row.entity_id) for row in entities if row.ifc_type == 'IfcBuildingStorey'],
-                tasks=tasks, confirmed_connections=[], alignment_verified=False, real_release_ready=False,
-                limitations=['source_declarations_not_field_facts', 'bounds_for_indexing_only',
-                             'no_inferred_room_or_corridor', 'no_door_state_or_clear_width',
-                             'no_navigation_or_traversability', 'no_ontology_binding'])
+    return {'profile': 'cospace.ifc-structure-review/0.1',
+            'source_catalog_sha256': expected_catalog_sha256, 'frame_id': catalog['frame_id'], 'unit': 'm',
+            'data_kind': 'ifc_design_candidate', 'declared_role_counts': counts,
+            'missing_declared_roles': [role for role in ('space', 'door', 'stair', 'distribution_board') if not counts.get(role)],
+            'declared_levels': [product_summary(row.entity_id) for row in entities if row.ifc_type == 'IfcBuildingStorey'],
+            'tasks': tasks, 'confirmed_connections': [], 'alignment_verified': False, 'real_release_ready': False,
+            'limitations': ['source_declarations_not_field_facts', 'bounds_for_indexing_only',
+                            'no_inferred_room_or_corridor', 'no_door_state_or_clear_width',
+                            'no_navigation_or_traversability', 'no_ontology_binding']}
