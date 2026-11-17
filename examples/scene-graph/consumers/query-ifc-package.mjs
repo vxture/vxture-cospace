@@ -3,7 +3,7 @@ import {readPackage} from './read-ifc-package.mjs';
 import {readGeometry} from './read-ifc-geometry.mjs';
 
 function check(ok,message){if(!ok){throw new Error(message);}}
-const sub=(a,b)=>a.map((v,i)=>v-b[i]);
+const sub=(left,right)=>left.map((v,i)=>v-right[i]);
 const dot=(a,b)=>a.reduce((sum,v,i)=>sum+v*b[i],0);
 const cross=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];
 const distance2=(a,b)=>dot(sub(a,b),sub(a,b));
@@ -41,10 +41,10 @@ function nearestMesh(point,vertices,triangles){
 }
 function validateQuery(query){
  check(query&&typeof query==='object'&&!Array.isArray(query)
-  &&Object.keys(query).sort().join(',')==='frame_id,max_distance_m,point_xyz_m','offline_surface_query_fields');
+  &&Object.keys(query).sort((left,right)=>left.localeCompare(right,'en')).join(',')==='frame_id,max_distance_m,point_xyz_m','offline_surface_query_fields');
  check(typeof query.frame_id==='string'&&/^ifc_world_[a-f0-9]{16}$/.test(query.frame_id),'offline_surface_frame');
  check(Array.isArray(query.point_xyz_m)&&query.point_xyz_m.length===3
-  &&query.point_xyz_m.every(v=>typeof v==='number'&&Number.isFinite(v)&&Math.abs(v)<=1000000),'offline_surface_point');
+  &&Array.from(query.point_xyz_m).every(v=>typeof v==='number'&&Number.isFinite(v)&&Math.abs(v)<=1000000),'offline_surface_point');
  check(typeof query.max_distance_m==='number'&&Number.isFinite(query.max_distance_m)
   &&query.max_distance_m>0&&query.max_distance_m<=1000,'offline_surface_radius');
 }

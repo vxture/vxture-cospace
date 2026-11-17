@@ -105,17 +105,32 @@ def test_edge_vertex_and_shared_face_ties(package, point, expected):
 def test_invalid_query_rejected_by_both(package, change):
     raw, source, *_ = package
     query = request(raw, **change)
+    expected = sha(raw)
     with pytest.raises(ValueError):
-        query_package_surface(raw, expected_sha256=sha(raw), expected_source=source, query=query)
+        query_package_surface(raw, expected_sha256=expected, expected_source=source, query=query)
     assert node_query(raw, source, query).returncode != 0
 
 
 @pytest.mark.parametrize('value', [float('inf'), float('nan'), float('-inf')])
 def test_nonfinite_query_is_rejected(package, value):
     raw, source, *_ = package
+    expected = sha(raw)
+    query = request(raw, point_xyz_m=[value, 0., 0.])
     with pytest.raises(ValueError):
-        query_package_surface(raw, expected_sha256=sha(raw), expected_source=source,
-                              query=request(raw, point_xyz_m=[value, 0., 0.]))
+        query_package_surface(raw, expected_sha256=expected, expected_source=source, query=query)
+
+
+def test_node_api_rejects_nonfinite_and_sparse_coordinates_before_package_read():
+    node = shutil.which('node')
+    if node is None:
+        pytest.skip('Node runtime unavailable')
+    uri = Path('examples/scene-graph/consumers/query-ifc-package.mjs').resolve().as_uri()
+    script = ('import {queryPackageSurface} from ' + json.dumps(uri) + ';'
+              "for(const point of [[Infinity,0,0],[NaN,0,0],new Array(3)]){"
+              "try{queryPackageSurface(Buffer.alloc(0),{}, {frame_id:'ifc_world_'+'a'.repeat(16),"
+              "point_xyz_m:point,max_distance_m:1});throw new Error('accepted_invalid_point');}"
+              "catch(e){if(e.message!=='offline_surface_point'){throw e;}}}")
+    subprocess.run([node, '--input-type=module', '-e', script], check=True, timeout=30, shell=False)
 
 
 @pytest.mark.parametrize('failure', ['frame', 'source', 'digest', 'damage'])
@@ -197,8 +212,9 @@ def test_tied_components_and_corrupt_nonwinning_member(package):
     assert result['match']['element_id'] == 'e00001'
     # The winning member is intact. Damage elsewhere must still reject the whole query.
     raw = raw[:-1] + bytes([raw[-1] ^ 1])
+    expected, query = sha(raw), request(raw)
     with pytest.raises(ValueError, match='member_digest'):
-        query_package_surface(raw, expected_sha256=sha(raw), expected_source=source, query=request(raw))
+        query_package_surface(raw, expected_sha256=expected, expected_source=source, query=query)
     assert node_query(raw, source, request(raw)).returncode != 0
 
 
@@ -218,8 +234,9 @@ def test_total_triangle_budget_is_enforced_by_both_consumers(package, monkeypatc
     def never(*args, **kwargs):
         pytest.fail('over-budget package started distance work')
     monkeypatch.setattr('packages.views.agent.ifc_offline_surface.nearest_surface', never)
+    expected, query = sha(raw), request(raw)
     with pytest.raises(ValueError, match='triangle_budget'):
-        query_package_surface(raw, expected_sha256=sha(raw), expected_source=source, query=request(raw))
+        query_package_surface(raw, expected_sha256=expected, expected_source=source, query=query)
     result = node_query(raw, source, request(raw))
     assert result.returncode != 0
     assert 'triangle_budget' in result.stderr
@@ -231,8 +248,9 @@ def test_query_budget_refuses_before_distance_work(package, monkeypatch):
     def never(*args, **kwargs):
         pytest.fail('over-budget query started surface work')
     monkeypatch.setattr('packages.views.agent.ifc_offline_surface.nearest_surface', never)
+    expected, query = sha(raw), request(raw)
     with pytest.raises(ValueError, match='triangle_budget'):
-        query_package_surface(raw, expected_sha256=sha(raw), expected_source=source, query=request(raw))
+        query_package_surface(raw, expected_sha256=expected, expected_source=source, query=query)
 
 
 def test_request_schema():
