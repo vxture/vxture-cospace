@@ -83,8 +83,9 @@ def test_invalid_context_is_rejected(bound, query, error):
 def test_other_tenant_cannot_reuse_context_or_implicitly_register(bound):
     result = read(bound)
     other = SimpleNamespace(issuer='https://example.invalid', org_id='other-org', workspace_id='test-workspace')
+    request = replay(result)
     with pytest.raises(ValueError, match='scope_not_registered'):
-        read(bound, query=replay(result), principal=other)
+        read(bound, query=request, principal=other)
 
 
 def test_identical_reports_in_other_registered_scope_do_not_match_context(bound):
@@ -97,8 +98,9 @@ def test_identical_reports_in_other_registered_scope_do_not_match_context(bound)
                     'producers': ['sensor-a']})
     other_result = read(bound, principal=other)
     assert other_result['context_cursor'] != result['context_cursor']
+    request = replay(result)
     with pytest.raises(ValueError, match='context_changed'):
-        read(bound, query=replay(result), principal=other)
+        read(bound, query=request, principal=other)
 
 
 def test_semantic_revision_changes_context_but_not_observation_cursor(bound, review_env):
@@ -109,8 +111,9 @@ def test_semantic_revision_changes_context_but_not_observation_cursor(bound, rev
     assert current['observation_cursor'] == base['observation_cursor']
     assert current['context_cursor'] != base['context_cursor']
     assert current['states'] == base['states']
+    request = replay(base)
     with pytest.raises(ValueError, match='context_changed'):
-        read(bound, query=replay(base), snapshot=revised, ontology_raw=vocabulary)
+        read(bound, query=request, snapshot=revised, ontology_raw=vocabulary)
 
 
 def test_annotation_revision_changes_context_without_touching_reports(bound, review_env):
