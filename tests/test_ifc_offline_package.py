@@ -71,8 +71,9 @@ def test_optional_original_source_check_keeps_design_and_field_assessment_separa
     original = env[2] / 'source.ifc'
     path = root / (source['ifc_sha256'] + '.bin')
     path.write_bytes(original.read_bytes())
-    result = read_design_package(raw, expected_sha256=sha(raw), expected_source=source, evidence_root=root)
-    assert result['evidence_receipt']['document_sha256'] == sha(raw)
+    pin = sha(raw)
+    result = read_design_package(raw, expected_sha256=pin, expected_source=source, evidence_root=root)
+    assert result['evidence_receipt']['document_sha256'] == pin
     assert result['summary']['original_ifc_content_verified'] is True
     assert result['summary']['original_mesh_content_verified'] is False
     for key in ('alignment_verified', 'ontology_bound', 'real_release_ready'):
@@ -80,7 +81,7 @@ def test_optional_original_source_check_keeps_design_and_field_assessment_separa
     assert result['structure']['assessment'] == 'unverified'
     path.write_bytes(b'changed original source')
     with pytest.raises(ValueError, match='content_changed'):
-        read_design_package(raw, expected_sha256=sha(raw), expected_source=source, evidence_root=root)
+        read_design_package(raw, expected_sha256=pin, expected_source=source, evidence_root=root)
 
 
 def test_original_source_size_is_checked_independently_of_digest(package, tmp_path):
