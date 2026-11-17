@@ -25,3 +25,4 @@ test('unmapped remains explicit, never filled from a name or role',()=>{
  const value={...sample(),mapping:{...sample().mapping,rules:[]},entities:[{...sample().entities[0],target_type_id:null,status:'unmapped'}],proposed_count:0,unmapped_count:1};
  assert.equal(checkedTypeProposals(value,space,pin,ontology,sources,{}).unmapped_count,1);
 });
+import './ifc-mapping-file.test.mjs';
