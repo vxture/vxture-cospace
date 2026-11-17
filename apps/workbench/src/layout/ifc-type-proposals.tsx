@@ -7,6 +7,11 @@ import {MAX_MAPPING_FILE_BYTES,readMappingFile,mappingDocument,mappingFile,valid
 type Version=OntologyPin&{title:string};
 type Definition={record:OntologyPin;integrity:string;definition:{types:Record<string,{title:string}>}};
 const versionKey=(v:OntologyPin)=>`${v.ontology_id}/${v.version}/${v.sha256}`;
+function download(value:unknown,name:string){
+ const url=URL.createObjectURL(new Blob([JSON.stringify(value,null,2)],{type:'application/json'}));
+ const link=document.createElement('a');link.href=url;link.download=name;link.click();
+ setTimeout(()=>URL.revokeObjectURL(url),0);
+}
 async function loadDefinition(version:OntologyPin,signal:AbortSignal){
  const path=`/api/ontologies/${encodeURIComponent(version.ontology_id)}/${encodeURIComponent(version.version)}`;
  const response=await fetch(`${endpoint}${path}?${new URLSearchParams({sha256:version.sha256})}`,{signal,cache:'no-store'});
@@ -79,11 +84,6 @@ function ProposalForm({space,pin,sources,selectedId}:Readonly<{space:string;pin:
  const types=[...new Set([...sourceTypes,...Object.keys(rules).filter(type=>rules[type])])].sort((a,b)=>a.localeCompare(b));
  const selected=result?.entities.find(e=>e.source_entity_id===selectedId);
  const ruleCount=Object.values(rules).filter(Boolean).length;
- function download(value:unknown,name:string){
-  const url=URL.createObjectURL(new Blob([JSON.stringify(value,null,2)],{type:'application/json'}));
-  const link=document.createElement('a');link.href=url;link.download=name;link.click();
-  setTimeout(()=>URL.revokeObjectURL(url),0);
- }
  return <div className="flex flex-col gap-md">
   <p className="text-body-small text-muted-foreground">显式选择类型规则，仅生成提案；不保存关联或确认现场实例。</p>
   <label className="flex flex-col gap-xs text-body-small">载入映射配置或旧提案<Input type="file" accept=".json,application/json" disabled={versions.length===0||busy} onChange={e=>{const file=e.target.files?.[0];e.target.value='';if(file)void importFile(file);}}/></label>

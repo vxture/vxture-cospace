@@ -4,7 +4,7 @@ export function checkedJsonFile(text:string,maximumBytes:number):unknown{
  const value:unknown=JSON.parse(text);
  const stack:(Set<string>|null)[]=[];
  // Skip entire strings, so braces or colons inside values cannot become tokens.
- for(const [token,keyToken] of text.matchAll(/("(?:[^"\\]|\\.)*")[\t\n\r ]*:|"(?:[^"\\]|\\.)*"|[{}\[\]]/g)){
+ for(const [token,keyToken] of text.matchAll(/("(?:[^"\\]|\\.)*")[\t\n\r ]*:|"(?:[^"\\]|\\.)*"|[{}[\]]/g)){
   if(keyToken){
    const keys=stack.at(-1)!;
    const key=JSON.parse(keyToken) as string;
