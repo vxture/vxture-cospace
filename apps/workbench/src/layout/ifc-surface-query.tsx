@@ -32,6 +32,10 @@ function QueryForm({space,pin,frame,subjects,onSelect}:Readonly<{space:string;pi
   <div className="grid grid-cols-2 md:grid-cols-4 gap-md">{['X','Y','Z'].map((axis,i)=><label key={axis} className="flex flex-col gap-xs text-body-small">{axis}（m）<Input required type="number" step="any" min={-1000000} max={1000000} value={coordinates[i]} onChange={e=>{invalidate();setCoordinates(coordinates.map((v,j)=>j===i?e.target.value:v));}}/></label>)}<label className="flex flex-col gap-xs text-body-small">半径（m）<Input required type="number" step="any" min={0.001} max={1000} value={radius} onChange={e=>{invalidate();setRadius(e.target.value);}}/></label></div>
   <Button type="submit" variant="outline" size="sm" className="self-start" disabled={busy}>{busy?'正在查询…':'查找最近构件'}</Button>
   {error&&<p role="alert" className="text-body-small">{error}</p>}
-  {result&&<div role="status" className="flex flex-col gap-sm text-body-small">{result.match?<><strong>{result.match.name||result.match.entity_id}</strong><p>{result.match.ifc_type} · 距离 {result.match.distance_m.toFixed(3)} m</p><Button variant="ghost" size="sm" className="self-start" type="button" onClick={()=>onSelect(result.match!.element_id)}>定位构件</Button></>:<p>{result.status==='geometry_unavailable'?'没有可查询的结构网格。':'指定半径内没有匹配的结构表面。'}</p>}<p className="text-label-small text-muted-foreground">查询了 {result.tested_components} 个结构网格 · {result.without_geometry} 项无几何未参与 · 设计资料待核验</p></div>}
+  {result&&<section aria-label="查询结果" className="flex flex-col gap-sm text-body-small">
+   <output>{result.match?(result.match.name||result.match.entity_id):(result.status==='geometry_unavailable'?'没有可查询的结构网格。':'指定半径内没有匹配的结构表面。')}</output>
+   {result.match&&<><p>{result.match.ifc_type} · 距离 {result.match.distance_m.toFixed(3)} m</p><Button type="button" variant="ghost" size="sm" className="self-start" onClick={()=>onSelect(result.match!.element_id)}>定位构件</Button></>}
+   <p className="text-label-small text-muted-foreground">查询了 {result.tested_components} 个结构网格 · {result.without_geometry} 项无几何未参与 · 设计资料待核验</p>
+  </section>}
  </form>;
 }

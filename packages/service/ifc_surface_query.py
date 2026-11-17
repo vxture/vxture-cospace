@@ -52,9 +52,12 @@ def query_surface(workspace, query):
     if export_structure_snapshot(workspace, query.space_id, query.catalog_sha256) != raw:
         raise ValueError('ifc_surface_source_changed')
     match = best if best is not None and best['distance_m'] <= query.max_distance_m else None
+    status = 'found' if match else 'no_match'
+    if not subjects:
+        status = 'geometry_unavailable'
     return {'profile': 'cospace.ifc-nearest-surface/0.1', 'source': snapshot.source.model_dump(),
             'frame_id': snapshot.frame_id, 'unit': 'm', 'query': query.model_dump(),
-            'status': ('found' if match else 'no_match') if subjects else 'geometry_unavailable',
+            'status': status,
             'match': match, 'tested_components': len(subjects), 'tested_triangles': triangles,
             'without_geometry': sum(e.geometry_status != 'extracted' for e in snapshot.entities),
             'coverage': 'all_extracted_structure_entities', 'method': 'unsigned_point_to_triangle_surface',
