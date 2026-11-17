@@ -1,0 +1,34 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "frame_id": {
+      "pattern": "^ifc_world_[a-f0-9]{16}$",
+      "title": "Frame Id",
+      "type": "string"
+    },
+    "point_xyz_m": {
+      "items": {
+        "maximum": 1000000,
+        "minimum": -1000000,
+        "type": "number"
+      },
+      "maxItems": 3,
+      "minItems": 3,
+      "title": "Point Xyz M",
+      "type": "array"
+    },
+    "max_distance_m": {
+      "exclusiveMinimum": 0,
+      "maximum": 1000,
+      "title": "Max Distance M",
+      "type": "number"
+    }
+  },
+  "required": [
+    "frame_id",
+    "point_xyz_m",
+    "max_distance_m"
+  ],
+  "title": "OfflineSurfaceQuery",
+  "type": "object"
+}
