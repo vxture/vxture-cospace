@@ -47,6 +47,7 @@ from packages.views.agent.ifc_geometry_exchange import export_geometry_component
 
 DATA_MANAGE='data.manage'
 SPACE_PREVIEW='space.preview'
+BINARY_MEDIA_TYPE='application/octet-stream'
 
 SELECTION_ROUTE='/api/selection'
 PUBLICATIONS_ROUTE='/api/publications'
@@ -363,7 +364,7 @@ class BusinessAccess:
                             record,raw=await run_in_threadpool(self.attachments.download,request.query_params['space_id'],attachment_path[1])
                         except (AttachmentRejected,OSError,ValueError,TypeError):return deny(409,'attachment_unavailable')
                         from fastapi.responses import Response
-                        return Response(raw if request.method!='HEAD' else b'',media_type='application/octet-stream',headers={
+                        return Response(raw if request.method!='HEAD' else b'',media_type=BINARY_MEDIA_TYPE,headers={
                             'Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Content-Security-Policy':"sandbox; default-src 'none'",
                             'Content-Disposition':"attachment; filename=reference; filename*=UTF-8''"+quote(record['name'],safe=''),
                             'Content-Length':str(len(raw))})
@@ -456,10 +457,10 @@ class BusinessAccess:
                     if path==IFC_GEOMETRY_PATH:
                         import hashlib
                         if (not re.fullmatch('[a-f0-9]{64}',request.query_params['catalog_sha256'])
-                                or not re.fullmatch('e[0-9]{5}',request.query_params['element_id'])):return deny(422,'ifc_invalid_request')
+                                or not re.fullmatch(r'e\d{5}',request.query_params['element_id'],flags=re.ASCII)):return deny(422,'ifc_invalid_request')
                         raw=await run_in_threadpool(export_geometry_component,self.scene_ifc,request.query_params['space_id'],request.query_params['catalog_sha256'],request.query_params['element_id'])
                         digest=hashlib.sha256(raw).hexdigest()
-                        return ByteResponse(raw,media_type='application/octet-stream',headers={'Cache-Control':'no-store',
+                        return ByteResponse(raw,media_type=BINARY_MEDIA_TYPE,headers={'Cache-Control':'no-store',
                             'Content-Disposition':f'attachment; filename="ifc-geometry-{digest}.bin"','X-Content-SHA256':digest,
                             'X-Content-Type-Options':'nosniff'})
                     if path==IFC_SNAPSHOT_PATH:
@@ -512,7 +513,7 @@ class BusinessAccess:
                     wanted=request.query_params['space_id']
                     if tile_path:
                         raw=await run_in_threadpool(self.scene_pointclouds.tile,wanted,tile_path[1],int(tile_path[2]),request.query_params['index_sha256'])
-                        return Response(raw,media_type='application/octet-stream',headers={'Cache-Control':'no-store'})
+                        return Response(raw,media_type=BINARY_MEDIA_TYPE,headers={'Cache-Control':'no-store'})
                     if path=='/api/scene-pointclouds':result=await run_in_threadpool(self.scene_pointclouds.directory,wanted)
                     else:result=await run_in_threadpool(self.scene_pointclouds.status,wanted,path.rsplit('/',1)[-1])
                     return JSONResponse(result,headers={'Cache-Control':'no-store'})

@@ -150,7 +150,8 @@ def test_export_authorization_integrity_and_head(ifc_secured, monkeypatch):
     assert response.headers['cache-control'] == 'no-store'
     assert response.headers['content-disposition'] == f'attachment; filename="ifc-geometry-{sha}.bin"'
     head = client.head(ROUTE, params=params)
-    assert head.status_code == 200 and not head.content
+    assert head.status_code == 200
+    assert not head.content
     assert head.headers['x-content-sha256'] == sha
     for change, status in [({'element_id': '../bad'}, 422), ({'element_id': 'e99999'}, 409),
                            ({'catalog_sha256': 'bad'}, 422), ({'catalog_sha256': '0' * 64}, 409),

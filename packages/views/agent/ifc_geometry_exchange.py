@@ -60,13 +60,13 @@ def build_geometry_component(root, space, pin, catalog, element):
     product = catalog['products'][int(element[1:])]
     _budget(product['mesh']['vertices'], product['mesh']['triangles'])
     vertices, faces = load_mesh(root, product)
-    header = GeometryHeader.model_validate(dict(
-        profile='cospace.ifc-element-geometry/0.1', source=snapshot.source.model_dump(),
-        structure_sha256=hashlib.sha256(structure_raw).hexdigest(), entity_id=subject.entity_id,
-        element_id=element, source_mesh_sha256=product['mesh']['sha256'], frame_id=snapshot.frame_id,
-        unit='m', encoding='float64le_xyz_uint32le_triangles', vertices=len(vertices), triangles=len(faces),
-        data_kind='ifc_design_candidate', assessment='unverified', alignment_verified=False,
-        ontology_bound=False, real_release_ready=False))
+    header = GeometryHeader.model_validate({
+        'profile': 'cospace.ifc-element-geometry/0.1', 'source': snapshot.source.model_dump(),
+        'structure_sha256': hashlib.sha256(structure_raw).hexdigest(), 'entity_id': subject.entity_id,
+        'element_id': element, 'source_mesh_sha256': product['mesh']['sha256'], 'frame_id': snapshot.frame_id,
+        'unit': 'm', 'encoding': 'float64le_xyz_uint32le_triangles', 'vertices': len(vertices), 'triangles': len(faces),
+        'data_kind': 'ifc_design_candidate', 'assessment': 'unverified', 'alignment_verified': False,
+        'ontology_bound': False, 'real_release_ready': False})
     metadata = canonical(header.model_dump())
     if len(metadata) > MAX_HEADER:
         raise ValueError('geometry_header_budget')
@@ -125,11 +125,11 @@ def inspect_geometry_component(raw, *, expected_sha256, structure_raw, expected_
 
 
 def geometry_summary(header, vertices, faces):
-    return dict(profile=header.profile, source=header.source.model_dump(),
-                structure_sha256=header.structure_sha256, entity_id=header.entity_id,
-                element_id=header.element_id, frame_id=header.frame_id, unit='m',
-                vertices=len(vertices), triangles=len(faces),
-                bounds=[vertices.min(axis=0).tolist(), vertices.max(axis=0).tolist()],
-                data_kind='ifc_design_candidate', assessment='unverified',
-                original_ifc_content_verified=False, original_mesh_content_verified=False,
-                alignment_verified=False, ontology_bound=False, real_release_ready=False)
+    return {'profile': header.profile, 'source': header.source.model_dump(),
+            'structure_sha256': header.structure_sha256, 'entity_id': header.entity_id,
+            'element_id': header.element_id, 'frame_id': header.frame_id, 'unit': 'm',
+            'vertices': len(vertices), 'triangles': len(faces),
+            'bounds': [vertices.min(axis=0).tolist(), vertices.max(axis=0).tolist()],
+            'data_kind': 'ifc_design_candidate', 'assessment': 'unverified',
+            'original_ifc_content_verified': False, 'original_mesh_content_verified': False,
+            'alignment_verified': False, 'ontology_bound': False, 'real_release_ready': False}
