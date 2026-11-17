@@ -38,4 +38,3 @@ def nearest_surface(point, vertices, faces, *, chunk_size=8192):
     if best is None:
         raise ValueError('annotation_geometry_empty_mesh')
     return dict(distance_m=float(np.sqrt(best[0])), triangle_index=best[1], closest_point_xyz_m=best[2])
-
