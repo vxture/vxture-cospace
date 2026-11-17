@@ -131,8 +131,9 @@ def test_corrupt_or_incomplete_packages_rejected_by_both_consumers(package, dama
         else:
             manifest['navigation_ready'] = True
         raw = pack(manifest, data)
+    digest = sha(raw)
     with pytest.raises(ValueError):
-        inspect_design_package(raw, expected_sha256=sha(raw), expected_source=source)
+        inspect_design_package(raw, expected_sha256=digest, expected_source=source)
     result = node_read(raw, source)
     assert result.returncode == 1
     assert not result.stdout
@@ -140,11 +141,12 @@ def test_corrupt_or_incomplete_packages_rejected_by_both_consumers(package, dama
 
 def test_external_digest_and_source_pins_required(package):
     raw, source, *_ = package
+    digest = sha(raw)
+    other_source = source | {'catalog_sha256': '0' * 64}
     with pytest.raises(ValueError, match='byte_digest'):
         inspect_design_package(raw, expected_sha256='0' * 64, expected_source=source)
     with pytest.raises(ValueError, match='source_binding'):
-        inspect_design_package(raw, expected_sha256=sha(raw),
-                               expected_source=source | {'catalog_sha256': '0' * 64})
+        inspect_design_package(raw, expected_sha256=digest, expected_source=other_source)
 
 
 @pytest.mark.parametrize('budget', ['MAX_GEOMETRIES', 'MAX_BYTES'])

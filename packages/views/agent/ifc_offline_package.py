@@ -20,6 +20,7 @@ MAGIC = b'CSIFCP01'
 MAX_BYTES = 32 * 1024 * 1024
 MAX_MANIFEST = 1024 * 1024
 MAX_GEOMETRIES = 512
+STRUCTURE_MEMBER = 'structure.json'
 
 
 class Member(Fixed):
@@ -69,7 +70,7 @@ def export_design_package(workspace, space, pin):
     structure = build_structure_snapshot(space, pin, catalog)
     snapshot = StructureSnapshot.model_validate_json(structure)
     elements = _preflight(catalog, snapshot, len(structure))
-    payloads = [('structure.json', structure)]
+    payloads = [(STRUCTURE_MEMBER, structure)]
     for element in elements:
         raw = encode_geometry_component(binding.root, catalog, element, structure)
         payloads.append((element + '.bin', raw))
@@ -127,10 +128,10 @@ def read_design_package(raw, *, expected_sha256, expected_source):
     if manifest.source != SourcePin.model_validate(expected_source):
         raise ValueError('ifc_package_source_binding')
     members = _read_members(raw, manifest, 12 + size)
-    structure_raw = members.get('structure.json', b'')
+    structure_raw = members.get(STRUCTURE_MEMBER, b'')
     snapshot = inspect_structure_snapshot(structure_raw, expected_sha256=manifest.structure_sha256,
                                           expected_source=expected_source)
-    expected = ['structure.json'] + sorted(e.element_id + '.bin' for e in snapshot.entities
+    expected = [STRUCTURE_MEMBER] + sorted(e.element_id + '.bin' for e in snapshot.entities
                                           if e.geometry_status == 'extracted')
     if [m.name for m in manifest.members] != expected:
         raise ValueError('ifc_package_geometry_coverage')
