@@ -1,0 +1,135 @@
+{
+  "$defs": {
+    "Member": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "pattern": "^(structure\\.json|e[0-9]{5}\\.bin)$",
+          "title": "Name",
+          "type": "string"
+        },
+        "sha256": {
+          "pattern": "^[a-f0-9]{64}$",
+          "title": "Sha256",
+          "type": "string"
+        },
+        "bytes": {
+          "maximum": 10485760,
+          "minimum": 1,
+          "title": "Bytes",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "name",
+        "sha256",
+        "bytes"
+      ],
+      "title": "Member",
+      "type": "object"
+    },
+    "SourcePin": {
+      "additionalProperties": false,
+      "properties": {
+        "space_id": {
+          "pattern": "^space-[a-f0-9]{16}$",
+          "title": "Space Id",
+          "type": "string"
+        },
+        "catalog_sha256": {
+          "pattern": "^[a-f0-9]{64}$",
+          "title": "Catalog Sha256",
+          "type": "string"
+        },
+        "ifc_sha256": {
+          "pattern": "^[a-f0-9]{64}$",
+          "title": "Ifc Sha256",
+          "type": "string"
+        },
+        "ifc_bytes": {
+          "maximum": 134217728,
+          "minimum": 1,
+          "title": "Ifc Bytes",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "space_id",
+        "catalog_sha256",
+        "ifc_sha256",
+        "ifc_bytes"
+      ],
+      "title": "SourcePin",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "profile": {
+      "const": "cospace.ifc-design-package/0.1",
+      "title": "Profile",
+      "type": "string"
+    },
+    "source": {
+      "$ref": "#/$defs/SourcePin"
+    },
+    "structure_sha256": {
+      "pattern": "^[a-f0-9]{64}$",
+      "title": "Structure Sha256",
+      "type": "string"
+    },
+    "geometry_coverage": {
+      "const": "all_extracted_structure_entities",
+      "title": "Geometry Coverage",
+      "type": "string"
+    },
+    "members": {
+      "items": {
+        "$ref": "#/$defs/Member"
+      },
+      "maxItems": 513,
+      "minItems": 1,
+      "title": "Members",
+      "type": "array"
+    },
+    "data_kind": {
+      "const": "ifc_design_candidate",
+      "title": "Data Kind",
+      "type": "string"
+    },
+    "assessment": {
+      "const": "unverified",
+      "title": "Assessment",
+      "type": "string"
+    },
+    "alignment_verified": {
+      "const": false,
+      "title": "Alignment Verified",
+      "type": "boolean"
+    },
+    "ontology_bound": {
+      "const": false,
+      "title": "Ontology Bound",
+      "type": "boolean"
+    },
+    "real_release_ready": {
+      "const": false,
+      "title": "Real Release Ready",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "profile",
+    "source",
+    "structure_sha256",
+    "geometry_coverage",
+    "members",
+    "data_kind",
+    "assessment",
+    "alignment_verified",
+    "ontology_bound",
+    "real_release_ready"
+  ],
+  "title": "PackageManifest",
+  "type": "object"
+}
