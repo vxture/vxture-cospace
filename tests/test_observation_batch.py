@@ -139,7 +139,9 @@ def test_http_batch_preserves_single_state_and_replays_after_correction(register
     state = batch['states'][0]
     for key in state:
         assert state[key] == single[key]
-    assert 'scope' not in batch and 'active' not in state and 'producer' not in json.dumps(batch)
+    assert 'scope' not in batch
+    assert 'active' not in state
+    assert 'producer' not in json.dumps(batch)
     journal.append(scope, report('correction', entity_id='wall', value='open', supersedes='event-1'),
                    authenticated_producer='sensor-a')
     assert client.post(ROUTE, json=body(params), headers=headers).json()['states'][0]['value'] == 'open'
