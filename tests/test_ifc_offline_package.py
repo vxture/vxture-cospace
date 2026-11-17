@@ -64,6 +64,47 @@ def package(ifc_secured):
     return raw, source, ifc_secured, space, pin
 
 
+def test_optional_original_source_check_keeps_design_and_field_assessment_separate(package, tmp_path):
+    raw, source, env, *_ = package
+    root = tmp_path / 'evidence'
+    root.mkdir()
+    original = env[2] / 'source.ifc'
+    path = root / (source['ifc_sha256'] + '.bin')
+    path.write_bytes(original.read_bytes())
+    result = read_design_package(raw, expected_sha256=sha(raw), expected_source=source, evidence_root=root)
+    assert result['evidence_receipt']['document_sha256'] == sha(raw)
+    assert result['summary']['original_ifc_content_verified'] is True
+    assert result['summary']['original_mesh_content_verified'] is False
+    for key in ('alignment_verified', 'ontology_bound', 'real_release_ready'):
+        assert result['summary'][key] is False
+    assert result['structure']['assessment'] == 'unverified'
+    path.write_bytes(b'changed original source')
+    with pytest.raises(ValueError, match='content_changed'):
+        read_design_package(raw, expected_sha256=sha(raw), expected_source=source, evidence_root=root)
+
+
+def test_original_source_size_is_checked_independently_of_digest(package, tmp_path):
+    raw, source, env, *_ = package
+    root = tmp_path / 'evidence'
+    root.mkdir()
+    (root / (source['ifc_sha256'] + '.bin')).write_bytes((env[2] / 'source.ifc').read_bytes())
+    manifest, data = unpack(raw)
+    manifest['source']['ifc_bytes'] += 1
+    structure = json.loads(data[0])
+    structure['source']['ifc_bytes'] += 1
+    for entity in structure['entities']:
+        entity['geometry_status'] = 'no_representation'
+    data[0] = canonical(structure)
+    manifest['structure_sha256'] = sha(data[0])
+    manifest['members'][0].update(bytes=len(data[0]), sha256=sha(data[0]))
+    manifest['members'] = manifest['members'][:1]
+    changed = pack(manifest, data[:1])
+    changed_pin = sha(changed)
+    with pytest.raises(ValueError, match='original_source_size'):
+        read_design_package(changed, expected_sha256=changed_pin,
+                            expected_source=manifest['source'], evidence_root=root)
+
+
 def test_deterministic_complete_package_and_independent_consumers(package):
     raw, source, (_, access, root, _), space, pin = package
     before = {p.name: p.read_bytes() for p in root.iterdir() if p.is_file()}

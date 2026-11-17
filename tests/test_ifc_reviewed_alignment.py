@@ -90,6 +90,24 @@ def test_unit_evidence_is_required(reviewed_sources):
     reviewed_sources[1].pop('unit_evidence')
     with pytest.raises(ValueError):
         run(reviewed_sources)
+
+
+def test_review_evidence_bytes_checked_without_approving_controls(reviewed_sources, tmp_path):
+    from test_evidence_content import put
+    sheet, review, ifc, cloud, pins = reviewed_sources
+    root = tmp_path / 'evidence'
+    ref = put(root)
+    review['unit_evidence']['sha256'] = ref['sha256']
+    for row in review['controls']:
+        row['evidence']['sha256'] = ref['sha256']
+    result = reviewed_candidate(sheet, review, ifc, cloud, **pins, evidence_root=root)
+    assert result['evidence_receipt']['document_sha256'] == content_digest(review)
+    assert result['evidence_receipt']['content_integrity_checked'] is True
+    for key in ('alignment_verified', 'control_evidence_verified', 'evidence_content_verified', 'real_release_ready'):
+        assert result[key] is False
+    (root / (ref['sha256'] + '.bin')).write_bytes(b'changed')
+    with pytest.raises(ValueError, match='content_changed'):
+        reviewed_candidate(sheet, review, ifc, cloud, **pins, evidence_root=root)
 import json
 
 
