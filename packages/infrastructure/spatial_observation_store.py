@@ -21,17 +21,20 @@ class ObservationStorageUnavailable(RuntimeError):
 def _decode_registration(raw, key):
     try:
         value = Registration.model_validate_json(raw)
-        if scope_key(value.scope) != key:
+        if scope_key(value.scope) != key or canonical(value.model_dump()) != raw:
             raise ValueError('persisted_scope_binding')
         return value
-    except ValueError as exc:
+    except (ValueError, TypeError) as exc:
         raise ObservationStorageUnavailable('observation_registration_invalid') from exc
 
 
 def _decode_record(seq, received, raw):
     try:
-        utc(received)
-        return {'sequence': seq, 'received_at': received, 'report': Report.model_validate_json(raw).model_dump()}
+        report = Report.model_validate_json(raw).model_dump()
+        if (type(seq) is not int or seq <= 0 or canonical(report) != raw
+                or utc(report['observed_at']) > utc(received)):
+            raise ValueError('persisted_record_binding')
+        return {'sequence': seq, 'received_at': received, 'report': report}
     except (ValueError, TypeError) as exc:
         raise ObservationStorageUnavailable('observation_record_invalid') from exc
 
@@ -52,20 +55,47 @@ def _registration(db, key):
     return _decode_registration(row[0], key)
 
 
+def _checked_records(rows, registration):
+    subjects = {s.entity_id for s in registration.subjects}
+    previous, corrected, last_received = {}, set(), None
+    result = []
+    for sequence, producer, event, received, raw, supersedes in rows:
+        record = _decode_record(sequence, received, raw)
+        report = record['report']
+        target = (producer, supersedes)
+        try:
+            if ((producer, event, supersedes) != (report['producer'], report['event_id'], report['supersedes'])
+                    or producer not in registration.producers or report['entity_id'] not in subjects
+                    or last_received is not None and utc(received) < last_received):
+                raise ValueError('persisted_report_reference')
+            validate_correction(Report.model_validate(report), previous.get(target), already_corrected=target in corrected)
+        except ValueError as exc:
+            raise ObservationStorageUnavailable('observation_record_reference_invalid') from exc
+        if supersedes is not None:
+            corrected.add(target)
+        previous[(producer, event)] = report
+        last_received = utc(received)
+        result.append(record)
+    return result
+
+
 def _records(db, key):
-    rows = db.execute('SELECT seq, received_at, document FROM reports WHERE scope=? ORDER BY seq LIMIT ?',
+    rows = db.execute('SELECT seq,producer,event_id,received_at,document,supersedes FROM reports WHERE scope=? ORDER BY seq LIMIT ?',
                       (key, MAX_EVENTS + 1)).fetchall()
     if len(rows) > MAX_EVENTS:
         raise ValueError('observation_read_budget')
-    return [_decode_record(seq, received, raw) for seq, received, raw in rows]
+    return _checked_records(rows, _registration(db, key))
 
 
 def _event(db, key, producer, event_id):
-    row = db.execute('SELECT seq, received_at, document FROM reports WHERE scope=? AND producer=? AND event_id=?',
+    row = db.execute('SELECT seq, received_at, document, supersedes FROM reports WHERE scope=? AND producer=? AND event_id=?',
                      (key, producer, event_id)).fetchone()
     if row is None:
         return None
-    return _decode_record(*row)
+    record = _decode_record(*row[:3])
+    if (record['report']['producer'], record['report']['event_id'], record['report']['supersedes']) != (producer, event_id, row[3]):
+        raise ObservationStorageUnavailable('observation_event_index_invalid')
+    return record
 
 
 def _check_correction(db, key, report):

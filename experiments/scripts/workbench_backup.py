@@ -10,6 +10,7 @@ import zipfile
 from pathlib import Path
 from packages.infrastructure.preview_backup import backup,verify,restore
 from packages.infrastructure.platform_identity import IdentityUnavailable
+from packages.infrastructure.spatial_observation_store import ObservationStorageUnavailable
 
 
 def main():
@@ -27,7 +28,7 @@ def main():
         else:result=restore(a.archive,a.root,a.sha256)
         # Detailed file inventory stays inside the archive; CLI prints the receipt.
         print(json.dumps({k:v for k,v in result.items() if k!='manifest'},ensure_ascii=False))
-    except (ValueError,OSError,KeyError,TypeError,sqlite3.Error,zipfile.BadZipFile,IdentityUnavailable) as exc:
+    except (ValueError,OSError,KeyError,TypeError,sqlite3.Error,zipfile.BadZipFile,IdentityUnavailable,ObservationStorageUnavailable) as exc:
         p.exit(2,'backup_rejected: '+str(exc)+'\n')
 
 

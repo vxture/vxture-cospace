@@ -4,6 +4,8 @@ import hashlib
 import json
 from pathlib import Path
 import sqlite3
+import subprocess
+import sys
 import threading
 import zipfile
 
@@ -30,6 +32,22 @@ def seeded(runtime):
 
 def resolved(store, scope):
     return store.resolve(scope, 'door-1', as_of='2026-11-17T00:05:00Z', known_at='2026-11-17T00:05:00Z')
+
+
+def test_cli_rejects_logically_corrupt_observations_without_traceback(runtime):
+    root, output = runtime
+    store, _ = seeded(runtime)
+    with closing(sqlite3.connect(store.path)) as db, db:
+        db.execute('UPDATE reports SET event_id=?', ('mismatched-index',))
+    result = subprocess.run(
+        [sys.executable, '-m', 'experiments.scripts.workbench_backup', 'backup',
+         '--root', str(root), '--output', str(output), '--actor', 'operator', '--reason', 'integrity test'],
+        capture_output=True, text=True,
+    )
+    assert result.returncode == 2
+    assert 'backup_rejected: observation_record_reference_invalid' in result.stderr
+    assert 'Traceback' not in result.stderr
+    assert not output.exists()
 
 
 def test_backup_restore_preserves_corrections_retractions_cursors_and_next_sequence(runtime):
@@ -130,7 +148,7 @@ def test_recovery_rejects_semantic_damage_even_after_archive_repin(runtime, tmp_
             archive.writestr(name, raw)
     expected = hashlib.sha256(altered.read_bytes()).hexdigest()
     root.rename(root.with_name('source-before-restore'))
-    with pytest.raises(ValueError, match='record_binding'):
+    with pytest.raises(ObservationStorageUnavailable, match='reference_invalid'):
         restore(altered, root, expected)
     assert not root.exists()
 
