@@ -4,11 +4,8 @@ from pathlib import Path
 import sqlite3
 
 from packages.infrastructure.spatial_observation_store import (
-    MAX_EVENTS, _initialize, _decode_registration, _decode_record,
+    MAX_EVENTS, _initialize, _decode_registration, _checked_records,
 )
-from packages.spatial.opening_observations import Report, validate_correction
-from packages.spatial.scene_graph import utc
-from packages.spatial.scene_identity import canonical
 
 MAX_SCOPES = 1000
 MAX_TOTAL_EVENTS = 100_000
@@ -33,24 +30,7 @@ def _records(db, key, registration):
                       'WHERE scope=? ORDER BY seq LIMIT ?', (key, MAX_EVENTS + 1)).fetchall()
     if len(rows) > MAX_EVENTS:
         raise ValueError('observation_integrity_scope_budget')
-    subjects = {s.entity_id for s in registration.subjects}
-    previous, corrected, last_received = {}, set(), None
-    for sequence, producer, event, received, raw, supersedes in rows:
-        record = _decode_record(sequence, received, raw)
-        report = record['report']
-        if (type(sequence) is not int or sequence <= 0 or canonical(report) != raw
-                or (producer, event, supersedes) != (report['producer'], report['event_id'], report['supersedes'])
-                or producer not in registration.producers or report['entity_id'] not in subjects
-                or utc(report['observed_at']) > utc(received)
-                or last_received is not None and utc(received) < last_received):
-            raise ValueError('observation_integrity_record_binding')
-        model = Report.model_validate(report)
-        target = (producer, supersedes)
-        validate_correction(model, previous.get(target), already_corrected=target in corrected)
-        if supersedes is not None:
-            corrected.add(target)
-        previous[(producer, event)] = report
-        last_received = utc(received)
+    _checked_records(rows, registration)
     return len(rows)
 
 
@@ -77,7 +57,5 @@ def validate_observation_database(path):
             raise ValueError('observation_integrity_orphan_scope')
         for key, raw in scopes:
             registration = _decode_registration(raw, key)
-            if canonical(registration.model_dump()) != raw:
-                raise ValueError('observation_integrity_registration_encoding')
             _records(db, key, registration)
         return {'registrations': len(scopes), 'reports': total, 'highest_sequence': _validate_sequence(db)}
