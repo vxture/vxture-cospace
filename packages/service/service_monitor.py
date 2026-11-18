@@ -93,6 +93,8 @@ class ServiceMonitor:
             meta = dict(db.execute('SELECT key,value FROM metadata').fetchall())
             rows = db.execute('SELECT at,caller,publication,outcome,http_status,duration_ms FROM events WHERE issuer=? AND org=? AND workspace=? AND space=? AND at>=? AND at<=? ORDER BY at DESC,id DESC',
                               (*scope, now - WINDOW, now)).fetchall()
+            recent = db.execute('SELECT at,caller,publication,outcome,http_status,duration_ms FROM events WHERE issuer=? AND org=? AND workspace=? AND space=? AND at>=? AND at<=? ORDER BY at DESC,id DESC LIMIT 20',
+                                (*scope, now - RETENTION, now)).fetchall()
             total=db.execute('SELECT requests,failed,rejected FROM totals WHERE issuer=? AND org=? AND workspace=? AND space=?',scope).fetchone()
         counts = {'historical_result': 0, 'refused': 0, 'rejected': 0, 'failed': 0}
         versions = {}
@@ -118,10 +120,10 @@ class ServiceMonitor:
             'totals': {'requests':total['requests'] if total else 0,'failed':total['failed'] if total else 0,
                        'rejected':total['rejected'] if total else 0,
                        'partial':bool(meta['totals_partial']) or self.write_failed_at is not None},
-            'last_request_at': utc(rows[0]['at']) if rows else None,
+            'last_request_at': utc(recent[0]['at']) if recent else None,
             'p95_ms': durations[math.ceil(len(durations)*.95)-1] if durations else None,
             'versions': [{'publication_id': key, 'requests': value} for key, value in sorted(versions.items(), key=lambda item: (-item[1],item[0]))[:10]],
-            'recent': [dict(row) | {'at': utc(row['at'])} for row in rows[:20]],
+            'recent': [dict(row) | {'at': utc(row['at'])} for row in recent],
             'outcomes': sorted(outcomes.values(), key=lambda item: (-item['requests'], item['outcome'])),
             'callers': sorted(callers.values(), key=lambda item: (-item['requests'], item['caller']))[:100],
         }
