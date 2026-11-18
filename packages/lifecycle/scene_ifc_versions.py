@@ -11,6 +11,7 @@ import tempfile
 import time
 from uuid import uuid4
 from typing import Literal
+from zipfile import BadZipFile
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -25,6 +26,7 @@ TIMEOUT_SECONDS = 300
 LEASE_SECONDS = TIMEOUT_SECONDS + 120
 MAX_TASKS = 1000
 MAX_SWITCHES = 2000
+MAX_PENDING = 8
 
 
 class StoredModel(BaseModel):
@@ -212,6 +214,8 @@ class SceneIfcVersions:
                 raise ValueError('ifc_retry_requires_failed_task')
             if task is None and len(value['tasks']) >= MAX_TASKS:
                 raise ValueError('ifc_task_budget')
+            if sum(t['state'] in ('queued','running') for t in value['tasks'].values()) >= MAX_PENDING:
+                raise ValueError('ifc_queue_full')
             result = {'id': key, 'attachment_id': attachment, 'source_sha256': record['sha256'],
                       'name': record['name'], 'actor': actor, 'parser': PARSER, 'state': 'queued',
                       'requested_at': now(), 'attempt': uuid4().hex}
@@ -272,7 +276,7 @@ class SceneIfcVersions:
                     return True
             except ParseFailed as exc:
                 error = str(exc) if str(exc) in ('parse_timeout', 'parser_unavailable', 'parse_rejected') else error
-            except (OSError, ValueError, TypeError, KeyError):
+            except (OSError, ValueError, TypeError, KeyError, BadZipFile):
                 pass
         with mutation_guard(self.inputs.root.parent):
             value = self._read(path)

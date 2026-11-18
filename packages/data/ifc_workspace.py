@@ -94,10 +94,7 @@ class IfcWorkspace:
     def catalog(self,space,expected=None):
         self.directory.read('space',space)
         binding=self.versions.resolve(space,catalog_sha256=expected) if self.versions is not None else None
-        if binding is None and self.config is not None:
-            _,raw=read_json(self.config,1_000_000);config=IfcConfig.model_validate(raw)
-            if len({b.space_id for b in config.bindings})!=len(config.bindings):raise ValueError('ifc_duplicate_scene_binding')
-            binding=next((b for b in config.bindings if b.space_id==space),None)
+        if binding is None:binding=self.legacy_binding(space)
         if (binding is None and expected is not None and self.versions is not None
                 and self.versions.resolve(space) is not None):raise ValueError('ifc_catalog_changed')
         if binding is None:return None,None
@@ -106,6 +103,12 @@ class IfcWorkspace:
         if sha(raw)!=binding.catalog_sha256:raise ValueError('ifc_catalog_changed')
         validate_catalog(doc);validate_source(binding.root,doc)
         return binding,doc
+
+    def legacy_binding(self,space):
+        if self.config is None:return None
+        _,raw=read_json(self.config,1_000_000);config=IfcConfig.model_validate(raw)
+        if len({b.space_id for b in config.bindings})!=len(config.bindings):raise ValueError('ifc_duplicate_scene_binding')
+        return next((b for b in config.bindings if b.space_id==space),None)
 
     def directory_view(self,space):
         binding,doc=self.catalog(space)

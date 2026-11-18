@@ -68,19 +68,26 @@ IFC_GEOMETRY_PATH = '/api/scene-ifc/element-geometry'
 IFC_TYPES_PATH = '/api/scene-ifc/type-proposals'
 IFC_PACKAGE_PATH = '/api/scene-ifc/design-package'
 IFC_SURFACE_PATH = '/api/scene-ifc/nearest-surface'
+IFC_REFERENCE_PATH = '/api/scene-ifc/references'
+IFC_ACTIVATE_PATH = IFC_REFERENCE_PATH+'/activate'
+IFC_REFERENCE_PREVIEW = IFC_REFERENCE_PATH+'/preview'
 
 
 class BusinessAccess:
-    def __init__(self, rp, policies, directory, jobs, registration_sources=None,workspace_config=None,consumer_config=None,subscriptions=None,scene_pointcloud_config=None,scene_ifc_config=None):
+    def __init__(self, rp, policies, directory, jobs, registration_sources=None,workspace_config=None,consumer_config=None,subscriptions=None,scene_pointcloud_config=None,scene_ifc_config=None,*,scene_ifc_self_service=False):
         self.rp,self.policies,self.directory,self.jobs=rp,policies,directory,jobs
         self.subscriptions=subscriptions
         self.amap=AmapGateway.from_env()
         self.globe=GlobeRuntime.from_env()
         self.scene_pointclouds=ScenePointcloudWorkspace(jobs.inputs,scene_pointcloud_config) if jobs.inputs else None
-        self.scene_ifc=IfcWorkspace(directory,jobs,scene_ifc_config)
+        self.attachments=SceneAttachments(jobs.inputs) if jobs.inputs else None
+        self.ifc_versions=None
+        if scene_ifc_self_service and self.attachments is not None:
+            from packages.lifecycle.scene_ifc_versions import SceneIfcVersions
+            self.ifc_versions=SceneIfcVersions(self.attachments)
+        self.scene_ifc=IfcWorkspace(directory,jobs,scene_ifc_config,versions=self.ifc_versions)
         from packages.service.ifc_opening_observations import IfcOpeningObservations
         self.ifc_observations=IfcOpeningObservations(jobs.root,self.scene_ifc)
-        self.attachments=SceneAttachments(jobs.inputs) if jobs.inputs else None
         self.sources=SpaceSources(directory.root,registration_sources or {})
         self.recipients=ServiceRecipients(directory.root)
         self.workspace_scenes=WorkspaceScenes(directory,policies,self.sources,workspace_config,
@@ -153,6 +160,15 @@ class BusinessAccess:
             space(q.get('space_id'),DATA_MANAGE);return {'principal':principal}
         if (path=='/api/scene-attachments' or re.fullmatch(r'/api/scene-attachments/attachment-[a-f0-9]{16}',path)) and method in ('GET','HEAD','POST'):
             space(q.get('space_id'),DATA_MANAGE);return {'principal':principal}
+        if (path==IFC_REFERENCE_PATH and method=='GET' or path==IFC_REFERENCE_PREVIEW and method=='GET'
+                or path in (IFC_REFERENCE_PATH,IFC_ACTIVATE_PATH) and method=='POST'):
+            wanted=body.get('space_id') if method=='POST' else q.get('space_id')
+            space(wanted,ASSOCIATION_EDIT)
+            try:space(wanted,DATA_MANAGE)
+            except PermissionError:
+                if method!='GET' or path!=IFC_REFERENCE_PATH:raise
+                return {'principal':principal,'can_manage_ifc':False}
+            return {'principal':principal,'can_manage_ifc':True}
         if path in (IFC_TYPES_PATH,IFC_SURFACE_PATH,IFC_OBSERVATION_BATCH_PATH) and method=='POST':
             space(body.get('space_id'),ASSOCIATION_EDIT);return {'principal':principal}
         if path in (IFC_CATALOG_PATH,'/api/scene-ifc/element',IFC_STRUCTURE_PATH,IFC_OBSERVATION_PATH,IFC_SNAPSHOT_PATH,IFC_GEOMETRY_PATH,IFC_PACKAGE_PATH) and method in ('GET','HEAD'):
@@ -458,6 +474,36 @@ class BusinessAccess:
                 try:result=await run_in_threadpool(workspace_catalog,self.jobs,self.directory,policy,context['principal'],query)
                 except CatalogUnavailable:return deny(503,'catalog_budget_exceeded')
                 return JSONResponse(result,headers={'Cache-Control':'no-store'})
+            if path in (IFC_REFERENCE_PATH,IFC_ACTIVATE_PATH,IFC_REFERENCE_PREVIEW):
+                if self.ifc_versions is None:return deny(404,'ifc_self_service_unavailable')
+                from packages.service.ifc_reference_http import ActivateCommand,TaskCommand,public_listing,preview_version
+                try:
+                    if request.method=='GET':
+                        if path==IFC_REFERENCE_PREVIEW:
+                            if set(request.query_params)!={'space_id','task_id'} or not re.fullmatch('[a-f0-9]{64}',request.query_params['task_id']):return deny(422,'ifc_invalid_request')
+                            result=await run_in_threadpool(preview_version,self.ifc_versions,request.query_params['space_id'],request.query_params['task_id'])
+                        else:
+                            if set(request.query_params)!={'space_id'}:return deny(422,'ifc_invalid_request')
+                            result=await run_in_threadpool(public_listing,self.ifc_versions,request.query_params['space_id'],context['can_manage_ifc'])
+                        return JSONResponse(result,headers={'Cache-Control':'no-store'})
+                    if request.query_params:return deny(422,'ifc_invalid_request')
+                    if path==IFC_ACTIVATE_PATH:
+                        change=ActivateCommand.model_validate(body)
+                        if (await run_in_threadpool(self.scene_ifc.legacy_binding,change.space_id) is not None
+                                and (await run_in_threadpool(self.ifc_versions.listing,change.space_id))['current'] is None):
+                            return deny(409,'ifc_legacy_migration_required')
+                        binding=await run_in_threadpool(self.ifc_versions.activate,change.space_id,change.task_id,
+                            expected_revision=change.expected_revision,actor=context['principal'].subject)
+                        return JSONResponse({'space_id':change.space_id,'catalog_sha256':binding.catalog_sha256},headers={'Cache-Control':'no-store'})
+                    change=TaskCommand.model_validate(body)
+                    task,created=await run_in_threadpool(self.ifc_versions.enqueue,change.space_id,change.attachment_id,
+                        context['principal'].subject,retry=change.retry)
+                    return JSONResponse({'space_id':change.space_id,'task_id':task['id'],'state':task['state']},
+                        status_code=202 if created else 200,headers={'Cache-Control':'no-store'})
+                except ValidationError:return deny(422,'ifc_invalid_request')
+                except (ValueError,OSError,KeyError,TypeError) as exc:
+                    detail=str(exc)
+                    return deny(409,detail if detail in ('ifc_current_changed','ifc_version_not_ready','ifc_attachment_required','ifc_task_budget','ifc_queue_full','ifc_retry_requires_failed_task') else 'ifc_reference_unavailable')
             if path.startswith(IFC_CATALOG_PATH):
                 try:
                     if path==IFC_OBSERVATION_BATCH_PATH:
