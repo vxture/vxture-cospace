@@ -39,10 +39,10 @@ function SettingsSection({section,editable,onEdit,children}:{section:Section;edi
 }
 type InformationRevision={space:string;revision:number};
 export function useSpaceInformationRevision(space:string){
- const [value,onRevisionChange]=useState<InformationRevision|null>(null);
- return {revision:value?.space===space?value.revision:undefined,onRevisionChange};
+ const [value,setValue]=useState<InformationRevision|null>(null);
+ return {revision:value?.space===space?value.revision:undefined,onRevisionChange:setValue};
 }
-export function SpaceSettings({embedded=false,onRevisionChange}:{embedded?:boolean;onRevisionChange?:(value:InformationRevision)=>void}){
+export function SpaceSettings({embedded=false,onRevisionChange} :Readonly<{embedded?:boolean;onRevisionChange?:(value:InformationRevision)=>void}>){
  const target=useRecordNavigation(),{toast}=useToast();
  const [data,setData]=useState<Settings|null>(null);
  const [name,setName]=useState(''),[description,setDescription]=useState(''),[reason,setReason]=useState('');
