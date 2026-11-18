@@ -64,6 +64,8 @@ jobs:
         run: docker build --file deploy/linux/Dockerfile --build-arg GIT_SHA="$GITHUB_SHA" --tag cospace:ci .
       - name: Verify frozen model and dual-view composition inside production image
         run: docker run --rm -i --entrypoint python cospace:ci < tests/container_preview_smoke.py
+      - name: Verify native parser isolation, durable queue and readiness recovery
+        run: python scripts/guardrails/smoke_ifc_sidecar.py cospace:ci
   test-coverage:
     name: test-coverage
     runs-on: ubuntu-latest
@@ -81,7 +83,8 @@ jobs:
       - name: Require production requirements to match the reviewed lock
         run: |
           uv export --frozen --no-dev --extra preview --extra input --no-emit-project --output-file deploy/linux/requirements.lock
-          git diff --exit-code -- deploy/linux/requirements.lock
+          uv export --directory experiments/ifc-tool --frozen --no-dev --no-emit-project --output-file ../../deploy/linux/ifc-requirements.lock
+          git diff --exit-code -- deploy/linux/requirements.lock deploy/linux/ifc-requirements.lock
       - run: uv run --frozen pytest -q --junitxml=test-results.xml
       - name: Isolated native IFC parser regression (SI units and placements)
         run: uv run --no-build --project experiments/ifc-tool --frozen --group dev pytest -q tests/test_ifc_native.py

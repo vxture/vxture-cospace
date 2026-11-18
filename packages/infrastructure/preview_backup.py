@@ -4,7 +4,7 @@ No session stores or credentials are accepted. Archive trust is the externally
 recorded SHA-256, not a digest read from the archive itself.
 """
 from datetime import datetime,timezone
-from contextlib import closing
+from contextlib import closing, nullcontext
 import hashlib
 import json
 from pathlib import Path,PurePosixPath
@@ -141,6 +141,12 @@ def validate_runtime(root,original_root=None):
         list(stored_records(root/'runtime/preview-inputs', verify=True))
     except (OSError,ValueError,TypeError,KeyError):
         raise ValueError('backup_scene_attachments_invalid') from None
+    if (root/'runtime/preview-inputs/scene-ifc-versions').exists():
+        from packages.lifecycle.scene_ifc_versions import validate_version_storage
+        try:
+            validate_version_storage(root/'runtime/preview-inputs')
+        except (OSError,ValueError,TypeError,KeyError,zipfile.BadZipFile):
+            raise ValueError('backup_scene_ifc_versions_invalid') from None
     for pattern in ('*/job.json','*/views/*/task.json'):
         for p in (root/'runtime/preview-builds').glob(pattern):
             if json.loads(p.read_bytes()).get('state') in ('queued','running'):
@@ -166,7 +172,9 @@ def backup(root,output,*,actor,reason):
     if not isinstance(actor,str) or not actor.strip() or len(actor)>200 or not isinstance(reason,str) or not reason.strip() or len(reason)>500:
         raise ValueError('backup_actor_and_reason_required')
     temporary=output.parent/('.'+output.name+'.'+uuid.uuid4().hex+'.tmp')
-    with service_guard(root/'runtime',require_existing=True),mutation_guard(root/'runtime'),mutation_guard(root/'policy'):
+    worker=root/'runtime/preview-inputs/scene-ifc-worker'
+    worker_guard=service_guard(worker,require_existing=True) if worker.exists() else nullcontext()
+    with service_guard(root/'runtime',require_existing=True),worker_guard,mutation_guard(root/'runtime'),mutation_guard(root/'policy'):
         before=tree(root);validate_runtime(root)
         manifest={'profile':PROFILE,'root':str(root),'created_at':datetime.now(timezone.utc).isoformat(),
                   'actor':actor.strip(),'reason':reason.strip(),'restore_mode':'same_machine_original_path',

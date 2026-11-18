@@ -1,4 +1,4 @@
-"""Run in experiments/ifc-tool; the production environment has no native parser."""
+"""Run in the dedicated native IFC environment, never in the HTTP interpreter."""
 import gc
 from pathlib import Path
 import numpy as np

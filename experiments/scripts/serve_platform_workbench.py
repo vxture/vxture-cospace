@@ -21,7 +21,7 @@ from packages.infrastructure.platform_provisioning import ProvisioningReconciler
 from packages.infrastructure.platform_usage import StorageInventory, StorageReporter, UsageTransport
 
 
-def assemble(rp,policies,sample,initial=None,sources_config=Path('deploy/config/preview-sources.json'),workspace_config=None,consumer_config=None,scene_pointcloud_config=None,scene_ifc_config=None):
+def assemble(rp,policies,sample,initial=None,sources_config=Path('deploy/config/preview-sources.json'),workspace_config=None,consumer_config=None,scene_pointcloud_config=None,scene_ifc_config=None,*,scene_ifc_self_service=False,ifc_worker_available=None):
     sample=Path(sample).resolve();directory=PreviewSpaces(sample/'preview-directory')
     inputs=PreviewInputs(sample/'preview-inputs',directory)
     jobs=PreviewJobs(sample/'preview-builds',Path('.'),Path('.'),inputs)
@@ -33,7 +33,7 @@ def assemble(rp,policies,sample,initial=None,sources_config=Path('deploy/config/
     return create_auth_app(rp,business=business,subscriptions=subscriptions,
         reconciler=ProvisioningReconciler(subscriptions) if subscriptions is not None else None,
         usage_reporter=StorageReporter(StorageInventory(policies,inputs,jobs),UsageTransport(rp,subscriptions.config)) if subscriptions is not None else None,
-        access=BusinessAccess(rp,policies,directory,jobs,sources,workspace_config,consumer_config,subscriptions,scene_pointcloud_config,scene_ifc_config))
+        access=BusinessAccess(rp,policies,directory,jobs,sources,workspace_config,consumer_config,subscriptions,scene_pointcloud_config,scene_ifc_config,scene_ifc_self_service=scene_ifc_self_service,ifc_worker_available=ifc_worker_available))
 
 
 def main():
@@ -44,6 +44,7 @@ def main():
     p.add_argument('--consumer-config',type=Path,help='Optional trusted service-caller scene grants; enables only /s2s fixed-version queries')
     p.add_argument('--scene-pointcloud-config',type=Path,help='Optional scene-scoped full pointcloud/LOD bindings; browser cannot set paths')
     p.add_argument('--scene-ifc-config',type=Path,help='Optional scene-scoped inspected IFC catalogs; native parsing stays offline')
+    p.add_argument('--scene-ifc-self-service',action='store_true',help='Enable the local IFC queue UI when the separate worker is running')
     p.add_argument('--sessions',type=Path,help='Optional separate session directory; keep outside a cold-backup business root')
     p.add_argument('--sources-config',type=Path,default=Path('deploy/config/preview-sources.json'));a=p.parse_args()
     original=Path('var/nyu').resolve();sample=a.sample.resolve();runtime=a.runtime.resolve()
@@ -56,7 +57,7 @@ def main():
         config=RpConfig.from_env();policies=SpacePolicyStore(runtime);policies.load()
         rp=PlatformLogin(config,LocalRpStore(a.sessions or runtime/'sessions',config.encryption_key.get_secret_value()))
         with service_guard(sample):
-            app=assemble(rp,policies,sample,a.initial,a.sources_config,a.workspace_scenes_config,a.consumer_config,a.scene_pointcloud_config,a.scene_ifc_config)
+            app=assemble(rp,policies,sample,a.initial,a.sources_config,a.workspace_scenes_config,a.consumer_config,a.scene_pointcloud_config,a.scene_ifc_config,scene_ifc_self_service=a.scene_ifc_self_service)
             uvicorn.run(app,host='127.0.0.1',port=a.port,access_log=False)
     except (ValueError,OSError,RuntimeError):p.exit(2,'authorized_workbench_configuration_rejected\n')
 

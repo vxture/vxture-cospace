@@ -11,6 +11,9 @@ import numpy as np
 from pydantic import BaseModel,ConfigDict,Field,ValidationError
 from packages.data.ifc_inspection import PROFILE,MAX_PRODUCTS,MAX_VERTICES,MAX_FACES,MAX_SOURCE_BYTES,digest,mesh_arrays
 
+VERTICES_MEMBER='vertices.npy'
+FACES_MEMBER='faces.npy'
+
 
 class Fixed(BaseModel):
     model_config=ConfigDict(extra='forbid',strict=True,allow_inf_nan=False)
@@ -68,6 +71,21 @@ def validate_source(root,doc):
         raise ValueError('ifc_source_changed')
 
 
+def validate_array_header(archive, name, rows, dtype):
+    with archive.open(name) as stream:
+        version = np.lib.format.read_magic(stream)
+        if version == (1, 0):
+            read_header = np.lib.format.read_array_header_1_0
+        elif version == (2, 0):
+            read_header = np.lib.format.read_array_header_2_0
+        else:
+            raise ValueError('ifc_mesh_array_layout')
+        shape, fortran, actual_dtype = read_header(stream, max_header_size=1024)
+        if (shape != (rows, 3) or fortran or actual_dtype != np.dtype(dtype)
+                or archive.getinfo(name).file_size != stream.tell() + rows * 3 * actual_dtype.itemsize):
+            raise ValueError('ifc_mesh_array_layout')
+
+
 def load_mesh(root,product):
     member=product['mesh'];path=Path(root)/member['path']
     if path.is_symlink() or not path.resolve().is_relative_to(Path(root).resolve()):raise ValueError('ifc_mesh_path')
@@ -76,9 +94,11 @@ def load_mesh(root,product):
     # Check inner array sizes before NumPy allocates buffers.
     with zipfile.ZipFile(io.BytesIO(raw)) as archive:
         entries=archive.infolist()
-        if (len(entries)!=2 or {p.filename for p in entries}!={'vertices.npy','faces.npy'}
-                or archive.getinfo('vertices.npy').file_size>member['vertices']*24+1024
-                or archive.getinfo('faces.npy').file_size>member['triangles']*12+1024):raise ValueError('ifc_mesh_archive_budget')
+        if (len(entries)!=2 or {p.filename for p in entries}!={VERTICES_MEMBER,FACES_MEMBER}
+                or archive.getinfo(VERTICES_MEMBER).file_size>member['vertices']*24+1024
+                or archive.getinfo(FACES_MEMBER).file_size>member['triangles']*12+1024):raise ValueError('ifc_mesh_archive_budget')
+        validate_array_header(archive, VERTICES_MEMBER, member['vertices'], '<f8')
+        validate_array_header(archive, FACES_MEMBER, member['triangles'], '<i4')
     with np.load(io.BytesIO(raw),allow_pickle=False) as arrays:vertices,faces=mesh_arrays(arrays['vertices'],arrays['faces'])
     if len(vertices)!=member['vertices'] or len(faces)!=member['triangles']:raise ValueError('ifc_mesh_count')
     bounds=np.array([vertices.min(axis=0),vertices.max(axis=0)])
@@ -87,20 +107,28 @@ def load_mesh(root,product):
 
 
 class IfcWorkspace:
-    def __init__(self,directory,jobs,config=None):self.directory,self.jobs,self.config=directory,jobs,Path(config) if config else None
+    def __init__(self,directory,jobs,config=None,*,versions=None):
+        self.directory,self.jobs,self.config=directory,jobs,Path(config) if config else None
+        self.versions=versions
 
     def catalog(self,space,expected=None):
         self.directory.read('space',space)
-        if self.config is None:return None,None
-        _,raw=read_json(self.config,1_000_000);config=IfcConfig.model_validate(raw)
-        if len({b.space_id for b in config.bindings})!=len(config.bindings):raise ValueError('ifc_duplicate_scene_binding')
-        binding=next((b for b in config.bindings if b.space_id==space),None)
+        binding=self.versions.resolve(space,catalog_sha256=expected) if self.versions is not None else None
+        if binding is None:binding=self.legacy_binding(space)
+        if (binding is None and expected is not None and self.versions is not None
+                and self.versions.resolve(space) is not None):raise ValueError('ifc_catalog_changed')
         if binding is None:return None,None
         if expected is not None and expected!=binding.catalog_sha256:raise ValueError('ifc_catalog_changed')
         raw,doc=read_json(Path(binding.root)/'ifc.json',8*1024*1024)
         if sha(raw)!=binding.catalog_sha256:raise ValueError('ifc_catalog_changed')
         validate_catalog(doc);validate_source(binding.root,doc)
         return binding,doc
+
+    def legacy_binding(self,space):
+        if self.config is None:return None
+        _,raw=read_json(self.config,1_000_000);config=IfcConfig.model_validate(raw)
+        if len({b.space_id for b in config.bindings})!=len(config.bindings):raise ValueError('ifc_duplicate_scene_binding')
+        return next((b for b in config.bindings if b.space_id==space),None)
 
     def directory_view(self,space):
         binding,doc=self.catalog(space)
