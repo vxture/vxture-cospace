@@ -8,12 +8,12 @@ import {hasPreviewModelSummary} from './preview-model-contract';
 import {usePlatformSession} from './platform-auth';
 import {useSceneCapabilities} from './scene-capabilities';
 import {WorkflowNavigationToggle} from './workflow-navigation';
-import {SpaceSettings} from './space-settings';
+import {SpaceSettings,useSpaceInformationRevision} from './space-settings';
 import {runGuarded} from './unsaved-navigation';
 import {appNavigate} from './app-router';
 import React,{useEffect,useState} from 'react';
 import {Button,Badge,StatusBadge,Drawer,Select,SelectTrigger,SelectValue,SelectContent,SelectItem,Dialog,DialogContent,DialogHeader,DialogTitle,DialogDescription} from '@vxture/design-system';
-import {ArrowClockwise,ArrowUpRight,Database,Cube,Eye,Robot,ArrowRight,Plus,ClockCounterClockwise,UploadSimple,Broadcast,Desktop,CheckCircle,SidebarSimple,FileArrowUp,Clock,WarningCircle,Circle,SpinnerGap,Layout,Cpu,MapPin,ListChecks} from '@phosphor-icons/react';
+import {ArrowClockwise,ArrowUpRight,Database,FlowArrow,Cube,Eye,Robot,ArrowRight,Plus,ClockCounterClockwise,UploadSimple,Broadcast,Desktop,CheckCircle,SidebarSimple,FileArrowUp,Clock,WarningCircle,Circle,SpinnerGap,Layout,Cpu,MapPin,ListChecks} from '@phosphor-icons/react';
 import {businessEndpoint as endpoint} from './business-endpoint';
 import {recordLink,useRecordNavigation} from './record-navigation';
 import {inputFormat} from './input-format';
@@ -50,6 +50,7 @@ export function ConstructionFlow({active=true}:{active?:boolean}={}){
  const target=useRecordNavigation();
  const platform=usePlatformSession(),capabilities=useSceneCapabilities();
  const canBuild=!platform||capabilities.includes('build.run');
+ const information=useSpaceInformationRevision(target.space);
  const [data,setData]=useState<Snapshot|null>(null),[error,setError]=useState(''),[busy,setBusy]=useState(true),[revision,setRevision]=useState(0);
  const [step,setStep]=useState(()=>entryStep(target.tab,target.job)),[restart,setRestart]=useState(false),[historyOpen,setHistoryOpen]=useState(()=>innerWidth>=1100);
  const draft=target.tab==='tasks';
@@ -137,11 +138,11 @@ export function ConstructionFlow({active=true}:{active?:boolean}={}){
   {!historyOpen&&<WorkflowNavigationToggle open={false} label="构建" panelId="build-navigation-panel" onToggle={()=>setHistoryOpen(true)}/>}
   <div className="build-work">
    <div className="build-work-scroll" tabIndex={0} aria-label="构建内容">
-   <WorkflowPageHeader space={target.space} icon={<Cube size={32}/>} process="场景构建" stage={step==='info'?'基本信息':steps.find(item=>item.id===step)?.title||'构建记录'} version={step!=='info'&&job?(job.display_code||job.build_code||job.id.slice(-8).toUpperCase()):undefined}
+   <WorkflowPageHeader space={target.space} icon={<FlowArrow size={32}/>} process="场景构建" revision={step==='info'?information.revision:undefined} stage={step==='info'?'基本信息':steps.find(item=>item.id===step)?.title||'构建记录'} version={step!=='info'&&job?(job.display_code||job.build_code||job.id.slice(-8).toUpperCase()):undefined}
     status={step!=='info'&&<StatusBadge tone={model?'success':job?.state==='failed'?'danger':'info'}>{draft?'待准备':state}</StatusBadge>}
     details={step!=='info'&&<>{draft&&draftTime}{job&&<>{job.build_info?.name&&<span>{job.build_info.name}</span>}<time dateTime={job.created_at}>{shortTime(job.created_at)}</time></>}{canBuild&&(job||draft)&&<BuildContext endpoint={endpoint} space={target.space} draft={draft} value={draft?buildInfo:job?.build_info||{name:'',purpose:'',changes:''}} onChange={setBuildInfo} jobId={job?.id} revision={job?.build_info_revision||0} onSaved={()=>setRevision(n=>n+1)}/>}</>}
     actions={<>{step!=='info'&&job&&model&&<Button asChild variant="outline" size="sm"><a href={candidateScreenHref(target.space,job.id)} target="_blank" rel="noopener noreferrer"><Eye size={16}/>查看成果</a></Button>}{step!=='info'&&job&&canBuild&&<Button size="sm" variant="outline" onClick={()=>setRestart(true)}><ClockCounterClockwise size={16}/>重新构建</Button>}{canBuild&&!draft&&<Button size="sm" onClick={newBuild}><Plus size={16}/>新建构建</Button>}</>}/>
-   {step==='info'?<section className="build-stage-content build-scene-information"><SpaceSettings embedded key={target.space}/></section>:<>
+   {step==='info'?<section className="build-stage-content build-scene-information"><SpaceSettings embedded onRevisionChange={information.onRevisionChange} key={target.space}/></section>:<>
    {busy&&!data?<p role="status">正在读取构建工作…</p>:error?<div role="alert" className="construction-flow-message">{error}</div>:<>
 
 

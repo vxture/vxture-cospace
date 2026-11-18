@@ -2,9 +2,10 @@
 .workflow-page-icon{display:grid;place-items:center;color:var(--primary)}
 .workflow-page-copy{display:grid;gap:8px;min-width:0}
 .workflow-page-title,.workflow-page-meta,.workflow-page-actions{display:flex;align-items:center;flex-wrap:wrap;gap:8px 12px;min-width:0}
+.workflow-page-title{min-height:32px}
 .workflow-page-title h2{margin:0;font-size:18px;font-weight:600;line-height:1.5;overflow-wrap:anywhere}
 .workflow-page-title>[data-slot]{flex-shrink:0}
-.workflow-page-meta{font-size:12px;color:var(--muted-foreground);overflow-wrap:anywhere}
+.workflow-page-meta{min-height:24px;line-height:20px;font-size:12px;color:var(--muted-foreground);overflow-wrap:anywhere}
 .workflow-page-meta strong{font-weight:600;color:var(--foreground)}
 .workflow-page-actions{justify-content:flex-end;gap:8px}
 .workflow-page-actions:empty{display:none}
