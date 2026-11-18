@@ -14,4 +14,3 @@ Validation: workbench type check/build passed. Authenticated browser comparison 
 | Content (reference: Current build materials) | 14px / 500 | 21.7px | 24px, primary | 12px |
 
 All three information subheadings matched; no horizontal overflow. Local screenshots reviewed under ignored `output/playwright/hierarchy/parity-*.png`.
-
