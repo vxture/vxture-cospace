@@ -1,6 +1,5 @@
 import React,{useEffect,useState} from 'react';
-import {Button,Input,NativeSelect,Dialog,DialogContent,DialogHeader,DialogTitle,DialogDescription} from '@vxture/design-system';
-import {ShieldCheck} from '@phosphor-icons/react';
+import {Button,Input,NativeSelect} from '@vxture/design-system';
 import {usePlatformSession} from './platform-auth';
 import {sessionScopeKey} from './session-continuity';
 import {businessEndpoint} from './business-endpoint';
@@ -14,13 +13,13 @@ type Access={workspace_id:string;can_manage:boolean;revision:number;requested:bo
 const roleLabels:Record<Role|string,string>={viewer:'查看者',engineer:'工程师',manager:'管理者',none:'无权限'};
 const endpoint=businessEndpoint+'/api/scene-permissions';
 
-export function ScenePermissionsButton(){
- const session=usePlatformSession(),[open,setOpen]=useState(false),[busy,setBusy]=useState(false);
- if(!session)return null;
- return <><Button size="xl" variant="outline" onClick={()=>setOpen(true)}><ShieldCheck size={16}/>场景权限</Button><Dialog open={open} onOpenChange={value=>{if(!busy)void runGuarded(()=>setOpen(value));}}><DialogContent className="scene-permissions-dialog"><DialogHeader><DialogTitle>场景权限</DialogTitle><DialogDescription>工作区成员共享场景查看权限，由所有者或管理者分配角色。</DialogDescription></DialogHeader>{open&&<ScenePermissions key={sessionScopeKey(session)} onBusy={setBusy}/>}</DialogContent></Dialog></>;
+export function ScenePermissionsPanel(){
+ const session=usePlatformSession();
+ if(!session)return <p>登录后可查看工作区场景权限。</p>;
+ return <ScenePermissions key={sessionScopeKey(session)}/>;
 }
 
-function ScenePermissions({onBusy}:{onBusy:(busy:boolean)=>void}){
+function ScenePermissions(){
  const session=usePlatformSession();
  const [data,setData]=useState<Access|null>(null),[refresh,setRefresh]=useState(0),[busy,setBusy]=useState(false),[loading,setLoading]=useState(true),[error,setError]=useState(''),[notice,setNotice]=useState('');
  const [subject,setSubject]=useState(''),[space,setSpace]=useState(''),[role,setRole]=useState<Role|'none'>('viewer'),[reason,setReason]=useState('');
@@ -28,7 +27,6 @@ function ScenePermissions({onBusy}:{onBusy:(busy:boolean)=>void}){
  const current=data?.grants?.find(g=>g.subject===subject&&g.space_id===space)?.role||'none';
  const dirty=!!reason||!!subject&&!!space&&current!==role;
  const acknowledge=useUnsavedNavigation(dirty,'场景权限调整',{discard:()=>{setSubject('');setSpace('');setReason('');}});
- useEffect(()=>{onBusy(busy);return()=>onBusy(false);},[busy,onBusy]);
  useEffect(()=>{const controller=new AbortController();setLoading(true);setError('');
   fetch(endpoint,{cache:'no-store',signal:controller.signal}).then(async response=>{
    if(!response.ok)throw Error('暂时无法读取场景权限，请重试。');
@@ -53,7 +51,7 @@ function ScenePermissions({onBusy}:{onBusy:(busy:boolean)=>void}){
   {error&&<p role="alert">{error}</p>}{notice&&<p role="status">{notice}</p>}
   <Button size="sm" variant="outline" disabled={busy||loading} onClick={()=>void runGuarded(()=>setRefresh(n=>n+1))}>重新读取权限</Button>
   {loading?<p role="status">正在读取权限…</p>:data?.can_manage?<>
-   <section aria-label="成员场景授权"><h3>分配场景权限</h3><p>需要编辑或管理场景的成员，可在“场景权限”中申请协作权限，随后在此分配角色。成员无需申请即可查看本工作区场景。</p>
+   <section aria-label="成员场景授权"><h3>分配场景权限</h3><p>需要编辑或管理场景的成员，可在“配置与管理 → 工作区与授权 → 场景权限”中申请协作权限，随后在此分配角色。成员无需申请即可查看本工作区场景。</p>
     {!data.members?.length?<p>暂无申请或已授权成员。</p>:!data.scenes?.length?<p>当前工作区暂无可分配的场景，请先创建场景。</p>:<form onSubmit={submit} className="scene-permissions-form">
      <label>成员<NativeSelect aria-label="授权成员" value={subject} disabled={busy} onChange={e=>choose(e.target.value,space)}><option value="">选择成员</option>{data.members.map(m=><option key={m.subject} value={m.subject}>{m.display_name} · {m.subject}</option>)}</NativeSelect></label>
      <label>场景<NativeSelect aria-label="授权场景" value={space} disabled={busy} onChange={e=>choose(subject,e.target.value)}><option value="">选择场景</option>{data.scenes.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</NativeSelect></label>
