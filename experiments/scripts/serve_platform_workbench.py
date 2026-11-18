@@ -33,7 +33,7 @@ def assemble(rp,policies,sample,initial=None,sources_config=Path('deploy/config/
     return create_auth_app(rp,business=business,subscriptions=subscriptions,
         reconciler=ProvisioningReconciler(subscriptions) if subscriptions is not None else None,
         usage_reporter=StorageReporter(StorageInventory(policies,inputs,jobs),UsageTransport(rp,subscriptions.config)) if subscriptions is not None else None,
-        access=BusinessAccess(rp,policies,directory,jobs,sources,workspace_config,consumer_config,subscriptions,scene_pointcloud_config,scene_ifc_config,scene_ifc_self_service=scene_ifc_self_service,ifc_worker_available=ifc_worker_available))
+        access=BusinessAccess(rp,policies,directory,jobs,sources,workspace_config,consumer_config,subscriptions,scene_pointcloud_config,scene_ifc_config,scene_ifc_self_service=scene_ifc_self_service,ifc_worker_available=ifc_worker_available,workspace_scene_visibility=True))
 
 
 def main():

@@ -6,6 +6,7 @@ import {MagnifyingGlass,MapPin,ArrowRight,Cube,ArrowsClockwise} from '@phosphor-
 import {useSceneDirectory} from './use-scene-directory';
 import {SceneCover} from './scene-cover';
 import {CreateSceneButton} from './create-scene';
+import {ScenePermissionsButton} from './scene-permissions';
 import {scenePhases,scenePhase,filterScenes,sceneWorkspaceHref,sceneEntryHref,sceneEntryLabel,currentRelease,publicationLabel} from './scene-catalog-contract';
 import {SceneDetail,SceneMoreMenu} from './scene-detail';
 import {useLocation} from 'react-router-dom';
@@ -24,7 +25,7 @@ export function SceneCatalog(){
  const reset=()=>{setQuery('');setPhase('all');};
  if(mode==='map')return <React.Suspense fallback={<MapLoading/>}><SceneMap spaces={spaces} loading={loading} error={error} onBack={()=>appNavigate('/space')} onRefresh={()=>setRevision(v=>v+1)}/></React.Suspense>;
  return <main className="scene-catalog" aria-label="场景选择"><div className="scene-catalog-shell">
-  <ViewHeader title="我的场景" secondary={<span className="scene-total" aria-label="场景总数">{spaces.length}</span>} description="从场景开始，连接资料、模型与空间服务。" action={<CreateSceneButton size="xl" onCreated={id=>appNavigate('/data?'+new URLSearchParams({space:id,tab:'inputs'}))}/>}/>
+  <ViewHeader title="我的场景" secondary={<span className="scene-total" aria-label="场景总数">{spaces.length}</span>} description="从场景开始，连接资料、模型与空间服务。" action={<div className="scene-catalog-header-actions"><ScenePermissionsButton/><CreateSceneButton size="xl" onCreated={id=>appNavigate('/data?'+new URLSearchParams({space:id,tab:'inputs'}))}/></div>}/>
   <div className="scene-catalog-toolbar" aria-label="场景清单操作区">
    <ViewModeSwitch value={layout} onChange={setLayout} ariaLabel="清单布局" labels={{list:'列表布局',cards:'卡片布局'}}/>
    <span className="scene-result-count" aria-live="polite">筛选 <strong>{visible.length}</strong> 项</span>
@@ -36,7 +37,7 @@ export function SceneCatalog(){
     <div className="catalog-card-visual"><header className="catalog-card-heading"><h2><a href={sceneWorkspaceHref(scene.id)}>{scene.name}{scene.project_name&&<span> · {scene.project_name}</span>}</a></h2><p className="catalog-card-address" title={scene.address||locationLabel(scene.location)}><MapPin size={14}/><span>{scene.address||locationLabel(scene.location)}</span></p></header><button className="catalog-card-cover" aria-label={'查看'+scene.name+'概览'} onClick={()=>showDetails(scene.id)}><SceneCover name={scene.name} overviewUrl={scene.overview_url}/></button></div>
     <div className="catalog-card-body"><p className="catalog-card-description">{scene.description||'暂无场景描述'}</p><div className="catalog-card-footer"><div className="catalog-card-publication"><StatusBadge size="sm" icon={false} tone={state.tone}>{state.label}</StatusBadge>{release&&<div className="catalog-card-release" title={'发布版本 '+release.id}><span>{publicationLabel(release)}</span><time dateTime={release.created_at}>{release.created_at.slice(0,10)}</time></div>}</div><div className="catalog-card-actions"><SceneMoreMenu scene={scene} onDetails={()=>showDetails(scene.id)}/><Button asChild size="xl" variant={state.tone==='neutral'?'secondary':'default'}><a href={sceneEntryHref(scene)} {...(release?{target:'_blank',rel:'noopener noreferrer'}:{})}>{sceneEntryLabel(scene)}<ArrowRight size={14}/></a></Button></div></div></div>
    </article>;})}
-   {!visible.length&&<div className="scene-catalog-empty" role="status"><MagnifyingGlass size={28}/><h2>{spaces.length?'没有匹配的场景':'暂无可访问的场景'}</h2><p>{spaces.length?'调整搜索关键词或状态后重试。':'可创建新场景，或联系管理员分配场景权限。'}</p>{spaces.length>0&&<Button size="sm" variant="secondary" onClick={reset}>清除筛选</Button>}</div>}
+   {!visible.length&&<div className="scene-catalog-empty" role="status"><MagnifyingGlass size={28}/><h2>{spaces.length?'没有匹配的场景':'暂无可访问的场景'}</h2><p>{spaces.length?'调整搜索关键词或状态后重试。':'当前工作区尚无场景，请确认所选工作区，或联系工作区所有者新建场景。'}</p>{spaces.length>0&&<Button size="sm" variant="secondary" onClick={reset}>清除筛选</Button>}</div>}
   </div>}
  </div><SceneDetail scene={detail} onClose={()=>showDetails('')}/></main>;
 }

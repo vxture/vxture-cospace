@@ -31,6 +31,8 @@ from packages.data.rgbd_input_preview import directory as rgbd_directory, frame 
 from packages.construction.build_preview import preview as build_preview
 from packages.construction.build_process import read_process
 from packages.service.space_preparation import preparation
+from packages.service.scene_permissions import ScenePermissions, GrantChange, PermissionConflict
+from packages.service.space_access import WorkspaceSceneAccessPolicy
 from packages.data.input_uploads import InputUploads,UploadRejected,MAX_UPLOAD,capabilities as upload_capabilities,metadata as upload_metadata
 from packages.ontology.workspace_authoring import WorkspaceOntologies,DraftChange,SealDraft
 from packages.ontology.scene_usage import usage as scene_ontology_usage, UsageQuery
@@ -75,9 +77,11 @@ IFC_REFERENCE_PREVIEW = IFC_REFERENCE_PATH+'/preview'
 
 
 class BusinessAccess:
-    def __init__(self, rp, policies, directory, jobs, registration_sources=None,workspace_config=None,consumer_config=None,subscriptions=None,scene_pointcloud_config=None,scene_ifc_config=None,*,scene_ifc_self_service=False,ifc_worker_available=None):
+    def __init__(self, rp, policies, directory, jobs, registration_sources=None,workspace_config=None,consumer_config=None,subscriptions=None,scene_pointcloud_config=None,scene_ifc_config=None,*,scene_ifc_self_service=False,ifc_worker_available=None,workspace_scene_visibility=False):
         self.rp,self.policies,self.directory,self.jobs=rp,policies,directory,jobs
         self.subscriptions=subscriptions
+        self.workspace_scene_visibility=workspace_scene_visibility
+        self.scene_permissions=ScenePermissions(policies,directory,workspace_scene_visibility=workspace_scene_visibility)
         self.amap=AmapGateway.from_env()
         self.globe=GlobeRuntime.from_env()
         self.scene_pointclouds=ScenePointcloudWorkspace(jobs.inputs,scene_pointcloud_config) if jobs.inputs else None
@@ -93,7 +97,7 @@ class BusinessAccess:
         self.sources=SpaceSources(directory.root,registration_sources or {})
         self.recipients=ServiceRecipients(directory.root)
         self.workspace_scenes=WorkspaceScenes(directory,policies,self.sources,workspace_config,
-            platform_access=subscriptions is not None)
+            platform_access=subscriptions is not None or workspace_scene_visibility)
         self.registration=PreviewRegistration(jobs.inputs,{}) if jobs.inputs else None
         self.consumer=None
         from packages.service.service_monitor import ServiceMonitor
@@ -101,6 +105,12 @@ class BusinessAccess:
         if consumer_config is not None:
             from packages.service.online_consumer import OnlineConsumer
             self.consumer=OnlineConsumer(rp,policies,jobs,consumer_config,subscriptions=subscriptions,monitor=self.service_monitor)
+
+    def load_policy(self):
+        revision,policy=self.policies.load()
+        if self.workspace_scene_visibility:
+            policy=WorkspaceSceneAccessPolicy.model_validate(policy.model_dump())
+        return revision,policy
 
     def require_subscription(self,session):
         if self.subscriptions is not None:
@@ -111,6 +121,11 @@ class BusinessAccess:
         principal=self.rp.verifier.verify(session['access_token'])
         access=PlatformResourceAccess(self.directory,self.jobs,policy)
         path=request.url.path; method=request.method; q=request.query_params
+        if path=='/api/scene-permissions' and method=='GET' or path=='/api/scene-permissions/requests' and method=='POST':
+            return {'principal':principal}
+        if path=='/api/scene-permissions/grants' and method=='POST':
+            if not policy.workspace_manager(principal):raise PermissionError()
+            return {'principal':principal}
         if path=='/api/service-recipients' and method in ('GET','POST') or re.fullmatch(r'/api/service-recipients/agent-[a-f0-9]{32}',path) and method=='PATCH':
             return {'principal':principal}
         if path=='/api/service-monitor' and method=='GET':
@@ -156,7 +171,7 @@ class BusinessAccess:
         visible=policy.visible(principal,self.directory.list('space')) if path in ('/api/projects','/api/spaces') or path.startswith('/api/projects/') else None
         if path in ('/api/ontology-authoring','/api/ontology-authoring/drafts','/api/ontology-authoring/validate','/api/ontology-authoring/seal'):
             if method not in ('GET','HEAD','POST'):raise PermissionError()
-            if method=='POST' and not principal.workspace_owner:raise PermissionError()
+            if method=='POST' and not policy.workspace_manager(principal):raise PermissionError()
             return {'principal':principal}
         if path=='/api/input-uploads' and method in ('GET','POST'):
             space(q.get('space_id'),DATA_MANAGE);return {'principal':principal}
@@ -351,7 +366,7 @@ class BusinessAccess:
             if path=='/api/map/config' or path.startswith('/_AMapService/'):
                 return await self.amap.dispatch(request)
             if path=='/api/input-uploads' and request.method in ('GET','POST'):
-                revision,policy=await run_in_threadpool(self.policies.load)
+                revision,policy=await run_in_threadpool(self.load_policy)
                 context=await run_in_threadpool(self.authorize,request,session,policy,{})
                 if self.jobs.inputs is None:return deny(503,'input_catalog_not_configured')
                 if request.method=='GET':return JSONResponse(upload_capabilities(),headers={'Cache-Control':'no-store'})
@@ -374,7 +389,7 @@ class BusinessAccess:
                     current,_=await run_in_threadpool(timed_call,'rp_session',self.rp.resolve,rpsid,active=False,require_access=True)
                     if current is None:return deny(401,'authentication_required')
                     await run_in_threadpool(self.require_subscription,current)
-                    revision,policy=await run_in_threadpool(self.policies.load)
+                    revision,policy=await run_in_threadpool(self.load_policy)
                     context=await run_in_threadpool(self.authorize,request,current,policy,{})
                     try:result=await run_in_threadpool(InputUploads(self.jobs.inputs).register,upload,
                         request.query_params['space_id'],request.query_params['label'],context['principal'].subject)
@@ -382,7 +397,7 @@ class BusinessAccess:
                 return JSONResponse(result,status_code=201 if result['created'] else 200,headers={'Cache-Control':'no-store'})
             attachment_path=re.fullmatch(r'/api/scene-attachments/(attachment-[a-f0-9]{16})',path)
             if (path=='/api/scene-attachments' or attachment_path) and request.method in ('GET','HEAD','POST'):
-                revision,policy=await run_in_threadpool(self.policies.load)
+                revision,policy=await run_in_threadpool(self.load_policy)
                 context=await run_in_threadpool(self.authorize,request,session,policy,{})
                 request.state.platform_principal=context['principal'];request.state.policy_revision=revision
                 if self.attachments is None:return deny(503,'input_catalog_not_configured')
@@ -419,7 +434,7 @@ class BusinessAccess:
                     current,_=await run_in_threadpool(timed_call,'rp_session',self.rp.resolve,rpsid,active=False,require_access=True)
                     if current is None:return deny(401,'authentication_required')
                     await run_in_threadpool(self.require_subscription,current)
-                    revision,policy=await run_in_threadpool(self.policies.load)
+                    revision,policy=await run_in_threadpool(self.load_policy)
                     context=await run_in_threadpool(self.authorize,request,current,policy,{})
                     try:result=await run_in_threadpool(self.attachments.register,upload,request.query_params['space_id'],request.query_params['name'],context['principal'].subject)
                     except AttachmentRejected:return deny(409,'attachment_rejected')
@@ -434,9 +449,21 @@ class BusinessAccess:
                 return value
             body=json.loads(raw,object_pairs_hook=unique_pairs) if raw else {}
             if not isinstance(body,dict):return deny(403,'space_access_denied')
-            revision,policy=await run_in_threadpool(self.policies.load)
+            revision,policy=await run_in_threadpool(self.load_policy)
             context=await run_in_threadpool(self.authorize,request,session,policy,body)
             request.state.platform_principal=context['principal'];request.state.policy_revision=revision
+            if path=='/api/scene-permissions' or path.startswith('/api/scene-permissions/'):
+                if request.query_params:return deny(422,'scene_permissions_invalid_request')
+                if path=='/api/scene-permissions':
+                    result=await run_in_threadpool(self.scene_permissions.read,context['principal'])
+                elif path=='/api/scene-permissions/requests':
+                    if body:return deny(422,'scene_permissions_invalid_request')
+                    result=await run_in_threadpool(self.scene_permissions.request,context['principal'])
+                else:
+                    try:change=GrantChange.model_validate(body)
+                    except ValidationError:return deny(422,'scene_permissions_invalid_request')
+                    result=await run_in_threadpool(self.scene_permissions.change,context['principal'],change)
+                return JSONResponse(result,headers={'Cache-Control':'no-store'})
             if path=='/api/service-recipients' or path.startswith('/api/service-recipients/'):
                 if request.method=='GET':
                     if set(request.query_params)-{'space_id','offset','limit','q','morphology','purpose'}:return deny(422,'recipient_query_invalid')
@@ -592,7 +619,7 @@ class BusinessAccess:
                             except (IdentityRejected,SubscriptionDenied):
                                 raise PermissionError() from None
                             if current is None:raise PermissionError()
-                            _,fresh_policy=self.policies.load()
+                            _,fresh_policy=self.load_policy()
                             principal=self.rp.verifier.verify(current['access_token'])
                             if principal.subject!=context['principal'].subject:raise PermissionError()
                             PlatformResourceAccess(self.directory,self.jobs,fresh_policy).space(principal,wanted,DATA_MANAGE)
@@ -629,7 +656,7 @@ class BusinessAccess:
                 try:
                     if path=='/api/ontology-authoring' and request.method in ('GET','HEAD'):
                         result={'profile':'cospace.ontology-authoring/0.1','workspace_id':context['principal'].workspace_id,
-                                'can_edit':context['principal'].workspace_owner,'drafts':rules.drafts()}
+                                'can_edit':policy.workspace_manager(context['principal']),'drafts':rules.drafts()}
                     elif path=='/api/ontology-authoring/drafts' and request.method=='POST':
                         result=await run_in_threadpool(rules.save,DraftChange.model_validate(body),context['principal'].subject)
                     elif path=='/api/ontology-authoring/validate' and request.method=='POST':
@@ -902,6 +929,7 @@ class BusinessAccess:
             ),'upload_package_invalid'))
         except RecipientConflict as exc:
             return deny(409,public_error(exc,('recipient_request_reused','recipient_revision_changed'),'recipient_conflict'))
+        except PermissionConflict:return deny(409,'scene_permissions_changed')
         except RecipientsUnavailable:return deny(503,'service_recipients_unavailable')
         except CoordinatesConflict as exc:
             return deny(409,public_error(exc,('coordinate_request_conflict','coordinate_revision_changed'),'input_coordinates_unavailable'))

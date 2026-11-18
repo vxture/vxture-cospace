@@ -10,7 +10,7 @@ from urllib.parse import urlencode
 from packages.infrastructure.platform_identity import PlatformTokenVerifier, IdentityRejected, IdentityUnavailable
 from packages.infrastructure.platform_rp import PlatformHttp, safe_return
 from packages.infrastructure.platform_session_store import key_of
-from packages.service.platform_profile import profile_claims
+from packages.service.platform_profile import profile_claims, PROFILE_VERSION
 
 LOGIN_SCOPES = ('openid', 'profile', 'email')
 
@@ -82,7 +82,7 @@ class PlatformLogin:
         refresh = tokens.get('refresh_token')
         if not isinstance(refresh, str) or not 1 <= len(refresh) <= 16384:
             raise IdentityRejected('rotated_refresh_token_required')
-        return {'principal': asdict(principal), 'profile': profile_claims(claims), 'access_token': access, 'id_token': id_token or prior['id_token'],
+        return {'principal': asdict(principal), 'profile': profile_claims(claims), 'profile_version': PROFILE_VERSION, 'access_token': access, 'id_token': id_token or prior['id_token'],
             'refresh_token': refresh, 'access_expires_at': min(principal.expires_at, self.now()+expires),
             'sid': sid, 'refresh_pending': False, 'refresh_blocked': False}
 
@@ -152,10 +152,11 @@ class PlatformLogin:
 
     def _upgrade_profile(self, rpsid, session):
         # Optional display fields never affect session validity or permissions.
-        if 'profile' in session or session['access_expires_at'] <= self.now():
+        if ('profile' in session and session.get('profile_version') == PROFILE_VERSION) or session['access_expires_at'] <= self.now():
             return
         try:
             session['profile'] = profile_claims(self.verifier.verified_claims(session['access_token']))
+            session['profile_version'] = PROFILE_VERSION
             self.store.put('session', rpsid, session)
         except (IdentityRejected, IdentityUnavailable):
             pass

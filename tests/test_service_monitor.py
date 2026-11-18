@@ -96,7 +96,7 @@ def test_only_verified_authorized_s2s_requests_are_recorded(consumer):
     assert b'point_m' not in raw and b'model_manifest_sha256' not in raw
 
 
-@pytest.mark.parametrize('user,expected',[('usr_local_test',403),('usr_engineer',403),('usr_other',403),('usr_manager',200)])
+@pytest.mark.parametrize('user,expected',[('usr_local_test',403),('usr_engineer',200),('usr_other',403),('usr_manager',200)])
 def test_monitor_requires_scene_publication_management(secured,user,expected):
     _,client,_,_,_,_,spaces,*_=secured
     assert client.get('/api/service-monitor',params={'space_id':spaces[0]['id']}).status_code==401

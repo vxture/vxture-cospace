@@ -57,7 +57,7 @@ def test_erroneous_can_retire_before_replacement(tmp_path):
     assert jobs.controls.report(pubs,spaces[0]['id'],command.artifact)['actions']==[]
 
 
-@pytest.mark.parametrize('user,allowed',[('usr_local_test',False),('usr_engineer',False),('usr_manager',True)])
+@pytest.mark.parametrize('user,allowed',[('usr_local_test',False),('usr_engineer',True),('usr_manager',True)])
 def test_secured_retirement(secured,user,allowed):
     _,client,_,_,jobs,_,spaces,_,old,new=secured
     from packages.service.preview_publications import PreviewPublications

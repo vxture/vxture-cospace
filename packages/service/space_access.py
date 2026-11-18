@@ -11,7 +11,7 @@ CAPABILITIES = frozenset(('space.preview', 'space.query', 'space.export', 'data.
                          'recipient.read', 'recipient.manage'))
 ROLE_CAPABILITIES = {
     'viewer': frozenset(('space.preview', 'space.query', 'recipient.read')),
-    'engineer': frozenset(('space.preview', 'space.query', 'space.export', 'data.manage', 'build.run', 'association.edit', 'space.location.edit', 'recipient.read')),
+    'engineer': CAPABILITIES,
     'manager': CAPABILITIES,
 }
 
@@ -68,3 +68,33 @@ class SpaceAccessPolicy(BaseModel):
 
     def visible(self, principal, spaces):
         return [s for s in spaces if 'space.preview' in self.capabilities(principal, s['id'])]
+
+    def role_spaces(self, principal, roles):
+        ids = {b.space_id for b in self.bindings if
+               (b.issuer, b.org_id, b.workspace_id) == (principal.issuer, principal.org_id, principal.workspace_id)}
+        if principal.workspace_owner:
+            return ids
+        return {g.space_id for g in self.grants if g.space_id in ids and
+                (g.issuer, g.subject) == (principal.issuer, principal.subject) and g.role in roles}
+
+    def workspace_manager(self, principal):
+        return principal.workspace_owner or bool(self.role_spaces(principal, {'manager'}))
+
+    def can_create_scene(self, principal):
+        return principal.workspace_owner or bool(self.role_spaces(principal, {'engineer', 'manager'}))
+
+
+class WorkspaceSceneAccessPolicy(SpaceAccessPolicy):
+    """Human workbench baseline; trusted assembly enables this after its platform gate.
+
+    Does not change saved grants or grant service callers access. Every scene must
+    still have an exact issuer/organization/active-workspace binding.
+    """
+    def capabilities(self, principal: PlatformPrincipal, space_id):
+        explicit = super().capabilities(principal, space_id)
+        if explicit:
+            return explicit
+        binding = next((b for b in self.bindings if b.space_id == space_id), None)
+        if binding and (binding.issuer, binding.org_id, binding.workspace_id) == (principal.issuer, principal.org_id, principal.workspace_id):
+            return ROLE_CAPABILITIES['viewer']
+        return frozenset()

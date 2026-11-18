@@ -81,8 +81,8 @@ def test_enable_register_disable_preserves_existing_records(sources_secured):
     r=c.post('/api/inputs',json=body,headers=headers);assert r.status_code==200,r.text
     assert not r.json()['created'] and r.json()['input']['id']==input['id']
     read=c.get('/api/source-settings',params=query).json()
-    assert not read['can_manage'] and read['history']==read['catalog']==[]
-    assert c.post('/api/source-settings',json=payload,headers=headers).status_code==403
+    assert read['can_manage'] and read['history'] and read['catalog']
+    assert c.post('/api/source-settings',json=payload,headers=headers).status_code==409
     headers,_=sign_in(secured,'usr_manager')
     assert c.post('/api/source-settings',json=payload|{'expected_revision':1,'enabled_source_ids':[]},headers=headers).status_code==200
     assert c.post('/api/inputs',json=body,headers=headers).status_code==409

@@ -140,11 +140,11 @@ def test_http_revocation_invalid_routes_and_corrupt_storage(secured):
 def test_http_registration_permissions_csrf_revision_and_no_release_dependency(secured):
     _, client, _, _, jobs, _, spaces, *_ = secured
     identity = spaces[0]['id']
-    for user in ('usr_local_test','usr_engineer'):
+    for user in ('usr_local_test',):
         headers, _ = sign_in(secured, user)
         assert not client.get('/api/service-recipients').json()['can_create']
         assert client.post('/api/service-recipients',json=body(identity),headers=headers).status_code == 403
-    headers, _ = sign_in(secured,'usr_manager')
+    headers, _ = sign_in(secured,'usr_engineer')
     assert client.post('/api/service-recipients',json=body(identity)).status_code == 403
     # No service publication is required to register a source device.
     response = client.post('/api/service-recipients',json=body(identity),headers=headers)

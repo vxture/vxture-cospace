@@ -101,10 +101,10 @@ def test_corrupt_history_refuses_read(tmp_path):
         event=draft['history'][0]|{'actor':'forged'};db.execute('UPDATE events SET record=?',(json.dumps(event),))
     with pytest.raises(ValueError,match='integrity'):store.drafts()
 
-@pytest.mark.parametrize('user,owner',[('usr_manager',False),('usr_engineer',False),('usr_local_test',False),('usr_owner',True)])
+@pytest.mark.parametrize('user,owner',[('usr_manager',True),('usr_engineer',False),('usr_local_test',False),('usr_owner',True)])
 def test_authoring_http_roles_and_scoped_routes(secured,user,owner):
     rp,c,accounts,_,jobs,*_=secured
-    if owner:accounts.roles=['workspace:owner']
+    if user=='usr_owner':accounts.roles=['workspace:owner']
     headers,_=sign_in(secured,user)
     response=c.get('/api/ontology-authoring');assert response.status_code==200
     assert response.json()['can_edit']==owner

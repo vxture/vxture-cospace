@@ -111,7 +111,11 @@ class WorkspaceScenes:
 
     def context(self, principal):
         config, entry = self.allocation(principal)
-        can_create = bool(self.platform_access and principal.workspace_owner or
+        product_creator = False
+        if self.platform_access:
+            _, policy = self.policies.load()
+            product_creator = policy.can_create_scene(principal)
+        can_create = bool(product_creator or
                           entry and entry.allow_create and
                           (principal.workspace_owner or principal.subject in entry.creator_subjects))
         digest = checksum({'configuration': config.model_dump() if config else None,
@@ -179,7 +183,7 @@ class WorkspaceScenes:
                         if saved['state'] == 'complete':
                             binding = next((b for b in policy.bindings if b.space_id == space_id), None)
                             grant = next((g for g in policy.grants if g.space_id == space_id and g.issuer == principal.issuer
-                                          and g.subject == principal.subject and g.role == 'manager'), None)
+                                          and g.subject == principal.subject and g.role == saved.get('creator_role', 'manager')), None)
                             if (binding is None or {k: getattr(binding, k) for k in scope} != scope or grant is None):
                                 raise WorkspaceScenesConflict('created_scene_access_changed_no_repair')
                             self.write_directory_check(saved['records'])
@@ -194,6 +198,7 @@ class WorkspaceScenes:
                         if project['id'] != project_id:
                             raise WorkspaceScenesConflict('scene_project_collision')
                         saved = {'id': identity, 'state': 'prepared', 'spec': spec,
+                                 'creator_role': 'manager' if policy.workspace_manager(principal) else 'engineer',
                                  'records': {'project': project, 'space': {'profile': 'cospace.preview-space/0.1',
                                      'id': space_id, 'project_id': project_id, 'name': request.name,
                                      'description': request.description, 'created_at': now(),
@@ -214,7 +219,7 @@ class WorkspaceScenes:
                     value = policy.model_dump()
                     value['bindings'].append(scope | {'space_id': space_id})
                     value['grants'].append({'issuer': principal.issuer, 'subject': principal.subject,
-                                            'space_id': space_id, 'role': 'manager'})
+                                            'space_id': space_id, 'role': saved.get('creator_role', 'manager')})
                     revision = self.policies.write_transaction(db, SpaceAccessPolicy.model_validate(value),
                         expected_revision=revision, actor=principal.subject, reason='verified Workspace scene creation '+identity)
                     receipt = {'profile': 'cospace.workspace-scene-receipt/0.1', 'space_id': space_id,
