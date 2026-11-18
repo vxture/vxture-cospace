@@ -241,7 +241,7 @@ function BusinessSession({children}:{children:React.ReactNode}){
     // Their editors refresh their own state and must stay mounted during upload → enqueue.
     const referenceRequest=['/api/scene-attachments','/api/scene-ifc/references','/api/scene-ifc/references/activate',
       '/api/scene-ifc/nearest-surface','/api/scene-ifc/opening-observations','/api/scene-ifc/type-proposals'].includes(url.pathname);
-    if(result.ok&&!referenceRequest&&!['GET','HEAD'].includes(method)&&url.pathname.startsWith('/api/')&&!url.pathname.startsWith('/api/auth/')&&!/comparisons|\/query(?:-range)?$/.test(url.pathname))window.dispatchEvent(new Event('cospace:records-changed'));
+    if(result.ok&&!referenceRequest&&!['GET','HEAD'].includes(method)&&url.pathname.startsWith('/api/')&&!url.pathname.startsWith('/api/auth/')&&!url.pathname.includes("comparisons")&&!/\/query(?:-range)?$/.test(url.pathname))window.dispatchEvent(new Event('cospace:records-changed'));
     return result;
    };
    setReady(true);window.addEventListener('pointerdown',activity);window.addEventListener('keydown',activity);window.addEventListener('focus',resume);document.addEventListener('visibilitychange',resume);window.addEventListener('cospace:confirm-session',retry);

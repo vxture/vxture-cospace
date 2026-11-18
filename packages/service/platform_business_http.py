@@ -59,6 +59,7 @@ INPUTS_ROUTE='/api/inputs'
 PUBLICATION_MANAGE='publication.manage'
 
 
+IFC_DIGEST_PATTERN = '[a-f0-9]{64}'
 IFC_CATALOG_PATH = '/api/scene-ifc'
 IFC_STRUCTURE_PATH = '/api/scene-ifc/structure'
 IFC_OBSERVATION_PATH = '/api/scene-ifc/opening-observation'
@@ -481,7 +482,7 @@ class BusinessAccess:
                 try:
                     if request.method=='GET':
                         if path==IFC_REFERENCE_PREVIEW:
-                            if set(request.query_params)!={'space_id','task_id'} or not re.fullmatch('[a-f0-9]{64}',request.query_params['task_id']):return deny(422,'ifc_invalid_request')
+                            if set(request.query_params)!={'space_id','task_id'} or not re.fullmatch(IFC_DIGEST_PATTERN,request.query_params['task_id']):return deny(422,'ifc_invalid_request')
                             result=await run_in_threadpool(preview_version,self.ifc_versions,request.query_params['space_id'],request.query_params['task_id'])
                         else:
                             if set(request.query_params)!={'space_id'}:return deny(422,'ifc_invalid_request')
@@ -537,7 +538,7 @@ class BusinessAccess:
                         expected=expected|replay_keys
                         replay={key:request.query_params.get(key) for key in replay_keys}
                     if set(request.query_params)!=expected or len(request.query_params.multi_items())!=len(expected):return deny(422,'ifc_invalid_request')
-                    if path in (IFC_STRUCTURE_PATH,IFC_SNAPSHOT_PATH,IFC_PACKAGE_PATH) and not re.fullmatch('[a-f0-9]{64}',request.query_params['catalog_sha256']):return deny(422,'ifc_invalid_request')
+                    if path in (IFC_STRUCTURE_PATH,IFC_SNAPSHOT_PATH,IFC_PACKAGE_PATH) and not re.fullmatch(IFC_DIGEST_PATTERN,request.query_params['catalog_sha256']):return deny(422,'ifc_invalid_request')
                     if path==IFC_PACKAGE_PATH:
                         import hashlib
                         raw=await run_in_threadpool(export_design_package,self.scene_ifc,request.query_params['space_id'],request.query_params['catalog_sha256'])
@@ -547,7 +548,7 @@ class BusinessAccess:
                             'X-Content-Type-Options':'nosniff'})
                     if path==IFC_GEOMETRY_PATH:
                         import hashlib
-                        if (not re.fullmatch('[a-f0-9]{64}',request.query_params['catalog_sha256'])
+                        if (not re.fullmatch(IFC_DIGEST_PATTERN,request.query_params['catalog_sha256'])
                                 or not re.fullmatch(r'e\d{5}',request.query_params['element_id'],flags=re.ASCII)):return deny(422,'ifc_invalid_request')
                         raw=await run_in_threadpool(export_geometry_component,self.scene_ifc,request.query_params['space_id'],request.query_params['catalog_sha256'],request.query_params['element_id'])
                         digest=hashlib.sha256(raw).hexdigest()

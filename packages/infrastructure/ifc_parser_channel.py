@@ -18,7 +18,7 @@ IDLE_HEARTBEAT = 12
 ACTIVE_HEARTBEAT = PARSE_TIMEOUT + 2 * TRANSFER_TIMEOUT + 30
 HEADER = struct.Struct('!12sI')
 SIZE = struct.Struct('!I')
-MEMBER = re.compile(rb'ifc\.json|e[0-9]{5}\.npz')
+MEMBER = re.compile(rb'ifc\.json|e\d{5}\.npz')
 
 
 def available(path=None):

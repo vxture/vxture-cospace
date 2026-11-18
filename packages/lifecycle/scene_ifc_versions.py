@@ -28,6 +28,9 @@ LEASE_SECONDS = TIMEOUT_SECONDS + 120
 MAX_TASKS = 1000
 MAX_SWITCHES = 2000
 MAX_PENDING = 8
+DIGEST_PATTERN = '^[a-f0-9]{64}$'
+VERSIONS_FILE = 'versions.json'
+CATALOG_FILE = 'ifc.json'
 
 
 class StoredModel(BaseModel):
@@ -35,9 +38,9 @@ class StoredModel(BaseModel):
 
 
 class StoredTask(StoredModel):
-    id: str = Field(pattern='^[a-f0-9]{64}$')
+    id: str = Field(pattern=DIGEST_PATTERN)
     attachment_id: str = Field(pattern='^attachment-[a-f0-9]{16}$')
-    source_sha256: str = Field(pattern='^[a-f0-9]{64}$')
+    source_sha256: str = Field(pattern=DIGEST_PATTERN)
     name: str = Field(min_length=1, max_length=160)
     actor: str = Field(min_length=1, max_length=200)
     parser: str = Field(min_length=1, max_length=100)
@@ -46,7 +49,7 @@ class StoredTask(StoredModel):
     attempt: str = Field(pattern='^[a-f0-9]{32}$')
     started_at: str | None = Field(default=None, max_length=40)
     lease_until: float | None = None
-    catalog_sha256: str | None = Field(default=None, pattern='^[a-f0-9]{64}$')
+    catalog_sha256: str | None = Field(default=None, pattern=DIGEST_PATTERN)
     finished_at: str | None = Field(default=None, max_length=40)
     error: Literal['parse_rejected', 'parse_timeout', 'parser_unavailable', 'worker_interrupted'] | None = None
 
@@ -62,8 +65,8 @@ class StoredTask(StoredModel):
 
 
 class StoredSwitch(StoredModel):
-    from_task: str | None = Field(alias='from', pattern='^[a-f0-9]{64}$')
-    to: str = Field(pattern='^[a-f0-9]{64}$')
+    from_task: str | None = Field(alias='from', pattern=DIGEST_PATTERN)
+    to: str = Field(pattern=DIGEST_PATTERN)
     actor: str = Field(min_length=1, max_length=200)
     at: str = Field(max_length=40)
 
@@ -122,6 +125,36 @@ def write_versions(path, value):
     write_atomic(path, value)
 
 
+def read_candidate(version):
+    raw, doc = read_json(checked_path(version, version / CATALOG_FILE), 8 * 1024 * 1024)
+    validate_catalog(doc)
+    validate_structure(doc)
+    validate_source(version, doc)
+    return hashlib.sha256(raw).hexdigest(), doc
+
+
+def validated_members(version, doc):
+    members = [CATALOG_FILE, 'source.ifc']
+    for product in doc['products']:
+        if product['geometry_status'] == 'extracted':
+            load_mesh(version, product)
+            members.append(product['mesh']['path'])
+    return members
+
+
+def validate_stored_attempt(attachments, folder, task):
+    record = read_record(attachments, attachments / folder.name / task['attachment_id'], verify=True)
+    if record['sha256'] != task['source_sha256'] or record['name'] != task['name']:
+        raise ValueError('ifc_version_attachment_invalid')
+    if task['state'] != 'ready':
+        return
+    version = checked_path(folder, folder / task['attempt'])
+    pin, doc = read_candidate(version)
+    if pin != task['catalog_sha256'] or doc['source']['sha256'] != record['sha256']:
+        raise ValueError('ifc_version_changed')
+    validated_members(version, doc)
+
+
 def validate_version_storage(inputs):
     """Check persisted candidates and their original attachments during backup and restore."""
     inputs = Path(inputs)
@@ -131,24 +164,11 @@ def validate_version_storage(inputs):
     attachments = inputs / 'scene-attachments'
     for folder in root.iterdir():
         checked_path(root, folder)
-        if not re.fullmatch('space-[a-f0-9]{16}', folder.name) or not (folder / 'versions.json').is_file():
+        if not re.fullmatch('space-[a-f0-9]{16}', folder.name) or not (folder / VERSIONS_FILE).is_file():
             raise ValueError('ifc_version_storage_invalid')
-        value = read_versions(checked_path(folder, folder / 'versions.json'))
+        value = read_versions(checked_path(folder, folder / VERSIONS_FILE))
         for task in value['tasks'].values():
-            record = read_record(attachments, attachments / folder.name / task['attachment_id'], verify=True)
-            if record['sha256'] != task['source_sha256'] or record['name'] != task['name']:
-                raise ValueError('ifc_version_attachment_invalid')
-            if task['state'] == 'ready':
-                version = checked_path(folder, folder / task['attempt'])
-                raw, doc = read_json(checked_path(version, version / 'ifc.json'), 8 * 1024 * 1024)
-                if hashlib.sha256(raw).hexdigest() != task['catalog_sha256'] or doc['source']['sha256'] != record['sha256']:
-                    raise ValueError('ifc_version_changed')
-                validate_catalog(doc)
-                validate_structure(doc)
-                validate_source(version, doc)
-                for product in doc['products']:
-                    if product['geometry_status'] == 'extracted':
-                        load_mesh(version, product)
+            validate_stored_attempt(attachments, folder, task)
 
 
 class ParseFailed(ValueError):
@@ -181,7 +201,7 @@ class SceneIfcVersions:
     def _paths(self, space):
         scope(self.inputs.directory, space)
         folder = checked_path(self.inputs.root, self.root / space)
-        return folder, checked_path(folder, folder / 'versions.json')
+        return folder, checked_path(folder, folder / VERSIONS_FILE)
 
     def _read(self, path):
         return read_versions(path)
@@ -258,18 +278,10 @@ class SceneIfcVersions:
                 original.write_bytes(raw)
                 candidate = Path(temp) / 'parsed'
                 parse(original, candidate, task['source_sha256'])
-                catalog_raw, doc = read_json(candidate / 'ifc.json', 8 * 1024 * 1024)
-                validate_catalog(doc)
-                validate_structure(doc)
-                validate_source(candidate, doc)
+                pin, doc = read_candidate(candidate)
                 if doc['source']['sha256'] != task['source_sha256']:
                     raise ValueError('source_changed')
-                members = ['ifc.json', 'source.ifc']
-                for product in doc['products']:
-                    if product['geometry_status'] == 'extracted':
-                        load_mesh(candidate, product)
-                        members.append(product['mesh']['path'])
-                pin = hashlib.sha256(catalog_raw).hexdigest()
+                members = validated_members(candidate, doc)
                 with mutation_guard(self.inputs.root.parent):
                     value = self._read(path)
                     self._expire(value)
@@ -324,7 +336,7 @@ class SceneIfcVersions:
         if not re.fullmatch('[a-f0-9]{32}', task['attempt']):
             raise ValueError('ifc_version_invalid')
         root = checked_path(folder, folder / task['attempt'])
-        raw, doc = read_json(root / 'ifc.json', 8 * 1024 * 1024)
+        raw, doc = read_json(root / CATALOG_FILE, 8 * 1024 * 1024)
         if hashlib.sha256(raw).hexdigest() != task['catalog_sha256']:
             raise ValueError('ifc_version_changed')
         validate_source(root, doc)

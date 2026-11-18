@@ -45,5 +45,5 @@ def preview_version(versions, space, task_id):
             'assessment':'unverified', 'role_counts':dict(sorted(Counter(e.role for e in entities).items())),
             'entity_count':len(entities), 'relation_count':len(relations),
             'geometry_counts':doc['geometry_counts'],
-            'sample':[{'name':products[e.entity_id]['name'], 'role':e.role, 'ifc_type':e.ifc_type}
+            'sample':[{'entity_id':e.entity_id,'name':products[e.entity_id]['name'], 'role':e.role, 'ifc_type':e.ifc_type}
                       for e in entities if e.role in ('level','door','stair')][:30]}

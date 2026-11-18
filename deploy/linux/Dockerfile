@@ -26,10 +26,11 @@ COPY deploy/linux/ifc-requirements.lock /app/deploy/linux/ifc-requirements.lock
 # pip's vendored build/download libraries are unnecessary in the running product.
 RUN pip install --no-cache-dir --only-binary=:all: --require-hashes -r /app/deploy/linux/requirements.lock \
     && python -m venv /opt/ifc \
-    && /opt/ifc/bin/pip install --no-cache-dir --only-binary=:all: --require-hashes -r /app/deploy/linux/ifc-requirements.lock \
+    && /opt/ifc/bin/pip install --no-cache-dir --only-binary=:all: --require-hashes \
+        -r /app/deploy/linux/ifc-requirements.lock \
     && /opt/ifc/bin/pip uninstall --yes pip \
-    && pip uninstall --yes pip
-RUN install -d -m 0700 -o 10001 -g 10001 /ifc-ipc /ifc-ready /data/runtime
+    && pip uninstall --yes pip \
+    && install -d -m 0700 -o 10001 -g 10001 /ifc-ipc /ifc-ready /data/runtime
 COPY packages /app/packages
 COPY experiments/scripts /app/experiments/scripts
 COPY experiments/templates/*.html /app/experiments/templates/

@@ -42,7 +42,7 @@ def main(override):
         worker = dc('ps','-q','ifc-worker',stdout=subprocess.PIPE).stdout.decode().strip()
         parser = dc('ps','-q','ifc-parser',stdout=subprocess.PIPE).stdout.decode().strip()
         details = json.loads(run('inspect',parser,stdout=subprocess.PIPE,check=True).stdout)[0]
-        assert {mount['Destination'] for mount in details['Mounts']} <= {'/ifc-ipc','/tmp'}
+        assert {mount['Destination'] for mount in details['Mounts'] if mount['Type'] != 'tmpfs'} == {'/ifc-ipc'}
         run('exec', parser, 'python','-c',
             "import socket; assert socket.if_nameindex()==[(1,'lo')]",
             check=True)

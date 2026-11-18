@@ -11,6 +11,9 @@ import numpy as np
 from pydantic import BaseModel,ConfigDict,Field,ValidationError
 from packages.data.ifc_inspection import PROFILE,MAX_PRODUCTS,MAX_VERTICES,MAX_FACES,MAX_SOURCE_BYTES,digest,mesh_arrays
 
+VERTICES_MEMBER='vertices.npy'
+FACES_MEMBER='faces.npy'
+
 
 class Fixed(BaseModel):
     model_config=ConfigDict(extra='forbid',strict=True,allow_inf_nan=False)
@@ -91,11 +94,11 @@ def load_mesh(root,product):
     # Check inner array sizes before NumPy allocates buffers.
     with zipfile.ZipFile(io.BytesIO(raw)) as archive:
         entries=archive.infolist()
-        if (len(entries)!=2 or {p.filename for p in entries}!={'vertices.npy','faces.npy'}
-                or archive.getinfo('vertices.npy').file_size>member['vertices']*24+1024
-                or archive.getinfo('faces.npy').file_size>member['triangles']*12+1024):raise ValueError('ifc_mesh_archive_budget')
-        validate_array_header(archive, 'vertices.npy', member['vertices'], '<f8')
-        validate_array_header(archive, 'faces.npy', member['triangles'], '<i4')
+        if (len(entries)!=2 or {p.filename for p in entries}!={VERTICES_MEMBER,FACES_MEMBER}
+                or archive.getinfo(VERTICES_MEMBER).file_size>member['vertices']*24+1024
+                or archive.getinfo(FACES_MEMBER).file_size>member['triangles']*12+1024):raise ValueError('ifc_mesh_archive_budget')
+        validate_array_header(archive, VERTICES_MEMBER, member['vertices'], '<f8')
+        validate_array_header(archive, FACES_MEMBER, member['triangles'], '<i4')
     with np.load(io.BytesIO(raw),allow_pickle=False) as arrays:vertices,faces=mesh_arrays(arrays['vertices'],arrays['faces'])
     if len(vertices)!=member['vertices'] or len(faces)!=member['triangles']:raise ValueError('ifc_mesh_count')
     bounds=np.array([vertices.min(axis=0),vertices.max(axis=0)])

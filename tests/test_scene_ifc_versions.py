@@ -90,7 +90,8 @@ def test_failed_and_interrupted_tasks_require_explicit_retry(scene, tmp_path):
     with pytest.raises(ValueError, match='not_ready'):
         store.activate(space, identity, expected_revision=0, actor='usr_one')
     second, created = store.enqueue(space, task['attachment_id'], 'usr_two', retry=True)
-    assert created and second['attempt'] != task['attempt']
+    assert created
+    assert second['attempt'] != task['attempt']
     path = store.root / space / 'versions.json'
     value = json.loads(path.read_bytes())
     value['tasks'][identity].update(state='running', lease_until=time.time()+420)

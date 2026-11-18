@@ -13,12 +13,15 @@ def test_source_bound_to_digest_and_size(tmp_path):
     raw = b'fixture original'
     digest = hashlib.sha256(raw).digest()
     source, fingerprint = receive_source(io.BytesIO(digest + SIZE.pack(len(raw)) + raw), tmp_path)
-    assert source.read_bytes() == raw and fingerprint == digest.hex()
+    assert source.read_bytes() == raw
+    assert fingerprint == digest.hex()
+    oversized = io.BytesIO(digest + SIZE.pack(SOURCE_LIMIT + 1))
     with pytest.raises(ValueError, match='source_budget'):
-        receive_source(io.BytesIO(digest + SIZE.pack(SOURCE_LIMIT + 1)), tmp_path)
+        receive_source(oversized, tmp_path)
     source.unlink()
+    tampered = io.BytesIO(b'0'*32 + SIZE.pack(len(raw)) + raw)
     with pytest.raises(ValueError, match='digest'):
-        receive_source(io.BytesIO(b'0'*32 + SIZE.pack(len(raw)) + raw), tmp_path)
+        receive_source(tampered, tmp_path)
 
 
 @pytest.mark.parametrize('name,size,data,error', [
@@ -28,8 +31,10 @@ def test_source_bound_to_digest_and_size(tmp_path):
     (b'ifc.json', 2, b'a', 'truncated'),
 ])
 def test_untrusted_result_cannot_write_paths_or_overrun_limits(tmp_path, name, size, data, error):
+    stream = io.BytesIO(SIZE.pack(1) + HEADER.pack(name,size) + data)
+    output, source = tmp_path/'out', tmp_path/'source'
     with pytest.raises(ValueError, match=error):
-        receive_result(io.BytesIO(SIZE.pack(1) + HEADER.pack(name,size) + data), tmp_path/'out', tmp_path/'source')
+        receive_result(stream, output, source)
     assert not (tmp_path/'ifc.json').exists()
 
 

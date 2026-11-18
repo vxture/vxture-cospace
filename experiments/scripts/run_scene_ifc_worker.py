@@ -78,6 +78,25 @@ def drain_one(store, parse):
     return True
 
 
+def poll(store, parse, *, sidecar, once):
+    for space in queue_spaces(store):
+        store.recover_interrupted(space)
+    while True:
+        if sidecar and not ping():
+            HEARTBEAT.unlink(missing_ok=True)
+            processed = False
+        elif sidecar:
+            pulse(IDLE_HEARTBEAT)
+            with keep_ready():
+                processed = drain_one(store, parse)
+        else:
+            processed = drain_one(store, parse)
+        if once:
+            return
+        if not processed:
+            time.sleep(2)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--runtime', required=True, type=Path)
@@ -98,25 +117,7 @@ def main():
         if args.sidecar:
             HEARTBEAT.unlink(missing_ok=True)
         try:
-            for space in queue_spaces(store):
-                store.recover_interrupted(space)
-            while True:
-                if args.sidecar and not ping():
-                    HEARTBEAT.unlink(missing_ok=True)
-                    if args.once:
-                        break
-                    time.sleep(2)
-                    continue
-                if args.sidecar:
-                    pulse(IDLE_HEARTBEAT)
-                    with keep_ready():
-                        processed = drain_one(store, parse)
-                else:
-                    processed = drain_one(store, parse)
-                if args.once:
-                    break
-                if not processed:
-                    time.sleep(2)
+            poll(store, parse, sidecar=args.sidecar, once=args.once)
         finally:
             if args.sidecar:
                 HEARTBEAT.unlink(missing_ok=True)

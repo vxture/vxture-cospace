@@ -48,7 +48,8 @@ def exercise(env, parse, original, filename, expected_roles):
         assert result.status_code == 200, result.text
         summary=result.json()
         assert summary['role_counts'] == expected_roles
-        assert summary['assessment'] == 'unverified' and str(jobs.inputs.root) not in result.text
+        assert summary['assessment'] == 'unverified'
+        assert str(jobs.inputs.root) not in result.text
         assert not client.get('/api/scene-ifc/structure',params=params|{'catalog_sha256':summary['catalog_sha256']}).json()['configured']
         ready = False
         for user in ('usr_local_test','usr_other'):
@@ -62,11 +63,14 @@ def exercise(env, parse, original, filename, expected_roles):
         assert selected.json()['catalog_sha256'] == summary['catalog_sha256']
         assert client.post(BASE+'/activate',json=activation,headers=headers).status_code == 409
         listing=client.get(BASE,params=params).json()
-        assert listing['current'] == key and listing['revision'] == 1
-        assert 'lease_until' not in listing['tasks'][0] and 'attempt' not in listing['tasks'][0]
+        assert listing['current'] == key
+        assert listing['revision'] == 1
+        assert 'lease_until' not in listing['tasks'][0]
+        assert 'attempt' not in listing['tasks'][0]
         structure=client.get('/api/scene-ifc/structure',params=params|{'catalog_sha256':summary['catalog_sha256']}).json()
         assert structure['declared_role_counts'] == expected_roles
-        assert not structure['alignment_verified'] and not structure['real_release_ready']
+        assert not structure['alignment_verified']
+        assert not structure['real_release_ready']
         package=client.get('/api/scene-ifc/design-package',params=params|{'catalog_sha256':summary['catalog_sha256']})
         assert package.status_code == 200, package.text[:500]
         return summary
@@ -87,5 +91,6 @@ def test_legacy_reference_stays_readable_until_it_can_be_retained_for_rollback(s
         prior=client.get('/api/scene-ifc',params={'space_id':space}).json()
         assert prior['configured']
         denied=client.post(BASE+'/activate',json={'space_id':space,'task_id':'a'*64,'expected_revision':0},headers=headers)
-        assert denied.status_code==409 and denied.json()['detail']=='ifc_legacy_migration_required'
+        assert denied.status_code==409
+        assert denied.json()['detail']=='ifc_legacy_migration_required'
         assert client.get('/api/scene-ifc',params={'space_id':space}).json()==prior
