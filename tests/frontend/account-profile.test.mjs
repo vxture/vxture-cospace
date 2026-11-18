@@ -22,3 +22,13 @@ test('status describes verified contact only, without inventing identity certifi
  assert.deepEqual(accountVerification({phone:'13800000000',phone_verified:true}),{label:'手机已验证',verified:true});
  assert.deepEqual(accountVerification({email:'person@example.test',email_verified:true}),{label:'邮箱已验证',verified:true});
 });
+
+
+test('internal identifiers never become identity or workspace display labels',async()=>{
+ const {displayText}=await import('../../apps/workbench/src/layout/display-text.ts');
+ for(const value of ['usr_00000000-0000-4000-a000-000000000100','00000000-0000-4000-A000-000000000100','ws_mock','org_mock','space-23dc10670b65850e'])assert.equal(displayText(value,'未提供'),'未提供');
+ assert.equal(displayText('Stone Smoker'),'Stone Smoker');
+ assert.equal(displayText('一号工程 2026-100'),'一号工程 2026-100');
+ assert.equal(displayText('负责人 usr_test'),'负责人');
+ assert.equal(organizationContext({org_name:'org_mock',workspace_name:'ws_mock'}).label,'组织名称待补全 · 工作区名称待补全');
+});
