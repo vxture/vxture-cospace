@@ -216,7 +216,8 @@ class BusinessAccess:
             if method in ('GET','HEAD'):
                 space(q.get('space_id'));return {'principal':principal}
             if method=='POST':
-                space(body.get('space_id'),'space.manage');return {'principal':principal}
+                capability = 'space.location.edit' if body.get('section') == 'location' else 'space.manage'
+                space(body.get('space_id'),capability);return {'principal':principal}
         if method in ('GET','HEAD') and path in ('/api/projects','/api/spaces'):
             return {'principal':principal,'visible':visible}
         if method in ('GET','HEAD') and path.startswith('/api/projects/'):
@@ -851,7 +852,8 @@ class BusinessAccess:
                 record=record|{key:saved[key] for key in ('name','description','address','location') if key in saved}
                 caps=sorted(policy.capabilities(context['principal'],identity))
                 payload={'space':record,'revision':saved['revision'],'can_manage':'space.manage' in caps,
-                         'editable_fields':['name','description','address','location'],
+                         'editable_fields':((['name','description'] if 'space.manage' in caps else [])
+                                            + (['address','location'] if 'space.location.edit' in caps else [])),
                          'history':saved['history'] if 'space.manage' in caps else []}
                 return JSONResponse(payload,headers={'Cache-Control':'no-store'})
             if request.method in ('GET','HEAD') and path in ('/api/projects','/api/spaces'):

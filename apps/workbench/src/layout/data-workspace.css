@@ -85,8 +85,6 @@
 .data-table tr[data-selected=true]{background:color-mix(in srgb,var(--primary) 4%,var(--card))}
 .data-table tbody tr{cursor:pointer}
 .data-table tbody tr:hover{background:color-mix(in srgb,var(--primary) 3%,transparent)}
-.data-table-action{text-align:right!important;white-space:nowrap}
-.data-table-action button{font-size:11px;font-weight:400;color:var(--muted-foreground);height:28px;min-height:28px;padding-inline:6px}
 .data-record-name{display:flex;align-items:center;gap:12px;width:100%;text-align:left;border:0;background:none;color:inherit;cursor:pointer;min-width:0}
 .data-record-name>span:last-child{min-width:0}
 .data-file-icon{display:grid;place-items:center;width:36px;height:40px;border:1px solid var(--border);border-radius:var(--radius-md);color:var(--primary);background:var(--card);flex-shrink:0}

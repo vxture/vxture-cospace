@@ -14,7 +14,7 @@ export function ProductLauncher({route,hasScene=false,panorama=false,hrefForRout
   </div>
   <div className="product-launcher-grid">
   <ShellPanelSection title={<span className="product-launcher-section-title">场景中心</span>} divided={false} className="product-launcher-group product-launcher-home">
-   <ShellPanelRow icon="app-grid" label="我的场景" description="查看、选择与创建场景" chevron={false} href="/space" active={route==='space'&&!hasScene&&!panorama} onClick={onNavigate}/>
+   <ShellPanelRow icon="cube" label="我的场景" description="查看、选择与创建场景" chevron={false} href="/space" active={route==='space'&&!hasScene&&!panorama} onClick={onNavigate}/>
    <ShellPanelRow icon="globe" label="空间服务" description="发现服务与获取接入支持" chevron={false} href="/services" active={route==='services'} onClick={onNavigate}/>
   </ShellPanelSection>
   {[work,resources].map(group=><ShellPanelSection key={group.title} title={<span className="product-launcher-section-title">{group.title}</span>} divided={false} className="product-launcher-group">

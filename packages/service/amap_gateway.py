@@ -7,6 +7,7 @@ from fastapi.responses import JSONResponse, Response
 
 
 UPSTREAMS = {
+    '/place-search': 'https://restapi.amap.com/v3/place/text',
     '/v4/map/styles': 'https://webapi.amap.com/v4/map/styles',
     '/v3/assistant/coordinate/convert': 'https://restapi.amap.com/v3/assistant/coordinate/convert',
 }
@@ -43,7 +44,15 @@ class AmapGateway:
                 or any(len(query.getlist(k)) != 1 for k in query)
                 or 'jscode' in query or query.get('key', self.key) != self.key):
             return error(403, 'map_request_rejected')
-        params = dict(query) | {'key': self.key, 'jscode': self.security_code}
+        if path == '/place-search':
+            keywords = query.get('keywords', '').strip()
+            if set(query) != {'keywords'} or not 2 <= len(keywords) <= 80:
+                return error(422, 'map_search_query_invalid')
+            params = {'keywords': keywords, 'offset': 8, 'page': 1, 'extensions': 'base',
+                      'output': 'JSON', 's': 'rsv3'}
+        else:
+            params = dict(query)
+        params.update(key=self.key, jscode=self.security_code)
         try:
             async with httpx.AsyncClient(transport=self.transport, timeout=12, follow_redirects=False) as client:
                 async with client.stream('GET', UPSTREAMS[path]+'?'+urlencode(params)) as upstream:

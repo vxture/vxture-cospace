@@ -158,3 +158,32 @@ def test_height_datum_source_and_old_height_semantics_are_preserved(tmp_path):
     assert legacy.location.altitude_reference is None
     for patch in ({'altitude':None},{'altitude':100001.0},{'altitude_reference':'sea-level'},{'source':'x'*161}):
         with pytest.raises(ValidationError):SpaceSettingsChange.model_validate(body(s['id'],location=location|patch))
+
+
+@pytest.mark.parametrize('user,fields',[
+    ('usr_local_test', []),
+    ('usr_engineer', ['address','location']),
+    ('usr_manager', ['name','description','address','location']),
+])
+def test_section_edit_acl_preserves_unedited_metadata(secured,user,fields):
+    _,c,_,_,_,directory,spaces,*_=secured;headers,_=sign_in(secured,user)
+    scene=spaces[0]
+    endpoint='/api/space-settings'
+    identity=dict(space_id=scene['id'],expected_revision=0,section='identity',
+                  name='New name',description='New purpose',reason='Rename')
+    location=dict(space_id=scene['id'],expected_revision=0,section='location',address='New address',
+                  location={'longitude':116.4,'latitude':39.9,'crs':'GCJ02'},reason='Verify location')
+    assert c.get(endpoint,params={'space_id':scene['id']}).json()['editable_fields']==fields
+    assert c.post(endpoint,json=location|{'name':'unauthorized'},headers=headers).status_code==403
+    assert c.post(endpoint,json=location|{'space_id':spaces[1]['id']},headers=headers).status_code==403
+    assert c.post(endpoint,json=location,headers=headers).status_code==(200 if 'location' in fields else 403)
+    saved=directory.read('space',scene['id'])
+    assert saved['name']==scene['name'] and saved['description']==scene['description']
+    if 'location' in fields:
+        assert saved['location']==location['location']
+        assert c.post(endpoint,json=location,headers=headers).status_code==409
+    identity['expected_revision']=1 if 'location' in fields else 0
+    assert c.post(endpoint,json=identity,headers=headers).status_code==(200 if 'name' in fields else 403)
+    if 'name' in fields:
+        assert directory.read('space',scene['id'])['location']==location['location']
+        assert c.post(endpoint,json=identity|{'expected_revision':2,'location':None},headers=headers).status_code==403

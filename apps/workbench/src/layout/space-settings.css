@@ -12,9 +12,28 @@
 .space-information-facts dt{color:var(--muted-foreground);font-size:12px}
 .space-information-facts dd{margin:4px 0 0;font-size:14px;white-space:pre-wrap;overflow-wrap:anywhere}
 @container(max-width:560px){.space-information-facts{grid-template-columns:minmax(0,1fr)}}
-[data-slot=dialog-content].space-location-picker{width:calc(100vw - 32px);max-width:760px;max-height:95dvh;overflow:auto}
-.space-location-map{position:relative;height:min(44dvh,400px);min-height:160px;overflow:hidden;border-radius:var(--radius-md);background:var(--muted)}
+[data-slot=dialog-content][role=dialog].space-location-picker{width:calc(100vw - 32px);max-width:min(760px,calc(100vw - 32px));max-height:95dvh;overflow:auto}
+.space-location-map{position:relative;height:clamp(160px,35dvh,400px);overflow:hidden;border-radius:var(--radius-md);background:var(--muted)}
 .space-location-map-canvas,.space-location-map-status{position:absolute;inset:0}
 .space-location-map-status{display:grid;place-items:center;text-align:center;padding:16px;background:var(--muted);color:var(--muted-foreground)}
 .space-location-picker-footer{align-items:center}
-.space-location-picker-footer p{margin-inline-end:auto}
+.space-information-section{display:flex;flex-direction:column;gap:10px;min-width:0}
+.space-information-section-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:32px}
+.space-information-form h4>svg{flex:none;color:var(--muted-foreground)}
+.space-information-summary{margin:0}
+.space-information-summary dt{color:var(--muted-foreground);font-size:12px}
+.space-information-summary dd{margin:4px 0 0;font-size:14px;white-space:pre-wrap;overflow-wrap:anywhere}
+.space-information-location-heading{justify-content:flex-end}
+.space-location-search{display:flex;align-items:center;gap:10px}
+.space-location-search input{min-width:0;flex:1;min-height:36px}
+.space-location-coordinate-fields{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.space-location-coordinate-fields input,.space-location-coordinate-fields select{min-height:36px}
+.space-location-results{display:grid;gap:2px;max-height:140px;overflow:auto;margin:0;padding:4px;list-style:none;border:1px solid var(--border);border-radius:var(--radius-md)}
+.space-location-results button{display:grid;width:100%;gap:4px;padding:8px 10px;text-align:start;border-radius:var(--radius-sm)}
+.space-location-results button:hover,.space-location-results button:focus-visible{background:var(--muted)}
+.space-location-results span{font-size:12px;color:var(--muted-foreground)}
+.space-location-picker-footer [data-slot=button],.space-location-search [data-slot=button]{min-height:36px}
+@media(max-width:520px){
+ .space-location-coordinate-fields{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .space-location-coordinate-fields>:last-child{grid-column:1/-1}
+}

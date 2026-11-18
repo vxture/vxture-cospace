@@ -186,3 +186,10 @@ html,body,body *{scrollbar-width:none!important}body::-webkit-scrollbar,html::-w
 /* Reserve room for explicit record and inspection actions in the unified viewer. */
 .real-space .space-picker{max-width:calc(100% - 408px)}
 @media(max-width:640px){.real-space .space-picker{max-width:calc(100% - var(--space-lg) * 2)}.real-space .space-tools{top:calc(var(--space-lg) + var(--space-control-xl) + var(--space-md));gap:var(--space-sm)}.real-space .space-rail{top:calc(var(--space-lg) + var(--space-control-xl) * 2 + var(--space-md) * 2)}}
+
+/* Shared action column: content-sized, with a centered single action and a flush group. */
+#workbench-shell [data-table-actions]{width:1%;min-width:64px;box-sizing:border-box;padding-inline:16px;text-align:center;white-space:nowrap;vertical-align:middle}
+#workbench-shell [data-table-actions] .table-action-group{display:flex;align-items:center;justify-content:flex-end;gap:6px}
+#workbench-shell [data-table-actions] .table-action-group:has(>:only-child){justify-content:center}
+#workbench-shell [data-table-actions] .table-action-group>[data-slot=button]{height:32px;min-height:32px}
+#workbench-shell [data-table-actions] .table-action-group>.table-icon-action{box-sizing:border-box;width:32px;min-width:32px;height:32px;flex:0 0 32px;padding:0}
