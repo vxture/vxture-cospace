@@ -4,7 +4,7 @@ import {ArrowSquareOut,ArrowsClockwise} from '@phosphor-icons/react';
 import {Cube,UploadSimple} from '@phosphor-icons/react';
 import {WorkspaceHeading} from './workspace-frame';
 import {serviceKinds,type ServiceSpace,type ServiceVersion} from './spatial-service-contract';
-import {sceneServiceTabs,type SceneServiceTab} from './service-workspace-contract';
+import {sceneServiceTabs,type SceneServiceTab,type ServicePresentation,type ServiceViewMode} from './service-workspace-contract';
 import {serviceStateLabels,serviceVersionLabel} from './spatial-service-list';
 import {ServiceAccess} from './spatial-service-detail';
 import {OnlineServiceMonitor,useServiceReport,useServiceAssistantReport} from './online-service-monitor';
@@ -13,8 +13,16 @@ import {locationLabel} from './geographic-location';
 import {ServiceRecipients} from './service-recipients';
 import {ServiceDirectoryRow} from './service-directory-row';
 import {ServiceCard} from './service-card';
+import {ServiceListViewGroup} from './service-list-view-group';
 
-export function FeedbackUnavailable({view='list'}:{view?:'cards'|'list'}){
+export function FeedbackList({presentation}:Readonly<{presentation:ServicePresentation}>){
+ return <section aria-label="态势反馈清单">
+  <div className="service-list-toolbar"><ServiceListViewGroup presentation={presentation} count="1 项态势反馈"/></div>
+  <FeedbackUnavailable view={presentation.view}/>
+ </section>;
+}
+
+function FeedbackUnavailable({view}:Readonly<{view:ServiceViewMode}>){
  const [overview,setOverview]=useState(false);
  if(view==='cards')return <><div className="service-card-grid"><ServiceCard label="态势反馈尚未开放" symbol={<UploadSimple size={26} weight="duotone"/>} heading={<div className="service-card-title-line"><h3>态势反馈</h3><StatusBadge size="sm" icon={false} tone="neutral">尚未开放</StatusBadge></div>} metadata={<span>最后上报：—</span>} onOverview={()=>setOverview(true)}><p className="service-project">开放后可查看反馈记录和处理进展。</p></ServiceCard></div><Drawer open={overview} onClose={()=>setOverview(false)} side="right" width="md" title="态势反馈概要" closeLabel="关闭态势反馈概要"><div className="service-card-overview"><StatusBadge tone="neutral">尚未开放</StatusBadge><p>态势反馈接入尚未开放，暂无上报记录。</p></div></Drawer></>;
  return <div className="service-directory-list"><ServiceDirectoryRow label="态势反馈尚未开放" symbol={<UploadSimple size={36} weight="duotone"/>}
@@ -40,7 +48,7 @@ function ServiceOverview({group,version,revision}:{group:ServiceSpace;version:Se
  </div>;
 }
 
-export function SceneServicePage({group,version,tab,revision,onTab,onVersion,onRefresh}:{group:ServiceSpace;version?:ServiceVersion;tab:SceneServiceTab;revision:number;onTab:(tab:SceneServiceTab)=>void;onVersion:(id:string)=>void;onRefresh:()=>void}){
+export function SceneServicePage({group,version,tab,revision,onTab,onVersion,onRefresh,presentation}:Readonly<{presentation:ServicePresentation;group:ServiceSpace;version?:ServiceVersion;tab:SceneServiceTab;revision:number;onTab:(tab:SceneServiceTab)=>void;onVersion:(id:string)=>void;onRefresh:()=>void}>){
  const preview=version?.services.find(item=>item.kind==='preview'),query=version?.services.find(item=>item.kind==='query'),offline=version?.services.find(item=>item.kind==='offline');
  const scene=group.scene;
  return <Tabs value={tab} onValueChange={value=>onTab(value as SceneServiceTab)} className="scene-service-page">
@@ -53,8 +61,8 @@ export function SceneServicePage({group,version,tab,revision,onTab,onVersion,onR
    <TabsContent value="overview"><ServiceOverview group={group} version={version} revision={revision}/></TabsContent>
    <TabsContent value="online"><div className="service-tab-body"><OnlineServiceMonitor scene={scene} space={scene.id} revision={revision} access={query?<ServiceAccess key={query.id} item={query}/>:<p className="spatial-service-section-note">当前账号未获此版本的在线查询权限。</p>}/></div></TabsContent>
    <TabsContent value="offline">{offline?<ServiceAccess key={offline.id} item={offline}/>:<p className="spatial-service-section-note">当前账号未获此版本的离线交付权限。</p>}</TabsContent>
-   <TabsContent value="feedback"><FeedbackUnavailable/></TabsContent>
+   <TabsContent value="feedback"><FeedbackList presentation={presentation}/></TabsContent>
   </>}
-  <TabsContent value="recipients"><ServiceRecipients spaceId={scene.id} revision={revision}/></TabsContent>
+  <TabsContent value="recipients"><ServiceRecipients presentation={presentation} spaceId={scene.id} revision={revision}/></TabsContent>
  </Tabs>;
 }

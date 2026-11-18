@@ -1,16 +1,17 @@
 import React,{useEffect,useLayoutEffect,useMemo,useRef,useState} from 'react';
 import {useSearchParams} from 'react-router-dom';
-import {ViewModeSwitch,Button,Input,NativeSelect,ShellSidebarFrame,Drawer,useMediaQuery} from '@vxture/design-system';
+import {Button,Input,NativeSelect,ShellSidebarFrame,Drawer,useMediaQuery} from '@vxture/design-system';
 import {Cube,UploadSimple,MagnifyingGlass,ArrowsClockwise,SidebarSimple,Cloud,DownloadSimple,Users} from '@phosphor-icons/react';
 import {WorkspaceHeading} from './workspace-frame';
 import {useSceneDirectory} from './use-scene-directory';
 import {spatialServices,serviceSpaces,selectedServiceVersion,sectionServices,serviceSections,type ServiceSection} from './spatial-service-contract';
 import {ServiceNavigation} from './service-navigation';
 import {ServiceListEntry} from './spatial-service-list';
-import {SceneServicePage,FeedbackUnavailable} from './scene-service-page';
+import {SceneServicePage,FeedbackList} from './scene-service-page';
 import {ServiceRecipients} from './service-recipients';
 import {appNavigate} from './app-router';
-import {sceneServiceTabs,entryServiceTab,servicePageHref,type SceneServiceTab} from './service-workspace-contract';
+import {sceneServiceTabs,entryServiceTab,servicePageHref,readServiceView,serviceViewPreferenceKey,type ServiceViewMode,type SceneServiceTab} from './service-workspace-contract';
+import {ServiceListViewGroup} from './service-list-view-group';
 import './scene-catalog.css';
 import './spatial-services.css';
 
@@ -33,9 +34,12 @@ export function SpatialServices(){
  const query=params.get('q')||'',state=['available','unavailable'].includes(params.get('status')||'')?params.get('status')!:'all';
  const filter={query,state};
  const [revision,setRevision]=useState(0),[collapsed,setCollapsed]=useState(false),[navigationOpen,setNavigationOpen]=useState(false);
- const [views,setViews]=useState<Partial<Record<ServiceSection,'cards'|'list'>>>({});
- const view=views[section]||'cards';
- const onView=(value:'cards'|'list')=>setViews(current=>({...current,[section]:value}));
+ const [view,setView]=useState<ServiceViewMode>(()=>readServiceView({getItem:key=>window.localStorage.getItem(key)}));
+ function onView(value:ServiceViewMode){
+  setView(value);
+  try{window.localStorage.setItem(serviceViewPreferenceKey,value);}catch{/* Keep the choice in memory when storage is disabled. */}
+ }
+ const presentation={view,onView};
  const narrow=useMediaQuery('(max-width:639px)');
  const content=useRef<HTMLDivElement>(null),listScroll=useRef<Record<string,number>>({});
  useLayoutEffect(()=>{if(content.current)content.current.scrollTop=space||deviceId?0:listScroll.current[section]||0;},[space,section,deviceId,deviceTab]);
@@ -69,11 +73,11 @@ export function SpatialServices(){
   <div ref={content} className="spatial-service-content" onScroll={()=>{if(!space&&!deviceId&&content.current)listScroll.current[section]=content.current.scrollTop;}}><div className="service-workspace-shell">
    {narrow&&<Button className="service-mobile-navigation" variant="ghost" size="sm" onClick={()=>setNavigationOpen(true)}><SidebarSimple size={16}/>功能导航</Button>}
    {space?<>
-    {loading?<p role="status" className="service-list-empty">正在读取场景服务…</p>:error?<div role="alert" className="service-list-empty"><p>{error}</p><Button variant="secondary" onClick={()=>setRevision(value=>value+1)}>重新加载</Button></div>:group?deviceId?<ServiceRecipients spaceId={group.scene.id} sceneName={group.scene.name} revision={revision}/>:<SceneServicePage group={group} version={version} tab={tab} revision={revision} onTab={value=>appNavigate(servicePageHref(section,space,publication||version?.release.id||'',value,filter))} onVersion={changeVersion} onRefresh={()=>setRevision(value=>value+1)}/>:<div className="service-list-empty" role="alert"><h2>此场景服务不可访问</h2><p>场景已不可访问，或暂无已授权的发布服务。</p><Button variant="secondary" onClick={()=>appNavigate('/services?section='+section)}>返回服务清单</Button></div>}
+    {loading?<p role="status" className="service-list-empty">正在读取场景服务…</p>:error?<div role="alert" className="service-list-empty"><p>{error}</p><Button variant="secondary" onClick={()=>setRevision(value=>value+1)}>重新加载</Button></div>:group?deviceId?<ServiceRecipients presentation={presentation} spaceId={group.scene.id} sceneName={group.scene.name} revision={revision}/>:<SceneServicePage presentation={presentation} group={group} version={version} tab={tab} revision={revision} onTab={value=>appNavigate(servicePageHref(section,space,publication||version?.release.id||'',value,filter))} onVersion={changeVersion} onRefresh={()=>setRevision(value=>value+1)}/>:<div className="service-list-empty" role="alert"><h2>此场景服务不可访问</h2><p>场景已不可访问，或暂无已授权的发布服务。</p><Button variant="secondary" onClick={()=>appNavigate('/services?section='+section)}>返回服务清单</Button></div>}
    </>:<>
     {!deviceId&&<WorkspaceHeading icon={({directory:Cube,online:Cloud,offline:DownloadSimple,feedback:UploadSimple,recipients:Users})[section]} title={serviceSections[section]} description={descriptions[section]} actions={section!=='recipients'&&section!=='feedback'&&<Button size="icon-sm" variant="ghost" aria-label="刷新服务清单" onClick={()=>setRevision(value=>value+1)}><ArrowsClockwise size={16}/></Button>}/>}
-    {section==='recipients'?<ServiceRecipients revision={revision}/>:section==='feedback'?<section aria-label="态势反馈清单"><div className="service-list-toolbar"><ViewModeSwitch value={view} onChange={onView} ariaLabel="显示方式" labels={{cards:'卡片视图',list:'列表视图'}}/></div><FeedbackUnavailable view={view}/></section>:<section aria-label={`${serviceSections[section]}清单`}>
-     <div className="service-list-toolbar"><div className="service-list-view-group"><ViewModeSwitch value={view} onChange={onView} ariaLabel="显示方式" labels={{cards:'卡片视图',list:'列表视图'}}/><span className="service-list-count" aria-live="polite">{loading?'读取中…':error?'暂不可读':`${visible.length} 项场景服务`}</span></div><div className="service-list-filters"><div className="service-list-search"><MagnifyingGlass size={16}/><Input aria-label="搜索服务清单" placeholder="搜索场景、项目或版本" value={query} onChange={event=>updateFilter('q',event.target.value)}/></div><NativeSelect wrapperClassName="service-list-state-select" aria-label="发布状态" value={state} onChange={event=>updateFilter('status',event.target.value)}><option value="all">全部发布状态</option><option value="available">已发布</option><option value="unavailable">暂停 / 退役 / 待核对</option></NativeSelect></div></div>
+    {section==='recipients'?<ServiceRecipients presentation={presentation} revision={revision}/>:section==='feedback'?<FeedbackList presentation={presentation}/>:<section aria-label={`${serviceSections[section]}清单`}>
+     <div className="service-list-toolbar"><ServiceListViewGroup presentation={presentation} count={loading?'读取中…':error?'暂不可读':`${visible.length} 项场景服务`}/><div className="service-list-filters"><div className="service-list-search"><MagnifyingGlass size={16}/><Input aria-label="搜索服务清单" placeholder="搜索场景、项目或版本" value={query} onChange={event=>updateFilter('q',event.target.value)}/></div><NativeSelect wrapperClassName="service-list-state-select" aria-label="发布状态" value={state} onChange={event=>updateFilter('status',event.target.value)}><option value="all">全部发布状态</option><option value="available">已发布</option><option value="unavailable">暂停 / 退役 / 待核对</option></NativeSelect></div></div>
      {missingVersion&&<p role="alert" className="spatial-service-section-note">部分已选版本不再可见，相关操作已停止。<Button variant="link" size="sm" onClick={()=>setVersions(current=>Object.fromEntries(Object.entries(current).filter(([id,pin])=>{const value=groups.find(item=>item.scene.id===id);return !value||!!selectedServiceVersion(value,pin);}))) }>重新确认版本</Button></p>}
      {loading?<p role="status" className="service-list-empty">正在读取服务清单…</p>:error?<div role="alert" className="service-list-empty"><p>{error}</p><Button variant="secondary" onClick={()=>setRevision(value=>value+1)}>重新加载</Button></div>:<div className={visible.length&&view==='cards'?'service-card-grid':'service-directory-list'}>{visible.map(value=><ServiceListEntry key={value.scene.id} group={value} version={selectedServiceVersion(value,versions[value.scene.id])!} section={section} filter={filter} view={view}/>)}{!visible.length&&<div className="service-list-empty"><h2>{groups.length?'没有匹配的服务':'暂无已授权的场景服务'}</h2><p>{groups.length?'调整关键词或发布状态后重试。':'场景发布成果并授权后，服务会显示在这里。'}</p>{(query||state!=='all')&&<Button variant="secondary" onClick={()=>setParams({section},{replace:true})}>清除筛选</Button>}</div>}</div>}
     </section>}
