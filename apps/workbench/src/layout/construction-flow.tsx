@@ -37,16 +37,22 @@ const shortTime=(value?:string)=>value?new Date(value).toLocaleString('zh-CN',{y
 const bytes=(value:number)=>value>=1024*1024?`${(value/1024/1024).toFixed(2)} MB`:`${(value/1024).toFixed(1)} KB`;
 
 /** Explain actual saved artifacts; reading this page never starts, selects or publishes a build. */
+function entryStep(tab:string,job:string){
+ if(tab==='info')return 'info';
+ if(tab==='tasks')return 'prepare';
+ if(tab==='candidate')return 'review';
+ return tab==='flow'||job?'model':'info';
+}
 export function ConstructionFlow({active=true}:{active?:boolean}={}){
  const target=useRecordNavigation();
  const platform=usePlatformSession(),capabilities=useSceneCapabilities();
  const canBuild=!platform||capabilities.includes('build.run');
  const [data,setData]=useState<Snapshot|null>(null),[error,setError]=useState(''),[busy,setBusy]=useState(true),[revision,setRevision]=useState(0);
- const [step,setStep]=useState('model'),[restart,setRestart]=useState(false),[historyOpen,setHistoryOpen]=useState(()=>innerWidth>=1100);
+ const [step,setStep]=useState(()=>entryStep(target.tab,target.job)),[restart,setRestart]=useState(false),[historyOpen,setHistoryOpen]=useState(()=>innerWidth>=1100);
  const draft=target.tab==='tasks';
  const [buildInfo,setBuildInfo]=useState<BuildInfo>({name:'',purpose:'',changes:''});
  useEffect(()=>{setBuildInfo({name:'',purpose:'',changes:''});},[target.space,target.tab,target.job]);
- useEffect(()=>{let next='model';if(target.tab==='info')next='info';else if(draft)next='prepare';else if(target.tab==='candidate')next='review';setStep(next);},[target.job,target.space,target.tab,draft]);
+ useEffect(()=>{setStep(entryStep(target.tab,target.job));},[target.job,target.space,target.tab]);
  const [preflightOpen,setPreflightOpen]=useState(false);
  const [review,setReview]=useState<{candidate:string;revision:number}|null>(null);
  useEffect(()=>{setReview(null);setPreflightOpen(false);setData(null);},[target.space,target.input,target.job,active]);
@@ -127,10 +133,10 @@ export function ConstructionFlow({active=true}:{active?:boolean}={}){
   {!historyOpen&&<WorkflowNavigationToggle open={false} label="构建" panelId="build-navigation-panel" onToggle={()=>setHistoryOpen(true)}/>}
   <div className="build-work">
    <div className="build-work-scroll" tabIndex={0} aria-label="构建内容">
+   {step==='info'?<section className="build-stage-content build-scene-information"><SpaceSettings key={target.space}/></section>:<>
    <header className="build-work-header"><div className="build-title-block"><Cube size={32} className="build-title-icon"/><div className="build-title-copy"><div className="build-title-line"><h2>{job?(job.build_info?.name||currentInput):'新建构建'}</h2><StatusBadge tone={model?'success':job?.state==='failed'?'danger':'info'}>{draft?'待准备':state}</StatusBadge></div><div className="build-work-meta">{job?<><span title={job.id}>{buildVersion(job)}</span><time dateTime={job.created_at}>{new Date(job.created_at).toLocaleString('zh-CN',{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false})}</time></>:null}<BuildContext endpoint={endpoint} space={target.space} draft={draft} value={draft?buildInfo:job?.build_info||{name:'',purpose:'',changes:''}} onChange={setBuildInfo} jobId={job?.id} revision={job?.build_info_revision||0} onSaved={()=>setRevision(n=>n+1)}/></div></div></div><div className="build-header-actions">{job&&<Button asChild variant="secondary" size="sm"><a href={model?candidateScreenHref(target.space,job.id):buildScanHref(target.space,job.id,job.input_id||'')} target="_blank" rel="noopener noreferrer"><Eye size={16}/>{model?'查看成果':'查看过程'}</a></Button>}{job&&model&&<Button asChild variant="ghost" size="sm"><a href={buildScanHref(target.space,job.id,job.input_id||'')} target="_blank" rel="noopener noreferrer">构建过程</a></Button>}{job&&<Button size="sm" variant="secondary" onClick={()=>setRestart(true)}><ClockCounterClockwise size={16}/>重新构建</Button>}<Button size="sm" disabled={!canBuild} onClick={newBuild}><Plus size={16}/>新建构建</Button></div></header>
    {busy&&!data?<p role="status">正在读取构建工作…</p>:error?<div role="alert" className="construction-flow-message">{error}</div>:<>
 
-    {step==='info'?<section className="build-stage-content build-scene-information"><SpaceSettings/></section>:<>
 
     <section className="build-stage-content" aria-label={steps.find(s=>s.id===step)?.title}>
 
@@ -170,8 +176,8 @@ export function ConstructionFlow({active=true}:{active?:boolean}={}){
       <div className="build-stage-footer"><span>仅核对固定成果；现场质量未验收</span>{selected?<Button asChild><a href={recordLink('delivery',{job:model.id,...(release?{publication:release.id}:{})})}>服务发布<ArrowRight size={14}/></a></Button>:<Button onClick={()=>setReview({candidate:model.id,revision:data!.selection.revision})}>核对并选择候选<ArrowRight size={14}/></Button>}</div>
      </>:<div className="build-empty"><Eye size={32}/><h4>尚无可核对成果</h4><p>模型与两类表达完成并通过同源校验后，在这里核对。</p><Button variant="outline" onClick={()=>setStep('model')}>查看构建状态</Button></div>}</>}
     </section>
-    </>}
-    {step!=='info'&&job&&<details className="build-execution"><summary>执行记录与技术信息</summary><dl className="build-facts"><div><dt>创建时间</dt><dd>{new Date(job.created_at).toLocaleString('zh-CN',{hour12:false})}</dd></div><div><dt>执行状态</dt><dd>{labels[job.state]||job.state}</dd></div>{job.retry_of&&<div><dt>重试来源</dt><dd><a href={recordLink('build',{tab:'flow',job:job.retry_of})}>{job.retry_of}</a></dd></div>}{job.view_parent_id&&<div><dt>派生来源</dt><dd><a href={recordLink('build',{tab:'flow',job:job.view_parent_id})}>{job.view_parent_id}</a></dd></div>}{job.error&&<div><dt>错误代码</dt><dd>{job.error}</dd></div>}{model&&<div><dt>模型 SHA-256</dt><dd>{model.members['spatial.npz'].sha256}</dd></div>}</dl></details>}
+    {job&&<details className="build-execution"><summary>执行记录与技术信息</summary><dl className="build-facts"><div><dt>创建时间</dt><dd>{new Date(job.created_at).toLocaleString('zh-CN',{hour12:false})}</dd></div><div><dt>执行状态</dt><dd>{labels[job.state]||job.state}</dd></div>{job.retry_of&&<div><dt>重试来源</dt><dd><a href={recordLink('build',{tab:'flow',job:job.retry_of})}>{job.retry_of}</a></dd></div>}{job.view_parent_id&&<div><dt>派生来源</dt><dd><a href={recordLink('build',{tab:'flow',job:job.view_parent_id})}>{job.view_parent_id}</a></dd></div>}{job.error&&<div><dt>错误代码</dt><dd>{job.error}</dd></div>}{model&&<div><dt>模型 SHA-256</dt><dd>{model.members['spatial.npz'].sha256}</dd></div>}</dl></details>}
+   </>}
    </>}
    </div>
   </div>
