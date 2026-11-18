@@ -68,6 +68,21 @@ def validate_source(root,doc):
         raise ValueError('ifc_source_changed')
 
 
+def validate_array_header(archive, name, rows, dtype):
+    with archive.open(name) as stream:
+        version = np.lib.format.read_magic(stream)
+        if version == (1, 0):
+            read_header = np.lib.format.read_array_header_1_0
+        elif version == (2, 0):
+            read_header = np.lib.format.read_array_header_2_0
+        else:
+            raise ValueError('ifc_mesh_array_layout')
+        shape, fortran, actual_dtype = read_header(stream, max_header_size=1024)
+        if (shape != (rows, 3) or fortran or actual_dtype != np.dtype(dtype)
+                or archive.getinfo(name).file_size != stream.tell() + rows * 3 * actual_dtype.itemsize):
+            raise ValueError('ifc_mesh_array_layout')
+
+
 def load_mesh(root,product):
     member=product['mesh'];path=Path(root)/member['path']
     if path.is_symlink() or not path.resolve().is_relative_to(Path(root).resolve()):raise ValueError('ifc_mesh_path')
@@ -79,6 +94,8 @@ def load_mesh(root,product):
         if (len(entries)!=2 or {p.filename for p in entries}!={'vertices.npy','faces.npy'}
                 or archive.getinfo('vertices.npy').file_size>member['vertices']*24+1024
                 or archive.getinfo('faces.npy').file_size>member['triangles']*12+1024):raise ValueError('ifc_mesh_archive_budget')
+        validate_array_header(archive, 'vertices.npy', member['vertices'], '<f8')
+        validate_array_header(archive, 'faces.npy', member['triangles'], '<i4')
     with np.load(io.BytesIO(raw),allow_pickle=False) as arrays:vertices,faces=mesh_arrays(arrays['vertices'],arrays['faces'])
     if len(vertices)!=member['vertices'] or len(faces)!=member['triangles']:raise ValueError('ifc_mesh_count')
     bounds=np.array([vertices.min(axis=0),vertices.max(axis=0)])

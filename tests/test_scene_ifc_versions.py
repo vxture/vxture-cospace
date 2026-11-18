@@ -1,4 +1,5 @@
 import json
+import time
 
 import pytest
 
@@ -92,8 +93,10 @@ def test_failed_and_interrupted_tasks_require_explicit_retry(scene, tmp_path):
     assert created and second['attempt'] != task['attempt']
     path = store.root / space / 'versions.json'
     value = json.loads(path.read_bytes())
-    value['tasks'][identity].update(state='running', lease_until=0)
+    value['tasks'][identity].update(state='running', lease_until=time.time()+420)
     write_atomic(path, value)
+    assert store.listing(space)['tasks'][identity]['state'] == 'running'
+    store.recover_interrupted(space)
     assert store.listing(space)['tasks'][identity]['error'] == 'worker_interrupted'
     assert store.enqueue(space, task['attachment_id'], 'usr_two', retry=True)[1]
     assert store.run(space, identity, parse_fixture)

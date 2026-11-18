@@ -15,7 +15,8 @@ BASE = '/api/scene-ifc/references'
 def exercise(env, parse, original, filename, expected_roles):
     rp,_,accounts,clock,jobs,directory,spaces,policies,old,new = env
     space, other = (s['id'] for s in spaces[:2])
-    access = BusinessAccess(rp, policies, directory, jobs, scene_ifc_self_service=True)
+    ready = False
+    access = BusinessAccess(rp, policies, directory, jobs, scene_ifc_self_service=True,ifc_worker_available=lambda:ready)
     app = create_auth_app(rp, business=create_app(None, jobs, space_directory=directory,
                           platform_origin=rp.config.origin), access=access)
     with TestClient(app, base_url=rp.config.origin, follow_redirects=False) as client:
@@ -27,6 +28,11 @@ def exercise(env, parse, original, filename, expected_roles):
         assert response.status_code == 201, response.text
         body=params|{'attachment_id':response.json()['attachment']['id']}
         assert client.post(BASE,json=body).status_code == 403
+        assert client.get(BASE,params=params).json()['can_submit'] is False
+        assert client.post(BASE,json=body,headers=headers).status_code == 503
+        assert client.get(BASE,params=params).json()['tasks'] == []
+        ready = True
+        assert client.get(BASE,params=params).json()['can_submit'] is True
         task=client.post(BASE,json=body,headers=headers)
         assert task.status_code == 202, task.text
         key=task.json()['task_id']
@@ -44,6 +50,7 @@ def exercise(env, parse, original, filename, expected_roles):
         assert summary['role_counts'] == expected_roles
         assert summary['assessment'] == 'unverified' and str(jobs.inputs.root) not in result.text
         assert not client.get('/api/scene-ifc/structure',params=params|{'catalog_sha256':summary['catalog_sha256']}).json()['configured']
+        ready = False
         for user in ('usr_local_test','usr_other'):
             denied,_=sign_in(auth,user)
             assert client.get(BASE,params=params).status_code == 403

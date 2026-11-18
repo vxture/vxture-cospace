@@ -18,11 +18,12 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from packages.data.ifc_structure_read import validate_structure
 from packages.data.ifc_workspace import IfcBinding, load_mesh, read_json, validate_catalog, validate_source
 from packages.data.scene_attachments import checked_path, read_record
+from packages.infrastructure.ifc_parser_channel import PARSE_TIMEOUT
 from packages.lifecycle.preview_control_lock import mutation_guard
 from packages.lifecycle.preview_scope import scope
 
 PARSER = 'ifcopenshell-0.9.0.post1-structure-1'
-TIMEOUT_SECONDS = 300
+TIMEOUT_SECONDS = PARSE_TIMEOUT
 LEASE_SECONDS = TIMEOUT_SECONDS + 120
 MAX_TASKS = 1000
 MAX_SWITCHES = 2000
@@ -197,6 +198,18 @@ class SceneIfcVersions:
         value = self._read(path)
         self._expire(value)
         return value
+
+    def recover_interrupted(self, space):
+        """Only the worker holding the singleton guard may call this on startup."""
+        _, path = self._paths(space)
+        with mutation_guard(self.inputs.root.parent):
+            value = self._read(path)
+            running = [task for task in value['tasks'].values() if task['state'] == 'running']
+            for task in running:
+                task.update(state='failed', error='worker_interrupted', finished_at=now())
+                task.pop('lease_until')
+            if running:
+                write_versions(path, value)
 
     def enqueue(self, space, attachment, actor, *, retry=False):
         folder, path = self._paths(space)

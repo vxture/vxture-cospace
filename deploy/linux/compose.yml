@@ -35,6 +35,7 @@ services:
       COSPACE_PLATFORM_ACCESS_CACHE_SECONDS: ${COSPACE_PLATFORM_ACCESS_CACHE_SECONDS:-30}
       COSPACE_PLATFORM_WEBHOOK_SECRET_FILE: /run/secrets/webhook-secret
     volumes:
+      - ifc-ready:/ifc-ready:ro
       - ${STACK_ROOT:?set worker02 production stack root}/data/business:/data
       - ${STACK_ROOT:?set worker02 production stack root}/data/state:/state
       - ${STACK_ROOT:?set worker02 production stack root}/etc/secrets/client-secret:/run/secrets/client-secret:ro
@@ -45,3 +46,63 @@ services:
       options:
         max-size: 5m
         max-file: "3"
+  ifc-parser:
+    image: ${COSPACE_IMAGE:?set accepted immutable image tag}
+    entrypoint: ["python", "-m", "experiments.scripts.serve_ifc_parser"]
+    command: []
+    restart: unless-stopped
+    init: true
+    network_mode: none
+    read_only: true
+    user: "10001:10001"
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    mem_limit: 1024m
+    memswap_limit: 1024m
+    cpus: 1.0
+    pids_limit: 24
+    tmpfs:
+      - /tmp:size=288m,mode=1777,noexec,nosuid,nodev
+    volumes:
+      - ifc-ipc:/ifc-ipc
+    healthcheck:
+      disable: true
+    logging:
+      driver: json-file
+      options: {max-size: 5m, max-file: "3"}
+  ifc-worker:
+    image: ${COSPACE_IMAGE:?set accepted immutable image tag}
+    entrypoint: ["python", "-m", "experiments.scripts.run_scene_ifc_worker"]
+    command: ["--runtime", "/data/runtime", "--sidecar"]
+    restart: unless-stopped
+    init: true
+    network_mode: none
+    read_only: true
+    user: "10001:10001"
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    mem_limit: 768m
+    memswap_limit: 768m
+    cpus: 0.75
+    pids_limit: 24
+    tmpfs:
+      - /tmp:size=256m,mode=1777,noexec,nosuid,nodev
+    volumes:
+      - type: bind
+        source: ${STACK_ROOT:?set worker02 production stack root}/data/business/runtime
+        target: /data/runtime
+        bind: {create_host_path: false}
+      - ifc-ipc:/ifc-ipc:ro
+      - ifc-ready:/ifc-ready
+    healthcheck:
+      test: ["CMD", "python", "-c", "from packages.infrastructure.ifc_parser_channel import available; raise SystemExit(0 if available() else 1)"]
+      start_period: 30s
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    logging:
+      driver: json-file
+      options: {max-size: 5m, max-file: "3"}
+volumes:
+  ifc-ipc:
+  ifc-ready:

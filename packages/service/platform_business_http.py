@@ -74,7 +74,7 @@ IFC_REFERENCE_PREVIEW = IFC_REFERENCE_PATH+'/preview'
 
 
 class BusinessAccess:
-    def __init__(self, rp, policies, directory, jobs, registration_sources=None,workspace_config=None,consumer_config=None,subscriptions=None,scene_pointcloud_config=None,scene_ifc_config=None,*,scene_ifc_self_service=False):
+    def __init__(self, rp, policies, directory, jobs, registration_sources=None,workspace_config=None,consumer_config=None,subscriptions=None,scene_pointcloud_config=None,scene_ifc_config=None,*,scene_ifc_self_service=False,ifc_worker_available=None):
         self.rp,self.policies,self.directory,self.jobs=rp,policies,directory,jobs
         self.subscriptions=subscriptions
         self.amap=AmapGateway.from_env()
@@ -82,6 +82,7 @@ class BusinessAccess:
         self.scene_pointclouds=ScenePointcloudWorkspace(jobs.inputs,scene_pointcloud_config) if jobs.inputs else None
         self.attachments=SceneAttachments(jobs.inputs) if jobs.inputs else None
         self.ifc_versions=None
+        self.ifc_worker_available=ifc_worker_available or (lambda: True)
         if scene_ifc_self_service and self.attachments is not None:
             from packages.lifecycle.scene_ifc_versions import SceneIfcVersions
             self.ifc_versions=SceneIfcVersions(self.attachments)
@@ -485,6 +486,8 @@ class BusinessAccess:
                         else:
                             if set(request.query_params)!={'space_id'}:return deny(422,'ifc_invalid_request')
                             result=await run_in_threadpool(public_listing,self.ifc_versions,request.query_params['space_id'],context['can_manage_ifc'])
+                            if context['can_manage_ifc']:
+                                result['can_submit']=await run_in_threadpool(self.ifc_worker_available)
                         return JSONResponse(result,headers={'Cache-Control':'no-store'})
                     if request.query_params:return deny(422,'ifc_invalid_request')
                     if path==IFC_ACTIVATE_PATH:
@@ -496,6 +499,8 @@ class BusinessAccess:
                             expected_revision=change.expected_revision,actor=context['principal'].subject)
                         return JSONResponse({'space_id':change.space_id,'catalog_sha256':binding.catalog_sha256},headers={'Cache-Control':'no-store'})
                     change=TaskCommand.model_validate(body)
+                    if not await run_in_threadpool(self.ifc_worker_available):
+                        return deny(503,'ifc_parser_unavailable')
                     task,created=await run_in_threadpool(self.ifc_versions.enqueue,change.space_id,change.attachment_id,
                         context['principal'].subject,retry=change.retry)
                     return JSONResponse({'space_id':change.space_id,'task_id':task['id'],'state':task['state']},

@@ -11,6 +11,7 @@ from packages.infrastructure.platform_subscription import SubscriptionConfig
 from packages.infrastructure.space_policy_store import SpacePolicyStore
 from packages.infrastructure.preview_service_lock import service_guard
 from packages.infrastructure.preview_backup import validate_runtime
+from packages.infrastructure.ifc_parser_channel import available as ifc_worker_available
 from packages.service.platform_login import PlatformLogin
 from packages.service.space_access import SpaceAccessPolicy
 from experiments.scripts.serve_platform_workbench import assemble
@@ -86,7 +87,8 @@ def main():
             app=assemble(rp,policies,business/'runtime',sources_config=business/'setup/sources.json',
                 workspace_config=business/'setup/workspace-scenes.json',consumer_config=business/'setup/consumer-access.json',
                 scene_pointcloud_config=business/'setup/scene-pointclouds.json' if (business/'setup/scene-pointclouds.json').exists() else None,
-                scene_ifc_config=business/'setup/scene-ifc.json' if (business/'setup/scene-ifc.json').exists() else None)
+                scene_ifc_config=business/'setup/scene-ifc.json' if (business/'setup/scene-ifc.json').exists() else None,
+                scene_ifc_self_service=True,ifc_worker_available=ifc_worker_available)
             # Docker publishes only the explicit tailnet interface. No proxy trust
             # is needed: public origin and callback URLs come from trusted config.
             uvicorn.run(app,host='0.0.0.0',port=a.port,access_log=False,proxy_headers=False,
