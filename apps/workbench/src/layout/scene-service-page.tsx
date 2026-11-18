@@ -35,7 +35,7 @@ function ServiceOverview({group,version,revision}:{group:ServiceSpace;version:Se
    const item=version.services.find(value=>value.kind===kind);
    return <div key={kind}><span>{serviceKinds[kind].label}</span><StatusBadge size="sm" icon={false} tone={item?.available?'success':'neutral'}>{!item?'未授权':item.available?'可使用':serviceStateLabels[item.state]}</StatusBadge></div>;
   })}</div><p className="spatial-service-section-note">操作固定到页头所选版本，新发布不会自动替换。</p></section>
-  <section className="service-page-section"><h2>接入与调用</h2>{!allowed?<p className="spatial-service-section-note">当前账号没有运行监测权限，可使用已授权的服务能力。</p>:error?<p role="alert" className="spatial-service-section-note">{error}</p>:!report?<p role="status" className="spatial-service-section-note">正在读取运行摘要…</p>:<><dl className="service-summary-metrics"><div><dt>服务身份接入</dt><dd>{configLabels[report.configuration.state]||'待核对'}</dd></div><div><dt>场景调用 · 近 24 小时</dt><dd>{report.request_count.toLocaleString()} 次</dd></div><div><dt>服务异常 · 近 24 小时</dt><dd>{report.counts.failed} 次</dd></div></dl><p className="spatial-service-section-note">调用摘要覆盖此场景的全部版本。{report.coverage.partial?'当前统计窗口记录不完整。':''}未记录到调用不代表设备离线。</p></>}</section>
+  <section className="service-page-section"><h2>接入与调用</h2>{!allowed?<p className="spatial-service-section-note">当前账号没有运行监测权限，可使用已授权的服务能力。</p>:error?<p role="alert" className="spatial-service-section-note">{error}</p>:!report?<p role="status" className="spatial-service-section-note">正在读取运行摘要…</p>:<><dl className="service-summary-metrics"><div><dt>服务身份接入</dt><dd>{configLabels[report.configuration.state]||'待核对'}</dd></div><div><dt>场景调用</dt><dd>{report.totals.requests.toLocaleString()} 次</dd></div><div><dt>服务异常</dt><dd>{report.totals.failed.toLocaleString()} 次</dd></div></dl><p className="spatial-service-section-note">调用摘要覆盖此场景的全部版本。{report.totals.partial?'部分历史记录可能缺失。':''}未记录到调用不代表设备离线。</p></>}</section>
   <section className="service-page-section"><h2>需要关注</h2>{!version.available&&<p className="service-attention">所选版本{serviceStateLabels[version.state]}，预览、查询与交付操作均已停用。</p>}{attention.map(check=><p className="service-attention" key={check.key}>{checkLabels[check.key]}</p>)}{!attention.length&&<p className="spatial-service-section-note">{!allowed?'运行监测信息仅向场景发布管理员开放。':error?'监测暂不可读，无法判断运行情况。':!report?'正在核对服务情况…':'当前核查项未发现需关注记录。'}</p>}</section>
  </div>;
 }
@@ -51,7 +51,7 @@ export function SceneServicePage({group,version,tab,revision,onTab,onVersion,onR
   </div>
   {!version?tab!=='recipients'&&<p className="spatial-service-section-note" role="alert">所选发布版本已不可访问，操作已停止。请明确选择其他版本。</p>:<>
    <TabsContent value="overview"><ServiceOverview group={group} version={version} revision={revision}/></TabsContent>
-   <TabsContent value="online"><div className="service-tab-body">{query?<ServiceAccess key={query.id} item={query}/>:<p className="spatial-service-section-note">当前账号未获此版本的在线查询权限。</p>}<OnlineServiceMonitor scene={scene} space={scene.id} revision={revision}/></div></TabsContent>
+   <TabsContent value="online"><div className="service-tab-body"><OnlineServiceMonitor scene={scene} space={scene.id} revision={revision} access={query?<ServiceAccess key={query.id} item={query}/>:<p className="spatial-service-section-note">当前账号未获此版本的在线查询权限。</p>}/></div></TabsContent>
    <TabsContent value="offline">{offline?<ServiceAccess key={offline.id} item={offline}/>:<p className="spatial-service-section-note">当前账号未获此版本的离线交付权限。</p>}</TabsContent>
    <TabsContent value="feedback"><FeedbackUnavailable/></TabsContent>
   </>}

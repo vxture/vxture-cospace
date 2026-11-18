@@ -30,8 +30,12 @@ def test_persistent_scoped_bounded_observations(tmp_path, monkeypatch):
     expired=persisted.snapshot(p,'space-a')
     assert expired['request_count']==0
     assert expired['totals']=={'requests':2,'failed':0,'rejected':0,'partial':False}
+    assert [row['publication'] for row in expired['recent']]==['preview-b','preview-a']
+    assert expired['last_request_at']==result['last_request_at']
     clock[0]+=7*86400
-    persisted.snapshot(p,'space-a')
+    pruned=persisted.snapshot(p,'space-a')
+    assert pruned['recent']==[]
+    assert pruned['last_request_at'] is None
     with sqlite3.connect(persisted.path) as db:assert db.execute('SELECT COUNT(*) FROM events').fetchone()[0]==0
     assert ServiceMonitor(tmp_path,now=lambda:clock[0]).snapshot(p,'space-a')['totals']['requests']==2
     monkeypatch.setattr('packages.service.service_monitor.MAX_EVENTS',2)
