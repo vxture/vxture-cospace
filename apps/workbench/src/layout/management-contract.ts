@@ -16,5 +16,5 @@ export function canOpenSceneWorkspace(route:string,tab:string,capabilities:reado
 }
 export const capabilityNames:Record<string,string>={
  'space.preview':'空间浏览','space.query':'空间查询','space.export':'成果导出','data.manage':'数据管理',
- 'build.run':'模型构建','association.edit':'空间关联','publication.manage':'服务发布','space.manage':'基本信息管理',
+ 'build.run':'模型构建','association.edit':'空间关联','publication.manage':'服务发布','space.manage':'名称与描述管理','space.location.edit':'空间位置编辑',
 };

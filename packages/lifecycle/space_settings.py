@@ -36,8 +36,9 @@ class SpaceSettingsChange(BaseModel):
     model_config = ConfigDict(extra='forbid', strict=True)
     space_id: str = Field(pattern=r'^space-[a-f0-9]{16}$')
     expected_revision: int = Field(ge=0)
-    name: str = Field(min_length=1, max_length=100)
-    description: str = Field(max_length=500)
+    section: Literal['identity', 'location'] | None = None
+    name: str | None = Field(default=None, min_length=1, max_length=100)
+    description: str | None = Field(default=None, max_length=500)
     address: str | None = Field(default=None, max_length=500)
     location: SceneLocation | None = None
     reason: str = Field(min_length=1, max_length=500)
@@ -45,9 +46,23 @@ class SpaceSettingsChange(BaseModel):
     @field_validator('name', 'reason')
     @classmethod
     def not_blank(cls, value):
-        if not value.strip():
+        if value is None or not value.strip():
             raise ValueError('text_required')
         return value.strip()
+
+
+    @model_validator(mode='after')
+    def restrict_section_fields(self):
+        fields = self.model_fields_set
+        identity = {'name', 'description'}
+        location = {'address', 'location'}
+        if self.section != 'location' and (self.name is None or self.description is None):
+            raise ValueError('space_identity_fields_required')
+        if self.section == 'identity' and fields & location:
+            raise ValueError('space_location_fields_not_allowed')
+        if self.section == 'location' and (fields & identity or not fields & location):
+            raise ValueError('space_location_fields_required')
+        return self
 
 
 class SpaceSettings:
@@ -75,7 +90,8 @@ class SpaceSettings:
                     if saved['revision'] != change.expected_revision:
                         raise SettingsConflict('space_settings_revision_changed')
                     before = {k: saved.get(k, original[k]) for k in ('name', 'description')}
-                    after = {'name': change.name, 'description': change.description.strip()}
+                    after = (dict(before) if change.section == 'location' else
+                             {'name': change.name, 'description': change.description.strip()})
                     # Older clients omit geographic metadata: preserve it rather than clear it.
                     for key in ('address', 'location'):
                         if key in saved or key in original or key in change.model_fields_set:

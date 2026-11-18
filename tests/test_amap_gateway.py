@@ -51,3 +51,19 @@ def test_proxy_bounds_upstream_and_hides_diagnostics(status,content):
 def test_configuration_rejects_partial_invalid_values(monkeypatch):
     monkeypatch.setenv('COSPACE_AMAP_WEB_KEY','invalid')
     with pytest.raises(ValueError,match='amap_configuration_invalid'):AmapGateway.from_env()
+
+
+def test_place_search_uses_fixed_query_and_bounded_results():
+    calls=[]
+    def upstream(request):
+        calls.append(request.url)
+        return httpx.Response(200,json={'status':'1','pois':[{'name':'故宫','location':'116.397,39.918'}]})
+    c=client(AmapGateway('a'*32,'b'*32,httpx.MockTransport(upstream)))
+    path='/_AMapService/place-search'
+    for params in ({},{'keywords':'x'},{'keywords':'x'*81},{'keywords':'故宫','offset':100}):
+        assert c.get(path,params=params).status_code==422
+    assert c.get(path,params={'keywords':'故宫'},headers={'Sec-Fetch-Site':'cross-site'}).status_code==403
+    result=c.get(path,params={'keywords':'故宫'})
+    assert result.status_code==200 and result.json()['pois'][0]['name']=='故宫'
+    assert len(calls)==1 and calls[0].host=='restapi.amap.com' and calls[0].path=='/v3/place/text'
+    assert calls[0].params['offset']=='8' and calls[0].params['keywords']=='故宫'

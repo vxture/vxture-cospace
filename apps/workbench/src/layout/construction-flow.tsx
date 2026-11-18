@@ -1,3 +1,6 @@
+import {useBuildDraft,emptyBuildInfo} from './build-draft';
+import {sessionScopeKey} from './session-continuity';
+import {WorkflowPageHeader} from './workflow-page-header';
 import {useAssistantReport} from './workspace-assistant';
 import {buildAssistantReport} from './assistant-contract';
 import {candidateScreenHref} from './real-space-data';
@@ -21,7 +24,7 @@ import {BuildStages,ViewDerivations} from './view-derivations';
 import {buildScanHref} from './build-scan-data';
 import {BuildJobs} from './build-jobs';
 import {PreflightHistory} from './preflight-history';
-import {BuildContext,BuildInfo,BuildSceneLink} from './build-context';
+import {BuildContext,BuildSceneLink,type BuildInfo} from './build-context';
 import {BuildMaterials} from './build-materials';
 import {InputRegistration} from './input-registration';
 import './construction-flow.css';
@@ -50,8 +53,9 @@ export function ConstructionFlow({active=true}:{active?:boolean}={}){
  const [data,setData]=useState<Snapshot|null>(null),[error,setError]=useState(''),[busy,setBusy]=useState(true),[revision,setRevision]=useState(0);
  const [step,setStep]=useState(()=>entryStep(target.tab,target.job)),[restart,setRestart]=useState(false),[historyOpen,setHistoryOpen]=useState(()=>innerWidth>=1100);
  const draft=target.tab==='tasks';
- const [buildInfo,setBuildInfo]=useState<BuildInfo>({name:'',purpose:'',changes:''});
- useEffect(()=>{setBuildInfo({name:'',purpose:'',changes:''});},[target.space,target.tab,target.job]);
+ const {draft:localDraft,update:setBuildInfo,clear:clearDraft}=useBuildDraft(sessionScopeKey(platform)||'preview',target.space,draft&&canBuild);
+ const buildInfo=localDraft?.info||emptyBuildInfo;
+ const draftTime=localDraft&&<time dateTime={localDraft.createdAt}>创建于 {shortTime(localDraft.createdAt)}</time>;
  useEffect(()=>{setStep(entryStep(target.tab,target.job));},[target.job,target.space,target.tab]);
  const [preflightOpen,setPreflightOpen]=useState(false);
  const [review,setReview]=useState<{candidate:string;revision:number}|null>(null);
@@ -124,7 +128,7 @@ export function ConstructionFlow({active=true}:{active?:boolean}={}){
    <div className="build-nav-heading workflow-nav-heading"><Layout size={18}/><h2>构建中心</h2><Badge variant="outline" className="build-nav-count" aria-label={`${history.length} 次构建`}>{history.length}</Badge><WorkflowNavigationToggle open={true} label="构建" panelId="build-navigation-panel" onToggle={()=>setHistoryOpen(false)}/></div>
    <section className="build-nav-section build-records-section" aria-label="构建版本与流程">
     <BuildSceneLink selected={step==='info'} onSelect={()=>void runGuarded(()=>setStep('info'))}/>
-    <Select value={draft?'draft':job?.id||'draft'} disabled={busy&&!data} onValueChange={id=>{if(id==='draft'){newBuild();return;}const picked=history.find(j=>j.id===id);if(picked)appNavigate(recordLink('build',{tab:'flow',job:picked.id,...(picked.input_id?{input:picked.input_id}:{})}));}}><SelectTrigger aria-label="选择构建版本" className="build-version-select"><SelectValue placeholder="选择构建版本"><span className="build-version-current"><strong>{draft||!job?'本次新建构建':buildVersion(job)}</strong><span><time>{job?shortTime(job.created_at):'尚未提交'}</time><span>{job?labels[job.state]||job.state:'待准备'}</span></span></span></SelectValue></SelectTrigger><SelectContent className="build-version-menu"><SelectItem value="draft"><span className="build-version-option"><strong>本次新建构建</strong><span>未提交 · 未发布</span></span></SelectItem>{history.map(j=><SelectItem key={j.id} value={j.id} textValue={buildVersion(j)}><span className="build-version-option"><strong>{buildVersion(j)}</strong><span><time dateTime={j.created_at}>{new Date(j.created_at).toLocaleString('zh-CN',{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false})}</time><span>{labels[j.state]||j.state} · {publicationStatus(j.id)}</span></span></span></SelectItem>)}</SelectContent></Select>
+    <Select value={draft?'draft':job?.id||''} disabled={busy&&!data} onValueChange={id=>{if(id==='draft'){if(canBuild)newBuild();return;}const picked=history.find(j=>j.id===id);if(picked)appNavigate(recordLink('build',{tab:'flow',job:picked.id,...(picked.input_id?{input:picked.input_id}:{})}));}}><SelectTrigger aria-label="选择构建版本" className="build-version-select"><SelectValue placeholder="选择构建版本"><span className="build-version-current"><strong>{draft||!job?(localDraft?'本机构建草稿':'新建构建'):buildVersion(job)}</strong><span>{job?<time dateTime={job.created_at}>{shortTime(job.created_at)}</time>:draftTime}<span>{job?labels[job.state]||job.state:'待准备'}</span></span></span></SelectValue></SelectTrigger><SelectContent className="build-version-menu"><SelectItem value="draft" disabled={!canBuild}><span className="build-version-option"><strong>{localDraft?'本机构建草稿':'新建构建'}</strong>{localDraft&&<span>{draftTime}<span>未提交</span></span>}</span></SelectItem>{history.map(j=><SelectItem key={j.id} value={j.id} textValue={buildVersion(j)}><span className="build-version-option"><strong>{buildVersion(j)}</strong><span><time dateTime={j.created_at}>{new Date(j.created_at).toLocaleString('zh-CN',{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false})}</time><span>{labels[j.state]||j.state} · {publicationStatus(j.id)}</span></span></span></SelectItem>)}</SelectContent></Select>
     <article className="build-record-group build-record-active">{stepNavigation}</article>
     <section className="build-flow-stat" aria-label="流程统计"><header><strong>全程耗时</strong><StatusBadge tone={failed?'danger':flowDone?'success':job?'info':'neutral'}>{failed?'异常':flowDone?'已完成':job?'进行中':'未开始'}</StatusBadge></header><p title="从资料准备到成果核对完成，包含人工等待时间">{elapsed(totalStart,totalEnd)}</p><span>包含人工确认{totalEstimated?' · 估算':''}</span></section>
    </section>
@@ -133,14 +137,17 @@ export function ConstructionFlow({active=true}:{active?:boolean}={}){
   {!historyOpen&&<WorkflowNavigationToggle open={false} label="构建" panelId="build-navigation-panel" onToggle={()=>setHistoryOpen(true)}/>}
   <div className="build-work">
    <div className="build-work-scroll" tabIndex={0} aria-label="构建内容">
-   {step==='info'?<section className="build-stage-content build-scene-information"><SpaceSettings key={target.space}/></section>:<>
-   <header className="build-work-header"><div className="build-title-block"><Cube size={32} className="build-title-icon"/><div className="build-title-copy"><div className="build-title-line"><h2>{job?(job.build_info?.name||currentInput):'新建构建'}</h2><StatusBadge tone={model?'success':job?.state==='failed'?'danger':'info'}>{draft?'待准备':state}</StatusBadge></div><div className="build-work-meta">{job?<><span title={job.id}>{buildVersion(job)}</span><time dateTime={job.created_at}>{new Date(job.created_at).toLocaleString('zh-CN',{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false})}</time></>:null}<BuildContext endpoint={endpoint} space={target.space} draft={draft} value={draft?buildInfo:job?.build_info||{name:'',purpose:'',changes:''}} onChange={setBuildInfo} jobId={job?.id} revision={job?.build_info_revision||0} onSaved={()=>setRevision(n=>n+1)}/></div></div></div><div className="build-header-actions">{job&&<Button asChild variant="secondary" size="sm"><a href={model?candidateScreenHref(target.space,job.id):buildScanHref(target.space,job.id,job.input_id||'')} target="_blank" rel="noopener noreferrer"><Eye size={16}/>{model?'查看成果':'查看过程'}</a></Button>}{job&&model&&<Button asChild variant="ghost" size="sm"><a href={buildScanHref(target.space,job.id,job.input_id||'')} target="_blank" rel="noopener noreferrer">构建过程</a></Button>}{job&&<Button size="sm" variant="secondary" onClick={()=>setRestart(true)}><ClockCounterClockwise size={16}/>重新构建</Button>}<Button size="sm" disabled={!canBuild} onClick={newBuild}><Plus size={16}/>新建构建</Button></div></header>
+   <WorkflowPageHeader space={target.space} icon={<Cube size={32}/>} process="场景构建" stage={step==='info'?'基本信息':steps.find(item=>item.id===step)?.title||'构建记录'} version={step!=='info'&&job?(job.display_code||job.build_code||job.id.slice(-8).toUpperCase()):undefined}
+    status={step!=='info'&&<StatusBadge tone={model?'success':job?.state==='failed'?'danger':'info'}>{draft?'待准备':state}</StatusBadge>}
+    details={step!=='info'&&<>{draft&&draftTime}{job&&<>{job.build_info?.name&&<span>{job.build_info.name}</span>}<time dateTime={job.created_at}>{shortTime(job.created_at)}</time></>}{canBuild&&(job||draft)&&<BuildContext endpoint={endpoint} space={target.space} draft={draft} value={draft?buildInfo:job?.build_info||{name:'',purpose:'',changes:''}} onChange={setBuildInfo} jobId={job?.id} revision={job?.build_info_revision||0} onSaved={()=>setRevision(n=>n+1)}/>}</>}
+    actions={<>{step!=='info'&&job&&model&&<Button asChild variant="outline" size="sm"><a href={candidateScreenHref(target.space,job.id)} target="_blank" rel="noopener noreferrer"><Eye size={16}/>查看成果</a></Button>}{step!=='info'&&job&&canBuild&&<Button size="sm" variant="outline" onClick={()=>setRestart(true)}><ClockCounterClockwise size={16}/>重新构建</Button>}{canBuild&&!draft&&<Button size="sm" onClick={newBuild}><Plus size={16}/>新建构建</Button>}</>}/>
+   {step==='info'?<section className="build-stage-content build-scene-information"><SpaceSettings embedded key={target.space}/></section>:<>
    {busy&&!data?<p role="status">正在读取构建工作…</p>:error?<div role="alert" className="construction-flow-message">{error}</div>:<>
 
 
     <section className="build-stage-content" aria-label={steps.find(s=>s.id===step)?.title}>
 
-     <div className="build-stage-heading workspace-section-heading"><div><h3>{React.createElement(steps.find(s=>s.id===step)!.icon,{size:20})}{steps.find(s=>s.id===step)?.title}</h3></div></div>
+     <div className="build-stage-heading workspace-section-heading"><div><h3>{React.createElement(steps.find(s=>s.id===step)!.icon,{size:20})}{steps.find(s=>s.id===step)?.title}</h3></div>{step==='model'&&job&&<Button asChild variant="outline" size="sm"><a href={buildScanHref(target.space,job.id,job.input_id||'')} target="_blank" rel="noopener noreferrer"><Eye size={16}/>查看构建过程</a></Button>}</div>
      {step==='prepare'&&<>{draft&&<div className="build-entry-modes" aria-label="构建接入方式">{[{icon:UploadSimple,title:'资料包构建',note:'上传已有资料，检查后构建',ready:true},{icon:Broadcast,title:'实时接入构建',note:'设备直连 · 增量触发',ready:false},{icon:Desktop,title:'客户端协同构建',note:'缓存补传 · 完整后触发',ready:false}].map(mode=><Button key={mode.title} variant={mode.ready?'secondary':'outline'} disabled={!mode.ready} className="build-entry-mode"><mode.icon size={20}/><span><strong>{mode.title}</strong><small>{mode.note}</small></span>{!mode.ready&&<span className="build-planned">规划中</span>}</Button>)}</div>}</>}
      {(step==='prepare'||step==='check')&&<>
       {!draft&&job?<>
@@ -157,7 +164,7 @@ export function ConstructionFlow({active=true}:{active?:boolean}={}){
        </>}
       </>:<>
        {step==='prepare'&&materialPreparation}
-       {step==='check'&&<BuildJobs key={`${target.space}:${target.input}`} active={active} compact buildInfo={buildInfo}/>}
+       {step==='check'&&<BuildJobs key={`${target.space}:${target.input}`} active={active} compact buildInfo={buildInfo} onSubmitted={clearDraft}/>}
       </>}
      </>}
      {step==='model'&&<>
@@ -176,7 +183,7 @@ export function ConstructionFlow({active=true}:{active?:boolean}={}){
       <div className="build-stage-footer"><span>仅核对固定成果；现场质量未验收</span>{selected?<Button asChild><a href={recordLink('delivery',{job:model.id,...(release?{publication:release.id}:{})})}>服务发布<ArrowRight size={14}/></a></Button>:<Button onClick={()=>setReview({candidate:model.id,revision:data!.selection.revision})}>核对并选择候选<ArrowRight size={14}/></Button>}</div>
      </>:<div className="build-empty"><Eye size={32}/><h4>尚无可核对成果</h4><p>模型与两类表达完成并通过同源校验后，在这里核对。</p><Button variant="outline" onClick={()=>setStep('model')}>查看构建状态</Button></div>}</>}
     </section>
-    {job&&<details className="build-execution"><summary>执行记录与技术信息</summary><dl className="build-facts"><div><dt>创建时间</dt><dd>{new Date(job.created_at).toLocaleString('zh-CN',{hour12:false})}</dd></div><div><dt>执行状态</dt><dd>{labels[job.state]||job.state}</dd></div>{job.retry_of&&<div><dt>重试来源</dt><dd><a href={recordLink('build',{tab:'flow',job:job.retry_of})}>{job.retry_of}</a></dd></div>}{job.view_parent_id&&<div><dt>派生来源</dt><dd><a href={recordLink('build',{tab:'flow',job:job.view_parent_id})}>{job.view_parent_id}</a></dd></div>}{job.error&&<div><dt>错误代码</dt><dd>{job.error}</dd></div>}{model&&<div><dt>模型 SHA-256</dt><dd>{model.members['spatial.npz'].sha256}</dd></div>}</dl></details>}
+    {job&&<details className="build-execution"><summary>执行记录与技术信息</summary>{step!=='model'&&<Button asChild variant="outline" size="sm"><a href={buildScanHref(target.space,job.id,job.input_id||'')} target="_blank" rel="noopener noreferrer"><Eye size={16}/>查看构建过程</a></Button>}<dl className="build-facts"><div><dt>创建时间</dt><dd>{new Date(job.created_at).toLocaleString('zh-CN',{hour12:false})}</dd></div><div><dt>执行状态</dt><dd>{labels[job.state]||job.state}</dd></div>{job.retry_of&&<div><dt>重试来源</dt><dd><a href={recordLink('build',{tab:'flow',job:job.retry_of})}>{job.retry_of}</a></dd></div>}{job.view_parent_id&&<div><dt>派生来源</dt><dd><a href={recordLink('build',{tab:'flow',job:job.view_parent_id})}>{job.view_parent_id}</a></dd></div>}{job.error&&<div><dt>错误代码</dt><dd>{job.error}</dd></div>}{model&&<div><dt>模型 SHA-256</dt><dd>{model.members['spatial.npz'].sha256}</dd></div>}</dl></details>}
    </>}
    </>}
    </div>

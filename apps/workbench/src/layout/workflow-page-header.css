@@ -1,0 +1,12 @@
+.workflow-page-header{display:grid;grid-template-columns:32px minmax(0,1fr) auto;align-items:center;column-gap:14px;row-gap:12px;padding:4px 0 16px;border-bottom:1px solid color-mix(in srgb,var(--border) 65%,transparent)}
+.workflow-page-icon{display:grid;place-items:center;color:var(--primary)}
+.workflow-page-copy{display:grid;gap:8px;min-width:0}
+.workflow-page-title,.workflow-page-meta,.workflow-page-actions{display:flex;align-items:center;flex-wrap:wrap;gap:8px 12px;min-width:0}
+.workflow-page-title h2{margin:0;font-size:18px;font-weight:600;line-height:1.5;overflow-wrap:anywhere}
+.workflow-page-title>[data-slot]{flex-shrink:0}
+.workflow-page-meta{font-size:12px;color:var(--muted-foreground);overflow-wrap:anywhere}
+.workflow-page-meta strong{font-weight:600;color:var(--foreground)}
+.workflow-page-actions{justify-content:flex-end;gap:8px}
+.workflow-page-actions:empty{display:none}
+#workbench-shell .workflow-page-actions [data-slot=button]{box-sizing:border-box;height:32px;min-height:32px;padding-inline:12px;gap:6px}
+@container(max-width:860px){.workflow-page-header{grid-template-columns:32px minmax(0,1fr)}.workflow-page-actions{grid-column:2;justify-content:flex-start}}
