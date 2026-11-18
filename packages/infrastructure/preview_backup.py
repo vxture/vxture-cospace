@@ -141,6 +141,12 @@ def validate_runtime(root,original_root=None):
         list(stored_records(root/'runtime/preview-inputs', verify=True))
     except (OSError,ValueError,TypeError,KeyError):
         raise ValueError('backup_scene_attachments_invalid') from None
+    if (root/'runtime/preview-inputs/scene-ifc-versions').exists():
+        from packages.lifecycle.scene_ifc_versions import validate_version_storage
+        try:
+            validate_version_storage(root/'runtime/preview-inputs')
+        except (OSError,ValueError,TypeError,KeyError,zipfile.BadZipFile):
+            raise ValueError('backup_scene_ifc_versions_invalid') from None
     for pattern in ('*/job.json','*/views/*/task.json'):
         for p in (root/'runtime/preview-builds').glob(pattern):
             if json.loads(p.read_bytes()).get('state') in ('queued','running'):

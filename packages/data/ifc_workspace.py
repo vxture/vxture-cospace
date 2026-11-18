@@ -87,14 +87,19 @@ def load_mesh(root,product):
 
 
 class IfcWorkspace:
-    def __init__(self,directory,jobs,config=None):self.directory,self.jobs,self.config=directory,jobs,Path(config) if config else None
+    def __init__(self,directory,jobs,config=None,*,versions=None):
+        self.directory,self.jobs,self.config=directory,jobs,Path(config) if config else None
+        self.versions=versions
 
     def catalog(self,space,expected=None):
         self.directory.read('space',space)
-        if self.config is None:return None,None
-        _,raw=read_json(self.config,1_000_000);config=IfcConfig.model_validate(raw)
-        if len({b.space_id for b in config.bindings})!=len(config.bindings):raise ValueError('ifc_duplicate_scene_binding')
-        binding=next((b for b in config.bindings if b.space_id==space),None)
+        binding=self.versions.resolve(space,catalog_sha256=expected) if self.versions is not None else None
+        if binding is None and self.config is not None:
+            _,raw=read_json(self.config,1_000_000);config=IfcConfig.model_validate(raw)
+            if len({b.space_id for b in config.bindings})!=len(config.bindings):raise ValueError('ifc_duplicate_scene_binding')
+            binding=next((b for b in config.bindings if b.space_id==space),None)
+        if (binding is None and expected is not None and self.versions is not None
+                and self.versions.resolve(space) is not None):raise ValueError('ifc_catalog_changed')
         if binding is None:return None,None
         if expected is not None and expected!=binding.catalog_sha256:raise ValueError('ifc_catalog_changed')
         raw,doc=read_json(Path(binding.root)/'ifc.json',8*1024*1024)
