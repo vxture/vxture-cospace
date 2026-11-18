@@ -60,7 +60,7 @@ def test_geographic_metadata_is_revisioned_and_preserved_by_older_clients(tmp_pa
         with pytest.raises(ValidationError):SpaceSettingsChange.model_validate(body(s['id'],location=invalid))
 
 
-@pytest.mark.parametrize('user,can_manage',[('usr_local_test',False),('usr_engineer',False),('usr_manager',True)])
+@pytest.mark.parametrize('user,can_manage',[('usr_local_test',False),('usr_engineer',True),('usr_manager',True)])
 def test_settings_http_role_and_cross_space(secured,user,can_manage):
     _,c,_,_,_,directory,spaces,*_=secured;headers,_=sign_in(secured,user)
     identity=spaces[0]['id'];foreign=spaces[1]['id']
@@ -162,7 +162,7 @@ def test_height_datum_source_and_old_height_semantics_are_preserved(tmp_path):
 
 @pytest.mark.parametrize('user,fields',[
     ('usr_local_test', []),
-    ('usr_engineer', ['address','location']),
+    ('usr_engineer', ['name','description','address','location']),
     ('usr_manager', ['name','description','address','location']),
 ])
 def test_section_edit_acl_preserves_unedited_metadata(secured,user,fields):

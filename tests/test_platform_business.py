@@ -231,12 +231,12 @@ def test_head_range_conditional_and_pause_do_not_bypass_auth(secured):
         assert getattr(c,method)(path,headers={'Range':'bytes=0-5','If-None-Match':'anything'}).status_code==403
 
 
-def test_engineer_data_writes_allowed_publish_denied_and_foreign_input_rejected(secured):
+def test_engineer_data_writes_and_publish_allowed_unbound_creation_denied(secured):
     _,c,_,_,jobs,_,spaces,_,_,new=secured;headers,_=sign_in(secured,'usr_engineer')
     body={'space_id':spaces[0]['id'],'name':'access batch','origin':'imported_sample','note':'authorization test'}
     r=c.post('/api/batches',json=body,headers=headers);assert r.status_code==201,r.text
     assert c.get('/api/batches',params={'space_id':spaces[0]['id']}).status_code==200
-    assert c.post('/api/publications',json={'space_id':spaces[0]['id'],'candidate_id':new['candidate_id'],'expected_revision':2},headers=headers).status_code==403
+    assert c.post('/api/publications',json={'space_id':spaces[0]['id'],'candidate_id':new['candidate_id'],'expected_revision':jobs.selection(spaces[0]['id'])['revision']},headers=headers).status_code==201
     assert c.post('/api/projects',json={'name':'not workspace authority'},headers=headers).status_code==403
     assert c.post('/api/spaces',json={'name':'not bound','project_id':spaces[0]['project_id']},headers=headers).status_code==403
 
