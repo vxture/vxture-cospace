@@ -6,7 +6,6 @@ import {MagnifyingGlass,MapPin,ArrowRight,Cube,ArrowsClockwise} from '@phosphor-
 import {useSceneDirectory} from './use-scene-directory';
 import {SceneCover} from './scene-cover';
 import {CreateSceneButton} from './create-scene';
-import {ScenePermissionsButton} from './scene-permissions';
 import {scenePhases,scenePhase,filterScenes,sceneWorkspaceHref,sceneEntryHref,sceneEntryLabel,currentRelease,publicationLabel} from './scene-catalog-contract';
 import {SceneDetail,SceneMoreMenu} from './scene-detail';
 import {useLocation} from 'react-router-dom';
@@ -25,7 +24,7 @@ export function SceneCatalog(){
  const reset=()=>{setQuery('');setPhase('all');};
  if(mode==='map')return <React.Suspense fallback={<MapLoading/>}><SceneMap spaces={spaces} loading={loading} error={error} onBack={()=>appNavigate('/space')} onRefresh={()=>setRevision(v=>v+1)}/></React.Suspense>;
  return <main className="scene-catalog" aria-label="场景选择"><div className="scene-catalog-shell">
-  <ViewHeader title="我的场景" secondary={<span className="scene-total" aria-label="场景总数">{spaces.length}</span>} description="从场景开始，连接资料、模型与空间服务。" action={<div className="scene-catalog-header-actions"><ScenePermissionsButton/><CreateSceneButton size="xl" onCreated={id=>appNavigate('/data?'+new URLSearchParams({space:id,tab:'inputs'}))}/></div>}/>
+  <ViewHeader title="我的场景" secondary={<span className="scene-total" aria-label="场景总数">{spaces.length}</span>} description="从场景开始，连接资料、模型与空间服务。" action={<div className="scene-catalog-header-actions"><CreateSceneButton size="xl" onCreated={id=>appNavigate('/data?'+new URLSearchParams({space:id,tab:'inputs'}))}/></div>}/>
   <div className="scene-catalog-toolbar" aria-label="场景清单操作区">
    <ViewModeSwitch value={layout} onChange={setLayout} ariaLabel="清单布局" labels={{list:'列表布局',cards:'卡片布局'}}/>
    <span className="scene-result-count" aria-live="polite">筛选 <strong>{visible.length}</strong> 项</span>

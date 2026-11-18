@@ -1,6 +1,6 @@
 export type ManagementPage='settings'|'account';
 export const managementPages={
- settings:{label:'工作区与授权',description:'查看当前组织、工作区与场景访问权限。'},
+ settings:{label:'工作区与授权',description:'管理工作区场景角色与人员授权，查看当前组织和可用权限。'},
  account:{label:'账户与登录',description:'查看当前账户与登录状态，前往账号中心维护资料。'},
 } as const;
 export function managementPage(route:string):ManagementPage{return route==='identity'||route==='account'?'account':'settings';}

@@ -6,6 +6,7 @@ import {usePlatformSession} from './platform-auth';
 import {useSceneDirectory} from './use-scene-directory';
 import {managementPage,sceneInformationHref,capabilityNames} from './management-contract';
 import {accountVerification} from './account-profile';
+import {ScenePermissionsPanel} from './scene-permissions';
 
 function Information({items}:{readonly items:readonly (readonly [string,string|undefined])[]}){
  return <dl className="management-information">{items.map(([label,value])=><div key={label}><dt>{label}</dt><dd>{value||'未提供'}</dd></div>)}</dl>;
@@ -17,6 +18,7 @@ function WorkspaceAccess(){
   <section className="management-card"><h2><Buildings size={20}/>当前工作区</h2>{session?<Information items={[
    ['组织',session.user?.org_name||session.user?.org_id],['工作区',session.user?.workspace_name||session.user?.workspace_id],['当前用户',session.user?.display_name],
   ]}/>:<p className="text-body-small text-muted-foreground">当前为设计预览，未连接平台身份与授权。</p>}</section>
+  <section className="management-card" aria-label="场景权限管理"><h2><ShieldCheck size={20}/>场景权限</h2><ScenePermissionsPanel/></section>
   <section className="management-card"><div className="management-card-heading"><h2><Users size={20}/>当前用户的场景权限</h2><Button variant="ghost" size="sm" disabled={loading} onClick={()=>setRevision(v=>v+1)}><ArrowClockwise size={16}/>刷新权限</Button></div>
    {loading&&<output>正在读取场景权限…</output>}
    {error&&<p role="alert" className="text-destructive">{error}</p>}
