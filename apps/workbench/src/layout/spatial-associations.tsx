@@ -10,7 +10,7 @@ import {ObjectAnnotations} from './object-annotations';
 import {BusinessAssociations} from './business-associations';
 import {ObjectRelations} from './object-relations';
 import {IfcCatalog} from './ifc-catalog';
-import {SpaceSettings} from './space-settings';
+import {SpaceSettings,useSpaceInformationRevision} from './space-settings';
 import {BuildSceneLink} from './build-context';
 import {recordLink,useRecordNavigation,RecordNavigationProvider} from './record-navigation';
 import {appNavigate} from './app-router';
@@ -33,6 +33,7 @@ function AssociationWorkspace(){
  const target=useRecordNavigation();
  const example=associationExample(new URLSearchParams(location.search).get('example'));
  const view:View=['overview','objects','relations','business','ifc','info'].includes(target.tab)?target.tab as View:'overview';
+ const information=useSpaceInformationRevision(target.space);
  const [jobs,setJobs]=useState<AssociationSource[]>([]),[selected,setSelected]=useState<string|null>(null),[loaded,setLoaded]=useState(false),[error,setError]=useState(''),[refresh,setRefresh]=useState(0);
  const [model,setModel]=useState<Model|null>(null),[objects,setObjects]=useState<Objects|null>(null),[snapshotError,setSnapshotError]=useState(''),[reading,setReading]=useState(false);
  const [visited,setVisited]=useState<View[]>([view]),[navOpen,setNavOpen]=useState(()=>innerWidth>=1100);
@@ -62,13 +63,13 @@ function AssociationWorkspace(){
 
  return <section className={`publication-workspace association-workspace `} aria-label="空间关联工作区">
   {navOpen?<aside className="publication-nav association-nav workflow-nav-panel" id="association-navigation" aria-label="关联导航"><header className="workflow-nav-heading"><LinkSimple size={18}/><h2>空间关联</h2><Badge variant="outline">{available.length}</Badge><WorkflowNavigationToggle open={true} label="关联" panelId="association-navigation" onToggle={()=>setNavOpen(false)}/></header><div className="publication-nav-surface"><BuildSceneLink selected={view==='info'} onSelect={()=>navigate('info')}/><Select value={current?.id||''} onValueChange={id=>navigate(view,id)} disabled={!loaded}><SelectTrigger aria-label="选择关联模型" className="publication-version-trigger"><span>{current?<><strong>来源构建 {title(current)}</strong><small>快照 {current.id.slice(-8).toUpperCase()} · {time(current.created_at)}</small></>:loaded?'选择来源构建':'读取模型来源…'}</span></SelectTrigger><SelectContent>{[...available].reverse().map(j=><SelectItem key={j.id} value={j.id}><span className="publication-version-option"><strong>{title(j)} · {j.id.slice(-8).toUpperCase()}</strong><small>{time(j.created_at)} · {j.view_parent_id||j.base_candidate_id?'派生候选':'构建候选'}</small></span></SelectItem>)}</SelectContent></Select><nav aria-label="关联功能">{sections.map(s=><Button key={s.id} variant={section?.id===s.id?'secondary':'ghost'} aria-current={section?.id===s.id?'page':undefined} onClick={()=>navigate(s.id)}><s.icon size={18}/>{s.name}</Button>)}</nav><div className="publication-nav-foot"><Info size={14}/><p>关联保存为新候选，核对后才能发布。既有发布保持固定。</p></div></div></aside>:<WorkflowNavigationToggle open={false} label="关联" panelId="association-navigation" onToggle={()=>setNavOpen(true)}/>}
-  <div className="publication-content association-content" role="region" tabIndex={0} aria-label="关联内容"><WorkflowPageHeader space={target.space} icon={<LinkSimple size={32}/>} process="空间关联" stage={view==='info'?'基本信息':view==='ifc'?'参考资料':section?.name||'关联概览'} version={view!=='info'&&view!=='ifc'&&current?(current.display_code||current.build_code||current.id.slice(-8).toUpperCase()):undefined}
+  <div className="publication-content association-content" role="region" tabIndex={0} aria-label="关联内容"><WorkflowPageHeader space={target.space} icon={<LinkSimple size={32}/>} process="空间关联" revision={view==='info'?information.revision:undefined} stage={view==='info'?'基本信息':view==='ifc'?'参考资料':section?.name||'关联概览'} version={view!=='info'&&view!=='ifc'&&current?(current.display_code||current.build_code||current.id.slice(-8).toUpperCase()):undefined}
     status={view!=='info'&&view!=='ifc'&&current&&<StatusBadge tone="neutral">历史快照</StatusBadge>}
     details={view!=='info'&&view!=='ifc'&&current&&<><time dateTime={current.created_at}>{time(current.created_at)}</time></>}
     actions={view!=='info'&&<>{view!=='ifc'&&current&&<Button asChild size="sm" variant="outline"><a href={candidateScreenHref(target.space,current.id)} target="_blank" rel="noopener noreferrer"><Eye size={16}/>查看模型</a></Button>}{view!=='ifc'&&target.space&&<Button variant="outline" size="sm" onClick={()=>navigate('ifc')}><Books size={16}/>参考资料</Button>}{view==='ifc'&&<Button variant="outline" size="sm" onClick={()=>navigate('objects')}>返回对象</Button>}</>}/>
    {view==='objects'&&<details className="association-example-templates" open={example?true:undefined}><summary>示例标注模板{example&&` · ${example.name}`}</summary><div className="flex flex-col gap-md"><div className="flex flex-wrap gap-sm">{associationExamples.map(item=><Button asChild key={item.id} variant={example?.id===item.id?'secondary':'ghost'} size="sm"><a href={recordLink('association',{space:target.space,tab:'objects',example:item.id,...(current?{job:current.id}:{})})}>{item.name}</a></Button>)}</div><p className="text-body-small text-muted-foreground">合成示例只提供设备名称与建议类型；选择场景、本体规则和模型后，逐个选点核实。原楼层为示例信息，空间归属在“空间关系”中维护。</p>{example&&<p className="text-label-small">{example.level} · {example.objects.map(o=>o.name).join('、')}</p>}{!target.space&&<output className="block">请从顶部场景选择器选择目标场景。</output>}</div></details>}
    {view!=='ifc'&&error&&<div role="alert" className="publication-message"><WarningCircle size={18}/><span>{error}</span><Button variant="ghost" size="sm" onClick={()=>setRefresh(v=>v+1)}>重试</Button></div>}
-   {visited.includes('info')&&<div hidden={view!=='info'} className="association-view"><SpaceSettings embedded/></div>}
+   {visited.includes('info')&&<div hidden={view!=='info'} className="association-view"><SpaceSettings embedded onRevisionChange={information.onRevisionChange}/></div>}
    {view==='ifc'&&target.space&&<div className="association-view"><IfcCatalog/></div>}
    {view!=='ifc'&&view!=='info'&&!loaded&&!error&&<output className="block">正在读取关联来源…</output>}
    {view!=='ifc'&&view!=='info'&&target.space&&loaded&&!current&&<AssociationSourceEmpty requested={!!target.job} count={available.length}/>}

@@ -29,7 +29,7 @@ function LocationSummary({space}:{space:Space}){
    </dl>;
 }
 function SettingsSection({section,editable,onEdit,children}:{section:Section;editable:boolean;onEdit:()=>void;children:React.ReactNode}){
- const identity=section==='identity', Icon=identity?TextAlignLeft:MapPin, title=identity?'名称与描述':'空间位置';
+ const identity=section==='identity', Icon=identity?TextAlignLeft:MapPin, title=identity?'场景描述':'空间位置';
  return <section className="space-information-section" aria-label={title}>
   <header className="space-information-section-heading"><h4><Icon size={18}/>{title}</h4>
    {editable&&<Button type="button" variant="outline" size="sm" aria-label={`编辑${title}`} onClick={onEdit}><PencilSimple size={16}/>编辑</Button>}
@@ -37,7 +37,12 @@ function SettingsSection({section,editable,onEdit,children}:{section:Section;edi
   {children}
  </section>;
 }
-export function SpaceSettings({embedded=false}:{embedded?:boolean}){
+type InformationRevision={space:string;revision:number};
+export function useSpaceInformationRevision(space:string){
+ const [value,onRevisionChange]=useState<InformationRevision|null>(null);
+ return {revision:value?.space===space?value.revision:undefined,onRevisionChange};
+}
+export function SpaceSettings({embedded=false,onRevisionChange}:{embedded?:boolean;onRevisionChange?:(value:InformationRevision)=>void}){
  const target=useRecordNavigation(),{toast}=useToast();
  const [data,setData]=useState<Settings|null>(null);
  const [name,setName]=useState(''),[description,setDescription]=useState(''),[reason,setReason]=useState('');
@@ -65,6 +70,7 @@ export function SpaceSettings({embedded=false}:{embedded?:boolean}){
    const body:Settings=await r.json();if(active){setData(body);setName(body.space.name);setDescription(body.space.description);readLocation(body.space);}
   }).catch(e=>{if(active)setError(e.message);}).finally(()=>{if(active)setLoading(false);});return()=>{active=false;};
  },[target.space,refresh]);
+ useEffect(()=>{if(data)onRevisionChange?.({space:data.space.id,revision:data.revision});},[data,onRevisionChange]);
  const canEditIdentity=!!data?.editable_fields.includes('name');
  const canEditLocation=!!data?.editable_fields.includes('location');
  const canEdit=editing==='identity'?canEditIdentity:canEditLocation;
@@ -92,8 +98,7 @@ export function SpaceSettings({embedded=false}:{embedded?:boolean}){
   <div className="flex justify-end gap-sm"><Button type="button" variant="outline" disabled={busy} onClick={discard}>放弃</Button><Button type="submit" disabled={!dirty||!canSave}>{busy?'保存中…':'保存'}</Button></div>
  </>;
  return <div className="space-information-form flex flex-col gap-xl" aria-label="基本信息">
-  {!embedded&&<header className="space-information-heading"><FileText size={20}/><div className="workspace-section-heading-copy"><h3>基本信息{data&&!canEditIdentity&&!canEditLocation&&<StatusBadge tone="neutral">只读</StatusBadge>}</h3>{data&&<p className="text-label-small text-muted-foreground">{data.revision?`R${String(data.revision).padStart(2,'0')}`:'历史快照'} · {data.space.scene_code||data.space.id}</p>}</div></header>}
-  {embedded&&data?.revision!==undefined&&data.revision>0&&<p className="text-label-small text-muted-foreground">修订 R{String(data.revision).padStart(2,'0')}</p>}
+  <header className="space-information-heading workspace-section-heading"><FileText size={20}/><div className="workspace-section-heading-copy"><h3>基本信息{data&&!canEditIdentity&&!canEditLocation&&<StatusBadge tone="neutral">只读</StatusBadge>}</h3>{!embedded&&data&&<p className="text-label-small text-muted-foreground">{data.revision?`R${String(data.revision).padStart(2,'0')}`:'历史快照'} · {data.space.scene_code||data.space.id}</p>}</div></header>
   {loading&&<p role="status">正在读取空间配置…</p>}
   {error&&<p role="alert" className="text-body-small text-destructive">{error} <Button type="button" variant="link" size="sm" disabled={busy||loading} onClick={()=>void runGuarded(()=>setRefresh(v=>v+1))}>重新读取</Button></p>}
   {!target.space&&<p className="text-body-small text-muted-foreground">选择场景后查看基本信息。</p>}
