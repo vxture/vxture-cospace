@@ -27,3 +27,11 @@ export function servicePageHref(section:ServiceSection,space:string,publication:
  params.set('tab',tab);
  return '/services?'+params;
 }
+
+export type ServiceViewMode='cards'|'list';
+export type ServicePresentation=Readonly<{view:ServiceViewMode;onView:(view:ServiceViewMode)=>void}>;
+export const serviceViewPreferenceKey='cospace.spatial-services.view';
+export function readServiceView(storage:Pick<Storage,'getItem'>){
+ try{return storage.getItem(serviceViewPreferenceKey)==='list'?'list':'cards';}
+ catch{return 'cards';}
+}

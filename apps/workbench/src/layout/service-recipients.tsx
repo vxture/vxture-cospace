@@ -4,7 +4,7 @@ import {useOperationConfirmation} from './operation-confirmation';
 import {useUnsavedNavigation,runGuarded} from './unsaved-navigation';
 import React,{useEffect,useId,useRef,useState} from 'react';
 import {useSearchParams} from 'react-router-dom';
-import {ViewModeSwitch,Button,Checkbox,Drawer,Dialog,DialogContent,DialogHeader,DialogTitle,DialogDescription,Input,NativeSelect,StatusBadge,Tabs,TabsContent,TabsList,TabsTrigger} from '@vxture/design-system';
+import {Button,Checkbox,Drawer,Dialog,DialogContent,DialogHeader,DialogTitle,DialogDescription,Input,NativeSelect,StatusBadge,Tabs,TabsContent,TabsList,TabsTrigger} from '@vxture/design-system';
 import {AirplaneTilt,PawPrint,Car,Robot,PersonSimpleWalk,Shapes,Plus,MagnifyingGlass,ArrowsClockwise,Check,Info,LinkSimple,PlugsConnected,ClockCounterClockwise,X} from '@phosphor-icons/react';
 import {WorkspaceHeading} from './workspace-frame';
 import {businessEndpoint} from './business-endpoint';
@@ -12,7 +12,8 @@ import {usePlatformSession} from './platform-auth';
 import {ServiceDirectoryRow} from './service-directory-row';
 import {DeviceArtwork} from './device-artwork';
 import {ServiceCard,ServiceCardActions} from './service-card';
-import {devicePageHref,deviceTabs,type DeviceTab} from './service-workspace-contract';
+import {devicePageHref,deviceTabs,type DeviceTab,type ServicePresentation} from './service-workspace-contract';
+import {ServiceListViewGroup} from './service-list-view-group';
 import './service-recipients.css';
 
 const forms={aerial:{label:'飞行式',example:'无人机',icon:AirplaneTilt},quadruped:{label:'四足式',example:'机器狗、四足机器人',icon:PawPrint},wheeled:{label:'轮式',example:'轮式机器人、移动底盘',icon:Car},tracked:{label:'履带式',example:'履带机器人',icon:Robot},humanoid:{label:'人形式',example:'人形机器人',icon:PersonSimpleWalk},other:{label:'其他形态',example:'其他足式、复合移动等',icon:Shapes}};
@@ -29,13 +30,13 @@ type EditSection='information'|'relations';
 const blank=():Draft=>({name:'',morphology:'',morphology_note:'',manufacturer:'',model:'',external_id:'',contact:'',relations:[]});
 const time=(value:string)=>new Date(value).toLocaleString('zh-CN',{hour12:false});
 
-export function ServiceRecipients({spaceId='',sceneName,revision=0}:{spaceId?:string;sceneName?:string;revision?:number}){
+export function ServiceRecipients({spaceId='',sceneName,revision=0,presentation}:Readonly<{spaceId?:string;sceneName?:string;revision?:number;presentation:ServicePresentation}>){
  const session=usePlatformSession();
  const scope=[session?.user?.org_id,session?.user?.workspace_id,session?.user?.subject].join(':');
- return <RecipientWorkspace key={scope+':'+spaceId} spaceId={spaceId} sceneName={sceneName} revision={revision} csrf={session?.csrf||''}/>;
+ return <RecipientWorkspace key={scope+':'+spaceId} spaceId={spaceId} sceneName={sceneName} revision={revision} presentation={presentation} csrf={session?.csrf||''}/>;
 }
 
-function RecipientWorkspace({spaceId,sceneName,revision,csrf}:{spaceId:string;sceneName?:string;revision:number;csrf:string}){
+function RecipientWorkspace({spaceId,sceneName,revision,csrf,presentation}:Readonly<{spaceId:string;sceneName?:string;revision:number;csrf:string;presentation:ServicePresentation}>){
  const [params,setParams]=useSearchParams();
  const deviceId=params.get('device')||'';
  const requestedTab=params.get('deviceTab')||'overview';
@@ -43,7 +44,8 @@ function RecipientWorkspace({spaceId,sceneName,revision,csrf}:{spaceId:string;sc
  const [data,setData]=useState<Directory|null>(null),[loading,setLoading]=useState(true),[error,setError]=useState(''),[refresh,setRefresh]=useState(0);
  const [query,setQuery]=useState(''),[morphology,setMorphology]=useState(''),[purpose,setPurpose]=useState(''),[scene,setScene]=useState(''),[offset,setOffset]=useState(0);
  const [detail,setDetail]=useState<Recipient|null>(null),[overviewOpen,setOverviewOpen]=useState(false),[editor,setEditor]=useState<{record?:Recipient;draft:Draft;section?:EditSection}|null>(null),[notice,setNotice]=useState('');
- const [linkExisting,setLinkExisting]=useState(false),[view,setView]=useState<'cards'|'list'>('cards');
+ const [linkExisting,setLinkExisting]=useState(false);
+ const {view}=presentation;
  useEffect(()=>{
   const controller=new AbortController();setLoading(true);setError('');setOverviewOpen(false);setDetail(null);
   const request=new URLSearchParams({offset:String(deviceId?0:offset),limit:'20'});
@@ -85,7 +87,7 @@ function RecipientWorkspace({spaceId,sceneName,revision,csrf}:{spaceId:string;sc
  }
  return <section className="recipient-workspace" aria-label={spaceId?'此场景关联的设备':'智能设备'}>
   <div className="recipient-operation-bar">
-   <div className="recipient-view-group"><ViewModeSwitch value={view} onChange={setView} ariaLabel="显示方式" labels={{cards:'卡片视图',list:'列表视图'}}/><span className="recipient-count" aria-live="polite">{loading?'正在读取…':error?'暂不可读':`${data?.total||0} 台设备`}</span></div>
+   <ServiceListViewGroup presentation={presentation} count={loading?'正在读取…':error?'暂不可读':`${data?.total||0} 台设备`}/>
    <div className="recipient-operation-right"><div className="recipient-filter-group">
     <div className="recipient-search"><MagnifyingGlass size={16}/><Input aria-label="搜索设备" placeholder="搜索名称、标识或厂家" maxLength={160} value={query} onChange={e=>{setQuery(e.target.value);setOffset(0);}}/></div>
     <NativeSelect wrapperClassName="recipient-filter-select" aria-label="设备形态" value={morphology} onChange={e=>{setMorphology(e.target.value);setOffset(0);}}><option value="">全部设备形态</option>{Object.entries(forms).map(([key,value])=><option value={key} key={key}>{value.label}</option>)}</NativeSelect>
