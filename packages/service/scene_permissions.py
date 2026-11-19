@@ -46,6 +46,7 @@ class ScopeChange(BaseModel):
 class PermissionQuery(BaseModel):
     model_config = ConfigDict(extra='forbid')
     summary: bool = False
+    scope_only: bool = False
     role: str = Field(default='', pattern=r'^(|viewer|engineer|manager)$')
     members_q: str = Field(default='', max_length=100)
     scenes_q: str = Field(default='', max_length=100)
@@ -150,7 +151,9 @@ class ScenePermissions:
             WHERE issuer=? AND org_id=? AND workspace_id=? ORDER BY revision DESC LIMIT 50''', scope)] if self.exists(db, 'scene_access_events') else []
         filtered_members = [member for member in members.values() if not query.role or query.role in member['roles']]
         member_page, member_total = page_items(filtered_members, query.members_q, query.member_offset, query.limit, 'display_name')
-        scene_page, scene_total = page_items(scenes, query.scenes_q, query.scene_offset, query.limit, 'name')
+        scoped_member = members.get(query.subject)
+        scope_scenes = [s for s in scenes if s['id'] in scoped_member['scope_scene_ids']] if query.scope_only and scoped_member and scoped_member['data_scope'] == 'selected' else scenes
+        scene_page, scene_total = page_items(scope_scenes, query.scenes_q, query.scene_offset, query.limit, 'name')
         selected_role = next((g['role'] for g in grants if g['subject'] == query.subject and g['space_id'] == query.space), None)
         visible_grants = [g for g in grants if not query.subject or g['subject'] == query.subject]
         names = {subject: member['display_name'] for subject, member in members.items()}

@@ -416,6 +416,8 @@ def test_data_scope_restricts_default_viewer_without_changing_roles(shared_workb
     response = c.post('/api/scene-permissions/scopes', json=change, headers=headers)
     assert response.status_code == 200, response.text
     assert policies.load()[1].grants == grants
+    scoped = c.get('/api/scene-permissions', params={'subject': 'usr_colleague', 'scope_only': 'true'}).json()
+    assert {s['id'] for s in scoped['scenes']} == set(selected)
     accounts.roles = ['workspace:member']
     sign_in(shared_workbench, 'usr_colleague')
     assert {s['id'] for s in c.get('/api/spaces').json()['spaces']} == set(selected)
