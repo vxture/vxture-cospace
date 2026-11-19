@@ -8,6 +8,10 @@ from packages.infrastructure.platform_identity import IdentityUnavailable
 from packages.service.space_access import SpaceAccessPolicy
 
 
+WRITE_TRANSACTION = 'BEGIN IMMEDIATE'
+READ_POLICY = 'SELECT revision,policy FROM policy WHERE id=1'
+
+
 class PermissionConflict(ValueError):
     pass
 
@@ -104,7 +108,7 @@ class ScenePermissions:
         # Subject, display name and scope are never accepted from a browser body.
         try:
             with closing(sqlite3.connect(self.policies.path, timeout=10)) as db, db:
-                db.execute('BEGIN IMMEDIATE')
+                db.execute(WRITE_TRANSACTION)
                 self.tables(db)
                 db.execute('''INSERT INTO scene_access_requests VALUES(?,?,?,?,?,?)
                     ON CONFLICT(issuer,org_id,workspace_id,subject) DO UPDATE SET display_name=excluded.display_name''',
@@ -119,7 +123,7 @@ class ScenePermissions:
             with closing(sqlite3.connect(self.policies.path.as_uri()+'?mode=ro', uri=True)) as db:
                 # A single read snapshot keeps members, grants and revision consistent.
                 db.execute('BEGIN')
-                revision, raw = db.execute('SELECT revision,policy FROM policy WHERE id=1').fetchone()
+                revision, raw = db.execute(READ_POLICY).fetchone()
                 policy = SpaceAccessPolicy.model_validate_json(raw)
                 scope = self.scope(principal)
                 requests = db.execute('''SELECT subject,display_name,requested_at FROM scene_access_requests
@@ -189,14 +193,17 @@ class ScenePermissions:
                 member['display_name'] = principal.display_name
             member['roles'] = sorted(member_roles.get(subject, {'viewer'} if self.workspace_scene_visibility else set()))
             member['scene_count'] = len(member_scenes.get(subject, set()))
-            data_scope = next((s for s in policy.scene_scopes if (s.issuer, s.org_id, s.workspace_id, s.subject) == (*scope, subject)), None)
-            member['data_scope'] = 'selected' if data_scope else 'all'
-            member['scope_scene_ids'] = list(data_scope.space_ids) if data_scope else []
+            member.update(self.member_scope(policy, scope, subject))
             if principal.workspace_owner and subject == principal.subject:
                 member['roles'] = ['owner']
                 member['scene_count'] = len(ids)
         role_counts = {role: sum(role in member['roles'] for member in members.values()) for role in ('viewer', 'engineer', 'manager')}
         return members, role_counts
+
+    @staticmethod
+    def member_scope(policy, scope, subject):
+        data_scope = next((s for s in policy.scene_scopes if (s.issuer, s.org_id, s.workspace_id, s.subject) == (*scope, subject)), None)
+        return {'data_scope': 'selected' if data_scope else 'all', 'scope_scene_ids': list(data_scope.space_ids) if data_scope else []}
 
     def change_scope(self, principal, change):
         # Workspace-wide data restrictions are maintained only by its verified owner.
@@ -204,8 +211,8 @@ class ScenePermissions:
             raise PermissionError('scene_scope_denied')
         try:
             with closing(sqlite3.connect(self.policies.path, timeout=10)) as db, db:
-                db.execute('BEGIN IMMEDIATE')
-                revision, raw = db.execute('SELECT revision,policy FROM policy WHERE id=1').fetchone()
+                db.execute(WRITE_TRANSACTION)
+                revision, raw = db.execute(READ_POLICY).fetchone()
                 policy = SpaceAccessPolicy.model_validate_json(raw)
                 if revision != change.expected_revision:
                     raise PermissionConflict('scene_permissions_changed')
@@ -221,7 +228,7 @@ class ScenePermissions:
                 value = policy.model_dump()
                 value['scene_scopes'] = [s for s in value['scene_scopes'] if (s['issuer'], s['org_id'], s['workspace_id'], s['subject']) != (*scope, change.subject)]
                 if change.space_ids is not None:
-                    value['scene_scopes'].append(dict(issuer=scope[0], org_id=scope[1], workspace_id=scope[2], subject=change.subject, space_ids=change.space_ids))
+                    value['scene_scopes'].append({'issuer': scope[0], 'org_id': scope[1], 'workspace_id': scope[2], 'subject': change.subject, 'space_ids': change.space_ids})
                 revision = self.policies.write_transaction(db, SpaceAccessPolicy.model_validate(value), expected_revision=revision, actor=principal.subject, reason=change.reason)
                 return {'revision': revision, 'changed': True}
         except sqlite3.Error as exc:
@@ -230,8 +237,8 @@ class ScenePermissions:
     def change(self, principal, change):
         try:
             with closing(sqlite3.connect(self.policies.path, timeout=10)) as db, db:
-                db.execute('BEGIN IMMEDIATE')
-                revision, raw = db.execute('SELECT revision,policy FROM policy WHERE id=1').fetchone()
+                db.execute(WRITE_TRANSACTION)
+                revision, raw = db.execute(READ_POLICY).fetchone()
                 policy = SpaceAccessPolicy.model_validate_json(raw)
                 if change.space_id not in policy.role_spaces(principal, {'manager'}):
                     raise PermissionError('scene_permissions_denied')
