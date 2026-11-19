@@ -22,3 +22,8 @@
 .management-entry-icon{color:var(--primary)}.management-entry-detail{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:auto;padding-top:16px;border-top:1px solid var(--border);font-size:12px;color:var(--muted-foreground)}
 .management-role-facts{display:flex;flex-direction:column;gap:14px;font-size:14px}.management-role-facts dt{color:var(--muted-foreground);margin-bottom:4px}.management-role-facts dd{overflow-wrap:anywhere}
 @media(max-width:900px){.management-entry-grid,.management-role-list{grid-template-columns:minmax(0,1fr)}}
+
+.member-management{display:flex;flex-direction:column;gap:16px;min-width:0}.management-directory-notice{padding:16px;border:1px solid var(--border);border-radius:var(--radius-md);font-size:14px;line-height:1.7;background:var(--muted);color:var(--muted-foreground)}
+.management-member-toolbar{display:flex;flex-wrap:wrap;align-items:end;gap:12px}.management-member-toolbar label{display:flex;flex-direction:column;gap:6px;font-size:14px;min-width:160px;flex:1}.management-member-table{overflow:auto}.management-member-meta{display:block;margin-top:4px;font-size:12px;color:var(--muted-foreground)}.management-role-tabs{display:flex;flex-wrap:wrap;gap:8px}
+
+.management-role-list[data-single]{grid-template-columns:minmax(0,1fr)}

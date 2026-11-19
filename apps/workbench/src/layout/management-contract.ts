@@ -23,7 +23,8 @@ export const capabilityNames:Record<string,string>={
 
 export const managementSections={
  overview:{label:'概览',description:'管理 CoSpace 产品角色、成员场景授权与业务配置。',icon:'app-grid'},
- roles:{label:'角色说明',description:'查看固定产品角色及其能力边界，按实际场景范围分配。',icon:'user'},
+ members:{label:'成员管理',description:'搜索本产品已记录成员，查看角色并分配场景权限。',icon:'users'},
+ roles:{label:'角色管理',description:'查看固定产品角色及其能力边界，按实际场景范围分配。',icon:'user'},
  permissions:{label:'权限管理',description:'分配场景角色、处理协作申请并查看授权调整记录。',icon:'users'},
  advanced:{label:'高级配置',description:'维护现有业务规则与场景配置，按实际授权范围操作。',icon:'shield-check'},
 } as const;

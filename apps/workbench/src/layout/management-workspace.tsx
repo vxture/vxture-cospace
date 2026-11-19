@@ -1,5 +1,6 @@
+import {MemberManagement,RoleManagement} from './member-management';
 import {useSearchParams} from 'react-router-dom';
-import {ManagementOverview,RoleDefinitions,AdvancedConfiguration} from './management-overview';
+import {ManagementOverview,AdvancedConfiguration} from './management-overview';
 import React,{useEffect,useState} from 'react';
 import {ShieldCheck,UserCircle} from '@phosphor-icons/react';
 import {usePlatformSession} from './platform-auth';
@@ -38,7 +39,8 @@ export function ManagementWorkspace({route}:{readonly route:string;readonly onLo
  const section=managementSection(params.get('section'));
  if(managementPage(route)==='account')return <AccountSummary/>;
  if(section==='permissions')return <WorkspaceAccess/>;
- if(section==='roles')return <RoleDefinitions/>;
+ if(section==='members')return <MemberManagement/>;
+ if(section==='roles')return <RoleManagement/>;
  if(section==='advanced')return <AdvancedConfiguration/>;
  return <ManagementOverview/>;
 }

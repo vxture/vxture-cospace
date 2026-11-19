@@ -29,11 +29,11 @@ export function ManagementFrame({route,children}:Readonly<{route:'settings'|'mem
  useEffect(()=>setOpen(false),[route]);
  const sections:ShellNavSection[]=[
   {title:'概览',items:[{href:managementHref('settings',space),label:'概览',icon:'app-grid'},{href:'/account',label:'个人信息',icon:'user'}]},
-  {title:'成员权限',items:['roles','permissions'].map(key=>({href:managementHref('settings',space,key),label:managementSections[key as 'roles'|'permissions'].label,icon:managementSections[key as 'roles'|'permissions'].icon}))},
+  {title:'成员权限',items:['members','roles','permissions'].map(key=>({href:managementHref('settings',space,key),label:managementSections[key as 'members'|'roles'|'permissions'].label,icon:managementSections[key as 'members'|'roles'|'permissions'].icon}))},
   {title:'业务配置',items:[{href:managementHref('settings',space,'advanced'),label:'高级配置',icon:'shield-check'}]},
  ];
  const navigation=(compact:boolean,toggle:()=>void)=><ShellSidebarNav domainName="配置管理" sections={sections} collapsed={compact} onToggleCollapsed={toggle} isActive={link=>current==='account'?link==='/account':link.startsWith('/settings')&&managementSection(new URLSearchParams(link.split('?')[1]||'').get('section'))===section} storageKeyPrefix="cospace.management.navigation" linkComponent={ManagementLink} labels={{expandNav:'展开功能导航',collapseNav:'收起功能导航',expandAllGroups:'展开导航分组',collapseAllGroups:'收起导航分组'}}/>;
- const page=current==='account'?pages.account:{...managementSections[section],heading:({overview:SquaresFour,roles:IdentificationCard,permissions:Users,advanced:Gear})[section]};
+ const page=current==='account'?pages.account:{...managementSections[section],heading:({overview:SquaresFour,members:Users,roles:IdentificationCard,permissions:Users,advanced:Gear})[section]};
  return <main className="scene-catalog spatial-services management-domain" aria-label="配置管理">
   {!narrow&&<ShellSidebarFrame mode={collapsed?'collapsed':'expanded'}>{navigation(collapsed,()=>setCollapsed(value=>!value))}</ShellSidebarFrame>}
   <div className="spatial-service-content"><div className="scene-catalog-shell">
