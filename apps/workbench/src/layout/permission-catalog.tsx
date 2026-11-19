@@ -1,16 +1,12 @@
 import React, { useState } from "react";
 import {
-  Button,
   Drawer,
   Input,
   NativeSelect,
-  Table,
-  TableHeader,
-  TableHead,
-  TableRow,
-  TableBody,
-  TableCell,
+  TableTitleCell,
 } from "@vxture/design-system";
+
+import { ManagementList, RoleBadges } from "./management-list";
 
 type Permission = {
   name: string;
@@ -94,78 +90,76 @@ export function PermissionCatalog() {
   );
   return (
     <>
-      <div className="management-card-heading">
-        <h2>权限清单</h2>
-        <span className="text-body-small text-muted-foreground">
-          {permissions.length} 项操作 · 4 种固定角色
-        </span>
-      </div>
-      <div className="management-member-toolbar">
-        <label>
-          搜索权限
-          <Input
-            aria-label="搜索权限"
-            value={query}
-            placeholder="按操作名称搜索"
-            onChange={(e) => setQuery(e.target.value)}
-          />
-        </label>
-        <label>
-          业务模块
-          <NativeSelect
-            aria-label="筛选权限模块"
-            value={group}
-            onChange={(e) => setGroup(e.target.value)}
-          >
-            <option value="">全部模块</option>
-            {[...new Set(permissions.map((item) => item.group))].map(
-              (value) => (
-                <option key={value}>{value}</option>
-              ),
-            )}
-          </NativeSelect>
-        </label>
-      </div>
-      <div className="management-member-table">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>操作权限</TableHead>
-              <TableHead>业务模块</TableHead>
-              <TableHead>授权角色</TableHead>
-              <TableHead data-table-actions>操作</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filtered.map((item) => (
-              <TableRow key={item.name}>
-                <TableCell>{item.name}</TableCell>
-                <TableCell>{item.group}</TableCell>
-                <TableCell>
-                  <div className="management-role-badges">
-                    {item.roles.map((role) => (
-                      <span key={role}>{role}</span>
-                    ))}
-                  </div>
-                </TableCell>
-                <TableCell data-table-actions>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setSelected(item)}
-                  >
-                    查看详情
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
-      {!filtered.length && <p>没有匹配的权限。</p>}
-      <p className="text-body-small text-muted-foreground">
-        共 {filtered.length} 项 · 权限按角色及实际授权范围生效
-      </p>
+      <ManagementList
+        className="management-permission-list"
+        title="权限清单"
+        icon="shield-check"
+        count={filtered.length}
+        rows={filtered}
+        rowKey={(item) => item.name}
+        toolbar={
+          <div className="management-member-toolbar">
+            <label>
+              <span className="sr-only">搜索权限</span>
+              <Input
+                aria-label="搜索权限"
+                value={query}
+                placeholder="按操作名称搜索"
+                onChange={(e) => setQuery(e.target.value)}
+              />
+            </label>
+            <label>
+              <span className="sr-only">业务模块</span>
+              <NativeSelect
+                aria-label="筛选权限模块"
+                value={group}
+                onChange={(e) => setGroup(e.target.value)}
+              >
+                <option value="">全部模块</option>
+                {[...new Set(permissions.map((item) => item.group))].map(
+                  (value) => (
+                    <option key={value}>{value}</option>
+                  ),
+                )}
+              </NativeSelect>
+            </label>
+          </div>
+        }
+        columns={[
+          {
+            id: "name",
+            header: "操作权限",
+            cell: (item) => (
+              <button
+                type="button"
+                className="management-title-button"
+                onClick={() => setSelected(item)}
+              >
+                <TableTitleCell title={item.name} />
+              </button>
+            ),
+          },
+          {
+            id: "group",
+            header: "业务模块",
+            width: "sm",
+            cell: (item) => item.group,
+          },
+          {
+            id: "roles",
+            header: "授权角色",
+            cell: (item) => <RoleBadges roles={item.roles} />,
+          },
+        ]}
+        actions={(item) => [
+          {
+            id: "details",
+            label: "权限详情",
+            onSelect: () => setSelected(item),
+          },
+        ]}
+        empty="没有匹配的权限。"
+      />
       <Drawer
         open={!!selected}
         onClose={() => setSelected(null)}
