@@ -1,3 +1,4 @@
+import {displayText} from './display-text';
 import {useOperationConfirmation} from './operation-confirmation';
 import {useUnsavedNavigation,runGuarded} from './unsaved-navigation';
 import React,{useEffect,useRef,useState} from 'react';
@@ -37,7 +38,7 @@ export function InputCoordinates({endpoint,space,identity,onSaved}:{endpoint:str
    <p>单位：米 · 场景对齐：未核验</p><label>修改原因<Input aria-label="坐标修改原因" value={reason} required maxLength={500} onChange={e=>{setReason(e.target.value);requestId.current='';}}/></label></fieldset>
    <div className="flex flex-wrap justify-end gap-sm"><Button type="button" variant="ghost" size="sm" disabled={busy} onClick={()=>{abort.current?.abort();setEditing(false);}}>取消</Button><Button type="submit" size="sm" disabled={busy||!impact||!reason.trim()}>{busy?'保存中…':'保存坐标说明'}</Button></div></form>}
   {!editing&&data?.supported&&<p className="break-words">{data.coordinates.frame_id} · {data.coordinates.axes.join(' / ')} · {data.coordinates.scope==='sensor_local'?'传感器局部':'场景局部'} · 修订 {data.revision}</p>}
-  {!!data?.history.length&&<details className="data-technical-details"><summary>坐标说明修改历史（{data.history.length}）</summary>{[...data.history].reverse().map(e=><div key={e.revision} className="break-words"><p>修订 {e.revision} · {new Date(e.changed_at).toLocaleString('zh-CN',{hour12:false})} · {e.actor}</p><p>{e.reason}</p><p>{e.before.frame_id} / {e.before.axes.join(' / ')} / {e.before.scope} → {e.coordinates.frame_id} / {e.coordinates.axes.join(' / ')} / {e.coordinates.scope}</p></div>)}</details>}
+  {!!data?.history.length&&<details className="data-technical-details"><summary>坐标说明修改历史（{data.history.length}）</summary>{[...data.history].reverse().map(e=><div key={e.revision} className="break-words"><p>修订 {e.revision} · {new Date(e.changed_at).toLocaleString('zh-CN',{hour12:false})} · {displayText(e.actor,'操作人名称待补全')}</p><p>{e.reason}</p><p>{e.before.frame_id} / {e.before.axes.join(' / ')} / {e.before.scope} → {e.coordinates.frame_id} / {e.coordinates.axes.join(' / ')} / {e.coordinates.scope}</p></div>)}</details>}
   <Button type="button" size="sm" variant="ghost" disabled={busy} onClick={()=>void runGuarded(()=>setReload(v=>v+1))}>重新读取坐标说明</Button>
  </section>;
 }

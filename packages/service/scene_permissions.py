@@ -28,6 +28,24 @@ class GrantChange(BaseModel):
         return value.strip()
 
 
+class PermissionQuery(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    summary: bool = False
+    members_q: str = Field(default='', max_length=100)
+    scenes_q: str = Field(default='', max_length=100)
+    member_offset: int = Field(default=0, ge=0, le=1_000_000)
+    scene_offset: int = Field(default=0, ge=0, le=1_000_000)
+    grant_offset: int = Field(default=0, ge=0, le=1_000_000)
+    subject: str = Field(default='', max_length=160)
+    space: str = Field(default='', max_length=160)
+    limit: int = Field(default=25, ge=1, le=50)
+
+
+def page_items(items, query, offset, limit, label):
+    matching = [item for item in items if query.casefold() in item[label].casefold()]
+    return matching[offset:offset+limit], len(matching)
+
+
 class ScenePermissions:
     def __init__(self, policies, directory, *, workspace_scene_visibility=False):
         self.policies, self.directory = policies, directory
@@ -62,7 +80,8 @@ class ScenePermissions:
             raise IdentityUnavailable('scene_permissions_unavailable') from exc
         return {'requested': True}
 
-    def read(self, principal):
+    def read(self, principal, query=None):
+        query = query or PermissionQuery()
         try:
             with closing(sqlite3.connect(self.policies.path.as_uri()+'?mode=ro', uri=True)) as db:
                 # A single read snapshot keeps members, grants and revision consistent.
@@ -73,25 +92,46 @@ class ScenePermissions:
                 requests = db.execute('''SELECT subject,display_name,requested_at FROM scene_access_requests
                     WHERE issuer=? AND org_id=? AND workspace_id=? ORDER BY requested_at,subject''', scope).fetchall() if self.exists(db, 'scene_access_requests') else []
                 requested = any(row[0] == principal.subject for row in requests)
+                bound_ids = {b.space_id for b in policy.bindings if (b.issuer, b.org_id, b.workspace_id) == scope}
                 can_manage = policy.workspace_manager(principal)
                 result = {'workspace_id': principal.workspace_id, 'can_manage': can_manage,
                           'revision': revision, 'requested': requested,
+                          'self_roles': ['owner'] if principal.workspace_owner else sorted({
+                              g.role for g in policy.grants if g.issuer == principal.issuer
+                              and g.subject == principal.subject and g.space_id in bound_ids} | ({'viewer'} if self.workspace_scene_visibility else set())),
                           'default_role': 'viewer' if self.workspace_scene_visibility else None}
-                if not can_manage:
+                if not can_manage or query.summary:
                     return result
-                ids = policy.role_spaces(principal, {'manager'})
-                scenes = [{'id': s['id'], 'name': s['name']} for s in self.directory.list('space') if s['id'] in ids]
-                grants = [g.model_dump(include={'subject', 'space_id', 'role'}) for g in policy.grants
-                          if g.issuer == principal.issuer and g.space_id in ids]
-                members = {s: {'subject': s, 'display_name': n, 'requested_at': t} for s, n, t in requests}
-                for grant in grants:
-                    members.setdefault(grant['subject'], {'subject': grant['subject'], 'display_name': grant['subject'], 'requested_at': None})
-                events = [json.loads(row[0]) for row in db.execute('''SELECT record FROM scene_access_events
-                    WHERE issuer=? AND org_id=? AND workspace_id=? ORDER BY revision DESC LIMIT 50''', scope)] if self.exists(db, 'scene_access_events') else []
-                return result | {'members': list(members.values()), 'scenes': scenes, 'grants': grants,
-                                 'history': [e for e in events if e['space_id'] in ids]}
+                return result | self.management_view(db, principal, policy, scope, query, requests)
+
         except (sqlite3.Error, ValueError, TypeError) as exc:
             raise IdentityUnavailable('scene_permissions_unavailable') from exc
+
+    def management_view(self, db, principal, policy, scope, query, requests):
+        ids = policy.role_spaces(principal, {'manager'})
+        scenes = [{'id': s['id'], 'name': s['name']} for s in self.directory.list('space') if s['id'] in ids]
+        grants = [g.model_dump(include={'subject', 'space_id', 'role'}) for g in policy.grants
+                  if g.issuer == principal.issuer and g.space_id in ids]
+        members = {s: {'subject': s, 'display_name': n, 'requested_at': t} for s, n, t in requests}
+        for grant in grants:
+            members.setdefault(grant['subject'], {'subject': grant['subject'], 'display_name': '成员名称待补全', 'requested_at': None})
+        events = [json.loads(row[0]) for row in db.execute('''SELECT record FROM scene_access_events
+            WHERE issuer=? AND org_id=? AND workspace_id=? ORDER BY revision DESC LIMIT 50''', scope)] if self.exists(db, 'scene_access_events') else []
+        member_page, member_total = page_items(list(members.values()), query.members_q, query.member_offset, query.limit, 'display_name')
+        scene_page, scene_total = page_items(scenes, query.scenes_q, query.scene_offset, query.limit, 'name')
+        selected_role = next((g['role'] for g in grants if g['subject'] == query.subject and g['space_id'] == query.space), None)
+        visible_grants = [g for g in grants if not query.subject or g['subject'] == query.subject]
+        names = {subject: member['display_name'] for subject, member in members.items()}
+        scene_names = {scene['id']: scene['name'] for scene in scenes}
+        def labeled(record):
+            return record | {'display_name': names.get(record['subject'], '成员名称待补全'),
+                             'scene_name': scene_names.get(record['space_id'], '场景名称待补全')}
+        return {'members': member_page, 'scenes': scene_page,
+                         'grants': [labeled(g) for g in visible_grants[query.grant_offset:query.grant_offset+query.limit]],
+                         'member_total': member_total, 'scene_total': scene_total, 'grant_total': len(visible_grants),
+                         'selected_role': selected_role,
+                         'history': [labeled(e) | {'actor_name': names.get(e['actor'], '操作人名称待补全')}
+                                     for e in events if e['space_id'] in ids]}
 
     def change(self, principal, change):
         try:

@@ -31,7 +31,7 @@ from packages.data.rgbd_input_preview import directory as rgbd_directory, frame 
 from packages.construction.build_preview import preview as build_preview
 from packages.construction.build_process import read_process
 from packages.service.space_preparation import preparation
-from packages.service.scene_permissions import ScenePermissions, GrantChange, PermissionConflict
+from packages.service.scene_permissions import ScenePermissions, GrantChange, PermissionConflict, PermissionQuery
 from packages.service.space_access import WorkspaceSceneAccessPolicy
 from packages.data.input_uploads import InputUploads,UploadRejected,MAX_UPLOAD,capabilities as upload_capabilities,metadata as upload_metadata
 from packages.ontology.workspace_authoring import WorkspaceOntologies,DraftChange,SealDraft
@@ -453,9 +453,12 @@ class BusinessAccess:
             context=await run_in_threadpool(self.authorize,request,session,policy,body)
             request.state.platform_principal=context['principal'];request.state.policy_revision=revision
             if path=='/api/scene-permissions' or path.startswith('/api/scene-permissions/'):
-                if request.query_params:return deny(422,'scene_permissions_invalid_request')
                 if path=='/api/scene-permissions':
-                    result=await run_in_threadpool(self.scene_permissions.read,context['principal'])
+                    try:
+                        query=PermissionQuery.model_validate(dict(request.query_params))
+                    except (ValueError, ValidationError):return deny(422,'scene_permissions_invalid_request')
+                    result=await run_in_threadpool(self.scene_permissions.read,context['principal'],query)
+                elif request.query_params:return deny(422,'scene_permissions_invalid_request')
                 elif path=='/api/scene-permissions/requests':
                     if body:return deny(422,'scene_permissions_invalid_request')
                     result=await run_in_threadpool(self.scene_permissions.request,context['principal'])

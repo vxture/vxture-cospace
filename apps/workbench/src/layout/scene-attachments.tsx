@@ -1,3 +1,4 @@
+import {displayText} from './display-text';
 import React,{useEffect,useRef,useState} from 'react';
 import {Button,Input,Table,TableHeader,TableBody,TableRow,TableHead,TableCell} from '@vxture/design-system';
 import {ArrowClockwise,ArrowDown,FileText,Paperclip,UploadSimple} from '@phosphor-icons/react';
@@ -48,5 +49,5 @@ export function SceneAttachments({endpoint,space,revision,onChanged,onSelect}:Pr
 }
 
 export function AttachmentSummary({item,endpoint}:{item:Attachment;endpoint:string}){
- return <><div className="data-detail-title"><span className="data-detail-symbol"><Paperclip size={25}/></span><h2>{item.name}</h2><p>已保存原文件</p></div><dl className="data-detail-facts"><div><dt>文件大小</dt><dd>{item.bytes.toLocaleString('zh-CN')} 字节</dd></div><div><dt>登记时间</dt><dd>{formatDate(item.created_at)}</dd></div><div><dt>登记人</dt><dd>{item.actor}</dd></div><div><dt>SHA256</dt><dd>{item.sha256}</dd></div></dl><p className="text-body-small text-muted-foreground">此文件仅作为场景配套资料，不自动进入构建或固定发布。</p><div className="data-detail-actions"><Button asChild size="sm"><a href={`${endpoint}/api/scene-attachments/${item.id}?${new URLSearchParams({space_id:item.space_id})}`} download><ArrowDown size={15}/>下载原文件</a></Button></div></>;
+ return <><div className="data-detail-title"><span className="data-detail-symbol"><Paperclip size={25}/></span><h2>{item.name}</h2><p>已保存原文件</p></div><dl className="data-detail-facts"><div><dt>文件大小</dt><dd>{item.bytes.toLocaleString('zh-CN')} 字节</dd></div><div><dt>登记时间</dt><dd>{formatDate(item.created_at)}</dd></div><div><dt>登记人</dt><dd>{displayText(item.actor,'操作人名称待补全')}</dd></div><div><dt>SHA256</dt><dd>{item.sha256}</dd></div></dl><p className="text-body-small text-muted-foreground">此文件仅作为场景配套资料，不自动进入构建或固定发布。</p><div className="data-detail-actions"><Button asChild size="sm"><a href={`${endpoint}/api/scene-attachments/${item.id}?${new URLSearchParams({space_id:item.space_id})}`} download><ArrowDown size={15}/>下载原文件</a></Button></div></>;
 }

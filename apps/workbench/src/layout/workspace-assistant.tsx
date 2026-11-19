@@ -59,7 +59,7 @@ function AssistantTasks({report,route,scene,onSelect}:{report:AssistantReport|nu
   }
  }else if(['settings','members','identity','account'].includes(route)){
   fallback.status='ready';fallback.note=undefined;
-  fallback.tasks=[{id:'account',title:'核对账号与组织',evidence:'账号与组织信息由平台统一维护。',label:'账户与登录',run:()=>go('/account')},{id:'access',title:'核对工作区授权',evidence:'场景操作以当前工作区的实际授权为准。',label:'工作区与授权',run:()=>go('/settings')}];
+  fallback.tasks=[{id:'account',title:'核对账号与组织',evidence:'账号与组织信息由平台统一维护。',label:'个人信息',run:()=>go('/account')},{id:'access',title:'核对工作区授权',evidence:'场景操作以当前工作区的实际授权为准。',label:'工作区与授权',run:()=>go('/settings')}];
  }else if(!report){
   fallback.note=!scene?'请先选择可访问的场景。':!current?'当前场景不可访问，请先选择已授权场景。':'当前工作面尚无可执行任务，请核对场景授权或等待页面读取完成。';
   if(route==='data'&&allowed('data.manage'))fallback.tasks.push({id:'inputs',title:'检查场景资料',evidence:'进入当前场景的资料工作面，核对登记与预检记录。',label:'进入场景资料',run:()=>go(link('data','inputs'))});

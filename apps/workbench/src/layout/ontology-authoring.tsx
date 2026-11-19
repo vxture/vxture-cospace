@@ -1,3 +1,4 @@
+import {displayText} from './display-text';
 import {useOperationConfirmation} from './operation-confirmation';
 import equipmentRules from '../../../../configs/ontology/indoor-equipment-v0.3.json?raw';
 import {useUnsavedNavigation,runGuarded} from './unsaved-navigation';
@@ -37,7 +38,7 @@ export function OntologyAuthoring({endpoint,source,onSealed}:{endpoint:string;so
  }
  if(!context&&!error)return null;
  return <Card className="module-surface" aria-label="本体规则维护"><CardHeader><CardTitle>本体规则维护</CardTitle></CardHeader><CardContent className="flex min-w-0 flex-col gap-md">
- {error&&<p role="alert">{error}</p>}{context&&<><p>规则归属当前 Workspace：{context.workspace_id}，可供其多个场景引用。预置规则为只读模板，固定版本不会自动更新场景。</p>
+ {error&&<p role="alert">{error}</p>}{context&&<><p>规则归属当前工作区，可供其多个场景引用。预置规则为只读模板，固定版本不会自动更新场景。</p>
  {!context.can_edit&&<p>当前可查看与应用规则；维护工作区规则需要 Workspace 所有者权限。</p>}
  <div className="flex flex-wrap gap-sm"><Button variant="secondary" disabled={!context.can_edit||busy} onClick={()=>open({...JSON.parse(equipmentRules),ontology_id:'workspace-equipment',version:'1.0.0'},null)}>从设备标注模板新建</Button><Button disabled={!context.can_edit||busy} onClick={()=>open(fresh(),null)}>新建本体草稿</Button><Button variant="outline" disabled={!context.can_edit||!source||busy} onClick={()=>{if(source){const parts=source.version.split('.').map(Number);parts[2]++;open({...source,version:parts.join('.')},null);}}}>复制所选版本为草稿</Button><Button variant="ghost" disabled={busy} onClick={()=>{void runGuarded(()=>{setDoc(null);setDraft(null);setDirty(false);setRefresh(v=>v+1);});}}>刷新草稿</Button></div>
  <label>已保存草稿<NativeSelect aria-label="选择本体草稿" value={draft?.draft_id||''} disabled={busy} onChange={e=>{const d=context.drafts.find(v=>v.draft_id===e.target.value);if(d)open(d.definition,d);}}><option value="">选择草稿继续编辑或查看</option>{context.drafts.map(d=><option key={d.draft_id} value={d.draft_id}>{d.definition.title||'未命名'} · V{d.definition.version} · 修订{d.revision}{d.sealed?' · 已固定':''}</option>)}</NativeSelect></label>
@@ -56,7 +57,7 @@ export function OntologyAuthoring({endpoint,source,onSealed}:{endpoint:string;so
  <label>修改原因<Input aria-label="本体修改原因" maxLength={500} value={reason} onChange={e=>{setReason(e.target.value);requestId.current='';}}/></label></fieldset>
  {validation&&<p role="status">{validation}</p>}{notice&&<p role="status">{notice}</p>}
  <div className="flex flex-wrap gap-sm"><Button variant="outline" disabled={busy||!context.can_edit||!!draft?.sealed} onClick={()=>void perform('validate')}>校验规则</Button><Button variant="outline" disabled={busy||!context.can_edit||!!draft?.sealed||!reason.trim()} onClick={()=>void perform('save')}>保存草稿</Button><Button disabled={busy||!context.can_edit||!!draft?.sealed||dirty||!draft||validation!=='规则校验通过'} onClick={()=>void perform('seal')}>保存固定版本</Button></div>
- {draft&&<details><summary>草稿修改历史（{draft.history.length}）{draft.sealed?' · 已固定':''}</summary>{[...draft.history].reverse().map(e=><p key={e.revision}>修订{e.revision} · {e.actor} · {new Date(e.changed_at).toLocaleString('zh-CN')} · {e.reason}</p>)}</details>}
+ {draft&&<details><summary>草稿修改历史（{draft.history.length}）{draft.sealed?' · 已固定':''}</summary>{[...draft.history].reverse().map(e=><p key={e.revision}>修订{e.revision} · {displayText(e.actor,'操作人名称待补全')} · {new Date(e.changed_at).toLocaleString('zh-CN')} · {e.reason}</p>)}</details>}
  </>}
  </>}
  </CardContent></Card>;

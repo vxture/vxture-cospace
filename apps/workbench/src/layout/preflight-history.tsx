@@ -1,3 +1,4 @@
+import {displayText} from './display-text';
 import {subscribeAppLocation} from './app-router';
 import {appLocation} from './app-router';
 import React,{useEffect,useState,useSyncExternalStore} from 'react';
@@ -41,7 +42,7 @@ export function PreflightHistory({endpoint,identity,revision,embedded=false}:{en
      <span className="text-body-small">{new Date(item.checked_at).toLocaleString('zh-CN',{hour12:false})}</span>
      <span className="text-body-small">{item.registration_matches?'与当前登记匹配；文件未重检':'登记已变化；此记录仅供追溯'}</span>
      {item.issue&&<p>{item.issue.title} · {item.issue.action}</p>}
-     {requested?<details><summary>记录依据</summary><p className="break-all text-label-small">操作者：{item.actor||'未记录'}<br/>登记摘要：{item.registration_sha256}</p><p>{item.notice}</p></details>:<a href={recordLink('data',{space:target.space,tab:'inputs',input:identity,check:String(item.sequence)})}>查看记录 #{item.sequence}</a>}
+     {requested?<details><summary>记录依据</summary><p className="break-all text-label-small">操作者：{displayText(item.actor,'操作人名称待补全')}<br/>登记摘要：{item.registration_sha256}</p><p>{item.notice}</p></details>:<a href={recordLink('data',{space:target.space,tab:'inputs',input:identity,check:String(item.sequence)})}>查看记录 #{item.sequence}</a>}
     </li>)}</ol>
     {!requested&&(cursor!==null||data.next_before_sequence!==null)&&<div className="flex gap-sm"><Button size="sm" variant="ghost" disabled={cursor===null} onClick={()=>setCursor(null)}>返回最新历史</Button><Button size="sm" variant="ghost" disabled={data.next_before_sequence===null} onClick={()=>setCursor(data.next_before_sequence)}>更早记录</Button></div>}
    </>}

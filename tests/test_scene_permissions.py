@@ -288,3 +288,43 @@ def test_audit_failure_rolls_back_grant_and_policy_history(secured):
     assert c.post('/api/scene-permissions/grants', json=body(data, spaces[0]['id']), headers=headers).status_code == 503
     assert policies.load() == before
     assert c.get('/api/scene-permissions').json()['history'] == []
+
+
+def test_permission_summary_returns_only_self_roles_without_admin_lists(shared_workbench):
+    _, c, accounts, *_ = shared_workbench
+    owner(shared_workbench)
+    summary = c.get('/api/scene-permissions?summary=true').json()
+    assert summary['self_roles'] == ['owner']
+    assert not {'members', 'scenes', 'grants', 'history'} & summary.keys()
+    accounts.roles = ['workspace:member']
+    sign_in(shared_workbench, 'usr_engineer')
+    assert set(c.get('/api/scene-permissions?summary=true').json()['self_roles']) == {'engineer', 'viewer'}
+    accounts.workspace = 'ws_foreign'
+    sign_in(shared_workbench, 'usr_engineer')
+    assert c.get('/api/scene-permissions?summary=true').json()['self_roles'] == ['viewer']
+
+
+def test_permission_pages_search_and_selected_role_do_not_depend_on_grant_page(secured):
+    _, c, *_ = secured
+    owner(secured)
+    all_data = c.get('/api/scene-permissions').json()
+    first = c.get('/api/scene-permissions?limit=1').json()
+    second = c.get('/api/scene-permissions?limit=1&scene_offset=1&member_offset=1').json()
+    assert len(first['scenes']) == len(second['scenes']) == 1
+    assert first['scenes'][0] != second['scenes'][0]
+    assert first['scene_total'] == len(all_data['scenes'])
+    grant = all_data['grants'][0]
+    selected = c.get('/api/scene-permissions', params={'limit': 1, 'grant_offset': 100,
+        'subject': grant['subject'], 'space': grant['space_id']}).json()
+    assert selected['grants'] == [] and selected['selected_role'] == grant['role']
+    filtered = c.get('/api/scene-permissions', params={'scenes_q': first['scenes'][0]['name']}).json()
+    assert first['scenes'][0] in filtered['scenes']
+    assert c.get('/api/scene-permissions?members_q=not-a-member').json()['members'] == []
+    assert all(m['display_name'] != m['subject'] for m in all_data['members'])
+
+
+@pytest.mark.parametrize('query', ['limit=51', 'member_offset=-1', 'unknown=1', 'limit=1&limit=2', 'summary=invalid'])
+def test_permission_query_rejects_invalid_or_ambiguous_paging(secured, query):
+    _, c, *_ = secured
+    owner(secured)
+    assert c.get('/api/scene-permissions?'+query).status_code == (403 if query == 'limit=1&limit=2' else 422)
