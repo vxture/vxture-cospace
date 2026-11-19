@@ -3,6 +3,7 @@ from dataclasses import replace
 import pytest
 from packages.infrastructure.platform_subscription import ApplicationAccessDenied, SubscriptionUnavailable
 from test_platform_subscription import gate, authorized_access
+from test_scene_permissions import shared_workbench, secured, runtime
 
 
 def test_strict_mode_assignment_is_not_shared_and_revocation_is_immediate(gate):
@@ -190,3 +191,36 @@ def test_default_transport_and_public_key_verifier_survive_multiple_calls(gate,m
     service.require(principal,'a');service.require(principal,'b')
     assert len(instances)==1
     assert service.fetch.__self__ is service.fetch_access.__self__
+
+
+def test_roleless_platform_authorized_member_enters_as_viewer(shared_workbench,tmp_path):
+    from test_platform_subscription import production_client, config, facts
+    from packages.infrastructure.platform_subscription import PlatformSubscriptions
+    from packages.service.platform_auth_http import create_auth_app
+    from packages.service.platform_business_http import BusinessAccess
+    from experiments.scripts.serve_nyu_flow_preview import create_app
+    from fastapi.testclient import TestClient
+    from test_platform_business import sign_in
+    rp,_,accounts,_,jobs,directory,spaces,policies,*_=shared_workbench
+    production_client(rp,accounts)
+    accounts.roles=[]
+    allowed=[True]
+    subscriptions=PlatformSubscriptions(rp,config(access_cache_seconds=0),tmp_path/'platform-gate',fetch=lambda *_:facts(),fetch_access=lambda p,t:authorized_access(p,t)|{'allowed':allowed[0]})
+    access=BusinessAccess(rp,policies,directory,jobs,subscriptions=subscriptions,workspace_scene_visibility=True)
+    app=create_auth_app(rp,business=create_app(None,jobs,space_directory=directory,platform_origin=rp.config.origin),access=access,subscriptions=subscriptions)
+    before=policies.load()
+    with TestClient(app,base_url=rp.config.origin,follow_redirects=False) as client:
+        context=list(shared_workbench);context[1]=client
+        headers,_=sign_in(tuple(context),'usr_new_product_member')
+        assert client.get('/api/auth/config').json()['subscription_authorization'] is True
+        assert client.get('/api/auth/session').json()['authenticated'] is True
+        subscription=client.get('/api/subscription').json()
+        assert subscription['application_authorized'] is True and subscription['business_allowed'] is True
+        assert len(client.get('/api/spaces').json()['spaces'])==len(spaces)
+        summary=client.get('/api/scene-permissions?summary=true').json()
+        assert summary['default_role']=='viewer' and summary['self_roles']==['viewer'] and not summary['can_manage']
+        assert client.post('/api/scene-permissions/grants',json={},headers=headers).status_code==403
+        assert policies.load()==before
+        allowed[0]=False
+        assert client.get('/api/subscription').json()['business_allowed'] is False
+        assert client.get('/api/spaces').status_code==403

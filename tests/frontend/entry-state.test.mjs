@@ -62,3 +62,12 @@ test('retry results replace failed and denied display with current platform fact
  ];
  assert.deepEqual(sequence,['access-unavailable','unassigned','connected']);
 });
+
+
+test('authorized new member enters without a separately assigned product role',()=>{
+ const newMember={...confirmed,user:{...user,roles:[]}};
+ assert.equal(identityEntryState(newMember),'identity');
+ const allowed={application_authorized:true,business_allowed:true,status:'active'};
+ assert.equal(subscriptionEntryState(allowed),'connected');
+ assert.equal(subscriptionEntryState({...allowed,application_authorized:false,business_allowed:false}),'unassigned');
+});
