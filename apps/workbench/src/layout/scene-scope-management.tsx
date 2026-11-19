@@ -35,6 +35,7 @@ type ScopeData = {
   scenes?: { id: string; name: string }[];
   scene_total?: number;
   selected_member?: Member;
+  directory_complete?: boolean;
 };
 const endpoint = businessEndpoint + "/api/scene-permissions";
 export function SceneScopeManagement() {
@@ -81,7 +82,7 @@ function ScopeDirectory() {
       <div className="management-card-heading">
         <h2>成员数据范围</h2>
         <span className="text-body-small text-muted-foreground">
-          {data?.member_total || 0} 位已记录成员
+          {data?.member_total || 0} 位{data?.directory_complete?'平台授权成员':'已记录成员'}
         </span>
       </div>
       <div className="management-member-toolbar">
@@ -170,7 +171,7 @@ function ScopeDirectory() {
               </TableBody>
             </Table>
           </div>
-          {!data.members?.length && <p>没有匹配的已记录成员。</p>}
+          {!data.members?.length && <p>没有匹配的成员。</p>}
           <div className="permission-pages">
             <span>共 {data.member_total || 0} 位</span>
             <Button
@@ -189,7 +190,8 @@ function ScopeDirectory() {
             </Button>
           </div>
           <p className="text-body-small text-muted-foreground">
-            数据范围限定可见场景，功能角色决定可执行操作。完整平台成员名单尚待接入。
+            数据范围限定可见场景，功能角色决定可执行操作。
+            {data.directory_complete?'成员名单来自平台当前产品授权。':'当前仅展示本产品已记录成员。'}
           </p>
           {!data.can_manage_scope && (
             <p className="text-body-small text-muted-foreground">

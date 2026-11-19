@@ -41,6 +41,8 @@ type Access = {
   scenes?: { id: string; name: string }[];
   grants?: Grant[];
   member_total?: number;
+  selected_member?: Member | null;
+  directory_complete?: boolean;
   scene_total?: number;
   grant_total?: number;
   selected_role?: Role | null;
@@ -479,14 +481,17 @@ function PermissionEditor({
   query,
   browse,
 }: Readonly<EditorProps>) {
-  const members = data.members ?? [],
+  const members = data.selected_member && !data.members?.some(m=>m.subject===data.selected_member?.subject)
+      ? [data.selected_member,...(data.members??[])] : data.members ?? [],
     scenes = data.scenes ?? [];
+  const memberUnavailable = !!subject && data.directory_complete === true && data.selected_member?.subject !== subject;
   return (
     <section aria-label="成员场景授权">
       <h3>分配场景权限</h3>
       <p>
         选择成员和你可管理的场景，核对角色后填写调整原因。成员默认可查看场景。
       </p>
+      {memberUnavailable&&<p role="alert">该成员当前不在平台授权名单中，请关闭面板并重新读取成员。</p>}
       <div className="permission-search">
         <label>
           查找成员
@@ -599,6 +604,7 @@ function PermissionEditor({
           disabled={
             busy ||
             !!error ||
+            memberUnavailable ||
             !subject ||
             !space ||
             !reason.trim() ||
