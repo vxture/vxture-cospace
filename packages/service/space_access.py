@@ -32,11 +32,21 @@ class Grant(BaseModel):
     role: str = Field(pattern=r'^(viewer|engineer|manager)$')
 
 
+class SceneScope(BaseModel):
+    model_config = ConfigDict(extra='forbid', strict=True, frozen=True)
+    issuer: str = Field(min_length=1, max_length=2048)
+    org_id: str = Field(min_length=1, max_length=160)
+    workspace_id: str = Field(min_length=1, max_length=160)
+    subject: str = Field(pattern=r'^usr_[A-Za-z0-9_-]{1,150}$')
+    space_ids: list[str] = Field(max_length=10_000)
+
+
 class SpaceAccessPolicy(BaseModel):
     model_config = ConfigDict(extra='forbid', strict=True, frozen=True)
     profile: str = Field(default='cospace.space-access-policy/0.1', pattern=r'^cospace\.space-access-policy/0\.1$')
     bindings: list[Binding] = Field(max_length=10_000)
     grants: list[Grant] = Field(max_length=100_000)
+    scene_scopes: list[SceneScope] = Field(default_factory=list, max_length=100_000)
 
     @model_validator(mode='after')
     def references(self):
@@ -46,7 +56,21 @@ class SpaceAccessPolicy(BaseModel):
             raise ValueError('duplicate_binding_or_member_grant')
         if any(v.space_id not in spaces for v in self.grants):
             raise ValueError('grant_requires_bound_space')
+        scope_keys = [(s.issuer, s.org_id, s.workspace_id, s.subject) for s in self.scene_scopes]
+        if len(set(scope_keys)) != len(scope_keys):
+            raise ValueError('duplicate_scene_scope')
+        for scope in self.scene_scopes:
+            valid = {b.space_id for b in self.bindings if (b.issuer, b.org_id, b.workspace_id) == (scope.issuer, scope.org_id, scope.workspace_id)}
+            if len(set(scope.space_ids)) != len(scope.space_ids) or not set(scope.space_ids) <= valid:
+                raise ValueError('scope_requires_bound_spaces')
         return self
+
+    def data_scope_allows(self, principal, space_id):
+        if principal.workspace_owner:
+            return True
+        scope = next((s for s in self.scene_scopes if (s.issuer, s.org_id, s.workspace_id, s.subject) ==
+                      (principal.issuer, principal.org_id, principal.workspace_id, principal.subject)), None)
+        return scope is None or space_id in scope.space_ids
 
     def capabilities(self, principal: PlatformPrincipal, space_id):
         binding = next((b for b in self.bindings if b.space_id == space_id), None)
@@ -56,6 +80,8 @@ class SpaceAccessPolicy(BaseModel):
         # limited to explicitly bound spaces in the token's active workspace.
         if principal.workspace_owner:
             return CAPABILITIES
+        if not self.data_scope_allows(principal, space_id):
+            return frozenset()
         grant = next((g for g in self.grants if (g.issuer, g.subject, g.space_id) ==
                       (principal.issuer, principal.subject, space_id)), None)
         return ROLE_CAPABILITIES[grant.role] if grant else frozenset()
@@ -74,7 +100,7 @@ class SpaceAccessPolicy(BaseModel):
                (b.issuer, b.org_id, b.workspace_id) == (principal.issuer, principal.org_id, principal.workspace_id)}
         if principal.workspace_owner:
             return ids
-        return {g.space_id for g in self.grants if g.space_id in ids and
+        return {g.space_id for g in self.grants if g.space_id in ids and self.data_scope_allows(principal, g.space_id) and
                 (g.issuer, g.subject) == (principal.issuer, principal.subject) and g.role in roles}
 
     def workspace_manager(self, principal):
@@ -95,6 +121,8 @@ class WorkspaceSceneAccessPolicy(SpaceAccessPolicy):
         if explicit:
             return explicit
         binding = next((b for b in self.bindings if b.space_id == space_id), None)
+        if not self.data_scope_allows(principal, space_id):
+            return frozenset()
         if binding and (binding.issuer, binding.org_id, binding.workspace_id) == (principal.issuer, principal.org_id, principal.workspace_id):
             return ROLE_CAPABILITIES['viewer']
         return frozenset()

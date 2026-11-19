@@ -1,12 +1,13 @@
 import React,{useEffect,useState} from 'react';
 import {Link} from 'react-router-dom';
-import {Button,Input,NativeSelect,Table,TableHeader,TableHead,TableRow,TableBody,TableCell} from '@vxture/design-system';
+import {Button,Drawer,Input,NativeSelect,Table,TableHeader,TableHead,TableRow,TableBody,TableCell} from '@vxture/design-system';
 import {usePlatformSession} from './platform-auth';
 import {sessionScopeKey} from './session-continuity';
 import {businessEndpoint} from './business-endpoint';
 import {displayText} from './display-text';
 import {runGuarded} from './unsaved-navigation';
 import {ScenePermissionsPanel} from './scene-permissions';
+import {productRoleDefinitions} from './management-contract';
 import {RoleDefinitions} from './management-overview';
 
 type Role='viewer'|'engineer'|'manager';
@@ -20,8 +21,9 @@ export function MemberManagement({role,assignmentRole}:{readonly role?:Role;read
 }
 function MemberDirectory({role,assignmentRole}:{readonly role?:Role;readonly assignmentRole?:Role}){
  const session=usePlatformSession();
+ const [saving,setSaving]=useState(false),[directoryInfo,setDirectoryInfo]=useState(false);
  const [query,setQuery]=useState(''),[filter,setFilter]=useState<Role|''>(role||''),[offset,setOffset]=useState(0),[refresh,setRefresh]=useState(0);
- const [data,setData]=useState<Directory|null>(null),[loading,setLoading]=useState(true),[error,setError]=useState(''),[selected,setSelected]=useState<Member|null>(null);
+ const [data,setData]=useState<Directory|null>(null),[loading,setLoading]=useState(true),[error,setError]=useState(''),[selected,setSelected]=useState<Member|null>(null),[mode,setMode]=useState<'details'|'assign'>('details');
  useEffect(()=>{const controller=new AbortController();setLoading(true);setError('');setData(null);
   const params=new URLSearchParams({members_q:query,member_offset:String(offset),role:filter});
   fetch(businessEndpoint+'/api/scene-permissions?'+params,{cache:'no-store',signal:controller.signal}).then(async response=>{
@@ -34,19 +36,22 @@ function MemberDirectory({role,assignmentRole}:{readonly role?:Role;readonly ass
  },[query,filter,offset,refresh,session?.user?.workspace_id]);
  function browse(action:()=>void){void runGuarded(()=>{setSelected(null);action();});}
  return <div className="member-management">
-  <p className="management-directory-notice">平台完整授权成员清单尚未接入。以下仅为本产品访问、协作申请及已授权记录中的成员，不代表当前完整平台名单或实时平台授权状态。产品访问仍由平台校验。</p>
+  <div className="management-card-heading"><h2>成员清单</h2><Button variant="ghost" size="sm" onClick={()=>setDirectoryInfo(true)}>名单说明</Button></div>
+  <Drawer open={directoryInfo} onClose={()=>setDirectoryInfo(false)} side="right" width="md" title="成员名单说明" closeLabel="关闭名单说明">  <p className="management-directory-notice">平台完整授权成员清单尚未接入。以下仅为本产品访问、协作申请及已授权记录中的成员，不代表当前完整平台名单或实时平台授权状态。产品访问仍由平台校验。</p></Drawer>
   <div className="management-member-toolbar"><label>搜索成员<Input aria-label="搜索产品成员" placeholder="按成员名称搜索" value={query} onChange={e=>{const value=e.target.value;browse(()=>{setQuery(value);setOffset(0);});}}/></label>{!role&&<label>产品角色<NativeSelect aria-label="筛选产品角色" value={filter} onChange={e=>{const value=e.target.value as Role|'';browse(()=>{setFilter(value);setOffset(0);});}}><option value="">全部角色</option>{Object.entries(labels).map(([key,label])=><option key={key} value={key}>{label}</option>)}</NativeSelect></label>}<Button variant="outline" size="sm" disabled={loading} onClick={()=>browse(()=>setRefresh(value=>value+1))}>重新读取成员</Button></div>
   {error&&<p role="alert">{error}</p>}{loading&&<p role="status">正在读取成员…</p>}
-  {data&&!data.can_manage&&<p>当前角色无权查看成员清单或分配角色。<Link to="/settings?section=permissions" className="text-primary underline">查看协作权限</Link></p>}
-  {data?.can_manage&&<MemberTable {...{data,loading,offset}} onSelect={member=>void runGuarded(()=>setSelected(member))} onPage={value=>browse(()=>setOffset(value))}/>}
-  {selected&&<section className="management-card" aria-label="成员角色分配"><div className="management-card-heading"><h2>{displayText(selected.display_name,'成员名称待补全')} · 分配角色</h2><Button variant="ghost" size="sm" onClick={()=>void runGuarded(()=>{setSelected(null);setRefresh(value=>value+1);})}>关闭并刷新清单</Button></div><p>选择你可管理的场景后分配角色。此操作不授予平台使用资格，也不转移工作区所有权。</p><ScenePermissionsPanel initialSubject={selected.subject} initialRole={assignmentRole||role}/></section>}
+  {data&&!data.can_manage&&<p>当前角色无权查看成员清单或分配角色。<Link to="/settings?section=scenes" className="text-primary underline">查看协作权限</Link></p>}
+  {data?.can_manage&&<MemberTable {...{data,loading,offset}} onSelect={(member,mode)=>void runGuarded(()=>{setSelected(member);setMode(mode);})} onPage={value=>browse(()=>setOffset(value))}/>}
+  <Drawer open={!!selected&&!!data?.can_manage} onClose={()=>{if(!saving)void runGuarded(()=>{setSelected(null);setRefresh(value=>value+1);});}} side="right" width="min(600px, 100vw)" title={mode==='details'?'成员详情':'分配成员角色'} description={selected?displayText(selected.display_name,'成员名称待补全'):undefined} closeLabel="关闭成员面板">
+   {selected&&data?.can_manage&&(mode==='details'?<div className="management-drawer-content"><dl className="management-information"><div><dt>成员</dt><dd>{displayText(selected.display_name,'成员名称待补全')}</dd></div><div><dt>产品角色</dt><dd>{selected.roles.map(value=>value==='owner'?'所有者':labels[value]).join('、')||'默认查看者'}</dd></div><div><dt>已授权场景</dt><dd>{selected.scene_count} 个</dd></div><div><dt>最近访问</dt><dd>{selected.last_seen?new Date(selected.last_seen).toLocaleString('zh-CN'):'暂无记录'}</dd></div></dl><p>角色与授权场景数仅统计你可管理的范围。平台使用资格由平台维护。</p>{!selected.roles.includes('owner')&&<Button onClick={()=>setMode('assign')}>分配角色</Button>}</div>:<ScenePermissionsPanel initialSubject={selected.subject} initialRole={assignmentRole||role} editorOnly onBusyChange={setSaving} onSaved={()=>{setSelected(null);setRefresh(value=>value+1);}}/>)}
+  </Drawer>
  </div>;
 }
-function MemberTable({data,loading,offset,onPage,onSelect}:{readonly data:Directory;readonly loading:boolean;readonly offset:number;readonly onPage:(value:number)=>void;readonly onSelect:(member:Member)=>void}){
+function MemberTable({data,loading,offset,onPage,onSelect}:{readonly data:Directory;readonly loading:boolean;readonly offset:number;readonly onPage:(value:number)=>void;readonly onSelect:(member:Member,mode:'details'|'assign')=>void}){
  const total=data.member_total||0;
- return <><p className="text-body-small text-muted-foreground">当前筛选共 {total} 位已记录成员。角色与场景数仅统计你可管理的场景范围。</p><div className="management-member-table"><Table><TableHeader><TableRow><TableHead>成员</TableHead><TableHead>产品角色</TableHead><TableHead>已授权场景</TableHead><TableHead data-table-actions>操作</TableHead></TableRow></TableHeader><TableBody>{data.members?.map(member=><TableRow key={member.subject}><TableCell><span>{displayText(member.display_name,'成员名称待补全')}</span>{member.last_seen&&<span className="management-member-meta">最近访问 {new Date(member.last_seen).toLocaleDateString('zh-CN')}</span>}{member.requested_at&&<span className="management-member-meta">已提交协作申请</span>}</TableCell><TableCell>{member.roles.map(value=>(value==='owner'?'所有者':labels[value])).join('、')||'无单独角色'}</TableCell><TableCell>{member.scene_count} 个</TableCell><TableCell data-table-actions>{member.roles.includes('owner')?<span>平台所有者</span>:<Button variant="ghost" size="sm" onClick={()=>onSelect(member)}>分配角色</Button>}</TableCell></TableRow>)}</TableBody></Table></div>{!data.members?.length&&<p>没有匹配的已记录成员。</p>}<div className="permission-pages"><Button variant="ghost" size="sm" disabled={loading||offset===0} onClick={()=>onPage(Math.max(0,offset-25))}>上一页</Button><Button variant="ghost" size="sm" disabled={loading||offset+25>=total} onClick={()=>onPage(offset+25)}>下一页</Button></div></>;
+ return <><p className="text-body-small text-muted-foreground">当前筛选共 {total} 位已记录成员。角色与场景数仅统计你可管理的场景范围。</p><div className="management-member-table"><Table><TableHeader><TableRow><TableHead>成员</TableHead><TableHead>产品角色</TableHead><TableHead>已授权场景</TableHead><TableHead data-table-actions>操作</TableHead></TableRow></TableHeader><TableBody>{data.members?.map(member=><TableRow key={member.subject}><TableCell><span>{displayText(member.display_name,'成员名称待补全')}</span>{member.last_seen&&<span className="management-member-meta">最近访问 {new Date(member.last_seen).toLocaleDateString('zh-CN')}</span>}{member.requested_at&&<span className="management-member-meta">已提交协作申请</span>}</TableCell><TableCell>{member.roles.map(value=>(value==='owner'?'所有者':labels[value])).join('、')||'无单独角色'}</TableCell><TableCell>{member.scene_count} 个</TableCell><TableCell data-table-actions><div className="management-row-actions"><Button variant="ghost" size="sm" onClick={()=>onSelect(member,'details')}>查看详情</Button>{!member.roles.includes('owner')&&<Button variant="ghost" size="sm" onClick={()=>onSelect(member,'assign')}>分配角色</Button>}</div></TableCell></TableRow>)}</TableBody></Table></div>{!data.members?.length&&<p>没有匹配的已记录成员。</p>}<div className="permission-pages"><Button variant="ghost" size="sm" disabled={loading||offset===0} onClick={()=>onPage(Math.max(0,offset-25))}>上一页</Button><Button variant="ghost" size="sm" disabled={loading||offset+25>=total} onClick={()=>onPage(offset+25)}>下一页</Button></div></>;
 }
 export function RoleManagement(){
- const [role,setRole]=useState<Role|'owner'>('engineer'),[assign,setAssign]=useState(false);
- return <><section className="management-card"><h2>产品角色</h2><div className="management-role-tabs" role="group" aria-label="选择管理角色">{(['owner','manager','engineer','viewer'] as const).map(value=><Button key={value} variant={role===value?'secondary':'ghost'} aria-pressed={role===value} onClick={()=>void runGuarded(()=>{setRole(value);setAssign(false);})}>{value==='owner'?'所有者':labels[value]}</Button>)}</div></section><RoleDefinitions role={role==='owner'?'所有者':labels[role]}/><section className="management-card"><h2>角色成员与分配</h2>{role==='owner'?<p>所有者由平台工作区身份确定，不能在 CoSpace 分配或转移。平台完整成员清单尚未接入，无法在此列出所有者。</p>:<><Button variant="outline" size="sm" onClick={()=>void runGuarded(()=>setAssign(value=>!value))}>{assign?'查看关联成员':'为成员分配此角色'}</Button><p className="text-body-small text-muted-foreground">{assign?`选择成员，为其分配${labels[role]}的场景权限。`:`以下为你可管理场景范围内的${labels[role]}。`}</p><MemberManagement key={String(assign)+role} role={assign?undefined:role} assignmentRole={role}/></>}</section></>;
+ const [selected,setSelected]=useState<string|null>(null);
+ return <><div className="management-member-table"><Table><TableHeader><TableRow><TableHead>角色</TableHead><TableHead>授权范围</TableHead><TableHead data-table-actions>操作</TableHead></TableRow></TableHeader><TableBody>{productRoleDefinitions.map(item=><TableRow key={item.role}><TableCell>{item.role}</TableCell><TableCell>{item.scope}</TableCell><TableCell data-table-actions><Button variant="ghost" size="sm" onClick={()=>setSelected(item.role)}>查看详情</Button></TableCell></TableRow>)}</TableBody></Table></div><p className="text-body-small text-muted-foreground">固定角色的权限组合由产品定义；成员角色在成员管理中分配。</p><Drawer open={!!selected} onClose={()=>setSelected(null)} side="right" width="md" title="角色详情" description={selected||undefined} closeLabel="关闭角色详情">{selected&&<div className="management-drawer-content"><RoleDefinitions role={selected}/><Link to="/settings?section=members" className="text-primary underline">前往成员管理</Link></div>}</Drawer></>;
 }
