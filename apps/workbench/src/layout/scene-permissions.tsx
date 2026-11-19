@@ -173,11 +173,7 @@ function ScenePermissions({
           throw new Error("权限信息无法确认，请重试。");
         if (!controller.signal.aborted) {
           setData(value);
-          setRole(
-            initialRole ||
-              value.selected_role ||
-              (value.default_role === "viewer" ? "engineer" : "viewer"),
-          );
+          setRole(initialRole || value.selected_role || "viewer");
         }
       })
       .catch((e) => {
