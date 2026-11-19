@@ -20,112 +20,71 @@ type Permission = {
 };
 const operators = ["所有者", "管理者", "工程师"];
 const administrators = ["所有者", "管理者"];
+function permissionGroup(
+  group: string,
+  roles: readonly string[],
+  entries: readonly (readonly [string, string])[],
+): Permission[] {
+  return entries.map(([name, description]) => ({
+    name,
+    group,
+    roles,
+    description,
+  }));
+}
 const permissions: Permission[] = [
-  {
-    name: "进入我的场景",
-    group: "功能入口",
-    roles: [...operators, "查看者"],
-    description: "进入场景列表，列表只返回当前数据范围内的场景。",
-  },
-  {
-    name: "打开空间全景地图",
-    group: "功能入口",
-    roles: [...operators, "查看者"],
-    description: "通过地图查看数据范围内的场景，地图不会扩大数据范围。",
-  },
-  {
-    name: "查看与预览场景",
-    group: "场景浏览",
-    roles: [...operators, "查看者"],
-    description: "平台已授权的成员默认可查看当前数据范围内的场景。",
-  },
-  {
-    name: "查询场景内容",
-    group: "场景浏览",
-    roles: [...operators, "查看者"],
-    description: "在当前工作区场景内查询已提供的内容。",
-  },
-  {
-    name: "查看服务对象",
-    group: "场景浏览",
-    roles: [...operators, "查看者"],
-    description: "读取场景关联的服务对象信息。",
-  },
-  {
-    name: "新建场景",
-    group: "场景操作",
-    roles: operators,
-    description: "所有者或已拥有工程师、管理者场景授权的成员可以新建场景。",
-  },
-  {
-    name: "维护名称与描述",
-    group: "场景操作",
-    roles: operators,
-    description: "在已授权场景内维护名称、用途和描述。",
-  },
-  {
-    name: "编辑场景位置",
-    group: "场景操作",
-    roles: operators,
-    description: "在已授权场景内调整空间位置。",
-  },
-  {
-    name: "管理资料",
-    group: "场景操作",
-    roles: operators,
-    description: "在已授权场景内登记、维护资料与资料来源。",
-  },
-  {
-    name: "运行模型构建",
-    group: "场景操作",
-    roles: operators,
-    description: "在已授权场景内发起构建和查看处理结果。",
-  },
-  {
-    name: "编辑空间关联",
-    group: "场景操作",
-    roles: operators,
-    description: "在已授权场景内维护空间对象关联。",
-  },
-  {
-    name: "管理服务发布",
-    group: "场景操作",
-    roles: operators,
-    description: "在已授权场景内管理服务发布。",
-  },
-  {
-    name: "导出场景成果",
-    group: "场景操作",
-    roles: operators,
-    description: "导出已授权场景内允许导出的成果。",
-  },
-  {
-    name: "管理服务对象",
-    group: "场景操作",
-    roles: operators,
-    description: "在已授权场景内维护服务对象及其关联。",
-  },
-  {
-    name: "系统高级配置",
-    group: "配置管理",
-    roles: administrators,
-    description: "维护系统高级配置，操作仍需满足对应服务的权限校验。",
-  },
-  {
-    name: "设置成员数据范围",
-    group: "成员权限",
-    roles: ["所有者"],
-    description:
-      "独立限制成员可访问的场景，不增加功能权限。当前仅工作区所有者可调整整个工作区的数据范围。",
-  },
-  {
-    name: "分配成员场景角色",
-    group: "成员权限",
-    roles: administrators,
-    description:
+  ...permissionGroup(
+    "功能入口",
+    [...operators, "查看者"],
+    [
+      ["进入我的场景", "进入场景列表，列表只返回当前数据范围内的场景。"],
+      [
+        "打开空间全景地图",
+        "通过地图查看数据范围内的场景，地图不会扩大数据范围。",
+      ],
+    ],
+  ),
+  ...permissionGroup(
+    "场景浏览",
+    [...operators, "查看者"],
+    [
+      ["查看与预览场景", "平台已授权的成员默认可查看当前数据范围内的场景。"],
+      ["查询场景内容", "在当前工作区场景内查询已提供的内容。"],
+      ["查看服务对象", "读取场景关联的服务对象信息。"],
+    ],
+  ),
+  ...permissionGroup("场景操作", operators, [
+    ["新建场景", "所有者或已拥有工程师、管理者场景授权的成员可以新建场景。"],
+    ["维护名称与描述", "在已授权场景内维护名称、用途和描述。"],
+    ["编辑场景位置", "在已授权场景内调整空间位置。"],
+    ["管理资料", "在已授权场景内登记、维护资料与资料来源。"],
+    ["运行模型构建", "在已授权场景内发起构建和查看处理结果。"],
+    ["编辑空间关联", "在已授权场景内维护空间对象关联。"],
+    ["管理服务发布", "在已授权场景内管理服务发布。"],
+    ["导出场景成果", "导出已授权场景内允许导出的成果。"],
+    ["管理服务对象", "在已授权场景内维护服务对象及其关联。"],
+  ]),
+  ...permissionGroup("配置管理", administrators, [
+    ["系统高级配置", "维护系统高级配置，操作仍需满足对应服务的权限校验。"],
+  ]),
+  ...permissionGroup(
+    "成员权限",
+    ["所有者"],
+    [
+      [
+        "设置成员数据范围",
+        "独立限制成员可访问的场景，不增加功能权限。当前仅工作区所有者可调整整个工作区的数据范围。",
+      ],
+    ],
+  ),
+  ...permissionGroup("成员权限", administrators, [
+    [
+      "分配成员场景角色",
       "所有者可管理本工作区全部已绑定场景；管理者只能调整自己管理范围内的场景授权。",
-  },
+    ],
+  ]),
 ];
+
 export function PermissionCatalog() {
   const [query, setQuery] = useState(""),
     [group, setGroup] = useState(""),

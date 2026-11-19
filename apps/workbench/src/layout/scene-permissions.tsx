@@ -59,7 +59,7 @@ type Access = {
     changed_at: string;
   }[];
 };
-const roleLabels: Record<Role | string, string> = {
+const roleLabels: Record<string, string> = {
   viewer: "查看者",
   engineer: "工程师",
   manager: "管理者",
@@ -163,14 +163,14 @@ function ScenePermissions({
       { cache: "no-store", signal: controller.signal },
     )
       .then(async (response) => {
-        if (!response.ok) throw Error("暂时无法读取场景权限，请重试。");
+        if (!response.ok) throw new Error("暂时无法读取场景权限，请重试。");
         const value: Access = await response.json();
         if (
           value.workspace_id !== session?.user?.workspace_id ||
           !Number.isSafeInteger(value.revision) ||
           typeof value.can_manage !== "boolean"
         )
-          throw Error("权限信息无法确认，请重试。");
+          throw new Error("权限信息无法确认，请重试。");
         if (!controller.signal.aborted) {
           setData(value);
           setRole(
@@ -247,7 +247,7 @@ function ScenePermissions({
   return (
     <div className="scene-permissions-content" aria-busy={busy || loading}>
       {error && <p role="alert">{error}</p>}
-      {notice && <p role="status">{notice}</p>}
+      {notice && <output>{notice}</output>}
       <Button
         size="sm"
         variant="outline"
@@ -256,7 +256,7 @@ function ScenePermissions({
       >
         重新读取权限
       </Button>
-      {loading && <p role="status">正在读取权限…</p>}
+      {loading && <output>正在读取权限…</output>}
       {data && (
         <PermissionState
           canManage={data.can_manage}
@@ -405,11 +405,7 @@ function ScenePermissions({
                 disabled={busy || data.requested}
                 onClick={() => void submit()}
               >
-                {data.requested
-                  ? "已申请协作权限"
-                  : busy
-                    ? "正在提交…"
-                    : "申请协作权限"}
+                {requestLabel(data.requested, busy)}
               </Button>
               {data.requested && (
                 <p>
@@ -486,7 +482,7 @@ function PermissionEditor({
   submit,
   query,
   browse,
-}: EditorProps) {
+}: Readonly<EditorProps>) {
   const members = data.members ?? [],
     scenes = data.scenes ?? [];
   return (
@@ -627,9 +623,8 @@ function PermissionGrants({
   choose,
   query,
   browse,
-}: Pick<
-  EditorProps,
-  "data" | "busy" | "labels" | "choose" | "query" | "browse"
+}: Readonly<
+  Pick<EditorProps, "data" | "busy" | "labels" | "choose" | "query" | "browse">
 >) {
   return (
     <section aria-label="场景授权记录">
@@ -684,7 +679,7 @@ function PermissionGrants({
 function PermissionHistory({
   data,
   labels,
-}: Pick<EditorProps, "data" | "labels">) {
+}: Readonly<Pick<EditorProps, "data" | "labels">>) {
   return (
     <section aria-label="权限操作记录">
       <h3>最近操作</h3>
@@ -729,7 +724,7 @@ async function savePermission(
     space,
     role,
     reason,
-  }: Pick<EditorProps, "subject" | "space" | "role" | "reason">,
+  }: Readonly<Pick<EditorProps, "subject" | "space" | "role" | "reason">>,
 ) {
   const response = await fetch(
     endpoint + (data.can_manage ? "/grants" : "/requests"),
@@ -749,7 +744,7 @@ async function savePermission(
       ),
     },
   );
-  if (!response.ok) throw Error(permissionFailure(response.status));
+  if (!response.ok) throw new Error(permissionFailure(response.status));
 }
 
 function PageControls({
@@ -758,10 +753,10 @@ function PageControls({
   busy,
   onPage,
 }: {
-  total: number;
-  offset: number;
-  busy: boolean;
-  onPage: (offset: number) => void;
+  readonly total: number;
+  readonly offset: number;
+  readonly busy: boolean;
+  readonly onPage: (offset: number) => void;
 }) {
   return (
     <div className="permission-pages">
@@ -784,4 +779,9 @@ function PageControls({
       </Button>
     </div>
   );
+}
+
+function requestLabel(requested: boolean, busy: boolean) {
+  if (requested) return "已申请协作权限";
+  return busy ? "正在提交…" : "申请协作权限";
 }
