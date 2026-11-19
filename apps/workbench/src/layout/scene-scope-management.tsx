@@ -5,18 +5,15 @@ import {
   Input,
   NativeSelect,
   Checkbox,
-  Table,
-  TableHeader,
-  TableHead,
-  TableRow,
-  TableBody,
-  TableCell,
+  StatusBadge,
 } from "@vxture/design-system";
 import { usePlatformSession } from "./platform-auth";
 import { sessionScopeKey } from "./session-continuity";
 import { businessEndpoint } from "./business-endpoint";
 import { displayText } from "./display-text";
 import { runGuarded, useUnsavedNavigation } from "./unsaved-navigation";
+
+import { ManagementList, MemberTitle } from "./management-list";
 
 type Member = {
   subject: string;
@@ -79,126 +76,112 @@ function ScopeDirectory() {
   }, [query, offset, refresh, session?.user?.workspace_id]);
   return (
     <>
-      <div className="management-card-heading">
-        <h2>成员数据范围</h2>
-        <span className="text-body-small text-muted-foreground">
-          {data?.member_total || 0} 位{data?.directory_complete?'平台授权成员':'已记录成员'}
-        </span>
-      </div>
-      <div className="management-member-toolbar">
-        <label>
-          搜索成员
-          <Input
-            aria-label="搜索数据范围成员"
-            value={query}
-            placeholder="按成员名称搜索"
-            onChange={(e) => {
-              setQuery(e.target.value);
-              setOffset(0);
-            }}
-          />
-        </label>
-        <Button
-          variant="outline"
-          disabled={!data}
-          onClick={() => setRefresh((value) => value + 1)}
-        >
-          重新读取
-        </Button>
-      </div>
-      {error && <p role="alert">{error}</p>}
-      {!data && !error && <output>正在读取数据范围…</output>}
+      {error && (
+        <div role="alert" className="management-load-error">
+          <p>{error}</p>
+          <Button
+            variant="outline"
+            onClick={() => setRefresh((value) => value + 1)}
+          >
+            重新读取
+          </Button>
+        </div>
+      )}
       {data && !data.can_manage && (
         <p>当前角色无权查看成员数据范围。你的可见场景以“我的场景”列表为准。</p>
       )}
-      {data?.can_manage && (
-        <>
-          <div className="management-member-table">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>成员</TableHead>
-                  <TableHead>场景数据范围</TableHead>
-                  <TableHead>覆盖</TableHead>
-                  <TableHead data-table-actions>操作</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {data.members?.map((member) => (
-                  <TableRow key={member.subject}>
-                    <TableCell>
-                      {displayText(member.display_name, "成员名称待补全")}
-                    </TableCell>
-                    <TableCell>
-                      {member.data_scope === "selected"
-                        ? "指定场景"
-                        : "整个工作区"}
-                    </TableCell>
-                    <TableCell>
-                      {member.data_scope === "selected"
-                        ? member.scope_scene_ids.length + " 个场景"
-                        : "当前及后续场景"}
-                    </TableCell>
-                    <TableCell data-table-actions>
-                      <div className="management-row-actions">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            setSelected(member);
-                            setEdit(false);
-                          }}
-                        >
-                          查看详情
-                        </Button>
-                        {data.can_manage_scope &&
-                          !member.roles.includes("owner") && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => {
-                                setSelected(member);
-                                setEdit(true);
-                              }}
-                            >
-                              设置范围
-                            </Button>
-                          )}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-          {!data.members?.length && <p>没有匹配的成员。</p>}
-          <div className="permission-pages">
-            <span>共 {data.member_total || 0} 位</span>
-            <Button
-              variant="ghost"
-              disabled={!offset}
-              onClick={() => setOffset((value) => Math.max(0, value - 25))}
-            >
-              上一页
-            </Button>
-            <Button
-              variant="ghost"
-              disabled={offset + 25 >= (data.member_total || 0)}
-              onClick={() => setOffset((value) => value + 25)}
-            >
-              下一页
-            </Button>
-          </div>
-          <p className="text-body-small text-muted-foreground">
-            数据范围限定可见场景，功能角色决定可执行操作。
-            {data.directory_complete?'成员名单来自平台当前产品授权。':'当前仅展示本产品已记录成员。'}
-          </p>
-          {!data.can_manage_scope && (
-            <p className="text-body-small text-muted-foreground">
-              工作区级数据范围由所有者维护；当前仅展示你可管理范围内的已知成员。
-            </p>
-          )}
-        </>
+      {((!data && !error) || data?.can_manage) && (
+        <ManagementList
+          title="成员数据范围"
+          icon="cube"
+          count={data?.member_total}
+          loading={!data}
+          offset={offset}
+          onPage={setOffset}
+          toolbar={
+            <div className="management-member-toolbar">
+              <label>
+                <span className="sr-only">搜索成员</span>
+                <Input
+                  aria-label="搜索数据范围成员"
+                  value={query}
+                  placeholder="按成员名称搜索"
+                  onChange={(e) => {
+                    setQuery(e.target.value);
+                    setOffset(0);
+                  }}
+                />
+              </label>
+              <Button
+                variant="outline"
+                disabled={!data}
+                onClick={() => setRefresh((value) => value + 1)}
+              >
+                重新读取
+              </Button>
+            </div>
+          }
+          rows={data?.members || []}
+          rowKey={(member) => member.subject}
+          empty="没有匹配的成员。"
+          columns={[
+            {
+              id: "member",
+              header: "成员",
+              cell: (member) => (
+                <MemberTitle
+                  name={displayText(member.display_name, "成员名称待补全")}
+                  onClick={() => {
+                    setSelected(member);
+                    setEdit(false);
+                  }}
+                />
+              ),
+            },
+            {
+              id: "scope",
+              header: "场景数据范围",
+              width: "md",
+              cell: (member) => (
+                <StatusBadge
+                  tone={member.data_scope === "selected" ? "neutral" : "info"}
+                >
+                  {member.data_scope === "selected" ? "指定场景" : "整个工作区"}
+                </StatusBadge>
+              ),
+            },
+            {
+              id: "coverage",
+              header: "覆盖",
+              cell: (member) =>
+                member.data_scope === "selected"
+                  ? member.scope_scene_ids.length + " 个场景"
+                  : "当前及后续场景",
+            },
+          ]}
+          actions={(member) => [
+            {
+              id: "details",
+              label: "范围详情",
+              onSelect: () => {
+                setSelected(member);
+                setEdit(false);
+              },
+            },
+            ...(data?.can_manage_scope && !member.roles.includes("owner")
+              ? [
+                  {
+                    id: "scope",
+                    label: "设置范围",
+                    onSelect: () => {
+                      setSelected(member);
+                      setEdit(true);
+                    },
+                  },
+                ]
+              : []),
+          ]}
+        />
       )}
       {selected && data?.can_manage && (
         <ScopeDrawer

@@ -42,9 +42,9 @@
 
 .header-context-organization{font-size:var(--body-font-size);line-height:var(--body-line-height);color:var(--foreground)}
 .header-context-organization>svg{width:16px;height:16px}
-.platform-header a[aria-label="配置与管理"]{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:var(--radius-sm);color:var(--muted-foreground)}
-.platform-header a[aria-label="配置与管理"]:hover{background:var(--secondary);color:var(--foreground)}
-.platform-header a[aria-label="配置与管理"]:focus-visible{outline:2px solid var(--ring);outline-offset:2px}
+.platform-header .platform-settings-entry{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:var(--radius-sm);color:var(--muted-foreground)}
+.platform-header .platform-settings-entry:hover{background:var(--secondary);color:var(--foreground)}
+.platform-header .platform-settings-entry:focus-visible{outline:2px solid var(--ring);outline-offset:2px}
 
 .platform-header[data-surface=card],.platform-header[data-surface=background]{border-bottom:1px solid var(--border);box-shadow:none}
 
@@ -72,3 +72,14 @@
 @media(max-width:1100px){.platform-header .header-organization-trigger[aria-label]{max-width:240px}.header-scene-trigger{max-width:160px}}
 @media(max-width:760px){.platform-header{flex-wrap:wrap;height:auto;min-height:64px;row-gap:4px;padding-block:8px}.platform-header>div:first-child{flex-wrap:wrap;flex:1;min-width:0}.header-context{display:flex;order:3;width:100%;height:32px;margin-left:0;gap:8px}.platform-header .header-organization-trigger[aria-label]{max-width:100%}.header-context .header-context-divider,.header-context>.header-scene-trigger,.header-context>.header-context-scene{display:none}.platform-header-actions{gap:4px}}
 @media(max-width:760px){.platform-header{position:relative}.platform-header>div:first-child{flex:none;width:100%}.platform-header>div:last-child{position:absolute;top:8px;right:16px}.header-context{flex-basis:100%}}
+
+/* Reserve full hit targets; context text gives way before the tools do. */
+.platform-header>div:first-child{flex:1;min-width:0}
+.platform-header-actions{flex:none}
+.platform-header .platform-settings-entry{flex:none;width:32px;min-width:32px;height:32px;padding:0}
+.header-context{flex:0 1 auto;overflow:hidden}
+.platform-header .header-organization-trigger[aria-label]{flex-shrink:1}
+.header-scene-trigger{flex-shrink:1}
+@media(max-width:1100px){.platform-header-actions{gap:8px}.header-context{margin-left:8px;gap:8px}}
+@media(max-width:760px){.platform-header>div:first-child{flex:none;row-gap:4px}.header-context{overflow:visible}.platform-header-actions{gap:4px}}
+@media(max-width:420px){.platform-header .cospace-brand>span{display:none}.platform-header{padding-inline:12px}.platform-header>div:first-child{column-gap:8px}.platform-header>div:last-child{right:12px}}

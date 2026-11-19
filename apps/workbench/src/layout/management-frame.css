@@ -30,6 +30,46 @@
 
 .management-row-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.management-drawer-content{display:flex;flex-direction:column;gap:24px;padding-block:8px}.management-drawer-content>button{align-self:flex-start}
 
-.management-role-badges{display:flex;flex-wrap:wrap;gap:6px}.management-role-badges>span{padding:2px 8px;border-radius:var(--radius-md);background:var(--muted);font-size:12px;white-space:nowrap}
+.management-role-badges{display:flex;flex-wrap:wrap;gap:6px}
 
 .management-scope-choices{display:flex;flex-direction:column;gap:12px}.scene-permissions-form .management-scope-choices label{display:flex;flex-direction:row;align-items:center;gap:10px}
+
+/* Yucer shares these DS page, section, table and action-menu components. */
+#workbench-shell .management-domain .spatial-service-content .management-view-layout{padding:24px 32px 64px;max-width:1536px}
+.management-view-layout .management-page-content{margin-top:0;gap:24px}
+.management-breadcrumb{display:flex;align-items:center;gap:10px;min-height:24px;font-size:12px;color:var(--muted-foreground)}
+.management-breadcrumb>a:first-child{display:grid;place-items:center;width:24px;height:24px;border-radius:var(--radius-sm)}
+.management-breadcrumb a:hover{color:var(--foreground);background:var(--accent)}
+.management-breadcrumb a:focus-visible,.management-title-button:focus-visible,.management-member-title:focus-visible{outline:2px solid var(--ring);outline-offset:3px}
+.management-page-help{font-size:14px;line-height:1.7}
+.management-list{min-width:0}
+.management-list-title{display:inline-flex;align-items:center;gap:16px}
+.management-list-count{font-size:12px;font-weight:400;color:var(--muted-foreground)}
+.management-list-toolbar{min-width:0}
+.management-list .management-member-toolbar{justify-content:flex-end;align-items:center;gap:10px}
+.management-list .management-member-toolbar label{flex:0 1 220px;min-width:112px;gap:0}
+.management-list .management-member-toolbar label:has(select){flex:0 0 144px;min-width:0}
+.management-list .management-member-toolbar>button{flex:none;margin-left:auto}
+.management-list .management-member-toolbar input,.management-list .management-member-toolbar select{height:32px;min-height:32px;font-size:12px}
+.management-list [data-slot=button]{min-height:32px}
+.management-list .management-member-toolbar [data-slot=button]{height:32px}
+.management-data-table{min-width:0}
+.management-data-table table{min-width:520px;width:100%;table-layout:fixed}
+.management-data-table th:first-child{width:48px}
+.management-data-table th:last-child{width:64px}
+.management-title-button{display:block;min-width:0;max-width:100%;text-align:left;cursor:pointer;border-radius:var(--radius-sm)}
+.management-member-title{display:flex;align-items:center;gap:10px;min-width:0;max-width:100%;text-align:left;cursor:pointer;border-radius:var(--radius-sm)}
+.management-member-title:hover,.management-title-button:hover{color:var(--primary)}
+.management-member-title>div:last-child{min-width:0}
+.management-list .management-role-badges{gap:4px}
+
+@container(max-width:600px){#workbench-shell .management-domain .spatial-service-content .management-view-layout{padding-inline:24px}.management-list .management-member-toolbar{justify-content:flex-start}.management-list .management-member-toolbar label{flex:1 1 140px}.management-list .management-member-toolbar label:has(select){flex:0 0 128px}}
+@media(max-width:639px){#workbench-shell .management-domain .spatial-service-content .management-view-layout{padding:16px 16px 48px}}
+
+#workbench-shell .management-domain{background:var(--background)}
+#workbench-shell .management-domain .spatial-service-content .management-view-layout{padding-inline:32px}
+@media(max-width:639px){#workbench-shell .management-domain .spatial-service-content .management-view-layout{padding-inline:16px}}
+
+.management-load-error{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px;border:1px solid var(--border);border-radius:var(--radius-md);font-size:14px}
+
+.management-data-table th:nth-child(2){width:40%}
