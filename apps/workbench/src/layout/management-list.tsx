@@ -28,6 +28,7 @@ export function ManagementList<Row>({
   onPage,
   loading = false,
   empty = "没有匹配的记录。",
+  className = "",
 }: {
   readonly title: string;
   readonly icon: IconName;
@@ -42,10 +43,11 @@ export function ManagementList<Row>({
   readonly onPage?: (offset: number) => void;
   readonly loading?: boolean;
   readonly empty?: string;
+  readonly className?: string;
 }) {
   return (
     <Section
-      className="management-list"
+      className={`management-list ${className}`}
       title={
         <span className="management-list-title">
           {title}

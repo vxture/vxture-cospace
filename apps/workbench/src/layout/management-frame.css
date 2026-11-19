@@ -73,3 +73,6 @@
 .management-load-error{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px;border:1px solid var(--border);border-radius:var(--radius-md);font-size:14px}
 
 .management-data-table th:nth-child(2){width:40%}
+.management-permission-list .management-data-table th:nth-child(2){width:auto}
+.management-permission-list .management-data-table th:nth-child(3){width:96px}
+.management-permission-list .management-data-table th:nth-child(4){width:184px}

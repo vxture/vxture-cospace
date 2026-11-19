@@ -91,6 +91,7 @@ export function PermissionCatalog() {
   return (
     <>
       <ManagementList
+        className="management-permission-list"
         title="权限清单"
         icon="shield-check"
         count={filtered.length}
