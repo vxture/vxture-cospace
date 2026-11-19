@@ -11,7 +11,7 @@ function ConfigurationCards({entries}:{readonly entries:readonly Entry[]}){
 export function ManagementOverview(){
  const {space}=useRecordNavigation();
  return <><ConfigurationCards entries={[
-  {title:'成员管理',description:'搜索本产品已记录的成员，查看角色与场景授权范围。',detail:'按成员查看并分配角色',href:managementHref('settings',space,'members'),icon:Users},
+  {title:'成员管理',description:'搜索成员，查看角色与场景授权范围。',detail:'按成员查看并分配角色',href:managementHref('settings',space,'members'),icon:Users},
   {title:'角色管理',description:'了解所有者、管理者、工程师和查看者各自能做什么。',detail:'四种固定角色 · 按范围生效',href:managementHref('settings',space,'roles'),icon:IdentificationCard},
   {title:'权限管理',description:'查看产品操作权限及对应角色。',detail:'按操作查看角色能力',href:managementHref('settings',space,'permissions'),icon:IdentificationCard},
   {title:'场景管理',description:'查看和调整成员的场景授权范围。',detail:'功能角色与场景数据范围独立生效',href:managementHref('settings',space,'scenes'),icon:Cube},

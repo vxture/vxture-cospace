@@ -14,6 +14,7 @@ from starlette.responses import Response as ByteResponse
 from starlette.concurrency import run_in_threadpool
 from packages.infrastructure.platform_identity import PlatformPrincipal, IdentityRejected, IdentityUnavailable
 from packages.infrastructure.platform_subscription import SubscriptionDenied, SubscriptionUnavailable, ApplicationAccessDenied
+from packages.infrastructure.platform_roster import ProductRoster, ProductRosterUnavailable
 from packages.service.platform_resource_access import PlatformResourceAccess
 from packages.lifecycle.space_settings import SpaceSettingsChange, SettingsConflict, SettingsUnavailable
 from packages.data.space_sources import SpaceSources, SourceChange, SourcesConflict, SourcesUnavailable
@@ -81,7 +82,8 @@ class BusinessAccess:
         self.rp,self.policies,self.directory,self.jobs=rp,policies,directory,jobs
         self.subscriptions=subscriptions
         self.workspace_scene_visibility=workspace_scene_visibility
-        self.scene_permissions=ScenePermissions(policies,directory,workspace_scene_visibility=workspace_scene_visibility)
+        roster=ProductRoster(rp,subscriptions.config).read if subscriptions is not None else None
+        self.scene_permissions=ScenePermissions(policies,directory,workspace_scene_visibility=workspace_scene_visibility,roster=roster)
         self.amap=AmapGateway.from_env()
         self.globe=GlobeRuntime.from_env()
         self.scene_pointclouds=ScenePointcloudWorkspace(jobs.inputs,scene_pointcloud_config) if jobs.inputs else None
@@ -964,6 +966,7 @@ class BusinessAccess:
         except PreflightUnavailable:return deny(503,'preflight_records_unavailable')
         except ApplicationAccessDenied:return deny(403,'application_access_required')
         except SubscriptionDenied:return deny(403,'subscription_required')
+        except ProductRosterUnavailable:return deny(503,'product_roster_unavailable')
         except SubscriptionUnavailable:return deny(503,'subscription_unavailable')
         except IdentityUnavailable:return deny(503,'platform_or_policy_unavailable')
         except IdentityRejected:return deny(401,'access_credential_unavailable')
