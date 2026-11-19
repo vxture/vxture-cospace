@@ -13,3 +13,12 @@
 .management-scene-code{display:block;margin-top:4px;color:var(--muted-foreground);font-size:12px;overflow-wrap:anywhere}
 .management-card-actions{display:flex;justify-content:flex-end;gap:8px}
 @media(max-width:639px){.management-card{padding:16px}.management-information{grid-template-columns:minmax(0,1fr)}}
+
+.management-entry-grid,.management-role-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--workspace-content-gap)}
+.management-entry{display:flex;flex-direction:column;gap:12px;min-width:0;padding:24px;border:1px solid var(--border);border-radius:var(--radius-lg);background:var(--card);color:var(--foreground);text-decoration:none}
+.management-entry[href]:hover{border-color:var(--primary);background:var(--accent)}
+.management-entry[href]:focus-visible{outline:2px solid var(--ring);outline-offset:3px}
+.management-entry h2{font-size:16px;font-weight:600}.management-entry p{font-size:14px;color:var(--muted-foreground);line-height:1.7}
+.management-entry-icon{color:var(--primary)}.management-entry-detail{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:auto;padding-top:16px;border-top:1px solid var(--border);font-size:12px;color:var(--muted-foreground)}
+.management-role-facts{display:flex;flex-direction:column;gap:14px;font-size:14px}.management-role-facts dt{color:var(--muted-foreground);margin-bottom:4px}.management-role-facts dd{overflow-wrap:anywhere}
+@media(max-width:900px){.management-entry-grid,.management-role-list{grid-template-columns:minmax(0,1fr)}}

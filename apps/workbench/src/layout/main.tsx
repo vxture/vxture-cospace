@@ -51,7 +51,7 @@ const BuildScan=React.lazy(()=>import('./build-scan').then(module=>({default:mod
 const RealSpace=React.lazy(()=>import('./real-space').then(module=>({default:module.RealSpace})));
 const GlobeEmbed=React.lazy(()=>import('./globe-embed').then(module=>({default:module.GlobeEmbed})));
 
-const names = {...moduleNames,services:'空间服务',settings:'工作区与授权',members:'工作区与授权',identity:'个人信息',account:'个人信息'};
+const names = {...moduleNames,services:'空间服务',settings:'配置与管理',members:'配置与管理',identity:'个人信息',account:'个人信息'};
 type Route = keyof typeof names|'home';
 const adminRoutes:Route[] = ['settings','members','identity','account'];
 const defaults = {workspace:'内部工程空间'};
