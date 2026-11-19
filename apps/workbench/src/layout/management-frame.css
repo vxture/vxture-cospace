@@ -27,3 +27,9 @@
 .management-member-toolbar{display:flex;flex-wrap:wrap;align-items:end;gap:12px}.management-member-toolbar label{display:flex;flex-direction:column;gap:6px;font-size:14px;min-width:160px;flex:1}.management-member-table{overflow:auto}.management-member-meta{display:block;margin-top:4px;font-size:12px;color:var(--muted-foreground)}.management-role-tabs{display:flex;flex-wrap:wrap;gap:8px}
 
 .management-role-list[data-single]{grid-template-columns:minmax(0,1fr)}
+
+.management-row-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.management-drawer-content{display:flex;flex-direction:column;gap:24px;padding-block:8px}.management-drawer-content>button{align-self:flex-start}
+
+.management-role-badges{display:flex;flex-wrap:wrap;gap:6px}.management-role-badges>span{padding:2px 8px;border-radius:var(--radius-md);background:var(--muted);font-size:12px;white-space:nowrap}
+
+.management-scope-choices{display:flex;flex-direction:column;gap:12px}.scene-permissions-form .management-scope-choices label{display:flex;flex-direction:row;align-items:center;gap:10px}

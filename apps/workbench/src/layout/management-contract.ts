@@ -4,7 +4,7 @@ export const managementPages={
  account:{label:'个人信息',description:'查看基本身份与当前工作区内的产品角色。'},
 } as const;
 export function managementPage(route:string):ManagementPage{return route==='identity'||route==='account'?'account':'settings';}
-export function managementHref(route:string,space='',section=route==='members'?'permissions':'overview'){
+export function managementHref(route:string,space='',section=route==='members'?'members':'overview'){
  const page=managementPage(route);
  const params=new URLSearchParams();
  if(page==='settings'){if(space)params.set('space',space);if(section!=='overview')params.set('section',managementSection(section));}
@@ -25,7 +25,8 @@ export const managementSections={
  overview:{label:'概览',description:'管理 CoSpace 产品角色、成员场景授权与业务配置。',icon:'app-grid'},
  members:{label:'成员管理',description:'搜索本产品已记录成员，查看角色并分配场景权限。',icon:'users'},
  roles:{label:'角色管理',description:'查看固定产品角色及其能力边界，按实际场景范围分配。',icon:'user'},
- permissions:{label:'权限管理',description:'分配场景角色、处理协作申请并查看授权调整记录。',icon:'users'},
+ permissions:{label:'权限管理',description:'查看产品操作权限及拥有这些权限的角色。',icon:'shield-check'},
+ scenes:{label:'场景管理',description:'管理成员可见的场景数据范围，与功能权限独立生效。',icon:'cube'},
  advanced:{label:'高级配置',description:'维护现有业务规则与场景配置，按实际授权范围操作。',icon:'shield-check'},
 } as const;
 export type ManagementSection=keyof typeof managementSections;
@@ -34,5 +35,5 @@ export const productRoleDefinitions=[
  {role:'所有者',scene:'全部场景操作',advanced:'系统高级配置',members:'本工作区全部场景授权',scope:'由平台工作区所有权确定'},
  {role:'管理者',scene:'全部场景操作',advanced:'系统高级配置',members:'对应管理范围内授权',scope:'按已授权场景生效'},
  {role:'工程师',scene:'新建、编辑、管理、构建、发布与导出',advanced:'无系统高级配置权限',members:'无人员授权权限',scope:'按已授权场景生效'},
- {role:'查看者',scene:'查看、预览与查询',advanced:'无系统高级配置权限',members:'无人员授权权限',scope:'默认可查看本工作区场景'},
+ {role:'查看者',scene:'查看、预览与查询',advanced:'无系统高级配置权限',members:'无人员授权权限',scope:'默认查看者 · 受数据范围限制'},
 ] as const;

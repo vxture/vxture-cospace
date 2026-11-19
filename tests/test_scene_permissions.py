@@ -403,3 +403,70 @@ def test_visit_directory_pages_and_trusted_display_updates(shared_workbench):
     assert not {m['subject'] for m in first['members']} & {m['subject'] for m in second['members']}
     assert sum(m['display_name'] == '访客已更新' for m in first['members']+second['members']) == 1
     assert policies.load() == before
+
+
+@pytest.mark.parametrize('space_selection', ['one', 'none'])
+def test_data_scope_restricts_default_viewer_without_changing_roles(shared_workbench, space_selection):
+    _, c, accounts, _, _, _, spaces, policies, *_ = shared_workbench
+    request_access(shared_workbench)
+    headers, data = owner(shared_workbench)
+    selected = [spaces[0]['id']] if space_selection == 'one' else []
+    grants = policies.load()[1].grants
+    change = {'expected_revision': data['revision'], 'subject': 'usr_colleague', 'space_ids': selected, 'reason': 'Project data isolation'}
+    response = c.post('/api/scene-permissions/scopes', json=change, headers=headers)
+    assert response.status_code == 200, response.text
+    assert policies.load()[1].grants == grants
+    accounts.roles = ['workspace:member']
+    sign_in(shared_workbench, 'usr_colleague')
+    assert {s['id'] for s in c.get('/api/spaces').json()['spaces']} == set(selected)
+    assert c.get('/api/scene-permissions?summary=true').json()['default_role'] == 'viewer'
+    for scene in spaces:
+        assert c.get('/api/spaces/'+scene['id']).status_code == (200 if scene['id'] in selected else 403)
+    # Resetting the data range restores baseline viewing, without manufacturing grants.
+    headers, data = owner(shared_workbench)
+    change.update(expected_revision=data['revision'], space_ids=None)
+    assert c.post('/api/scene-permissions/scopes', json=change, headers=headers).status_code == 200
+    accounts.roles = ['workspace:member']
+    sign_in(shared_workbench, 'usr_colleague')
+    assert len(c.get('/api/spaces').json()['spaces']) == len(spaces)
+
+
+def test_data_scope_blocks_explicit_engineer_and_manager_capabilities(shared_workbench):
+    _, c, accounts, _, _, _, spaces, policies, *_ = shared_workbench
+    request_access(shared_workbench)
+    headers, data = owner(shared_workbench)
+    assert c.post('/api/scene-permissions/grants', json=body(data, spaces[0]['id'], role='manager'), headers=headers).status_code == 200
+    data = c.get('/api/scene-permissions').json()
+    change = {'expected_revision': data['revision'], 'subject': 'usr_colleague', 'space_ids': [spaces[1]['id']], 'reason': 'Independent data restriction'}
+    assert c.post('/api/scene-permissions/scopes', json=change, headers=headers).status_code == 200
+    accounts.roles = ['workspace:member']
+    sign_in(shared_workbench, 'usr_colleague')
+    assert c.get('/api/source-settings', params={'space_id': spaces[0]['id']}).status_code == 403
+    assert not c.get('/api/scene-permissions').json()['can_manage']
+    assert c.get('/api/spaces/'+spaces[1]['id']).status_code == 200
+    assert c.get('/api/source-settings', params={'space_id': spaces[1]['id']}).status_code == 403
+
+
+@pytest.mark.parametrize('subject', ['usr_colleague', 'usr_engineer', 'usr_manager'])
+def test_data_scope_cannot_be_changed_without_workspace_ownership(shared_workbench, subject):
+    _, c, _, _, _, _, spaces, policies, *_ = shared_workbench
+    headers, _ = sign_in(shared_workbench, subject)
+    original = policies.load()
+    change = {'expected_revision': original[0], 'subject': 'usr_colleague', 'space_ids': [spaces[0]['id']], 'reason': 'Invalid scope adjustment'}
+    assert c.post('/api/scene-permissions/scopes', json=change, headers=headers).status_code == 403
+    assert policies.load() == original
+
+
+def test_data_scope_rechecks_revision_tenant_target_and_csrf(shared_workbench):
+    _, c, _, _, _, _, spaces, policies, *_ = shared_workbench
+    request_access(shared_workbench)
+    headers, data = owner(shared_workbench)
+    change = {'expected_revision': data['revision'], 'subject': 'usr_colleague', 'space_ids': [spaces[0]['id']], 'reason': 'Scope review'}
+    original = policies.load()
+    assert c.post('/api/scene-permissions/scopes', json=change).status_code == 403
+    for update in ({'subject': 'usr_unknown'}, {'subject': 'usr_owner'}, {'space_ids': ['space-'+'f'*16]}, {'space_ids': [spaces[0]['id']]*2}):
+        assert c.post('/api/scene-permissions/scopes', json=change|update, headers=headers).status_code == 403
+    assert c.post('/api/scene-permissions/scopes', json=change|{'reason': '  '}, headers=headers).status_code == 422
+    assert policies.load() == original
+    assert c.post('/api/scene-permissions/scopes', json=change, headers=headers).status_code == 200
+    assert c.post('/api/scene-permissions/scopes', json=change, headers=headers).status_code == 409

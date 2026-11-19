@@ -69,6 +69,51 @@
       ],
       "title": "Grant",
       "type": "object"
+    },
+    "SceneScope": {
+      "additionalProperties": false,
+      "properties": {
+        "issuer": {
+          "maxLength": 2048,
+          "minLength": 1,
+          "title": "Issuer",
+          "type": "string"
+        },
+        "org_id": {
+          "maxLength": 160,
+          "minLength": 1,
+          "title": "Org Id",
+          "type": "string"
+        },
+        "workspace_id": {
+          "maxLength": 160,
+          "minLength": 1,
+          "title": "Workspace Id",
+          "type": "string"
+        },
+        "subject": {
+          "pattern": "^usr_[A-Za-z0-9_-]{1,150}$",
+          "title": "Subject",
+          "type": "string"
+        },
+        "space_ids": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 10000,
+          "title": "Space Ids",
+          "type": "array"
+        }
+      },
+      "required": [
+        "issuer",
+        "org_id",
+        "workspace_id",
+        "subject",
+        "space_ids"
+      ],
+      "title": "SceneScope",
+      "type": "object"
     }
   },
   "additionalProperties": false,
@@ -93,6 +138,14 @@
       },
       "maxItems": 100000,
       "title": "Grants",
+      "type": "array"
+    },
+    "scene_scopes": {
+      "items": {
+        "$ref": "#/$defs/SceneScope"
+      },
+      "maxItems": 100000,
+      "title": "Scene Scopes",
       "type": "array"
     }
   },

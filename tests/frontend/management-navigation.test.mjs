@@ -7,7 +7,7 @@ test('all four management bookmarks reach two canonical destinations without rec
  assert.equal(managementPage('members'),'settings');
  assert.equal(managementPage('identity'),'account');
  assert.equal(managementHref('settings','scene A&B'),'/settings?space=scene+A%26B');
- assert.equal(managementHref('members','scene A&B'),'/settings?space=scene+A%26B&section=permissions');
+ assert.equal(managementHref('members','scene A&B'),'/settings?space=scene+A%26B&section=members');
  for(const route of ['identity','account'])assert.equal(managementHref(route,'scene A&B'),'/account');
  assert.equal(managementHref('settings'),'/settings');
 });

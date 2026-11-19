@@ -31,7 +31,7 @@ from packages.data.rgbd_input_preview import directory as rgbd_directory, frame 
 from packages.construction.build_preview import preview as build_preview
 from packages.construction.build_process import read_process
 from packages.service.space_preparation import preparation
-from packages.service.scene_permissions import ScenePermissions, GrantChange, PermissionConflict, PermissionQuery
+from packages.service.scene_permissions import ScenePermissions, GrantChange, PermissionConflict, PermissionQuery, ScopeChange
 from packages.service.space_access import WorkspaceSceneAccessPolicy
 from packages.data.input_uploads import InputUploads,UploadRejected,MAX_UPLOAD,capabilities as upload_capabilities,metadata as upload_metadata
 from packages.ontology.workspace_authoring import WorkspaceOntologies,DraftChange,SealDraft
@@ -122,6 +122,9 @@ class BusinessAccess:
         access=PlatformResourceAccess(self.directory,self.jobs,policy)
         path=request.url.path; method=request.method; q=request.query_params
         if path=='/api/scene-permissions' and method=='GET' or path=='/api/scene-permissions/requests' and method=='POST':
+            return {'principal':principal}
+        if path=='/api/scene-permissions/scopes' and method=='POST':
+            if not principal.workspace_owner:raise PermissionError()
             return {'principal':principal}
         if path=='/api/scene-permissions/grants' and method=='POST':
             if not policy.workspace_manager(principal):raise PermissionError()
@@ -464,6 +467,10 @@ class BusinessAccess:
                 elif path=='/api/scene-permissions/requests':
                     if body:return deny(422,'scene_permissions_invalid_request')
                     result=await run_in_threadpool(self.scene_permissions.request,context['principal'])
+                elif path=='/api/scene-permissions/scopes':
+                    try:change=ScopeChange.model_validate(body)
+                    except ValidationError:return deny(422,'scene_scope_invalid_request')
+                    result=await run_in_threadpool(self.scene_permissions.change_scope,context['principal'],change)
                 else:
                     try:change=GrantChange.model_validate(body)
                     except ValidationError:return deny(422,'scene_permissions_invalid_request')

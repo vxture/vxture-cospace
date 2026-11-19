@@ -1,20 +1,18 @@
+import {SceneScopeManagement} from './scene-scope-management';
+import {PermissionCatalog} from './permission-catalog';
 import {MemberManagement,RoleManagement} from './member-management';
 import {useSearchParams} from 'react-router-dom';
 import {ManagementOverview,AdvancedConfiguration} from './management-overview';
 import React,{useEffect,useState} from 'react';
-import {ShieldCheck,UserCircle} from '@phosphor-icons/react';
+import {UserCircle} from '@phosphor-icons/react';
 import {usePlatformSession} from './platform-auth';
 import {managementPage,managementSection} from './management-contract';
 import {organizationContext} from './account-profile';
-import {ScenePermissionsPanel} from './scene-permissions';
 import {businessEndpoint} from './business-endpoint';
 import {displayText} from './display-text';
 
 function Information({items}:{readonly items:readonly (readonly [string,string|undefined])[]}){
  return <dl className="management-information">{items.map(([label,value])=><div key={label}><dt>{label}</dt><dd>{displayText(value,'未提供')}</dd></div>)}</dl>;
-}
-function WorkspaceAccess(){
- return <section className="management-card" aria-label="场景权限管理"><h2><ShieldCheck size={20}/>场景权限</h2><ScenePermissionsPanel/></section>;
 }
 function AccountSummary(){
  const session=usePlatformSession(),user=session?.user,context=organizationContext(user);
@@ -38,7 +36,8 @@ export function ManagementWorkspace({route}:{readonly route:string;readonly onLo
  const [params]=useSearchParams();
  const section=managementSection(params.get('section'));
  if(managementPage(route)==='account')return <AccountSummary/>;
- if(section==='permissions')return <WorkspaceAccess/>;
+ if(section==='permissions')return <PermissionCatalog/>;
+ if(section==='scenes')return <SceneScopeManagement/>;
  if(section==='members')return <MemberManagement/>;
  if(section==='roles')return <RoleManagement/>;
  if(section==='advanced')return <AdvancedConfiguration/>;
