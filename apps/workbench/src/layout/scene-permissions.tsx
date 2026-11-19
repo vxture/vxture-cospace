@@ -49,7 +49,7 @@ function ScenePermissions(){
   void runGuarded(()=>{setSubject(nextSubject);setSpace(nextSpace);setReason('');setQuery(value=>({...value,grant_offset:0}));});
  }
  return <div className="scene-permissions-content" aria-busy={busy||loading}>
-  <p>{data?.default_role==='viewer'?'工作区成员默认可查看、预览和查询全部场景。':''}查看者可预览和查询；工程师可新建、编辑、管理和发布场景，拥有全部场景操作权限；管理者增加系统高级配置和人员角色管理权限。场景成员授权由工作区所有者或对应场景管理者维护，所有者保留本工作区全部场景的管理权限。</p>
+  <p>{data?.default_role==='viewer'?'工作区成员默认可查看、预览和查询全部场景。':''}查看者可预览和查询；工程师可新建、编辑、管理和发布场景，拥有全部场景操作权限；管理者增加系统高级配置和人员角色管理权限。场景权限管理由工作区所有者或对应场景管理者维护，所有者保留本工作区全部场景的管理权限。</p>
   {error&&<p role="alert">{error}</p>}{notice&&<p role="status">{notice}</p>}
   <Button size="sm" variant="outline" disabled={busy||loading} onClick={()=>void runGuarded(()=>setRefresh(n=>n+1))}>重新读取权限</Button>
   {loading&&<p role="status">正在读取权限…</p>}
@@ -66,7 +66,7 @@ type EditorProps={query:BrowseQuery;browse:(next:Partial<BrowseQuery>)=>void;dat
 
 function PermissionEditor({data,busy,error,subject,space,role,reason,current,labels,choose,setRole,setReason,submit,query,browse}:EditorProps){
  const members=data.members??[],scenes=data.scenes??[];
- return <section aria-label="成员场景授权"><h3>分配场景权限</h3><p>需要编辑或管理场景的成员，可在“配置与管理 → 成员授权”中申请协作权限，随后在此分配角色。成员无需申请即可查看本工作区场景。</p>
+ return <section aria-label="成员场景授权"><h3>分配场景权限</h3><p>需要编辑或管理场景的成员，可在“配置管理 → 权限管理”中申请协作权限，随后在此分配角色。成员无需申请即可查看本工作区场景。</p>
     <div className="permission-search"><label>查找成员<Input aria-label="搜索授权成员" value={query.members_q} onChange={e=>browse({members_q:e.target.value,member_offset:0})}/></label><PageControls total={data.member_total||0} offset={query.member_offset} busy={busy} onPage={member_offset=>browse({member_offset})}/><label>查找场景<Input aria-label="搜索授权场景" value={query.scenes_q} onChange={e=>browse({scenes_q:e.target.value,scene_offset:0})}/></label><PageControls total={data.scene_total||0} offset={query.scene_offset} busy={busy} onPage={scene_offset=>browse({scene_offset})}/></div>
     <form onSubmit={submit} className="scene-permissions-form">
      <label>成员<NativeSelect aria-label="授权成员" value={subject} disabled={busy} onChange={e=>choose(e.target.value,space)}><option value="">选择成员</option>{subject&&!members.some(m=>m.subject===subject)&&<option value={subject}>已选成员</option>}{members.map(m=><option key={m.subject} value={m.subject}>{displayText(m.display_name,'成员名称待补全')}</option>)}</NativeSelect></label>

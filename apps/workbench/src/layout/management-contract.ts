@@ -1,6 +1,6 @@
 export type ManagementPage='settings'|'account';
 export const managementPages={
- settings:{label:'配置总览',description:'管理 CoSpace 产品角色、成员场景授权与业务配置。'},
+ settings:{label:'概览',description:'管理 CoSpace 产品角色、成员场景授权与业务配置。'},
  account:{label:'个人信息',description:'查看基本身份与当前工作区内的产品角色。'},
 } as const;
 export function managementPage(route:string):ManagementPage{return route==='identity'||route==='account'?'account':'settings';}
@@ -22,9 +22,9 @@ export const capabilityNames:Record<string,string>={
 };
 
 export const managementSections={
- overview:{label:'配置总览',description:'管理 CoSpace 产品角色、成员场景授权与业务配置。',icon:'app-grid'},
+ overview:{label:'概览',description:'管理 CoSpace 产品角色、成员场景授权与业务配置。',icon:'app-grid'},
  roles:{label:'角色说明',description:'查看固定产品角色及其能力边界，按实际场景范围分配。',icon:'user'},
- permissions:{label:'成员授权',description:'分配场景角色、处理协作申请并查看授权调整记录。',icon:'users'},
+ permissions:{label:'权限管理',description:'分配场景角色、处理协作申请并查看授权调整记录。',icon:'users'},
  advanced:{label:'高级配置',description:'维护现有业务规则与场景配置，按实际授权范围操作。',icon:'shield-check'},
 } as const;
 export type ManagementSection=keyof typeof managementSections;
