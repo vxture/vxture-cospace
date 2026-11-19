@@ -14,47 +14,47 @@ type Access={workspace_id:string;can_manage:boolean;revision:number;requested:bo
 const roleLabels:Record<Role|string,string>={viewer:'查看者',engineer:'工程师',manager:'管理者',none:'无权限'};
 const endpoint=businessEndpoint+'/api/scene-permissions';
 
-export function ScenePermissionsPanel(){
+export function ScenePermissionsPanel({initialSubject='',initialRole}:{readonly initialSubject?:string;readonly initialRole?:Role}){
  const session=usePlatformSession();
  if(!session)return <p>登录后可查看工作区场景权限。</p>;
- return <ScenePermissions key={sessionScopeKey(session)}/>;
+ return <ScenePermissions key={sessionScopeKey(session)+initialSubject} {...{initialSubject,initialRole}}/>;
 }
 
-function ScenePermissions(){
+function ScenePermissions({initialSubject,initialRole}:{readonly initialSubject:string;readonly initialRole?:Role}){
  const session=usePlatformSession();
  const [data,setData]=useState<Access|null>(null),[refresh,setRefresh]=useState(0),[busy,setBusy]=useState(false),[loading,setLoading]=useState(true),[error,setError]=useState(''),[notice,setNotice]=useState('');
- const [subject,setSubject]=useState(''),[space,setSpace]=useState(''),[role,setRole]=useState<Role|'none'>('viewer'),[reason,setReason]=useState('');
+ const [subject,setSubject]=useState(initialSubject),[space,setSpace]=useState(''),[role,setRole]=useState<Role|'none'>('viewer'),[reason,setReason]=useState('');
  const [query,setQuery]=useState({members_q:'',scenes_q:'',member_offset:0,scene_offset:0,grant_offset:0});
  function browse(next:Partial<typeof query>){void runGuarded(()=>setQuery(value=>({...value,...next})));}
  const labels:Record<string,string>={...roleLabels,none:data?.default_role==='viewer'?'默认查看者':'无权限'};
  const current=data?.selected_role||'none';
  const dirty=!!reason||!!subject&&!!space&&current!==role;
- const acknowledge=useUnsavedNavigation(dirty,'场景权限调整',{discard:()=>{setSubject('');setSpace('');setReason('');}});
+ const acknowledge=useUnsavedNavigation(dirty,'场景权限调整',{discard:()=>{setSubject(initialSubject);setSpace('');setReason('');}});
  useEffect(()=>{const controller=new AbortController();setLoading(true);setError('');
   fetch(endpoint+'?'+new URLSearchParams({...Object.fromEntries(Object.entries(query).map(([key,value])=>[key,String(value)])),subject,space}),{cache:'no-store',signal:controller.signal}).then(async response=>{
    if(!response.ok)throw Error('暂时无法读取场景权限，请重试。');
    const value:Access=await response.json();
    if(value.workspace_id!==session?.user?.workspace_id||!Number.isSafeInteger(value.revision)||typeof value.can_manage!=='boolean')throw Error('权限信息无法确认，请重试。');
-   if(!controller.signal.aborted){setData(value);setRole(value.selected_role||(value.default_role==='viewer'?'engineer':'viewer'));}
+   if(!controller.signal.aborted){setData(value);setRole(initialRole||value.selected_role||(value.default_role==='viewer'?'engineer':'viewer'));}
   }).catch(e=>{if(!controller.signal.aborted)setError(e instanceof Error?e.message:'读取失败，请重试。');}).finally(()=>{if(!controller.signal.aborted)setLoading(false);});
   return()=>controller.abort();
- },[refresh,session?.user?.workspace_id,query,subject,space]);
+ },[refresh,session?.user?.workspace_id,query,subject,space,initialRole]);
  async function submit(event?:React.FormEvent){event?.preventDefault();if(busy||loading||!data)return;setBusy(true);setError('');setNotice('');
   try{
    await savePermission(data,{subject,space,role,reason});
-   acknowledge();setReason('');setSubject('');setSpace('');setNotice(data.can_manage?'场景权限已保存。成员刷新“我的场景”后即可看到授权结果。':'协作申请已提交，请联系工作区所有者或管理者分配角色。');setRefresh(n=>n+1);
+   acknowledge();setReason('');setSubject(initialSubject);setSpace('');setNotice(data.can_manage?'场景权限已保存。成员刷新“我的场景”后即可看到授权结果。':'协作申请已提交，请联系工作区所有者或管理者分配角色。');setRefresh(n=>n+1);
   }catch(e){setError(e instanceof Error?e.message:'提交失败，请重试。');}finally{setBusy(false);}
  }
  function choose(nextSubject:string,nextSpace:string){
   void runGuarded(()=>{setSubject(nextSubject);setSpace(nextSpace);setReason('');setQuery(value=>({...value,grant_offset:0}));});
  }
  return <div className="scene-permissions-content" aria-busy={busy||loading}>
-  <p>{data?.default_role==='viewer'?'工作区成员默认可查看、预览和查询全部场景。':''}查看者可预览和查询；工程师可新建、编辑、管理和发布场景，拥有全部场景操作权限；管理者增加系统高级配置和人员角色管理权限。场景成员授权由工作区所有者或对应场景管理者维护，所有者保留本工作区全部场景的管理权限。</p>
+  <p>{data?.default_role==='viewer'?'工作区成员默认可查看、预览和查询全部场景。':''}查看者可预览和查询；工程师可新建、编辑、管理和发布场景，拥有全部场景操作权限；管理者增加系统高级配置和人员角色管理权限。场景权限管理由工作区所有者或对应场景管理者维护，所有者保留本工作区全部场景的管理权限。</p>
   {error&&<p role="alert">{error}</p>}{notice&&<p role="status">{notice}</p>}
   <Button size="sm" variant="outline" disabled={busy||loading} onClick={()=>void runGuarded(()=>setRefresh(n=>n+1))}>重新读取权限</Button>
   {loading&&<p role="status">正在读取权限…</p>}
   {data?.can_manage?<>
-   <PermissionEditor {...{data,busy:busy||loading,error,subject,space,role,reason,current,labels,choose,setRole,setReason,submit,query,browse}}/>
+   <PermissionEditor lockedSubject={!!initialSubject} {...{data,busy:busy||loading,error,subject,space,role,reason,current,labels,choose,setRole,setReason,submit,query,browse}}/>
    <PermissionGrants {...{data,busy:busy||loading,labels,choose,query,browse}}/>
    <PermissionHistory {...{data,labels}}/>
   </>:data?<section aria-label="申请协作权限"><h3>申请协作权限</h3><p>你可以查看本工作区全部场景。如需管理资料、构建或发布，请申请协作权限，由工作区所有者或管理者分配角色。</p><Button disabled={busy||data.requested} onClick={()=>void submit()}>{data.requested?'已申请协作权限':busy?'正在提交…':'申请协作权限'}</Button>{data.requested&&<p>请联系工作区所有者或管理者处理；授权后刷新页面以使用对应功能。</p>}</section>:null}
@@ -62,14 +62,14 @@ function ScenePermissions(){
 }
 
 type BrowseQuery={members_q:string;scenes_q:string;member_offset:number;scene_offset:number;grant_offset:number};
-type EditorProps={query:BrowseQuery;browse:(next:Partial<BrowseQuery>)=>void;data:Access;busy:boolean;error:string;subject:string;space:string;role:Role|'none';reason:string;current:string;labels:Record<string,string>;choose:(subject:string,space:string)=>void;setRole:(role:Role|'none')=>void;setReason:(reason:string)=>void;submit:(event?:React.FormEvent)=>Promise<void>};
+type EditorProps={lockedSubject?:boolean;query:BrowseQuery;browse:(next:Partial<BrowseQuery>)=>void;data:Access;busy:boolean;error:string;subject:string;space:string;role:Role|'none';reason:string;current:string;labels:Record<string,string>;choose:(subject:string,space:string)=>void;setRole:(role:Role|'none')=>void;setReason:(reason:string)=>void;submit:(event?:React.FormEvent)=>Promise<void>};
 
-function PermissionEditor({data,busy,error,subject,space,role,reason,current,labels,choose,setRole,setReason,submit,query,browse}:EditorProps){
+function PermissionEditor({lockedSubject,data,busy,error,subject,space,role,reason,current,labels,choose,setRole,setReason,submit,query,browse}:EditorProps){
  const members=data.members??[],scenes=data.scenes??[];
- return <section aria-label="成员场景授权"><h3>分配场景权限</h3><p>需要编辑或管理场景的成员，可在“配置与管理 → 工作区与授权 → 场景权限”中申请协作权限，随后在此分配角色。成员无需申请即可查看本工作区场景。</p>
+ return <section aria-label="成员场景授权"><h3>分配场景权限</h3><p>需要编辑或管理场景的成员，可在“配置管理 → 权限管理”中申请协作权限，随后在此分配角色。成员无需申请即可查看本工作区场景。</p>
     <div className="permission-search"><label>查找成员<Input aria-label="搜索授权成员" value={query.members_q} onChange={e=>browse({members_q:e.target.value,member_offset:0})}/></label><PageControls total={data.member_total||0} offset={query.member_offset} busy={busy} onPage={member_offset=>browse({member_offset})}/><label>查找场景<Input aria-label="搜索授权场景" value={query.scenes_q} onChange={e=>browse({scenes_q:e.target.value,scene_offset:0})}/></label><PageControls total={data.scene_total||0} offset={query.scene_offset} busy={busy} onPage={scene_offset=>browse({scene_offset})}/></div>
     <form onSubmit={submit} className="scene-permissions-form">
-     <label>成员<NativeSelect aria-label="授权成员" value={subject} disabled={busy} onChange={e=>choose(e.target.value,space)}><option value="">选择成员</option>{subject&&!members.some(m=>m.subject===subject)&&<option value={subject}>已选成员</option>}{members.map(m=><option key={m.subject} value={m.subject}>{displayText(m.display_name,'成员名称待补全')}</option>)}</NativeSelect></label>
+     <label>成员<NativeSelect aria-label="授权成员" value={subject} disabled={busy||lockedSubject} onChange={e=>choose(e.target.value,space)}><option value="">选择成员</option>{subject&&!members.some(m=>m.subject===subject)&&<option value={subject}>已选成员</option>}{members.map(m=><option key={m.subject} value={m.subject}>{displayText(m.display_name,'成员名称待补全')}</option>)}</NativeSelect></label>
      <label>场景<NativeSelect aria-label="授权场景" value={space} disabled={busy} onChange={e=>choose(subject,e.target.value)}><option value="">选择场景</option>{space&&!scenes.some(s=>s.id===space)&&<option value={space}>已选场景</option>}{scenes.map(s=><option key={s.id} value={s.id}>{displayText(s.name,'场景名称待补全')}</option>)}</NativeSelect></label>
      <label>角色<NativeSelect aria-label="场景角色" value={role} disabled={busy||!subject||!space} onChange={e=>setRole(e.target.value as Role|'none')}>{Object.entries(labels).map(([key,label])=><option key={key} value={key}>{label}</option>)}</NativeSelect></label>
      {subject&&space&&<p>当前角色：{labels[current]}。{data.default_role==='viewer'?'选择“默认查看者”会撤销额外操作权限，仍保留场景查看。':'选择“无权限”会撤销场景授权。'}</p>}

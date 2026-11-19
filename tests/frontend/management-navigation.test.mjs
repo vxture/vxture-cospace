@@ -6,7 +6,8 @@ import {sceneLinkFromUrl} from '../../apps/workbench/src/layout/navigation-contr
 test('all four management bookmarks reach two canonical destinations without record scope',()=>{
  assert.equal(managementPage('members'),'settings');
  assert.equal(managementPage('identity'),'account');
- for(const route of ['settings','members'])assert.equal(managementHref(route,'scene A&B'),'/settings?space=scene+A%26B');
+ assert.equal(managementHref('settings','scene A&B'),'/settings?space=scene+A%26B');
+ assert.equal(managementHref('members','scene A&B'),'/settings?space=scene+A%26B&section=permissions');
  for(const route of ['identity','account'])assert.equal(managementHref(route,'scene A&B'),'/account');
  assert.equal(managementHref('settings'),'/settings');
 });
@@ -23,4 +24,19 @@ test('viewers can read basic information without gaining build or management ope
  assert.equal(canOpenSceneWorkspace('association','objects',viewer),false);
  assert.equal(canOpenSceneWorkspace('data','inputs',viewer),false);
  assert.equal(canOpenSceneWorkspace('build','flow',['build.run']),true);
+});
+
+
+test('settings sections keep scene scope and reject unknown destinations',async()=>{
+ const {managementSection,managementSections,productRoleDefinitions}=await import('../../apps/workbench/src/layout/management-contract.ts');
+ for(const section of Object.keys(managementSections)){
+  const href=managementHref('settings','scene A&B',section),url=new URL(href,'https://example.test');
+  assert.equal(url.searchParams.get('space'),'scene A&B');
+  assert.equal(managementSection(url.searchParams.get('section')),section);
+ }
+ assert.equal(managementSection('platform-billing'),'overview');
+ assert.equal(managementHref('account','scene','permissions'),'/account');
+ assert.equal(productRoleDefinitions.length,4);
+ assert.equal(productRoleDefinitions.find(r=>r.role==='工程师').members,'无人员授权权限');
+ assert.equal(productRoleDefinitions.find(r=>r.role==='管理者').members,'对应管理范围内授权');
 });

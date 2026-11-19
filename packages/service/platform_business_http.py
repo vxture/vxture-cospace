@@ -360,6 +360,8 @@ class BusinessAccess:
                 if (request.headers.get('origin')!=self.rp.config.origin or request.headers.get('sec-fetch-site')=='cross-site'
                         or not self.rp.csrf_matches(rpsid,request.headers.get('x-cospace-csrf'))):return deny(403,'csrf_rejected')
             await run_in_threadpool(timed_call,'platform_gate',self.require_subscription,session)
+            if path=='/api/spaces' and request.method=='GET':
+                await run_in_threadpool(self.scene_permissions.observe,self.rp.verifier.verify(session['access_token']))
             if path=='/api/globe/config':
                 if request.method not in ('GET','HEAD') or request.query_params:return deny(403,'globe_config_request_rejected')
                 return JSONResponse(self.globe.public(self.rp.config.origin),headers={'Cache-Control':'no-store'})

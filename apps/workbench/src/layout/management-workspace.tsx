@@ -1,7 +1,10 @@
+import {MemberManagement,RoleManagement} from './member-management';
+import {useSearchParams} from 'react-router-dom';
+import {ManagementOverview,AdvancedConfiguration} from './management-overview';
 import React,{useEffect,useState} from 'react';
 import {ShieldCheck,UserCircle} from '@phosphor-icons/react';
 import {usePlatformSession} from './platform-auth';
-import {managementPage} from './management-contract';
+import {managementPage,managementSection} from './management-contract';
 import {organizationContext} from './account-profile';
 import {ScenePermissionsPanel} from './scene-permissions';
 import {businessEndpoint} from './business-endpoint';
@@ -32,6 +35,12 @@ function AccountSummary(){
  ]}/><p className="text-body-small text-muted-foreground">产品角色以实际授权范围生效。</p></section>;
 }
 export function ManagementWorkspace({route}:{readonly route:string;readonly onLogout:()=>void|Promise<void>}){
+ const [params]=useSearchParams();
+ const section=managementSection(params.get('section'));
  if(managementPage(route)==='account')return <AccountSummary/>;
- return <WorkspaceAccess/>;
+ if(section==='permissions')return <WorkspaceAccess/>;
+ if(section==='members')return <MemberManagement/>;
+ if(section==='roles')return <RoleManagement/>;
+ if(section==='advanced')return <AdvancedConfiguration/>;
+ return <ManagementOverview/>;
 }

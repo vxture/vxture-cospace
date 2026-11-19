@@ -328,3 +328,78 @@ def test_permission_query_rejects_invalid_or_ambiguous_paging(secured, query):
     _, c, *_ = secured
     owner(secured)
     assert c.get('/api/scene-permissions?'+query).status_code == (403 if query == 'limit=1&limit=2' else 422)
+
+
+def test_product_visit_registers_known_member_without_request_and_allows_scoped_role(shared_workbench):
+    _, c, accounts, _, _, _, spaces, policies, *_ = shared_workbench
+    before = policies.load()
+    sign_in(shared_workbench, 'usr_colleague')
+    assert c.get('/api/spaces').status_code == 200
+    assert policies.load() == before
+    assert not c.get('/api/scene-permissions').json()['requested']
+    headers, data = owner(shared_workbench)
+    assert data['directory_complete'] is False and data['directory_source'] == 'product_records'
+    member = next(m for m in data['members'] if m['subject'] == 'usr_colleague')
+    assert member['last_seen'] and member['roles'] == ['viewer'] and member['scene_count'] == 0
+    assert c.post('/api/scene-permissions/grants', json=body(data, spaces[0]['id'], role='engineer'), headers=headers).status_code == 200
+    engineers = c.get('/api/scene-permissions?role=engineer').json()
+    member = next(m for m in engineers['members'] if m['subject'] == 'usr_colleague')
+    assert member['roles'] == ['engineer'] and member['scene_count'] == 1
+    assert all('engineer' in m['roles'] for m in engineers['members'])
+    assert engineers['role_counts']['engineer'] == engineers['member_total']
+    data = c.get('/api/scene-permissions').json()
+    assert c.post('/api/scene-permissions/grants', json=body(data, spaces[0]['id'], role=None), headers=headers).status_code == 200
+    member = next(m for m in c.get('/api/scene-permissions?role=viewer').json()['members'] if m['subject'] == 'usr_colleague')
+    assert member['roles'] == ['viewer'] and member['scene_count'] == 0
+
+
+def test_known_visits_isolate_workspace_and_role_projection(shared_workbench):
+    _, c, accounts, *_ = shared_workbench
+    accounts.workspace = 'ws_foreign'
+    sign_in(shared_workbench, 'usr_foreign_visitor')
+    assert c.get('/api/spaces').status_code == 200
+    accounts.workspace = 'ws_mock'
+    owner(shared_workbench)
+    assert not any(m['subject'] == 'usr_foreign_visitor' for m in c.get('/api/scene-permissions').json()['members'])
+    accounts.roles = ['workspace:member']
+    sign_in(shared_workbench, 'usr_manager')
+    data = c.get('/api/scene-permissions?role=engineer').json()
+    assert all(m['scene_count'] <= 1 for m in data['members'])
+    assert c.get('/api/scene-permissions?role=owner').status_code == 422
+
+
+def test_platform_access_denial_does_not_register_a_product_visit(shared_workbench):
+    from packages.infrastructure.platform_subscription import ApplicationAccessDenied
+    from packages.service.platform_business_http import BusinessAccess
+    _, c, _, _, _, _, _, policies, *_ = shared_workbench
+    sign_in(shared_workbench, 'usr_denied_visitor')
+    access = next(m.kwargs['dispatch'].__self__ for m in c.app.user_middleware
+        if isinstance(getattr(m.kwargs.get('dispatch'), '__self__', None), BusinessAccess))
+    class Denied:
+        def require(self, *args, **kwargs):
+            raise ApplicationAccessDenied()
+    access.subscriptions = Denied()
+    assert c.get('/api/spaces').status_code == 403
+    with sqlite3.connect(policies.path) as db:
+        exists = db.execute("SELECT 1 FROM sqlite_master WHERE name='product_member_visits'").fetchone()
+        assert not exists or not db.execute('SELECT 1 FROM product_member_visits WHERE subject=?', ('usr_denied_visitor',)).fetchone()
+
+
+def test_visit_directory_pages_and_trusted_display_updates(shared_workbench):
+    from packages.service.scene_permissions import ScenePermissions, PermissionQuery
+    rp, c, _, _, _, directory, _, policies, *_ = shared_workbench
+    owner(shared_workbench)
+    session, _ = rp.resolve(c.cookies.get(rp.config.cookie_name), active=False, require_access=True)
+    principal = rp.verifier.verify(session['access_token'])
+    service = ScenePermissions(policies, directory, workspace_scene_visibility=True)
+    before = policies.load()
+    for index in range(35):
+        service.observe(replace(principal, subject=f'usr_paged_{index}', display_name=f'访客{index}', governance_roles=('workspace:member',)))
+    service.observe(replace(principal, subject='usr_paged_0', display_name='访客已更新', governance_roles=('workspace:member',)))
+    first = service.read(principal, PermissionQuery(members_q='访客', role='viewer'))
+    second = service.read(principal, PermissionQuery(members_q='访客', member_offset=25, role='viewer'))
+    assert first['member_total'] == second['member_total'] == 35
+    assert len(first['members']) == 25 and len(second['members']) == 10
+    assert not {m['subject'] for m in first['members']} & {m['subject'] for m in second['members']}
+    assert sum(m['display_name'] == '访客已更新' for m in first['members']+second['members']) == 1
+    assert policies.load() == before

@@ -51,7 +51,7 @@ const BuildScan=React.lazy(()=>import('./build-scan').then(module=>({default:mod
 const RealSpace=React.lazy(()=>import('./real-space').then(module=>({default:module.RealSpace})));
 const GlobeEmbed=React.lazy(()=>import('./globe-embed').then(module=>({default:module.GlobeEmbed})));
 
-const names = {...moduleNames,services:'空间服务',settings:'工作区与授权',members:'工作区与授权',identity:'个人信息',account:'个人信息'};
+const names = {...moduleNames,services:'空间服务',settings:'配置管理',members:'配置管理',identity:'个人信息',account:'个人信息'};
 type Route = keyof typeof names|'home';
 const adminRoutes:Route[] = ['settings','members','identity','account'];
 const defaults = {workspace:'内部工程空间'};
@@ -91,7 +91,7 @@ function App(){
  const launcherControl=<Popover open={launcher} onOpenChange={v=>{setLauncher(v);}}><PopoverTrigger asChild><ShellIconButton className="launcher-control" icon="app-grid" label="功能 Launcher" active={launcher}/></PopoverTrigger><ShellPanelContent align="start" sideOffset={12} className="product-launcher-panel"><ProductLauncher route={route} panorama={panorama} hasScene={!!new URLSearchParams(location.search).get('space')} hrefForRoute={target=>moduleLink(target,navigation.space)} onNavigate={()=>setLauncher(false)}/></ShellPanelContent></Popover>;
  const assistantEnabled=assistantAvailable(route);
  const assistantKey=assistantScope(route,location.pathname+location.search,sessionScopeKey(platform));
- const header=(assistant?:{open:boolean;toggle:()=>void})=><ShellHeader height="md" leading={<>{launcherControl}{identity}<HeaderContext/></>} trailing={<div className="platform-header-actions">{assistant&&<Button className="platform-assistant-entry" variant={assistant.open?'secondary':'ghost'} size="icon-xl" aria-label="智能助手" aria-controls="workspace-assistant" title="智能助手" aria-expanded={assistant.open} onClick={assistant.toggle}><Sparkle size={24} className="size-icon-lg"/></Button>}<ShellIconGroup label="全局工具"><ShellThemeToggle currentTheme={theme} onThemeChange={setTheme} buttonLabel="切换主题"/><HeaderSupportControls/><a href={managementHref('settings',navigation.space)} target="_blank" rel="noopener noreferrer" aria-label="配置与管理" title="配置与管理（新标签页）"><Gear size={16}/></a></ShellIconGroup><ShellIconGroup label="账户"><ProductUserMenu onLogout={exit}/></ShellIconGroup></div>}/>;
+ const header=(assistant?:{open:boolean;toggle:()=>void})=><ShellHeader height="md" leading={<>{launcherControl}{identity}<HeaderContext/></>} trailing={<div className="platform-header-actions">{assistant&&<Button className="platform-assistant-entry" variant={assistant.open?'secondary':'ghost'} size="icon-xl" aria-label="智能助手" aria-controls="workspace-assistant" title="智能助手" aria-expanded={assistant.open} onClick={assistant.toggle}><Sparkle size={24} className="size-icon-lg"/></Button>}<ShellIconGroup label="全局工具"><ShellThemeToggle currentTheme={theme} onThemeChange={setTheme} buttonLabel="切换主题"/><HeaderSupportControls/><a href={managementHref('settings',navigation.space)} target="_blank" rel="noopener noreferrer" aria-label="配置管理" title="配置管理（新标签页）"><Gear size={16}/></a></ShellIconGroup><ShellIconGroup label="账户"><ProductUserMenu onLogout={exit}/></ShellIconGroup></div>}/>;
  if(preview&&route==='space'&&new URLSearchParams(location.search).get('embed')==='globe')return <React.Suspense fallback={<main role="status">正在打开三维地球…</main>}><GlobeEmbed/></React.Suspense>;
  const showLoginInfo=()=>setModal({title:'平台登录 · 独立接入验证',body:'已按 yucer 接通 OIDC + PKCE、中央会话与全局登出的独立验证入口。当前工程服务保持 UI 预览，尚未配置 CoSpace 平台客户端和业务空间授权。'});
  const renderWorkspace=()=>{

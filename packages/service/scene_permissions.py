@@ -31,6 +31,7 @@ class GrantChange(BaseModel):
 class PermissionQuery(BaseModel):
     model_config = ConfigDict(extra='forbid')
     summary: bool = False
+    role: str = Field(default='', pattern=r'^(|viewer|engineer|manager)$')
     members_q: str = Field(default='', max_length=100)
     scenes_q: str = Field(default='', max_length=100)
     member_offset: int = Field(default=0, ge=0, le=1_000_000)
@@ -66,6 +67,22 @@ class ScenePermissions:
     @staticmethod
     def exists(db, name):
         return db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?", (name,)).fetchone()
+
+    def observe(self, principal):
+        """Record a verified product visit, never platform membership or seat eligibility."""
+        try:
+            with closing(sqlite3.connect(self.policies.path, timeout=10)) as db, db:
+                db.execute('''CREATE TABLE IF NOT EXISTS product_member_visits(
+                    issuer TEXT,org_id TEXT,workspace_id TEXT,subject TEXT,display_name TEXT,last_seen TEXT,
+                    PRIMARY KEY(issuer,org_id,workspace_id,subject))''')
+                db.execute('''INSERT INTO product_member_visits VALUES(?,?,?,?,?,?)
+                    ON CONFLICT(issuer,org_id,workspace_id,subject) DO UPDATE
+                    SET display_name=excluded.display_name,last_seen=excluded.last_seen
+                    WHERE product_member_visits.display_name<>excluded.display_name
+                       OR substr(product_member_visits.last_seen,1,10)<>substr(excluded.last_seen,1,10)''',
+                    (*self.scope(principal), principal.subject, principal.display_name, now()))
+        except sqlite3.Error as exc:
+            raise IdentityUnavailable('scene_permissions_unavailable') from exc
 
     def request(self, principal):
         # Subject, display name and scope are never accepted from a browser body.
@@ -112,12 +129,11 @@ class ScenePermissions:
         scenes = [{'id': s['id'], 'name': s['name']} for s in self.directory.list('space') if s['id'] in ids]
         grants = [g.model_dump(include={'subject', 'space_id', 'role'}) for g in policy.grants
                   if g.issuer == principal.issuer and g.space_id in ids]
-        members = {s: {'subject': s, 'display_name': n, 'requested_at': t} for s, n, t in requests}
-        for grant in grants:
-            members.setdefault(grant['subject'], {'subject': grant['subject'], 'display_name': '成员名称待补全', 'requested_at': None})
+        members, role_counts = self.member_directory(db, principal, scope, requests, grants, ids)
         events = [json.loads(row[0]) for row in db.execute('''SELECT record FROM scene_access_events
             WHERE issuer=? AND org_id=? AND workspace_id=? ORDER BY revision DESC LIMIT 50''', scope)] if self.exists(db, 'scene_access_events') else []
-        member_page, member_total = page_items(list(members.values()), query.members_q, query.member_offset, query.limit, 'display_name')
+        filtered_members = [member for member in members.values() if not query.role or query.role in member['roles']]
+        member_page, member_total = page_items(filtered_members, query.members_q, query.member_offset, query.limit, 'display_name')
         scene_page, scene_total = page_items(scenes, query.scenes_q, query.scene_offset, query.limit, 'name')
         selected_role = next((g['role'] for g in grants if g['subject'] == query.subject and g['space_id'] == query.space), None)
         visible_grants = [g for g in grants if not query.subject or g['subject'] == query.subject]
@@ -127,11 +143,37 @@ class ScenePermissions:
             return record | {'display_name': names.get(record['subject'], '成员名称待补全'),
                              'scene_name': scene_names.get(record['space_id'], '场景名称待补全')}
         return {'members': member_page, 'scenes': scene_page,
+                         'directory_complete': False, 'directory_source': 'product_records', 'role_counts': role_counts,
                          'grants': [labeled(g) for g in visible_grants[query.grant_offset:query.grant_offset+query.limit]],
                          'member_total': member_total, 'scene_total': scene_total, 'grant_total': len(visible_grants),
                          'selected_role': selected_role,
                          'history': [labeled(e) | {'actor_name': names.get(e['actor'], '操作人名称待补全')}
                                      for e in events if e['space_id'] in ids]}
+
+    def member_directory(self, db, principal, scope, requests, grants, ids):
+        members = {s: {'subject': s, 'display_name': n, 'requested_at': t} for s, n, t in requests}
+        visits = db.execute('''SELECT subject,display_name,last_seen FROM product_member_visits
+            WHERE issuer=? AND org_id=? AND workspace_id=? ORDER BY display_name,subject''', scope).fetchall() if self.exists(db, 'product_member_visits') else []
+        for subject, name, seen in visits:
+            members.setdefault(subject, {'subject': subject, 'requested_at': None})
+            members[subject].update(display_name=name, last_seen=seen)
+        for grant in grants:
+            members.setdefault(grant['subject'], {'subject': grant['subject'], 'display_name': '成员名称待补全', 'requested_at': None})
+        member_roles = {}
+        member_scenes = {}
+        for grant in grants:
+            member_roles.setdefault(grant['subject'], set()).add(grant['role'])
+            member_scenes.setdefault(grant['subject'], set()).add(grant['space_id'])
+        for subject, member in members.items():
+            if subject == principal.subject:
+                member['display_name'] = principal.display_name
+            member['roles'] = sorted(member_roles.get(subject, {'viewer'} if self.workspace_scene_visibility else set()))
+            member['scene_count'] = len(member_scenes.get(subject, set()))
+            if principal.workspace_owner and subject == principal.subject:
+                member['roles'] = ['owner']
+                member['scene_count'] = len(ids)
+        role_counts = {role: sum(role in member['roles'] for member in members.values()) for role in ('viewer', 'engineer', 'manager')}
+        return members, role_counts
 
     def change(self, principal, change):
         try:
@@ -150,8 +192,9 @@ class ScenePermissions:
                 self.tables(db)
                 known = db.execute('''SELECT 1 FROM scene_access_requests
                     WHERE issuer=? AND org_id=? AND workspace_id=? AND subject=?''', (*self.scope(principal), change.subject)).fetchone()
+                visited = db.execute('SELECT 1 FROM product_member_visits WHERE issuer=? AND org_id=? AND workspace_id=? AND subject=?', (*self.scope(principal), change.subject)).fetchone() if self.exists(db, 'product_member_visits') else None
                 ids = {b.space_id for b in policy.bindings if (b.issuer, b.org_id, b.workspace_id) == self.scope(principal)}
-                if not known and not any(g.issuer == principal.issuer and g.space_id in ids and g.subject == change.subject for g in policy.grants):
+                if not known and not visited and not any(g.issuer == principal.issuer and g.space_id in ids and g.subject == change.subject for g in policy.grants):
                     raise PermissionError('scene_member_not_registered')
                 value = policy.model_dump()
                 previous = next((g for g in value['grants'] if (g['issuer'], g['subject'], g['space_id']) ==
