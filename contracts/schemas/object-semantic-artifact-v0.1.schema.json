@@ -1,0 +1,297 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cospace.local/contracts/object-semantic-artifact-v0.1.schema.json",
+  "title": "Fixed object semantic artifact manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "profile",
+    "artifact_id",
+    "revision",
+    "workspace_scope",
+    "space_id",
+    "candidate_id",
+    "consumer_revision",
+    "snapshot_sha256",
+    "source_manifest_sha256",
+    "source_model_sha256",
+    "generated_at",
+    "coverage",
+    "capabilities",
+    "assessment",
+    "evidence_policy",
+    "members"
+  ],
+  "properties": {
+    "profile": {
+      "const": "cospace.object-semantic-artifact/0.1"
+    },
+    "artifact_id": {
+      "type": "string",
+      "pattern": "^semantic-[a-f0-9]{32}$"
+    },
+    "revision": {
+      "const": 1
+    },
+    "workspace_scope": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 160
+    },
+    "space_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 160
+    },
+    "candidate_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 160
+    },
+    "consumer_revision": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 9223372036854775807
+    },
+    "snapshot_sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "source_manifest_sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "source_model_sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "generated_at": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "Z$"
+    },
+    "coverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "scope",
+        "objects_total",
+        "linked_objects",
+        "unlinked_objects",
+        "relations_total",
+        "mapped_relations",
+        "unmapped_relations"
+      ],
+      "properties": {
+        "scope": {
+          "const": "linked_objects_and_mapped_relations"
+        },
+        "objects_total": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000000
+        },
+        "linked_objects": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000000
+        },
+        "unlinked_objects": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000000
+        },
+        "relations_total": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000000
+        },
+        "mapped_relations": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000000
+        },
+        "unmapped_relations": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000000
+        }
+      }
+    },
+    "capabilities": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "object_semantic_query",
+        "geometry_evidence_reverification",
+        "robot_navigation",
+        "robot_task_execution"
+      ],
+      "properties": {
+        "object_semantic_query": {
+          "const": true
+        },
+        "geometry_evidence_reverification": {
+          "const": false
+        },
+        "robot_navigation": {
+          "const": false
+        },
+        "robot_task_execution": {
+          "const": false
+        }
+      }
+    },
+    "assessment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "attribute_validation",
+        "mapped_relation_validation",
+        "professional_review",
+        "field_verification"
+      ],
+      "properties": {
+        "attribute_validation": {
+          "const": "passed"
+        },
+        "mapped_relation_validation": {
+          "enum": [
+            "passed",
+            "not_applicable"
+          ]
+        },
+        "professional_review": {
+          "const": "not_performed"
+        },
+        "field_verification": {
+          "const": "not_performed"
+        }
+      }
+    },
+    "evidence_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "model",
+        "attachments",
+        "audit_identity_policy"
+      ],
+      "properties": {
+        "model": {
+          "const": "external_reference"
+        },
+        "attachments": {
+          "const": "references_only"
+        },
+        "audit_identity_policy": {
+          "const": "artifact_scoped_pseudonyms"
+        }
+      }
+    },
+    "members": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "object-index.json",
+        "definitions.json",
+        "claims.json",
+        "validation.json"
+      ],
+      "properties": {
+        "object-index.json": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "sha256",
+            "bytes",
+            "media_type"
+          ],
+          "properties": {
+            "sha256": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            },
+            "bytes": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 8388608
+            },
+            "media_type": {
+              "const": "application/json"
+            }
+          }
+        },
+        "definitions.json": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "sha256",
+            "bytes",
+            "media_type"
+          ],
+          "properties": {
+            "sha256": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            },
+            "bytes": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 8388608
+            },
+            "media_type": {
+              "const": "application/json"
+            }
+          }
+        },
+        "claims.json": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "sha256",
+            "bytes",
+            "media_type"
+          ],
+          "properties": {
+            "sha256": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            },
+            "bytes": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 8388608
+            },
+            "media_type": {
+              "const": "application/json"
+            }
+          }
+        },
+        "validation.json": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "sha256",
+            "bytes",
+            "media_type"
+          ],
+          "properties": {
+            "sha256": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            },
+            "bytes": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 8388608
+            },
+            "media_type": {
+              "const": "application/json"
+            }
+          }
+        }
+      }
+    }
+  }
+}
