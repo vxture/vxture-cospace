@@ -66,7 +66,7 @@ export function SceneOntologyLinksPanel({spaceId,candidateId,active}:{spaceId:st
  }
  const filtered=(data?.objects||[]).filter(item=>!query||`${item.name} ${item.object_id}`.toLocaleLowerCase().includes(query.toLocaleLowerCase()));
  return <section className="association-semantic-links" aria-label="对象本体引用">
-  <header className="workspace-section-heading"><div><h3><Books size={20}/>对象本体引用</h3><p>引用已发布的固定定义；对象属性校验与纳入服务发布另行处理。</p></div></header>
+  <header className="workspace-section-heading association-stage-heading"><div><h3><Books size={20}/>对象本体引用</h3><p>引用已发布的固定定义；对象属性校验与纳入服务发布另行处理。</p></div></header>
   <div className="association-semantic-toolbar"><span>共 {data?.objects.length??'—'} 项，已引用 {data?.links.length??'—'} 项</span><Input aria-label="搜索引用对象" placeholder="搜索对象名称或标识" value={query} maxLength={160} onChange={event=>setQuery(event.target.value)}/><Button variant="outline" disabled={loading||!!editing} onClick={()=>setRefresh(value=>value+1)}>刷新</Button></div>
   {loading&&<output>正在读取对象本体引用…</output>}
   {error&&!editing&&<p role="alert">{error}</p>}{notice&&<output>{notice}</output>}
