@@ -26,5 +26,5 @@ export function chooseDependency(bundle:Bundle,moduleId:string,reference:Referen
  target.requires=target.requires.map(r=>r.module_id===reference.module_id?reference:r);
  const modules=new Map(result.modules.map(m=>[m.module_id,m]));for(const m of dependency.modules)modules.set(m.module_id,structuredClone(m));modules.set(moduleId,target);
  const wanted=new Set<string>();function visit(id:string){if(wanted.has(id))return;wanted.add(id);const m=modules.get(id);if(!m)throw Error('依赖闭包不完整。');m.requires.forEach(r=>visit(r.module_id));}visit(moduleId);
- return {profile:bundle.profile,modules:[...wanted].sort().map(id=>modules.get(id)!)};
+ return {profile:bundle.profile,modules:[...wanted].sort((a,b)=>a.localeCompare(b)).map(id=>modules.get(id)!)};
 }

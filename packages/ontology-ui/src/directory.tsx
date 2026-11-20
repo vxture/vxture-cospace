@@ -10,7 +10,7 @@ export function OntologyDirectory({client,category,selection,onSelect,refresh=0,
  const [data,setData]=useState<DirectoryPage|null>(null),[library,setLibrary]=useState<Library|null>(null),[loading,setLoading]=useState(true),[error,setError]=useState(''),[notice,setNotice]=useState('');
  const [editing,setEditing]=useState<ResourceSummary|null>(null),[chosen,setChosen]=useState<string[]>([]),[busy,setBusy]=useState(false);
  const snapshot=useRef(''),request=useRef<MembershipChange|null>(null),gate=useRef(false),saving=useRef<AbortController|null>(null);
- const dirty=!!editing&&[...chosen].sort().join('|')!==[...editing.group_ids].sort().join('|');
+ const dirty=!!editing&&[...chosen].sort((a,b)=>a.localeCompare(b)).join('|')!==[...editing.group_ids].sort((a,b)=>a.localeCompare(b)).join('|');
  useEffect(()=>{onDirtyChange?.(dirty);return()=>onDirtyChange?.(false);},[dirty,onDirtyChange]);
  useEffect(()=>()=>saving.current?.abort(),[]);
  useEffect(()=>{snapshot.current='';setPage(1);setEditing(null);setNotice('');},[category]);
