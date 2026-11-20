@@ -1,3 +1,4 @@
+import {OntologyGroupSettings} from './ontology-group-settings';
 import {SceneScopeManagement} from './scene-scope-management';
 import {PermissionCatalog} from './permission-catalog';
 import {MemberManagement,RoleManagement} from './member-management';
@@ -40,6 +41,7 @@ export function ManagementWorkspace({route}:{readonly route:string;readonly onLo
  if(section==='scenes')return <SceneScopeManagement/>;
  if(section==='members')return <MemberManagement/>;
  if(section==='roles')return <RoleManagement/>;
+ if(section==='ontology-groups')return <OntologyGroupSettings/>;
  if(section==='advanced')return <AdvancedConfiguration/>;
  return <ManagementOverview/>;
 }

@@ -1,0 +1,27 @@
+{
+  "name": "@vxture/ontology-ui",
+  "version": "0.1.0-dev.0",
+  "type": "module",
+  "files": [
+    "src",
+    "README.md"
+  ],
+  "exports": {
+    ".": "./src/library.tsx",
+    "./contract": "./src/contract.ts",
+    "./styles": "./src/styles.css",
+    "./group-configuration": "./src/group-configuration.tsx",
+    "./directory": "./src/directory.tsx",
+    "./directory-contract": "./src/directory-contract.ts",
+    "./authoring": "./src/authoring.tsx",
+    "./authoring-contract": "./src/authoring-contract.ts"
+  },
+  "peerDependencies": {
+    "react": ">=19 <20",
+    "@vxture/design-system": "^15.6.1",
+    "@phosphor-icons/react": "^2.1.10"
+  },
+  "devDependencies": {
+    "@types/react": "19.3.0"
+  }
+}

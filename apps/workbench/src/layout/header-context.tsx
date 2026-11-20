@@ -10,8 +10,8 @@ import {useLocation} from 'react-router-dom';
 import {OrganizationContext} from './organization-context';
 
 export function HeaderContext(){
- const {pathname}=useLocation();
- if(pathname==='/'||pathname==='/space'||pathname==='/services'){
+ const {pathname,search}=useLocation();
+ if(pathname==='/'||pathname==='/space'||pathname==='/services'||pathname==='/ontology'||pathname==='/settings'&&new URLSearchParams(search).get('section')==='ontology-groups'){
   return <div className="header-context" aria-label="组织与工作区"><OrganizationContext/></div>;
  }
  return <SceneHeaderContext/>;

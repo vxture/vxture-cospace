@@ -23,6 +23,8 @@ export function sceneLinkFromUrl(route:ModuleRoute,space:string,url:string){
 // from the previous scene; retain only the current service navigation section.
 export function headerSceneLinkFromUrl(space:string,url:string){
  const [path,search='']=url.split('?');
+ // Public ontology definitions have no active-scene dependency.
+ if(path==='/ontology')return url;
  if(path==='/space'&&!new URLSearchParams(search).has('space')&&new URLSearchParams(search).get('screen')!=='space')return url;
  const route=path.slice(1) as ModuleRoute;
  if(['space','data','build','delivery','association','ontology'].includes(route))return sceneLinkFromUrl(route,space,url);

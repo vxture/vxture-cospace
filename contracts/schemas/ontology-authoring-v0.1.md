@@ -1,40 +1,78 @@
-# Workspace 本体维护与模型选点 0.1
+# 独立本体编制与版本服务 v0.1
 
-P21实现。维护定义与场景实例分开：规则属于平台Workspace，实例属于一个场景空间中的候选模型。发布和离线包继续固定规则版本及SHA-256。
+日期：2026-11-20。B04a 服务内核与参考存储端口。实现为 `packages/ontology/kernel/authoring.py`，独立包导入 `vxture_ontology.authoring`；SQLite 参考适配器位于 `packages/ontology/authoring_sqlite.py`。本批未接入 CoSpace HTTP 或业务页面，不能据此认定界面编辑/发布按钮可用。
 
-## 1. 规则维护
+同日 B04b 增量：已通过宿主适配器接入 `/api/ontology-definitions` 与详情页 DS 业务表单、版本/发布抽屉；以下 B04a 纯服务与存储协议保持不变，HTTP 细则见本文末尾。目录日期改为真实发布记录，不影响定义内容成熟度。
 
-| 接口 | 用途 |
-| --- | --- |
-| `GET /api/ontology-authoring` | 当前Workspace、can_edit、已保存草稿及修改历史 |
-| `POST /api/ontology-authoring/validate` | `{definition: {...}}`；校验现有本体0.1／0.2规范，不保存 |
-| `POST /api/ontology-authoring/drafts` | 保存同一草稿的下一修订，或精确请求重试 |
-| `POST /api/ontology-authoring/seal` | 将已保存且通过规则校验的固定修订保存为不可覆盖版本 |
+## 边界与装配
 
-草稿保存请求见[JSON Schema](ontology-draft-change-v0.1.schema.json)，固定版本请求见[JSON Schema](ontology-draft-seal-v0.1.schema.json)。维护请求使用既有平台会话、Origin和CSRF检查。Workspace归属由已验证身份的issuer、org_id、workspace_id共同确定；actor取服务端subject，客户端不能提交或指定归属。
+`DefinitionAuthoring(port, authorize=..., clock=...)` 通过显式注入的存储事务端口和授权函数提供编制用例。内核不导入 SQLite、HTTP、平台身份、场景、地图或商业权益；存储端口可替换，SQLite 适配器不导入宿主服务。独立 wheel 只包含编制内核，不包含该 SQLite 适配器；独立宿主须提供符合端口的持久存储实现。
 
-首版只有平台`workspace:owner`可维护，场景manager不隐式获得工作区规则编辑权。认证用户可读取当前Workspace规则；应用规则仍需对应场景的association.edit权限。共享预置模板只读，不能用同ID同版本覆盖。
+授权函数 `authorize(scope, actor, action)` 仅返回严格 True 才允许；action 为 read/edit/submit/review/publish，由宿主把真实可信身份与权限映射到该接口。scope/actor 必须由认证宿主提供，绝不信任浏览器提交的用户名称或自由构造的作用域。每次操作和幂等重放均重新检查权限。示例和测试中的角色名称只是测试数据，不是生产权限策略。
 
-保存字段：`draft_id`为`draft-`加32位十六进制；新草稿`expected_revision=0`，后续必须匹配当前修订；`request_id`为32位十六进制；`definition`为JSON对象；`reason`为去空白后非空、最多500字。定义最多64KiB。校验未通过的定义可以保存为草稿，不能保存为固定版本。
+时钟默认 UTC，可显式注入可信时钟便于测试；不接受浏览器指定发布时间。此处的 scope 是存储分区，不是平台订阅或商业配额。
 
-草稿响应含revision、sha256、完整definition、history、sealed。历史事件保存服务端操作者、UTC时间、原因、请求摘要、上一事件摘要与当前事件摘要。读取校验连续修订、定义摘要、事件链和Workspace归属；损坏时停止读取。相同请求ID、内容及actor重试不新增修订；内容或修订冲突返回409。固定版本请求还必须匹配草稿摘要，不能覆盖同ID同版本的不同内容。
+## 操作契约
 
-已固定草稿只读。修改规则可复制到新草稿、显式保存新版本；不会自动迁移任何场景、候选或发布。固定版完全相同的重试返回原记录及原审计信息。
+| 操作 | 输入要点 | 结果 |
+| --- | --- | --- |
+| save | scope/actor/request_id、module_id、expected_revision、bundle、base_reference? | 保存当前草稿，返回修订、摘要、定义包、来源基版、时间与操作者 |
+| read_draft | scope/actor/module_id | 当前草稿副本 |
+| validate | scope/actor/module_id/revision | 当前修订的 valid、draft_sha256、可定位 diagnostics |
+| compare | scope/actor/module_id/revision | 与显式基版的结构差异：path 和 added/removed/changed |
+| submit | scope/actor/request_id、module_id、expected_revision | 固定提交快照及摘要的 pending 审批单 |
+| read_review | scope/actor/review_id | 含原始提交定义包的审批单，可在草稿后来修改后继续查看当时内容 |
+| decide | scope/actor/request_id、review_id、decision=approved/rejected、reason | 绑定原修订及摘要的审批结果 |
+| publish | scope/actor/request_id、review_id、expected_revision | 发布记录，冻结完整依赖包 |
+| read_release | scope/actor、精确 reference | 不可变发布记录和定义包 |
+| list_releases | scope/actor/module_id | 该模块版本及真实发布时间，按数值版本降序 |
 
-类型、字符串属性长度／必填，以及包含／连接关系沿用[本体0.1 Schema](preview-ontology-v0.1.schema.json)和[本体0.2 Schema](preview-ontology-v0.2.schema.json)。端点类型存在、长度区间、包含单父／无环、连接双向及重复等检查继续使用已有规则。首版没有新增复杂属性类型或OWL／SHACL转换。
+request_id 为 32 位小写十六进制。相同作用域中同一请求 ID，只允许同 actor/action/规范化 payload 重放；不一致返回 request_conflict。每个请求结果持久保存，不因网络重试重复送审、修改修订或发布。返回深复制，调用方不能直接修改存储状态。
 
-固定版本继续通过`GET /api/ontologies`及`GET /api/ontologies/{id}/{version}?sha256=...`读取。列表scope为shared_template或workspace_rules；单版读取返回同类scope和原record／definition。固定记录authoring包含Workspace、actor、草稿ID／修订、原因、保存时间与草稿事件摘要。
+## 草稿与校验
 
-私有定义存于`preview-ontologies/.workspaces/{workspace_hash}/{id}/{version}/`，草稿存于该Workspace目录的`drafts.sqlite3`。这些是本机审计资料，尚非外部签名审计服务。
+每个作用域每模块一个当前草稿，首次 expected_revision=0，其后必须匹配当前整数修订。None、布尔值和字符串不能绕过并发控制。相同修订的并发写入只能一个成功，失败返回 revision_changed。没有新增“修改记录”页面。
 
-## 2. 模型画面选点
+草稿允许语义不完整的中间编辑，例如暂时失效的上位概念或关系引用；保存仍要求 JSON 可规范编码、1 MiB 内、正确库载体、模块 ID 不重复、目标唯一且具有合法版本/status=draft。完整字段、概念/属性/关系、依赖和继承由单独 validate 检查；不能把保存成功显示为校验通过。
 
-`GET /candidates/{candidate_id}/api/anchor-preview`。权限为当前场景association.edit，响应见[JSON Schema](anchor-preview-v0.1.schema.json)。
+validate 调用独立 Catalog，必须是目标模块及其准确依赖闭包，不允许混入无关模块。此处是定义校验，不是 B03 的现场实例包校验。差异比较是结构比较，不声称自动证明实例兼容；依赖变化、删除或必填变化需后续消费方影响评估。
 
-返回固定模型摘要、原spatial.npz摘要、场景、局部坐标轴／frame、原模型点数、完整范围及有界点／颜色抽样。最多10,000点，最多2MiB；抽样方法file_index_stride，`stride=max(1,ceil(point_count/10000))`。抽样第i点对应原模型索引`i*stride`。缺少三轴声明返回409，不填造坐标语义。
+## 审批与发布
 
-双击画面中投影附近的实际模型点后，调用既有`GET /candidates/{id}/api/anchor?point_index=...`重新读取原模型位置。前端再次核对候选、模型摘要、坐标系与索引；切场景或模型清空位置并忽略迟到响应。拖动旋转和背景双击不建立位置；渲染失败仍可用原模型索引读取锚点。
+送审前再次完整校验，并确认所有依赖已在本作用域中按准确版本和摘要发布。内置候选定义不是自动发布的版本；如需导入，必须显式执行保存、送审、审批和发布流程，先依赖后目标。
 
-对象提交继续走`POST /api/semantic-candidates`；关系继续走`POST /api/relation-candidates`。服务端按固定模型重新取坐标并校验固定规则。锚点属于几何证据，不能证明所填对象类型或关系属实；所有confirmation=unverified，robot_ready=false。新候选仍需人工核对选择、再单独发布。
+审批单存提交时的定义包、修订和摘要。审批者必须与送审者不同；自审拒绝。草稿改动后旧 pending 审批无法批准，旧 approved 审批无法用于发布。驳回后要重新送审，不能修改旧审批单来变成通过。实际权限角色由宿主决定，测试用虚拟审批不构成真实专业审核。
 
-401／403表示会话或权限不满足，422表示请求格式错误，409表示修订、规则或固定证据不满足；读取不属于当前Workspace的私有本体返回404。业务错误不能触发覆盖或自动迁移。
+发布前再次校验、检查审批、修订和摘要，并要求新版本在数值上高于该模块所有已发布版本。模块 ID + version 唯一，已发布版本不能覆盖；即便内容相同也只能用原请求 ID 重放取得相同结果。发布记录包含精确 module reference、定义及依赖闭包、bundle_sha256、发布时间/操作者与审批快照。读取时检查定义及整包摘要，错误引用明确失败，不返回最新版替代。
+
+新草稿可以基于明确的历史发布 reference：版本必须推进，base_reference 一般保持不变。一个当前草稿完成发布后，可以把刚发布的版本设为下一轮基版；只有该基版内容与当前草稿摘要相同才允许这一切换。这样既保留当前编辑并发修订，也保留旧发布记录。
+
+发布 envelope 的 `state=published` 表示经过上述治理流程并冻结了一个可取回工件；定义 profile 0.1 的 `status=draft` 仍表示内容语义成熟度为候选，两者分离，不改动内容字段伪称专家签核或外部标准正式等价。CoSpace 当前目录没有接入这些发布记录，继续显示“草案/未发布”；B04b 必须明确展示工件发布状态与内容成熟度，不得仅因有时间字段就自动把全部候选概念标成正式标准。
+
+## 存储端口
+
+`AuthoringPort.transaction(scope)` 是上下文管理器，yield 当前分区的可变字典。port 必须串行化该作用域所有修改，成功时原子提交，异常时完全回滚。状态含 drafts/reviews/releases/receipts 四个映射；端口受信任，服务返回值与其内存状态隔离。不能把无锁进程内字典当作并发持久存储。
+
+SQLite 参考实现使用注入 root 下的 ontology-authoring.sqlite3；scope 用 SHA256 转为分区键，BEGIN IMMEDIATE 串行事务、10 秒等待。单分区 JSON 状态最多 16 MiB，超过时回滚并返回 state_budget。该限制是参考适配器保护，不是商业权益限制。它不提供海量版本索引、跨进程审批通知、分片、备份恢复或收据清理；生产大规模存储应替换适配器，并保持相同事务语义。
+
+端口和文件系统仍由宿主保护；摘要不是数字签名，不能抵御有数据库写权限者同时伪造内容和摘要。原有旧 preview 版本库、场景核验及正式发布链路保持兼容，未在本批迁移。
+
+## B04b 接入要求
+
+对象页中区分查看、编辑、送审、审批和发布，不添加数据导航或二次导航。编辑概念/属性/关系采用现有 DS 表单/抽屉，不把 JSON 原文编辑器作为普通业务入口。HTTP 必须先认证授权并验证 CSRF，再把可信 scope/actor 注入上述服务；分页目录须按真实发布记录显示日期，历史定义按准确引用读取。页面接入前不能启用假保存或假发布按钮。
+
+## B04b 已实现的宿主 HTTP
+
+`GET|HEAD /api/ontology-definitions?module_id=...` 返回 `vxture.ontology-workbench/0.1`：can_manage、source_bundle、draft、releases、reviews、validation、comparison。普通业务用户只能读取已发布/内置候选定义与发布版本摘要；私有草稿、审批和基版差异仅工作空间管理者可读。source_bundle 来自准确发布快照，未发布模块使用原内置候选定义。
+
+`GET|HEAD /api/ontology-definitions?module_id=...&version=...&sha256=...` 返回准确发布版本的定义与依赖闭包，保持现有目录响应格式，供 parseLibrary 消费。准确匹配的原内置引用仍可读；其他不存在的引用明确失败。
+
+`GET|HEAD /api/ontology-definitions?review_id=...` 仅管理者可读取当时送审的固定定义包，与当前草稿分离。该端点不把 rejected/pending 草稿开放给普通读取者。
+
+`POST /api/ontology-definitions` 接收 action：save/validate/submit/decide/publish，字段与上表相同，未知字段拒绝；validate 不接收 request_id，其余操作必须有。所有写方法沿用平台认证、工作空间管理权限、Origin/CSRF 和会话有效性检查。scope 由可信 issuer/org/workspace 编码，actor 来自主体，不接收浏览器指定身份或分区。此首版管理者可执行各治理操作，但不能批准自己的提交；更细的编辑/审批/发布角色可由宿主后续映射，不在纯内核硬编码账号。
+
+所有响应 Cache-Control=no-store。未认证 401、无权/CSRF 不满足 403、字段非法 422、修订/审批/版本冲突 409、存储或定义损坏 503。错误不携带私有文件路径。重复 query 沿用宿主统一拒绝。
+
+目录 `/api/ontology-resources` 在可信作用域内叠加各模块最新已发布版本，只把它用于摘要显示；不能把多个各自依赖旧版核心的目录条目拼成一个可解释定义包。`/definition` 始终通过对应发布快照返回自身闭包，因此通用核心升版不会使旧领域版本改用新核心。草稿保存不改变目录共享定义或发布日期。
+
+首版业务表单从现有模块进入，支持元数据与概念/属性/关系新建、编辑、从草稿移除，依赖选择仅引用已发布版本。整体新模块创建向导、任意文件导入、批量编辑、依赖影响分析、正式专业标准成熟度工作流不在本批范围；不宣称完整行业标准治理平台。

@@ -1,0 +1,372 @@
+{
+  "profile": "vxture.ontology-negative-matrix/0.1",
+  "cases": [
+    {
+      "id": "missing-namespace",
+      "base": "manufacturing",
+      "patches": [
+        {
+          "op": "remove",
+          "path": "/namespace"
+        }
+      ],
+      "stage": "schema",
+      "expected": {
+        "code": "schema_invalid",
+        "path": "/namespace"
+      }
+    },
+    {
+      "id": "host-field",
+      "base": "manufacturing",
+      "patches": [
+        {
+          "op": "add",
+          "path": "/workspace_id",
+          "value": "host-owned"
+        }
+      ],
+      "stage": "schema",
+      "expected": {
+        "code": "schema_invalid",
+        "path": "/workspace_id"
+      }
+    },
+    {
+      "id": "non-utc-time",
+      "base": "manufacturing",
+      "patches": [
+        {
+          "op": "replace",
+          "path": "/generated_at",
+          "value": "2026-11-20T08:00:00+08:00"
+        }
+      ],
+      "stage": "schema",
+      "expected": {
+        "code": "schema_invalid",
+        "path": "/generated_at"
+      }
+    },
+    {
+      "id": "invalid-calendar",
+      "base": "manufacturing",
+      "patches": [
+        {
+          "op": "replace",
+          "path": "/generated_at",
+          "value": "2026-13-20T00:00:00Z"
+        }
+      ],
+      "stage": "schema",
+      "expected": {
+        "code": "schema_invalid",
+        "path": "/generated_at"
+      }
+    },
+    {
+      "id": "unpaired-unit",
+      "base": "manufacturing",
+      "patches": [
+        {
+          "op": "remove",
+          "path": "/entities/11/properties/rated_voltage/quantity"
+        }
+      ],
+      "stage": "schema",
+      "expected": {
+        "code": "schema_invalid",
+        "path": "/entities/11/properties/rated_voltage/quantity"
+      }
+    },
+    {
+      "id": "mixed-synthetic",
+      "base": "manufacturing",
+      "patches": [
+        {
+          "op": "replace",
+          "path": "/sources/0/synthetic",
+          "value": false
+        }
+      ],
+      "stage": "schema",
+      "expected": {
+        "code": "schema_invalid",
+        "path": "/sources/0/synthetic"
+      }
+    },
+    {
+      "id": "digest-mismatch",
+      "base": "manufacturing",
+      "patches": [
+        {
+          "op": "replace",
+          "path": "/definition_refs/0/sha256",
+          "value": "0000000000000000000000000000000000000000000000000000000000000000"
+        }
+      ],
+      "stage": "semantic",
+      "expected": {
+        "code": "definition_mismatch",
+        "path": "/definition_refs/0/sha256"
+      }
+    },
+    {
+      "id": "duplicate-identity",
+      "base": "manufacturing",
+      "patches": [
+        {
+          "op": "replace",
+          "path": "/entities/1/id",
+          "value": "site"
+        }
+      ],
+      "stage": "semantic",
+      "expected": {
+        "code": "duplicate_id",
+        "path": "/entities/1/id"
+      }
+    },
+    {
+      "id": "dangling-target",
+      "base": "manufacturing",
+      "patches": [
+        {
+          "op": "replace",
+          "path": "/assertions/0/object_id",
+          "value": "missing"
+        }
+      ],
+      "stage": "semantic",
+      "expected": {
+        "code": "unresolved_entity",
+        "path": "/assertions/0/object_id"
+      }
+    },
+    {
+      "id": "wrong-endpoint",
+      "base": "manufacturing",
+      "patches": [
+        {
+          "op": "replace",
+          "path": "/assertions/5/object_id",
+          "value": "cabinet"
+        }
+      ],
+      "stage": "semantic",
+      "expected": {
+        "code": "endpoint_type_mismatch",
+        "path": "/assertions/5/object_id"
+      }
+    },
+    {
+      "id": "missing-name",
+      "base": "manufacturing",
+      "patches": [
+        {
+          "op": "remove",
+          "path": "/entities/11/properties/name"
+        }
+      ],
+      "stage": "semantic",
+      "expected": {
+        "code": "required_property",
+        "path": "/entities/11/properties/name"
+      }
+    },
+    {
+      "id": "wrong-scalar",
+      "base": "manufacturing",
+      "patches": [
+        {
+          "op": "replace",
+          "path": "/entities/11/properties/name/value",
+          "value": true
+        }
+      ],
+      "stage": "semantic",
+      "expected": {
+        "code": "property_type_mismatch",
+        "path": "/entities/11/properties/name/value"
+      }
+    },
+    {
+      "id": "wrong-unit",
+      "base": "manufacturing",
+      "patches": [
+        {
+          "op": "replace",
+          "path": "/entities/11/properties/rated_voltage/unit",
+          "value": "kV"
+        }
+      ],
+      "stage": "semantic",
+      "expected": {
+        "code": "unit_mismatch",
+        "path": "/entities/11/properties/rated_voltage/unit"
+      }
+    },
+    {
+      "id": "wrong-quantity",
+      "base": "manufacturing",
+      "patches": [
+        {
+          "op": "replace",
+          "path": "/entities/11/properties/rated_voltage/quantity",
+          "value": "power"
+        }
+      ],
+      "stage": "semantic",
+      "expected": {
+        "code": "quantity_mismatch",
+        "path": "/entities/11/properties/rated_voltage/quantity"
+      }
+    },
+    {
+      "id": "missing-role-time",
+      "base": "manufacturing",
+      "patches": [
+        {
+          "op": "remove",
+          "path": "/entities/8/valid_time"
+        }
+      ],
+      "stage": "semantic",
+      "expected": {
+        "code": "required_valid_time",
+        "path": "/entities/8/valid_time"
+      }
+    },
+    {
+      "id": "reversed-interval",
+      "base": "manufacturing",
+      "patches": [
+        {
+          "op": "replace",
+          "path": "/assertions/0/valid_time/end",
+          "value": "2025-01-01T00:00:00Z"
+        }
+      ],
+      "stage": "semantic",
+      "expected": {
+        "code": "invalid_interval",
+        "path": "/assertions/0/valid_time/end"
+      }
+    },
+    {
+      "id": "spatial-cycle",
+      "base": "manufacturing",
+      "patches": [
+        {
+          "op": "replace",
+          "path": "/assertions/1/object_id",
+          "value": "level"
+        }
+      ],
+      "stage": "semantic",
+      "expected": {
+        "code": "hierarchy_cycle",
+        "path": "/assertions/1/object_id"
+      }
+    },
+    {
+      "id": "unresolved-evidence",
+      "base": "manufacturing",
+      "patches": [
+        {
+          "op": "replace",
+          "path": "/assertions/0/evidence_ids/0",
+          "value": "missing"
+        }
+      ],
+      "stage": "semantic",
+      "expected": {
+        "code": "unresolved_evidence",
+        "path": "/assertions/0/evidence_ids/0"
+      }
+    },
+    {
+      "id": "unresolved-source",
+      "base": "manufacturing",
+      "patches": [
+        {
+          "op": "replace",
+          "path": "/evidence/0/source_id",
+          "value": "missing"
+        }
+      ],
+      "stage": "semantic",
+      "expected": {
+        "code": "unresolved_source",
+        "path": "/evidence/0/source_id"
+      }
+    },
+    {
+      "id": "unknown-frame",
+      "base": "manufacturing",
+      "patches": [
+        {
+          "op": "replace",
+          "path": "/geometries/0/frame_id",
+          "value": "missing"
+        }
+      ],
+      "stage": "semantic",
+      "expected": {
+        "code": "unresolved_frame",
+        "path": "/geometries/0/frame_id"
+      }
+    },
+    {
+      "id": "invalid-box",
+      "base": "manufacturing",
+      "patches": [
+        {
+          "op": "replace",
+          "path": "/geometries/0/shape/min",
+          "value": [
+            300,
+            0,
+            0
+          ]
+        }
+      ],
+      "stage": "semantic",
+      "expected": {
+        "code": "invalid_geometry",
+        "path": "/geometries/0/shape/min"
+      }
+    },
+    {
+      "id": "missing-role-link",
+      "base": "manufacturing",
+      "patches": [
+        {
+          "op": "remove",
+          "path": "/assertions/5"
+        }
+      ],
+      "stage": "semantic",
+      "expected": {
+        "code": "cardinality_violation",
+        "path": "/entities/8"
+      }
+    },
+    {
+      "id": "role-time-gap",
+      "base": "manufacturing",
+      "patches": [
+        {
+          "op": "replace",
+          "path": "/assertions/5/valid_time/end",
+          "value": "2026-06-01T00:00:00Z"
+        }
+      ],
+      "stage": "semantic",
+      "expected": {
+        "code": "role_interval_uncovered",
+        "path": "/assertions/5/valid_time/end"
+      }
+    }
+  ]
+}
