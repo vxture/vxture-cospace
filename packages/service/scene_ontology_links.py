@@ -62,7 +62,8 @@ class SceneOntologyLinks:
         contents = model.objects() if model.manifest.get('semantic_annotation') else {'objects': []}
         objects = contents['objects']
         return {'space_id': space_id, 'candidate_id': candidate_id, 'source_sha256': digest,
-                'frame_id': model.manifest['frame_id'], 'objects': objects, 'relations': contents.get('relations', [])}
+                'frame_id': model.manifest['frame_id'], 'unit': contents.get('unit'), 'axes': model.manifest.get('axes'),
+                'source_model_sha256': model.manifest['members']['spatial.npz']['sha256'], 'objects': objects, 'relations': contents.get('relations', [])}
 
     def options(self):
         result = []
@@ -100,6 +101,33 @@ class SceneOntologyLinks:
         for link in value['links']:
             concept_definition(link['bundle'], link['reference'], link['concept_id'])
         return value
+
+    def fixed_snapshot(self, source, revision):
+        require(type(revision) is int and 0 <= revision <= 2**63 - 1)
+        if revision == 0:
+            return {'revision': 0, 'source_sha256': source['source_sha256'], 'links': [], 'relation_links': []}
+        require(self.path.is_file(), 'link_revision_not_found')
+        # Querying an old revision must not create or migrate a consumer store.
+        with closing(sqlite3.connect(self.path.resolve().as_uri() + '?mode=ro', uri=True)) as connection:
+            row = connection.execute('SELECT payload,digest FROM link_snapshots WHERE scope=? AND revision=?',
+                                     (self.scope(source), revision)).fetchone()
+        require(row is not None, 'link_revision_not_found')
+        require(len(row[0]) <= 8_388_608 and sha256(row[0]).hexdigest() == row[1], 'link_store_integrity')
+        value = json.loads(row[0])
+        require(value['revision'] == revision, 'link_store_integrity')
+        require(value['source_sha256'] == source['source_sha256'], 'link_source_changed')
+        for link in value['links']:
+            concept_definition(link['bundle'], link['reference'], link['concept_id'])
+        return value
+
+    def query(self, source, values):
+        from packages.service.scene_ontology_query import query_object
+        require({'space_id', 'candidate_id', 'object_id', 'revision'} <= set(values)
+                and set(values) <= {'space_id', 'candidate_id', 'object_id', 'revision', 'at'})
+        require(type(values['revision']) is str and re.fullmatch(r'0|[1-9][0-9]{0,18}', values['revision']) is not None)
+        require(values['space_id'] == source['space_id'] and values['candidate_id'] == source['candidate_id'], 'link_source_changed')
+        snapshot = self.fixed_snapshot(source, int(values['revision']))
+        return query_object(source, snapshot, values['object_id'], values.get('at'))
 
     def read(self, source):
         with closing(self.connect()) as connection:
