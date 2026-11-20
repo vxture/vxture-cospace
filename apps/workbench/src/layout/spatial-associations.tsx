@@ -1,3 +1,4 @@
+import {SceneOntologyLinksPanel} from './scene-ontology-links';
 import {WorkflowPageHeader} from './workflow-page-header';
 import {useAssistantReport} from './workspace-assistant';
 import {candidateScreenHref} from './real-space-data';
@@ -76,7 +77,7 @@ function AssociationWorkspace(){
    {view!=='ifc'&&view!=='info'&&target.space&&loaded&&!current&&<AssociationSourceEmpty requested={!!target.job} count={available.length}/>}
    {view!=='ifc'&&ready&&<RecordNavigationProvider value={{...target,job:current.id}}><section className="association-current" aria-label="关联功能内容">
     {view!=='info'&&<header className="workspace-section-heading association-stage-heading"><div><h3>{section&&React.createElement(section.icon,{size:20})}{section?.name}</h3><p>{section?.description}</p></div></header>}
-    {visited.includes('overview')&&<div hidden={view!=='overview'} className="association-view"><AssociationOverview model={model} objects={objects} reading={reading} error={snapshotError} source={current} selected={selected} onNavigate={navigate}/></div>}
+    {visited.includes('overview')&&<div hidden={view!=='overview'} className="association-view"><AssociationOverview model={model} objects={objects} reading={reading} error={snapshotError} source={current} selected={selected} onNavigate={navigate}/><SceneOntologyLinksPanel key={current.id} spaceId={target.space} candidateId={current.id} active={view==='overview'}/></div>}
     {visited.includes('objects')&&<div hidden={view!=='objects'} className="association-view"><ObjectAnnotations key={current.id} embedded active={view==='objects'}/></div>}
     {visited.includes('relations')&&<div hidden={view!=='relations'} className="association-view"><ObjectRelations key={current.id} embedded/></div>}
     {visited.includes('business')&&<div hidden={view!=='business'} className="association-view"><BusinessAssociations key={current.id} embedded/></div>}

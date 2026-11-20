@@ -39,6 +39,7 @@ from packages.ontology.workspace_authoring import WorkspaceOntologies,DraftChang
 from packages.ontology.scene_usage import usage as scene_ontology_usage, UsageQuery
 from packages.service.ontology_library import ontology_library
 from packages.service.ontology_definition_workbench import DefinitionWorkbench
+from packages.service.scene_ontology_links import SceneOntologyLinks, SceneLinkError
 from packages.ontology.kernel.authoring import AuthoringError
 from packages.ontology.resource_directory import ResourceDirectory,ResourceDirectoryError
 from packages.ontology.group_configuration import GroupConfigurationStore,GroupConfigurationError
@@ -179,6 +180,17 @@ class BusinessAccess:
             record=self.jobs.batches.read(identity,wanted)
             if record.get('space_id')!=wanted:raise PermissionError()
 
+        if path=='/api/scene-ontology-links':
+            if method not in ('GET','POST'):raise PermissionError()
+            values=body if method=='POST' else q
+            wanted=values.get('space_id')
+            cap=ASSOCIATION_EDIT if method=='POST' else SPACE_PREVIEW
+            space(wanted,cap)
+            artifact('candidate:'+str(values.get('candidate_id','')),cap,wanted)
+            can_edit=True
+            try:space(wanted,ASSOCIATION_EDIT)
+            except PermissionError:can_edit=False
+            return {'principal':principal,'can_edit':can_edit}
         visible=policy.visible(principal,self.directory.list('space')) if path in ('/api/projects','/api/spaces') or path.startswith('/api/projects/') else None
         if path=='/api/ontology-configuration/groups':
             if method not in ('GET','HEAD','POST') or not policy.workspace_manager(principal):raise PermissionError()
@@ -478,6 +490,24 @@ class BusinessAccess:
             revision,policy=await run_in_threadpool(self.load_policy)
             context=await run_in_threadpool(self.authorize,request,session,policy,body)
             request.state.platform_principal=context['principal'];request.state.policy_revision=revision
+            if path=='/api/scene-ontology-links':
+                principal=context['principal']
+                scope=json.dumps([principal.issuer,principal.org_id,principal.workspace_id],separators=(',',':'))
+                values=body if request.method=='POST' else dict(request.query_params)
+                if request.method=='POST' and request.query_params or request.method=='GET' and set(values)!={'space_id','candidate_id'}:
+                    return deny(422,'invalid_link_request')
+                try:
+                    service=SceneOntologyLinks(self.directory.root,scope,principal.subject,self.jobs)
+                    source=await run_in_threadpool(service.source,values['space_id'],values['candidate_id'])
+                    result=await run_in_threadpool(service.change,source,body) if request.method=='POST' else await run_in_threadpool(service.read,source)
+                except SceneLinkError as exc:
+                    code=str(exc)
+                    return deny(422 if code in ('invalid_link_request','object_not_found','concept_not_found','link_size_budget') else 503 if code=='link_store_integrity' else 409,code)
+                except AuthoringError as exc:
+                    return deny(422 if exc.code.startswith('invalid_') else 409 if exc.code=='release_not_found' else 503,exc.code)
+                except (CatalogError,OSError,sqlite3.Error,ValueError,KeyError,TypeError):
+                    return deny(503,'scene_ontology_links_unavailable')
+                return JSONResponse({**result,'can_edit':context['can_edit']},headers={'Cache-Control':'no-store'})
             if path=='/api/ontology-definitions':
                 principal=context['principal']
                 scope=json.dumps([principal.issuer,principal.org_id,principal.workspace_id],separators=(',',':'))
