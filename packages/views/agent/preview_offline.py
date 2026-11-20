@@ -164,6 +164,7 @@ class OfflinePreview(PreviewModel):
 
     def semantics(self,object_id=None,at=None):
         from packages.service.fixed_semantic_consumption import not_included
+        if object_id is None and at is not None:raise ValueError('invalid_semantic_query')
         if self.fixed_semantics is None:
             if object_id is not None:raise ValueError('semantic_not_included')
             return not_included(self.record)

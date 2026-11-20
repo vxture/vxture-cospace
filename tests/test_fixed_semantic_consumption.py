@@ -61,6 +61,7 @@ def test_online_offline_same_fixed_query_without_consumer_database_or_network(se
     for at in ('2026-11-20T00:00:00Z','2026-11-21T00:00:00Z'):
         assert offline.semantics(obj,at)['claim']['time_state']=='not_recorded'
     with pytest.raises(ValueError,match='invalid_query_time'):offline.semantics(obj,'bad')
+    with pytest.raises(ValueError,match='invalid_semantic_query'):offline.semantics(at='2026-11-20T00:00:00Z')
     with pytest.raises(ValueError,match='object_not_found'):offline.semantics('ghost')
 
 
@@ -147,3 +148,30 @@ def test_mapped_relation_rehydration_fixed_time_and_recomputed_reports(tmp_path)
     fixed=FixedSemantics(record,files,{'frame_id':source['frame_id']},source['objects'],source['relations'])
     assert fixed.query('cabinet','2026-11-20T00:00:00Z')['relations'][0]['time_state']=='active'
     assert fixed.query('cabinet','2026-11-19T23:59:59Z')['relations'][0]['time_state']=='inactive'
+
+
+def test_persistent_consumer_and_cli_restore_query_the_frozen_semantics(secured,tmp_path,monkeypatch,capsys):
+    import sys
+    from apps.cli.preview_consumer import main
+    from packages.views.agent.preview_consumer_store import PersistentPreviewConsumer
+    client=secured[1];record=publish(secured)
+    summary=client.get(record['preview_url']+'api/semantics').json()
+    obj=summary['objects'][0]['object_id']
+    viewed=client.get(record['preview_url']+'api/semantics',params={'object_id':obj}).json()
+    raw=client.get(record['preview_url']+'offline.zip').content
+    bundle=tmp_path/'fixed.zip';bundle.write_bytes(raw)
+    store=PersistentPreviewConsumer.initialize(tmp_path/'consumer',record['space_id'])
+    store.install(bundle,record['id'],sha(raw))
+    session=store.activate(record['id'],sha(raw),0)
+    assert session.semantics()==summary|dict(consumer_revision=1,package_sha256=sha(raw))
+    bundle.unlink()
+    monkeypatch.setattr(socket,'socket',lambda *a,**k:pytest.fail('offline query must not use network'))
+    args=['preview_consumer','--root',str(store.root),'restore','--publication',record['id'],
+          '--sha256',sha(raw),'--expected-revision','1']
+    capsys.readouterr()
+    for suffix,expected in [(['--semantics'],summary),(['--semantics',obj],viewed)]:
+        monkeypatch.setattr(sys,'argv',args+suffix);main()
+        assert json.loads(capsys.readouterr().out)==expected|dict(consumer_revision=1,package_sha256=sha(raw))
+    monkeypatch.setattr(sys,'argv',args+['--semantics','--at','2026-11-20T00:00:00Z'])
+    with pytest.raises(SystemExit) as refused:main()
+    assert refused.value.code==2

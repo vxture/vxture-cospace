@@ -71,6 +71,8 @@ GET `/publications/{id}/api/semantics` 返回 `cospace.publication-semantics/0.1
 
 采用新成果的完整包使用 `cospace.preview-offline/0.5`，在原有空间、对象、旧业务及关系文件之外增加semantic-artifact.json与四个语义成员。包内文件集合必须完整，profile、package.files、publication.files和成果members交叉绑定；不能删文件后按旧profile降级。`OfflinePreview.semantics(object_id=None, at=None)` 与在线摘要及对象查询等价，校验过程无需网络。旧profile继续可读，未采用成果返回not_included，不访问最新库补齐。
 
+本地消费会话提供同名semantics方法，额外返回消费库consumer_revision与包摘要；该消费库激活修订独立于成果内实例revision。CLI沿用显式安装、激活、恢复流程：restore追加 `--semantics` 查询摘要，`--semantics OBJECT_ID` 查询对象，可加 `--at UTC`；未指定对象的时刻查询拒绝。重启后恢复从已安装包验证，不读在线库。
+
 现有新建发布入口增加右侧准备面板，默认不采用语义；选择正整数固定消费修订并预检后，将完整semantic_selection传入原发布确认与POST。修订或来源变化后预检失效。分区包仍明确拒绝携带新语义成果，B06c不扩展其合同。在线暂停/退役停止新读取和导出，已下载副本继续按其固定内容本地消费。
 
 验收必须包含：旧发布完全不读取新库；最新修改/解除/定义升级不改变旧发布；缺失及非法修订阻断；对象/关系集合覆盖核验；空关系适用性；闭包冲突与篡改；身份投影；在线离线等价；暂停/退役及不同场景/工作区拒绝；失败不产生可见半成果。
