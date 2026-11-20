@@ -88,3 +88,5 @@
 .association-semantic-form label.association-semantic-check{flex-direction:row;align-items:flex-start}.association-semantic-check input{margin-top:4px;flex-shrink:0}
 
 .association-semantic-form input:not([type="checkbox"]),.association-semantic-form select{min-height:32px;font-size:14px}
+
+.association-semantic-time-query{display:flex;gap:8px;align-items:center}.association-semantic-time-query input{min-width:0;flex:1}.association-semantic-time-query button{height:32px;font-size:12px}.association-semantic-form .geometry-preview{min-width:0}.association-semantic-form section>h4{margin-bottom:8px}

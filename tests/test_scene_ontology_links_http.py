@@ -153,3 +153,37 @@ def test_relation_mapping_authorization_and_old_publication_unchanged(secured):
     assert client.get(PATH,params=query).status_code==200
     assert client.post(PATH,headers=viewer,json=body).status_code==403
     assert client.get('/publications/'+new['id']+'/api/objects').json()==before
+
+
+
+def test_fixed_object_view_authorized_readonly_and_archived_source(secured,monkeypatch):
+    rp,client,_,_,jobs,directory,spaces,_,old,new=secured
+    path='/api/scene-ontology-view'
+    query={'space_id':spaces[0]['id'],'candidate_id':old['candidate_id'],'object_id':'cabinet-a','revision':'0'}
+    assert client.get(path,params=query).status_code==401
+    headers,_=sign_in(secured,'usr_engineer')
+    initial=client.get(PATH,params={key:query[key] for key in ('space_id','candidate_id')}).json()
+    scope=json.dumps([rp.config.issuer,'org_mock','ws_mock'],separators=(',',':'))
+    ref=publish_core(directory.root,scope)
+    body={key:query[key] for key in ('space_id','candidate_id','object_id')}
+    response=client.post(PATH,headers=headers,json={**body,'action':'set','reference':ref,'concept_id':'physical_object',
+        'expected_revision':0,'request_id':'a'*32,'source_sha256':initial['source_sha256']})
+    assert response.status_code==200,response.text
+    sign_in(secured,'usr_local_test')
+    fixed={**query,'revision':'1'}
+    response=client.get(path,params=fixed)
+    assert response.status_code==200,response.text
+    value=response.json()
+    assert value['revision']==1
+    assert value['model_location']['available']
+    assert not value['can_edit']
+    assert response.headers['cache-control']=='no-store'
+    for extra in ({'actor':'forged'},{'revision':'-1'},{'at':'now'}):
+        assert client.get(path,params={**fixed,**extra}).status_code==422
+    assert client.get(path,params={**fixed,'revision':'999'}).status_code==404
+    assert client.get(path,params={**fixed,'space_id':spaces[1]['id']}).status_code==403
+    control_change(jobs.controls,PreviewPublications(jobs),spaces[0]['id'],'candidate:'+old['candidate_id'],'archive_candidate')
+    assert client.get(path,params=fixed).json()==value
+    sign_in(secured,'usr_other')
+    monkeypatch.setattr(jobs,'model',lambda *a: (_ for _ in ()).throw(AssertionError('must authorize before model I/O')))
+    assert client.get(path,params=fixed).status_code==403

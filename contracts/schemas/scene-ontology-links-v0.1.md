@@ -45,3 +45,18 @@ relation_report.scope 为 linked_attributes_and_mapped_relations，coverage=mapp
 relations_checked 表示本报告尝试执行映射关系校验；valid 才表示本次实际满足。geometry_checked=false、professional_review=not_performed、included_in_publication=false。当前不启用 park-baseline 的园区完整性、基数及层级规则，也不自动校验断言区间被对象区间覆盖；不得将此报告当作完整关系验收。未映射声明不自动进入断言集合，计数单列。
 
 关系不存在、定义 ID 不存在为 422 relation_not_found/relation_definition_not_found。其余鉴权、CSRF、来源变化、归档、并发和工作区隔离沿用原接口。原模型、几何、对象属性及历史服务发布不写入本次映射。
+
+
+## B05c 固定对象联查
+
+只读 GET `/api/scene-ontology-view`。必需参数 space_id、candidate_id、object_id、revision（十进制非负整数，无前导零，范围 0..2^63-1），可选 at（严格 UTC ISO 时刻，Z 后缀）。禁止额外参数、重复键与 POST。沿用 space.preview 场景及候选归属授权，先授权再读取，Cache-Control=no-store。
+
+revision 为明确的消费修订；找不到返回 404 link_revision_not_found，不改读最新值。0 表示空消费基线。已存在修订只读查询，不创建/迁移消费库；校验快照摘要和当前固定来源摘要，不接受跨候选/工作区回退。归档来源允许查看。接口不依赖当前可选发布库，定义和属性均来自该修订冻结闭包。
+
+响应 profile=cospace.scene-ontology-object-view/0.1，包含场景、候选、来源摘要、revision、object_id、对象原名称、at、claim（固定概念/属性/定义/人工依据/服务端审计，不含 bundle）、相关本体 relations（含方向和依据）、attribute_report/relation_report、model_location。未引用的对象 claim=null，仍可查询真实模型证据。
+
+time_query_policy=classify_without_inference。时间状态为 active / inactive（半开区间 start <= at < end）、not_recorded、invalid 或 not_filtered；保留原声明，不删除不活跃数据，不将未记录期当成无限有效。非法 at 返回 422 invalid_query_time；草稿期本身非法则 state=invalid，保留校验失败报告。
+
+model_location.available 要求米制局部点锚、固定 frame_id、spatial.npz 模型摘要与证据摘要一致；服务 source 通过已有模型读取器核对对象/点证据。available 不是现场核验。preview_available 另要求三条坐标轴记录，缺失轴保留点锚证据但禁用画布；点云画布继续通过已有 anchor-preview API 校验来源和摘要。点锚不代表完整实体几何。
+
+geographic_location.available=false，reason=geographic_handoff_not_connected。实际地理配准/地图定位归后续 B07，不从局部点锚生成经纬度。included_in_publication=false、professional_review=not_performed。新服务发布消费归 B06，旧服务发布不读取本接口的最新值。

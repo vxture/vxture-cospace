@@ -180,8 +180,8 @@ class BusinessAccess:
             record=self.jobs.batches.read(identity,wanted)
             if record.get('space_id')!=wanted:raise PermissionError()
 
-        if path=='/api/scene-ontology-links':
-            if method not in ('GET','POST'):raise PermissionError()
+        if path in ('/api/scene-ontology-links','/api/scene-ontology-view'):
+            if method not in ('GET','POST') or path=='/api/scene-ontology-view' and method!='GET':raise PermissionError()
             values=body if method=='POST' else q
             wanted=values.get('space_id')
             cap=ASSOCIATION_EDIT if method=='POST' else SPACE_PREVIEW
@@ -490,19 +490,22 @@ class BusinessAccess:
             revision,policy=await run_in_threadpool(self.load_policy)
             context=await run_in_threadpool(self.authorize,request,session,policy,body)
             request.state.platform_principal=context['principal'];request.state.policy_revision=revision
-            if path=='/api/scene-ontology-links':
+            if path in ('/api/scene-ontology-links','/api/scene-ontology-view'):
                 principal=context['principal']
                 scope=json.dumps([principal.issuer,principal.org_id,principal.workspace_id],separators=(',',':'))
                 values=body if request.method=='POST' else dict(request.query_params)
-                if request.method=='POST' and request.query_params or request.method=='GET' and set(values)!={'space_id','candidate_id'}:
+                if request.method=='POST' and request.query_params or request.method=='GET' and path=='/api/scene-ontology-links' and set(values)!={'space_id','candidate_id'}:
                     return deny(422,'invalid_link_request')
                 try:
                     service=SceneOntologyLinks(self.directory.root,scope,principal.subject,self.jobs)
                     source=await run_in_threadpool(service.source,values['space_id'],values['candidate_id'])
-                    result=await run_in_threadpool(service.change,source,body) if request.method=='POST' else await run_in_threadpool(service.read,source)
+                    if path=='/api/scene-ontology-view':
+                        result=await run_in_threadpool(service.query,source,values)
+                    else:
+                        result=await run_in_threadpool(service.change,source,body) if request.method=='POST' else await run_in_threadpool(service.read,source)
                 except SceneLinkError as exc:
                     code=str(exc)
-                    return deny(422 if code in ('invalid_link_request','object_not_found','concept_not_found','relation_not_found','relation_definition_not_found','link_size_budget') else 503 if code=='link_store_integrity' else 409,code)
+                    return deny(404 if code=='link_revision_not_found' else 422 if code in ('invalid_link_request','object_not_found','concept_not_found','relation_not_found','relation_definition_not_found','invalid_query_time','link_size_budget') else 503 if code=='link_store_integrity' else 409,code)
                 except AuthoringError as exc:
                     return deny(422 if exc.code.startswith('invalid_') else 409 if exc.code=='release_not_found' else 503,exc.code)
                 except (CatalogError,OSError,sqlite3.Error,ValueError,KeyError,TypeError):
