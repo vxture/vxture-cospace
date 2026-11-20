@@ -32,6 +32,7 @@ def sha(data):
 
 def export_bundle(record, model):
     """Caller supplies a validated fixed publication. Never modify its snapshot."""
+    if record.get('semantic_artifact'):raise ValueError('semantic_delivery_not_connected')
     files = {name: (model.root/name).read_bytes()
              for name in ('publication.json', 'model.json', 'agent.npz')}
     semantic=bool(model.manifest.get('semantic_annotation'))

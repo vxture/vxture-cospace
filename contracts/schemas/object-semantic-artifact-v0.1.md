@@ -55,4 +55,12 @@ relations_total为原候选关系数，mapped_relations为实际映射数，unma
 
 B06b：预检、冻结、显式发布选择及幂等。B06c：在线/离线同源查询及旧合同兼容。B06d：安全、历史稳定、预算、完整性、生命周期和上线收口。本合同不触发部署。
 
+### B06b 后端接口
+
+POST `/api/publication-semantic-preflight` 接收且仅接收space_id、candidate_id、semantic_selection。selection预检输入为consumer_revision与source_manifest_sha256，返回固定snapshot_sha256、覆盖计数及局部报告；要求publication.manage、可信工作区、候选归属和CSRF，响应no-store。非法输入422，采用条件不满足409，不创建或迁移消费库，不返回定义/实例全文。
+
+原POST `/api/publications`增加可选semantic_selection，包含以上三个固定选择字段。工作区/操作人由宿主注入，独立预览端没有可信身份时拒绝语义采用；不接受浏览器指定scope/actor。未选择仍走原流程，显式选择无法通过时整次发布失败。外层publication记录包含semantic_artifact（路径semantic-artifact.json、artifact_id、profile）、选择和散列化scope；清单及四项成员写入原发布的files并绑定摘要。
+
+B06b是后端冻结能力，不单独上线；发布选择界面及固定语义查询在B06c一并接通。B06c接通前，含新成果的完整包和分区包返回409，不静默生成缺语义的旧包；旧发布的导出不变。
+
 验收必须包含：旧发布完全不读取新库；最新修改/解除/定义升级不改变旧发布；缺失及非法修订阻断；对象/关系集合覆盖核验；空关系适用性；闭包冲突与篡改；身份投影；在线离线等价；暂停/退役及不同场景/工作区拒绝；失败不产生可见半成果。
