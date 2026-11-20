@@ -111,7 +111,7 @@ def artifact_catalog(publications,space_id=None):
             entry['resources']={'manifest_url':f'/publications/{identity}/publication.json',
                                 'preview_url':f'/publications/{identity}/'}
             package=add('offline_package',identity,identity+' · 离线包','offline_export','export_on_request')
-            package.update(integrity='not_generated',format=bundle_profile(model))
+            package.update(integrity='not_generated',format=bundle_profile(model,fixed))
             package['resources']={'info_url':f'/publications/{identity}/offline.json','download_url':f'/publications/{identity}/offline.zip'}
             relations.append({'from':package['key'],'to':entry['key'],'relation':'exported_from','status':'matched'})
         except (OSError,ValueError,KeyError,TypeError):

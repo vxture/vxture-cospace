@@ -288,7 +288,7 @@ class BusinessAccess:
                     artifact(kind+':'+m[2],SPACE_PREVIEW)
                     return {'principal':principal}
                 if suffix in ('/','/index.html','/human.ply','/views.js','/model.json','/objects.json','/ontology.json','/business.json','/relations.json',
-                              '/api/preview','/api/thumbnail','/api/objects','/api/checklist','/api/lineage') or re.fullmatch(r'/api/objects/[^/]+',suffix):cap=SPACE_PREVIEW
+                              '/api/preview','/api/thumbnail','/api/objects','/api/checklist','/api/lineage') or re.fullmatch(r'/api/objects/[^/]+',suffix) or kind=='publication' and suffix=='/api/semantics':cap=SPACE_PREVIEW
                 elif suffix in ('/api/anchor','/api/anchor-preview') and kind=='candidate':cap=ASSOCIATION_EDIT
                 elif re.fullmatch(r'/[^/]+',suffix):cap='space.export'
             if method=='POST' and suffix in ('/api/query','/api/query-range'):cap='space.query'

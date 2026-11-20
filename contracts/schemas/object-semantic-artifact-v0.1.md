@@ -63,4 +63,14 @@ POST `/api/publication-semantic-preflight` 接收且仅接收space_id、candidat
 
 B06b是后端冻结能力，不单独上线；发布选择界面及固定语义查询在B06c一并接通。B06c接通前，含新成果的完整包和分区包返回409，不静默生成缺语义的旧包；旧发布的导出不变。
 
+### B06c 同源查询与离线消费
+
+GET `/publications/{id}/api/semantics` 返回 `cospace.publication-semantics/0.1` 摘要，包括 included/not_included、固定实例修订、覆盖计数、校验范围、能力边界及对象清单。加 `object_id` 返回 `cospace.publication-semantic-object/0.1` 固定声明查询；可选 `at` 必须是严格UTC日历时刻，用于分类历史声明及映射关系的有效性，不执行推理。无object_id不能传at，拒绝重复及未知查询参数。响应no-store，沿用space.preview授权及发布生命周期，不授予导出权限。
+
+在线及离线统一使用 `FixedSemantics` 核验清单与发布绑定、成员字节/摘要、完整对象/原关系索引、定义依赖闭包、集合覆盖、局部校验报告及其输入摘要；重建固定定义后查询，不读取当前消费SQLite或公共本体最新版本。模型位置保持外部证据引用状态，不能由固定声明推导出已核验几何或地理定位。
+
+采用新成果的完整包使用 `cospace.preview-offline/0.5`，在原有空间、对象、旧业务及关系文件之外增加semantic-artifact.json与四个语义成员。包内文件集合必须完整，profile、package.files、publication.files和成果members交叉绑定；不能删文件后按旧profile降级。`OfflinePreview.semantics(object_id=None, at=None)` 与在线摘要及对象查询等价，校验过程无需网络。旧profile继续可读，未采用成果返回not_included，不访问最新库补齐。
+
+现有新建发布入口增加右侧准备面板，默认不采用语义；选择正整数固定消费修订并预检后，将完整semantic_selection传入原发布确认与POST。修订或来源变化后预检失效。分区包仍明确拒绝携带新语义成果，B06c不扩展其合同。在线暂停/退役停止新读取和导出，已下载副本继续按其固定内容本地消费。
+
 验收必须包含：旧发布完全不读取新库；最新修改/解除/定义升级不改变旧发布；缺失及非法修订阻断；对象/关系集合覆盖核验；空关系适用性；闭包冲突与篡改；身份投影；在线离线等价；暂停/退役及不同场景/工作区拒绝；失败不产生可见半成果。
