@@ -31,11 +31,16 @@ def main():
             query.add_argument('--point', nargs=3, type=float)
             query.add_argument('--objects', action='store_true')
             query.add_argument('--object-id')
+            query.add_argument('--semantics', nargs='?', const='', metavar='OBJECT_ID',
+                               help='Read the frozen semantic summary, or one object declaration')
             query.add_argument('--bounds', nargs=6, type=float)
+            command.add_argument('--at', help='UTC instant; requires --semantics OBJECT_ID')
             command.add_argument('--frame-id')
             command.add_argument('--limit', type=int)
     args = parser.parse_args()
     if args.command == 'restore':
+        if args.at is not None and not args.semantics:
+            parser.error('--at requires --semantics OBJECT_ID')
         if args.bounds is not None and not args.frame_id:
             parser.error('--bounds requires --frame-id')
         if args.bounds is None and (args.frame_id is not None or args.limit is not None):
@@ -61,6 +66,8 @@ def main():
                     result = session.query(args.point)
                 elif args.objects or args.object_id is not None:
                     result = session.objects(args.object_id)
+                elif args.semantics is not None:
+                    result = session.semantics(args.semantics or None, args.at)
                 elif args.bounds is not None:
                     result = session.query_range([args.bounds[:3], args.bounds[3:]], args.frame_id,
                                                  args.limit if args.limit is not None else DEFAULT_RANGE_CELLS)

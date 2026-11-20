@@ -53,7 +53,7 @@ def test_semantic_publication_explicit_preflight_authorization_frozen_files_and_
     assert client.post('/api/publications',json=request,headers=headers).json()['id']==record['id']
     assert (root/'claims.json').read_bytes()==raw
     assert client.get(record['preview_url']+'api/preview').status_code==200
-    assert client.get(record['preview_url']+'offline.zip').status_code==409
+    assert client.get(record['preview_url']+'offline.zip').status_code==200
     assert client.get(record['preview_url']+'partitions.zip').status_code==409
     manifest_record=root/'publication.json'
     saved=manifest_record.read_bytes()

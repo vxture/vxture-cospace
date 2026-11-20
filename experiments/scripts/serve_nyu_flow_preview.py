@@ -356,6 +356,24 @@ def create_app(root,jobs=None,update_evidence=None,registration_sources=None,sou
         record,current=publication(identity)
         return {**object_query(current,object_id),'publication_id':identity,
                 'publication_model_manifest_sha256':record['model_manifest_sha256']}
+    @app.get('/publications/{identity}/api/semantics')
+    def publication_semantics(identity:str,request:Request):
+        from packages.service.fixed_semantic_consumption import read_fixed,not_included
+        values=dict(request.query_params)
+        if (len(request.query_params.multi_items())!=len(values) or set(values)-{'object_id','at'}
+                or 'at' in values and 'object_id' not in values):raise HTTPException(422,'invalid_semantic_query')
+        record,current=publication(identity)
+        try:
+            fixed=read_fixed(record,current)
+            if fixed is None:
+                if 'object_id' in values:raise HTTPException(404,'semantic_not_included')
+                result=not_included(record)
+            else:result=fixed.query(values['object_id'],values.get('at')) if 'object_id' in values else fixed.summary()
+            return JSONResponse(result,headers={'Cache-Control':'no-store'})
+        except (ValueError,OSError,KeyError,TypeError) as exc:
+            code=str(exc)
+            raise HTTPException(422 if code in ('invalid_query_time','invalid_link_request') else 404 if code=='object_not_found' else 409,
+                code if isinstance(exc,ValueError) else 'semantic_consumption_unavailable') from exc
     @app.get('/publications/{identity}/api/checklist')
     def publication_checklist(identity:str):
         if publications is None: raise HTTPException(404,'publication_not_found')
@@ -393,22 +411,24 @@ def create_app(root,jobs=None,update_evidence=None,registration_sources=None,sou
     @app.get('/publications/{identity}/offline.zip')
     def publication_bundle(identity:str):
         record,current=publication(identity)
-        if record.get('semantic_artifact'):raise HTTPException(409,'semantic_delivery_not_connected')
-        data=export_bundle(record,current)
+        try:data=export_bundle(record,current)
+        except (ValueError,OSError,KeyError,TypeError) as exc:raise HTTPException(409,'offline_delivery_unavailable') from exc
         return Response(data,media_type='application/zip',headers={
             'Content-Disposition':f'attachment; filename="{identity}-offline.zip"',
             'X-CoSpace-Package-SHA256':sha(data)})
     @app.get('/publications/{identity}/offline.json')
     def publication_bundle_info(identity:str):
         record,current=publication(identity)
-        if record.get('semantic_artifact'):raise HTTPException(409,'semantic_delivery_not_connected')
-        data=export_bundle(record,current)
+        try:data=export_bundle(record,current)
+        except (ValueError,OSError,KeyError,TypeError) as exc:raise HTTPException(409,'offline_delivery_unavailable') from exc
         semantic=bool(current.manifest.get('semantic_annotation'))
-        return {'profile':bundle_profile(current),'publication_id':identity,
+        from packages.service.object_semantic_artifact import MANIFEST,MEMBERS
+        return {'profile':bundle_profile(current,record),'publication_id':identity,
                 **owned(record),
                 'download_url':record['preview_url']+'offline.zip',
                 'sha256':sha(data),'bytes':len(data),'quality':'unverified','robot_ready':False,
-                'contents':['package.json','publication.json','model.json','agent.npz']+(['objects.json','ontology.json'] if semantic else [])+(['business.json'] if current.manifest.get('business_association') else [])+(['relations.json'] if current.manifest.get('object_relations') else [])}
+                'semantic_artifact':'included' if record.get('semantic_artifact') else 'not_included',
+                'contents':['package.json','publication.json','model.json','agent.npz']+(['objects.json','ontology.json'] if semantic else [])+(['business.json'] if current.manifest.get('business_association') else [])+(['relations.json'] if current.manifest.get('object_relations') else [])+([MANIFEST,*MEMBERS] if record.get('semantic_artifact') else [])}
     def partition_delivery(identity):
         record,current=publication(identity)
         if record.get('semantic_artifact'):raise HTTPException(409,'semantic_partition_delivery_not_supported')
