@@ -37,6 +37,12 @@ from packages.service.space_access import WorkspaceSceneAccessPolicy
 from packages.data.input_uploads import InputUploads,UploadRejected,MAX_UPLOAD,capabilities as upload_capabilities,metadata as upload_metadata
 from packages.ontology.workspace_authoring import WorkspaceOntologies,DraftChange,SealDraft
 from packages.ontology.scene_usage import usage as scene_ontology_usage, UsageQuery
+from packages.service.ontology_library import ontology_library
+from packages.service.ontology_definition_workbench import DefinitionWorkbench
+from packages.ontology.kernel.authoring import AuthoringError
+from packages.ontology.resource_directory import ResourceDirectory,ResourceDirectoryError
+from packages.ontology.group_configuration import GroupConfigurationStore,GroupConfigurationError
+from packages.ontology.kernel import CatalogError
 from packages.service.public_errors import public_error
 from packages.service.service_recipients import ServiceRecipients, RecipientChange, RecipientConflict, RecipientsUnavailable
 from packages.service.scene_overview import overview as scene_overview
@@ -174,6 +180,19 @@ class BusinessAccess:
             if record.get('space_id')!=wanted:raise PermissionError()
 
         visible=policy.visible(principal,self.directory.list('space')) if path in ('/api/projects','/api/spaces') or path.startswith('/api/projects/') else None
+        if path=='/api/ontology-configuration/groups':
+            if method not in ('GET','HEAD','POST') or not policy.workspace_manager(principal):raise PermissionError()
+            return {'principal':principal}
+        if path=='/api/ontology-definitions':
+            if method not in ('GET','HEAD','POST') or method=='POST' and not policy.workspace_manager(principal):raise PermissionError()
+            return {'principal':principal,'can_manage':policy.workspace_manager(principal)}
+        if path in ('/api/ontology-resources','/api/ontology-resources/definition','/api/ontology-resources/membership'):
+            if path.endswith('/membership'):
+                if method!='POST' or not policy.workspace_manager(principal):raise PermissionError()
+            elif method not in ('GET','HEAD'):raise PermissionError()
+            return {'principal':principal,'can_group':policy.workspace_manager(principal)}
+        if path=='/api/ontology-library' and method in ('GET','HEAD'):
+            return {'principal':principal}
         if path in ('/api/ontology-authoring','/api/ontology-authoring/drafts','/api/ontology-authoring/validate','/api/ontology-authoring/seal'):
             if method not in ('GET','HEAD','POST'):raise PermissionError()
             if method=='POST' and not policy.workspace_manager(principal):raise PermissionError()
@@ -459,6 +478,63 @@ class BusinessAccess:
             revision,policy=await run_in_threadpool(self.load_policy)
             context=await run_in_threadpool(self.authorize,request,session,policy,body)
             request.state.platform_principal=context['principal'];request.state.policy_revision=revision
+            if path=='/api/ontology-definitions':
+                principal=context['principal']
+                scope=json.dumps([principal.issuer,principal.org_id,principal.workspace_id],separators=(',',':'))
+                try:
+                    if len(request.query_params.multi_items())!=len(request.query_params):return deny(422,'invalid_request')
+                    workbench=DefinitionWorkbench(self.directory.root,scope,principal.subject,context['can_manage'])
+                    if request.method=='POST':
+                        if request.query_params:return deny(422,'invalid_request')
+                        result=await run_in_threadpool(workbench.change,body)
+                    else:
+                        query=dict(request.query_params)
+                        if set(query)=={'module_id'}:result=await run_in_threadpool(workbench.read,query['module_id'])
+                        elif set(query)=={'review_id'}:result=await run_in_threadpool(workbench.review_definition,query['review_id'])
+                        elif set(query)=={'module_id','version','sha256'}:result=await run_in_threadpool(workbench.definition,query)
+                        else:return deny(422,'invalid_request')
+                except AuthoringError as exc:
+                    return deny(403 if exc.code=='forbidden' else 422 if exc.code.startswith('invalid_') else 503 if exc.code.startswith('store_') else 409,exc.code)
+                except (CatalogError,OSError,sqlite3.Error):return deny(503,'ontology_definitions_unavailable')
+                return JSONResponse(result,headers={'Cache-Control':'no-store'})
+            if path=='/api/ontology-configuration/groups':
+                if request.query_params:return deny(422,'ontology_group_invalid_request')
+                principal=context['principal']
+                scope=json.dumps([principal.issuer,principal.org_id,principal.workspace_id],separators=(',',':'))
+                store=GroupConfigurationStore(self.directory.root)
+                try:
+                    if request.method=='POST':result=await run_in_threadpool(store.change,scope,principal.subject,body)
+                    else:result=await run_in_threadpool(store.read,scope)
+                except GroupConfigurationError as exc:
+                    code=str(exc)
+                    return deny(422 if code=='ontology_group_invalid_request' else 503 if code=='ontology_group_configuration_invalid' else 409,code)
+                except (OSError,sqlite3.Error):return deny(503,'ontology_group_configuration_unavailable')
+                return JSONResponse({**result,'can_manage':True},headers={'Cache-Control':'no-store'})
+            if path in ('/api/ontology-resources','/api/ontology-resources/definition','/api/ontology-resources/membership'):
+                principal=context['principal']
+                scope=json.dumps([principal.issuer,principal.org_id,principal.workspace_id],separators=(',',':'))
+                try:
+                    if len(request.query_params.multi_items())!=len(request.query_params):return deny(422,'ontology_directory_invalid_request')
+                    workbench=DefinitionWorkbench(self.directory.root,scope,principal.subject,context['can_group'])
+                    store=ResourceDirectory(self.directory.root,await run_in_threadpool(workbench.released_library))
+                    if path.endswith('/membership'):
+                        if request.query_params:return deny(422,'ontology_directory_invalid_request')
+                        result=await run_in_threadpool(store.change,scope,principal.subject,body)
+                    elif path.endswith('/definition'):result=await run_in_threadpool(workbench.definition,dict(request.query_params))
+                    else:
+                        result=await run_in_threadpool(store.read,scope,dict(request.query_params))
+                        result['can_group']=context['can_group']
+                except ResourceDirectoryError as exc:
+                    code=str(exc)
+                    return deny(422 if code=='ontology_directory_invalid_request' else 503 if code=='ontology_directory_unavailable' else 409,code)
+                except AuthoringError as exc:return deny(422 if exc.code=='invalid_reference' else 409 if exc.code=='release_not_found' else 503,exc.code)
+                except (GroupConfigurationError,CatalogError,OSError,sqlite3.Error):return deny(503,'ontology_directory_unavailable')
+                return JSONResponse(result,headers={'Cache-Control':'no-store'})
+            if path=='/api/ontology-library':
+                if request.query_params:return deny(422,'ontology_library_invalid_query')
+                try:result=await run_in_threadpool(ontology_library)
+                except (CatalogError,OSError):return deny(503,'ontology_library_unavailable')
+                return JSONResponse(result,headers={'Cache-Control':'no-store'})
             if path=='/api/scene-permissions' or path.startswith('/api/scene-permissions/'):
                 if path=='/api/scene-permissions':
                     try:

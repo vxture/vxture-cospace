@@ -3,6 +3,8 @@
 *.bag.active
 __pycache__/
 *.pyc
+packages/ontology/kernel/*.egg-info/
+packages/ontology/kernel/build/
 .venv/
 node_modules/
 .pnpm-store/

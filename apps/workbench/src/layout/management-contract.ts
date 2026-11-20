@@ -7,7 +7,7 @@ export function managementPage(route:string):ManagementPage{return route==='iden
 export function managementHref(route:string,space='',section=route==='members'?'members':'overview'){
  const page=managementPage(route);
  const params=new URLSearchParams();
- if(page==='settings'){if(space)params.set('space',space);if(section!=='overview')params.set('section',managementSection(section));}
+ if(page==='settings'){if(space&&section!=='ontology-groups')params.set('space',space);if(section!=='overview')params.set('section',managementSection(section));}
  return '/'+page+(params.size?'?'+params:'');
 }
 export function sceneInformationHref(space:string){return '/build?'+new URLSearchParams({space,tab:'info'});}
@@ -27,6 +27,7 @@ export const managementSections={
  roles:{label:'角色管理',description:'查看固定产品角色及其能力边界，按实际场景范围分配。',icon:'user'},
  permissions:{label:'权限管理',description:'查看产品操作权限及拥有这些权限的角色。',icon:'shield-check'},
  scenes:{label:'场景管理',description:'管理成员可见的场景数据范围，与功能权限独立生效。',icon:'cube'},
+ 'ontology-groups':{label:'本体分组配置',description:'管理语义本体的预置与自建分组、说明、排序及启停状态。',icon:'tree-structure'},
  advanced:{label:'高级配置',description:'维护现有业务规则与场景配置，按实际授权范围操作。',icon:'shield-check'},
 } as const;
 export type ManagementSection=keyof typeof managementSections;

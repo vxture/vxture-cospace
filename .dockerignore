@@ -4,6 +4,8 @@
 .venv
 **/node_modules
 **/__pycache__
+**/*.egg-info
+packages/ontology/kernel/build
 **/.pytest_cache
 **/dist
 .pnpm-store

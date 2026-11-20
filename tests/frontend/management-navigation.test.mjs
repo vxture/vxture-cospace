@@ -31,7 +31,7 @@ test('settings sections keep scene scope and reject unknown destinations',async(
  const {managementSection,managementSections,productRoleDefinitions}=await import('../../apps/workbench/src/layout/management-contract.ts');
  for(const section of Object.keys(managementSections)){
   const href=managementHref('settings','scene A&B',section),url=new URL(href,'https://example.test');
-  assert.equal(url.searchParams.get('space'),'scene A&B');
+  assert.equal(url.searchParams.get('space'),section==='ontology-groups'?null:'scene A&B');
   assert.equal(managementSection(url.searchParams.get('section')),section);
  }
  assert.equal(managementSection('platform-billing'),'overview');
@@ -39,4 +39,9 @@ test('settings sections keep scene scope and reject unknown destinations',async(
  assert.equal(productRoleDefinitions.length,4);
  assert.equal(productRoleDefinitions.find(r=>r.role==='工程师').members,'无人员授权权限');
  assert.equal(productRoleDefinitions.find(r=>r.role==='管理者').members,'对应管理范围内授权');
+});
+
+
+test('ontology group configuration has a settings destination independent of scenes',()=>{
+ assert.equal(managementHref('settings','old-scene','ontology-groups'),'/settings?section=ontology-groups');
 });

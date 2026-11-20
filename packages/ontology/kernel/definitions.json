@@ -1,0 +1,918 @@
+{
+  "profile": "vxture.ontology-library/0.1",
+  "modules": [
+    {
+      "profile": "vxture.ontology-module/0.1",
+      "module_id": "core",
+      "version": "0.1.0",
+      "title": "通用核心",
+      "description": "跨领域对象、空间、系统、角色、时间、观测和证据的候选定义。用于公共语义引用，不保存现场实例。",
+      "layer": "core",
+      "status": "draft",
+      "requires": [],
+      "concepts": {
+        "entity": {
+          "title": "实体",
+          "definition": "具有可区分身份的描述对象；名称和数字记录不替代其身份。",
+          "examples": [
+            "某物理对象、空间或事件的身份"
+          ],
+          "counterexamples": [
+            "仅凭同名确定为同一对象"
+          ],
+          "properties": {
+            "name": {
+              "title": "名称",
+              "definition": "用于显示的名称，不作为实体身份。",
+              "data_type": "string",
+              "required": true
+            }
+          }
+        },
+        "physical_object": {
+          "title": "物理对象",
+          "definition": "在现实中具有物理存在的对象；与其数字记录和几何表达区分。",
+          "examples": [
+            "一台水泵"
+          ],
+          "counterexamples": [
+            "水泵的资产台账记录"
+          ],
+          "properties": {},
+          "parent": "core:entity"
+        },
+        "spatial_region": {
+          "title": "空间区域",
+          "definition": "在明确空间参照下界定的区域，边界和维度由实例表达声明。",
+          "examples": [
+            "房间空间、室外区域"
+          ],
+          "counterexamples": [
+            "房间的墙体构件"
+          ],
+          "properties": {},
+          "parent": "core:entity"
+        },
+        "system": {
+          "title": "系统",
+          "definition": "为某种功能组织起来的成员集合；成员关系不等同物理组成或空间包含。",
+          "examples": [
+            "供配电系统"
+          ],
+          "counterexamples": [
+            "所有最近邻设备的临时集合"
+          ],
+          "properties": {},
+          "parent": "core:entity"
+        },
+        "organization": {
+          "title": "组织",
+          "definition": "具有业务身份的组织主体；不隐含平台租户归属或权限。",
+          "examples": [
+            "园区运营公司"
+          ],
+          "counterexamples": [
+            "平台的某一条访问令牌"
+          ],
+          "properties": {},
+          "parent": "core:entity"
+        },
+        "role_assignment": {
+          "title": "角色指派",
+          "definition": "某主体或对象在指定范围和有效期内承担角色的记录。",
+          "examples": [
+            "设备在某期间被指定为巡检对象"
+          ],
+          "counterexamples": [
+            "将巡检角色当作设备固有类型"
+          ],
+          "properties": {},
+          "parent": "core:entity"
+        },
+        "observation": {
+          "title": "观测",
+          "definition": "某来源在某时刻通过某方法报告对象属性结果的活动记录，不自动成为已核实事实。",
+          "examples": [
+            "对某区域温度的一次报告"
+          ],
+          "counterexamples": [
+            "设备额定温度参数"
+          ],
+          "properties": {},
+          "parent": "core:entity"
+        },
+        "event": {
+          "title": "事件",
+          "definition": "在某时刻或区间发生的事情；来源报告与已确认发生须区分。",
+          "examples": [
+            "经确认的设备停运事件"
+          ],
+          "counterexamples": [
+            "永久设备类型"
+          ],
+          "properties": {},
+          "parent": "core:entity"
+        },
+        "evidence": {
+          "title": "证据记录",
+          "definition": "支持某项声明的可追溯资料或方法引用；引用完整不等于含义属实。",
+          "examples": [
+            "固定铭牌照片引用"
+          ],
+          "counterexamples": [
+            "可变网页地址被当作固定字节证据"
+          ],
+          "properties": {},
+          "parent": "core:entity"
+        },
+        "information_record": {
+          "title": "信息记录",
+          "definition": "描述对象或业务的信息载体，与其描述的现实对象分开。",
+          "examples": [
+            "资产主记录、巡检工单"
+          ],
+          "counterexamples": [
+            "记录所描述的物理泵"
+          ],
+          "properties": {},
+          "parent": "core:entity"
+        }
+      },
+      "relations": {
+        "located_in": {
+          "title": "位于",
+          "definition": "声明对象位于空间区域；声明与几何包含的核验分别处理。",
+          "source_types": [
+            "core:physical_object"
+          ],
+          "target_types": [
+            "core:spatial_region"
+          ],
+          "symmetric": false
+        },
+        "part_of": {
+          "title": "物理组成",
+          "definition": "物理对象构成另一物理对象的一部分，不表达所在空间。",
+          "source_types": [
+            "core:physical_object"
+          ],
+          "target_types": [
+            "core:physical_object"
+          ],
+          "symmetric": false
+        },
+        "member_of": {
+          "title": "系统成员",
+          "definition": "某对象为功能系统的成员，不推定其实际供给网络。",
+          "source_types": [
+            "core:physical_object"
+          ],
+          "target_types": [
+            "core:system"
+          ],
+          "symmetric": false
+        },
+        "observes_subject": {
+          "title": "观测主题",
+          "definition": "将观测关联到被观测对象，不以传感器安装位置替代该对象。",
+          "source_types": [
+            "core:observation"
+          ],
+          "target_types": [
+            "core:entity"
+          ],
+          "symmetric": false
+        },
+        "supported_by": {
+          "title": "依据",
+          "definition": "将声明的主题关联到证据记录；逐项断言证据须由消费契约细化。",
+          "source_types": [
+            "core:entity"
+          ],
+          "target_types": [
+            "core:evidence"
+          ],
+          "symmetric": false
+        }
+      }
+    },
+    {
+      "profile": "vxture.ontology-module/0.1",
+      "module_id": "built_environment",
+      "version": "0.2.0",
+      "title": "建筑与空间",
+      "description": "跨园区复用的建筑、楼层、空间与构件语义；空间用途、连接和现场核验需独立描述。",
+      "layer": "domain",
+      "status": "draft",
+      "requires": [
+        {
+          "module_id": "core",
+          "version": "0.1.0",
+          "sha256": "d12aec3d679d5c06779e91faf44b4064dfee2a7cbdee2330b20e253b511f169f"
+        }
+      ],
+      "concepts": {
+        "site_region": {
+          "title": "园区物理范围",
+          "definition": "描述园区物理空间范围，不等同平台工作区或运营组织。",
+          "examples": [
+            "园区用地范围"
+          ],
+          "counterexamples": [
+            "平台 Workspace"
+          ],
+          "properties": {},
+          "parent": "core:spatial_region"
+        },
+        "building": {
+          "title": "建筑",
+          "definition": "现实建筑物，其物理身份与内部空间区域分开。",
+          "examples": [
+            "1号厂房建筑物"
+          ],
+          "counterexamples": [
+            "厂房内的经营组织"
+          ],
+          "properties": {},
+          "parent": "core:physical_object"
+        },
+        "level": {
+          "title": "楼层空间",
+          "definition": "用于组织建筑内部空间的层级区域，不等同楼板。",
+          "examples": [
+            "建筑二层空间"
+          ],
+          "counterexamples": [
+            "二层楼板构件"
+          ],
+          "properties": {},
+          "parent": "core:spatial_region"
+        },
+        "room": {
+          "title": "房间空间",
+          "definition": "由边界限定的建筑内部空间；设备、办公等用途另行声明。",
+          "examples": [
+            "办公室所在房间空间"
+          ],
+          "counterexamples": [
+            "房间墙面网格"
+          ],
+          "properties": {},
+          "parent": "core:spatial_region"
+        },
+        "corridor": {
+          "title": "走廊空间",
+          "definition": "承担建筑内部空间联系用途的通道区域，类别不保证当前可通行。",
+          "examples": [
+            "一层走廊区域"
+          ],
+          "counterexamples": [
+            "机器人规划出的路径"
+          ],
+          "properties": {},
+          "parent": "core:spatial_region"
+        },
+        "door": {
+          "title": "门构件",
+          "definition": "与开口相关的物理门构件；门洞尺寸、门扇与当前开闭报告分别表达。",
+          "examples": [
+            "房间入口门"
+          ],
+          "counterexamples": [
+            "门当前处于关闭状态的报告"
+          ],
+          "properties": {},
+          "parent": "core:physical_object"
+        },
+        "stair": {
+          "title": "楼梯构件",
+          "definition": "用于联系不同标高空间的物理构件，类别不证明任何设备可通过。",
+          "examples": [
+            "两层间的楼梯"
+          ],
+          "counterexamples": [
+            "机器人上下楼轨迹"
+          ],
+          "properties": {},
+          "parent": "core:physical_object"
+        },
+        "building_region": {
+          "title": "建筑空间范围",
+          "definition": "用于组织建筑内部空间的空间区域；与建筑物理实体分别标识，不把几何模型本身当作空间区域。",
+          "examples": [
+            "某栋建筑所对应的整体空间范围"
+          ],
+          "counterexamples": [
+            "建筑外墙、建筑模型文件"
+          ],
+          "properties": {},
+          "parent": "core:spatial_region"
+        }
+      },
+      "relations": {
+        "spatial_part_of": {
+          "title": "空间层级归属",
+          "definition": "空间区域属于另一空间区域的声明；只对配置指定的层级检查单父与无环，不用于管理分区。",
+          "source_types": [
+            "core:spatial_region"
+          ],
+          "target_types": [
+            "core:spatial_region"
+          ],
+          "symmetric": false
+        },
+        "adjacent_to": {
+          "title": "空间邻接",
+          "definition": "空间具有经声明的邻接关系，不等于有开口、可互达或设备可通行。",
+          "source_types": [
+            "core:spatial_region"
+          ],
+          "target_types": [
+            "core:spatial_region"
+          ],
+          "symmetric": true
+        },
+        "region_of_building": {
+          "title": "对应建筑实体",
+          "definition": "将建筑空间范围关联到其描述的建筑实体；不由同名或相交自动建立，不据此推导坐标或可通行性。",
+          "source_types": [
+            "built_environment:building_region"
+          ],
+          "target_types": [
+            "built_environment:building"
+          ],
+          "symmetric": false
+        }
+      }
+    },
+    {
+      "profile": "vxture.ontology-module/0.1",
+      "module_id": "outdoor",
+      "version": "0.1.0",
+      "title": "室外空间与设施",
+      "description": "室内外衔接及公共设施候选语义；不承载导航策略。",
+      "layer": "domain",
+      "status": "draft",
+      "requires": [
+        {
+          "module_id": "core",
+          "version": "0.1.0",
+          "sha256": "d12aec3d679d5c06779e91faf44b4064dfee2a7cbdee2330b20e253b511f169f"
+        }
+      ],
+      "concepts": {
+        "road_segment": {
+          "title": "道路空间段",
+          "definition": "在明确边界及空间参照下表达的一段道路区域，不等同导航边。",
+          "examples": [
+            "园区内部道路一段"
+          ],
+          "counterexamples": [
+            "导航算法路径片段"
+          ],
+          "properties": {},
+          "parent": "core:spatial_region"
+        },
+        "entrance": {
+          "title": "出入口区域",
+          "definition": "用于进出某空间范围的区域；开放时间与通行政策独立记录。",
+          "examples": [
+            "园区东入口范围"
+          ],
+          "counterexamples": [
+            "允许车辆通行的审批结论"
+          ],
+          "properties": {},
+          "parent": "core:spatial_region"
+        },
+        "parking_region": {
+          "title": "停车区域",
+          "definition": "被指定用于停车的空间区域；实时占用另行观测。",
+          "examples": [
+            "地面停车区"
+          ],
+          "counterexamples": [
+            "当前空闲车位数量"
+          ],
+          "properties": {},
+          "parent": "core:spatial_region"
+        },
+        "fence": {
+          "title": "围栏",
+          "definition": "界定或分隔空间的物理设施，不自动证明所有边界均封闭。",
+          "examples": [
+            "园区围栏段"
+          ],
+          "counterexamples": [
+            "园区管理范围线"
+          ],
+          "properties": {},
+          "parent": "core:physical_object"
+        }
+      },
+      "relations": {}
+    },
+    {
+      "profile": "vxture.ontology-module/0.1",
+      "module_id": "electrical",
+      "version": "0.1.0",
+      "title": "供配电",
+      "description": "电气设备、系统成员与供给关系的候选定义。网络影响分析需要端口、配置及运行状态的后续契约。",
+      "layer": "domain",
+      "status": "draft",
+      "requires": [
+        {
+          "module_id": "core",
+          "version": "0.1.0",
+          "sha256": "d12aec3d679d5c06779e91faf44b4064dfee2a7cbdee2330b20e253b511f169f"
+        }
+      ],
+      "concepts": {
+        "distribution_cabinet": {
+          "title": "配电柜",
+          "definition": "承担电能分配功能的柜式电气设备，参数需来源依据。",
+          "examples": [
+            "低压配电柜"
+          ],
+          "counterexamples": [
+            "普通文件柜"
+          ],
+          "properties": {
+            "rated_voltage": {
+              "title": "额定电压",
+              "definition": "按规格依据声明的额定电压，不是实时量测电压。",
+              "data_type": "number",
+              "required": false,
+              "unit": "V",
+              "quantity": "electric_potential",
+              "minimum": 0
+            }
+          },
+          "parent": "core:physical_object"
+        },
+        "electrical_system": {
+          "title": "供配电系统",
+          "definition": "为电能供给与分配组织的功能系统。",
+          "examples": [
+            "园区供配电系统"
+          ],
+          "counterexamples": [
+            "同一房间内所有设备的空间集合"
+          ],
+          "properties": {},
+          "parent": "core:system"
+        },
+        "electrical_port": {
+          "title": "电气端口",
+          "definition": "用于描述电气连接接口的对象；接口身份与连接状态分开。",
+          "examples": [
+            "设备的供电接入端"
+          ],
+          "counterexamples": [
+            "设备名称"
+          ],
+          "properties": {},
+          "parent": "core:entity"
+        }
+      },
+      "relations": {
+        "supplies": {
+          "title": "供电",
+          "definition": "声明源对象向目标对象供电；必须有专业来源，位置邻近不能产生该关系。",
+          "source_types": [
+            "core:physical_object"
+          ],
+          "target_types": [
+            "core:physical_object"
+          ],
+          "symmetric": false
+        }
+      }
+    },
+    {
+      "profile": "vxture.ontology-module/0.1",
+      "module_id": "water",
+      "version": "0.1.0",
+      "title": "给排水",
+      "description": "水务设备和系统候选定义，物理连接与实际流向分别确认。",
+      "layer": "domain",
+      "status": "draft",
+      "requires": [
+        {
+          "module_id": "core",
+          "version": "0.1.0",
+          "sha256": "d12aec3d679d5c06779e91faf44b4064dfee2a7cbdee2330b20e253b511f169f"
+        }
+      ],
+      "concepts": {
+        "pump": {
+          "title": "水泵",
+          "definition": "用于输送水介质的泵设备，不自动覆盖所有工业介质泵。",
+          "examples": [
+            "给水泵"
+          ],
+          "counterexamples": [
+            "仅输送气体的压缩机"
+          ],
+          "properties": {
+            "rated_power": {
+              "title": "额定功率",
+              "definition": "按铭牌或规格依据声明的额定功率，不表示实时耗电。",
+              "data_type": "number",
+              "required": false,
+              "unit": "kW",
+              "quantity": "power",
+              "minimum": 0
+            }
+          },
+          "parent": "core:physical_object"
+        },
+        "valve": {
+          "title": "水务阀门",
+          "definition": "用于调节或截断水介质通路的物理设备。",
+          "examples": [
+            "给水阀门"
+          ],
+          "counterexamples": [
+            "阀门当前开度报告"
+          ],
+          "properties": {},
+          "parent": "core:physical_object"
+        },
+        "water_system": {
+          "title": "给排水系统",
+          "definition": "为水的供给、排放等功能组织的系统。",
+          "examples": [
+            "给水系统"
+          ],
+          "counterexamples": [
+            "只按距离聚类的设备集合"
+          ],
+          "properties": {},
+          "parent": "core:system"
+        }
+      },
+      "relations": {}
+    },
+    {
+      "profile": "vxture.ontology-module/0.1",
+      "module_id": "fire_safety",
+      "version": "0.1.0",
+      "title": "安全消防",
+      "description": "消防设施与专业空间候选定义；不提供全局消防合规结论。",
+      "layer": "domain",
+      "status": "draft",
+      "requires": [
+        {
+          "module_id": "core",
+          "version": "0.1.0",
+          "sha256": "d12aec3d679d5c06779e91faf44b4064dfee2a7cbdee2330b20e253b511f169f"
+        }
+      ],
+      "concepts": {
+        "fire_extinguisher": {
+          "title": "灭火器",
+          "definition": "用于灭火的便携消防器材，适用介质及有效性需独立依据。",
+          "examples": [
+            "现场灭火器"
+          ],
+          "counterexamples": [
+            "灭火器检查合格结论"
+          ],
+          "properties": {},
+          "parent": "core:physical_object"
+        },
+        "fire_compartment": {
+          "title": "防火分区",
+          "definition": "依据专业资料划定的防火空间区域，不等同普通房间或管理区。",
+          "examples": [
+            "经审核资料中的防火分区"
+          ],
+          "counterexamples": [
+            "任意相邻房间的组合"
+          ],
+          "properties": {},
+          "parent": "core:spatial_region"
+        },
+        "alarm_report": {
+          "title": "告警报告",
+          "definition": "来源对异常条件的报告记录，不自动确认事故已经发生。",
+          "examples": [
+            "消防系统告警记录"
+          ],
+          "counterexamples": [
+            "已确认的火灾事件"
+          ],
+          "properties": {},
+          "parent": "core:information_record"
+        }
+      },
+      "relations": {}
+    },
+    {
+      "profile": "vxture.ontology-module/0.1",
+      "module_id": "monitoring",
+      "version": "0.1.0",
+      "title": "环境与监测",
+      "description": "传感器、监测点及观测语义候选定义，观测时序和值域仍需消费契约。",
+      "layer": "domain",
+      "status": "draft",
+      "requires": [
+        {
+          "module_id": "core",
+          "version": "0.1.0",
+          "sha256": "d12aec3d679d5c06779e91faf44b4064dfee2a7cbdee2330b20e253b511f169f"
+        }
+      ],
+      "concepts": {
+        "sensor": {
+          "title": "传感器",
+          "definition": "通过某程序形成对被观测属性报告的物理设备。",
+          "examples": [
+            "温度传感器"
+          ],
+          "counterexamples": [
+            "一次温度观测结果"
+          ],
+          "properties": {},
+          "parent": "core:physical_object"
+        },
+        "monitoring_point": {
+          "title": "监测点",
+          "definition": "业务指定的监测目标或位置记录，不等同传感器物理设备。",
+          "examples": [
+            "区域温度监测点"
+          ],
+          "counterexamples": [
+            "安装该区域外的传感器本体"
+          ],
+          "properties": {},
+          "parent": "core:information_record"
+        },
+        "temperature_observation": {
+          "title": "温度观测",
+          "definition": "对指定对象温度属性的一次来源报告，需时间、方法及单位。",
+          "examples": [
+            "某房间某时刻的温度报告"
+          ],
+          "counterexamples": [
+            "传感器量程上限"
+          ],
+          "properties": {},
+          "parent": "core:observation"
+        }
+      },
+      "relations": {
+        "monitors": {
+          "title": "监测对象",
+          "definition": "声明传感器监测的目标；安装位置不同不能自动视为不合法。",
+          "source_types": [
+            "monitoring:sensor"
+          ],
+          "target_types": [
+            "core:entity"
+          ],
+          "symmetric": false
+        }
+      }
+    },
+    {
+      "profile": "vxture.ontology-module/0.1",
+      "module_id": "operations",
+      "version": "0.2.0",
+      "title": "组织与运营",
+      "description": "跨园区的空间用途、入驻指派、管理范围、设施职责与资产记录候选定义；实例和时效证据由消费方承载，不定义平台租户、商业权益或权限。",
+      "layer": "domain",
+      "status": "draft",
+      "requires": [
+        {
+          "module_id": "core",
+          "version": "0.1.0",
+          "sha256": "d12aec3d679d5c06779e91faf44b4064dfee2a7cbdee2330b20e253b511f169f"
+        }
+      ],
+      "concepts": {
+        "space_use": {
+          "title": "空间用途指派",
+          "definition": "某空间在指定范围和时间内承担用途的记录，如办公、设备、实验或仓储。",
+          "examples": [
+            "房间的设备用途指派"
+          ],
+          "counterexamples": [
+            "房间墙体构件"
+          ],
+          "properties": {
+            "use_label": {
+              "title": "用途名称",
+              "definition": "空间在本次指派中承担的用途，如研发、生产、仓储或办公；用途可以随有效期变化，不改变空间实体身份。",
+              "data_type": "string",
+              "required": true
+            }
+          },
+          "parent": "core:role_assignment"
+        },
+        "inspection_point": {
+          "title": "巡检点",
+          "definition": "业务指定的巡检目标或位置记录，不保证可到达或已生成任务。",
+          "examples": [
+            "某设备面板的人工巡检点"
+          ],
+          "counterexamples": [
+            "检测柜物理设备"
+          ],
+          "properties": {},
+          "parent": "core:information_record"
+        },
+        "work_order": {
+          "title": "工单记录",
+          "definition": "来自业务系统的作业记录引用，不等同实际执行成功。",
+          "examples": [
+            "维修工单"
+          ],
+          "counterexamples": [
+            "设备维修已完成的现场事实"
+          ],
+          "properties": {},
+          "parent": "core:information_record"
+        },
+        "loading_region": {
+          "title": "装卸区域",
+          "definition": "用于装卸活动的指定空间区域，管制与实际作业状态独立记录。",
+          "examples": [
+            "仓库装卸区"
+          ],
+          "counterexamples": [
+            "叉车规划轨迹"
+          ],
+          "properties": {},
+          "parent": "core:spatial_region"
+        },
+        "management_region": {
+          "title": "管理范围",
+          "definition": "根据明确管理依据界定的空间区域；可以覆盖多个园区范围或其部分，不等同行政区、法定宗地或平台工作空间。",
+          "examples": [
+            "运营单位负责的跨楼栋公共设施管理范围"
+          ],
+          "counterexamples": [
+            "平台租户、未经确认的行政区边界"
+          ],
+          "properties": {},
+          "parent": "core:spatial_region"
+        },
+        "occupancy_assignment": {
+          "title": "入驻指派",
+          "definition": "记录某组织在约定范围和有效期内入驻或使用空间的安排；不直接证明所有权、租赁合同有效性、现场实时占用或平台访问权。",
+          "examples": [
+            "企业在约定期间使用某厂房空间的安排"
+          ],
+          "counterexamples": [
+            "企业注册在园区但无空间使用依据"
+          ],
+          "properties": {},
+          "parent": "core:role_assignment"
+        },
+        "responsibility_assignment": {
+          "title": "设施职责指派",
+          "definition": "记录某组织对空间、设施或系统在指定范围和有效期内承担的职责；职责类别、责任主体和对象需要显式声明，不从入驻关系推导。",
+          "examples": [
+            "受托单位在合同期间负责某供配电系统维护的安排"
+          ],
+          "counterexamples": [
+            "设备附近的企业被自动认定负责维护"
+          ],
+          "properties": {
+            "responsibility_kind": {
+              "title": "职责类别",
+              "definition": "该指派承担的业务职责名称，如运营、维护或巡检；名称不构成访问授权或专业资质认定。",
+              "data_type": "string",
+              "required": true
+            }
+          },
+          "parent": "core:role_assignment"
+        },
+        "asset_record": {
+          "title": "资产记录",
+          "definition": "描述物理对象的资产管理信息记录；资产编号属于来源系统的记录标识，不自动作为物理对象身份，也不自动证明权属。",
+          "examples": [
+            "资产台账中描述某台水泵的条目"
+          ],
+          "counterexamples": [
+            "现场水泵实体或未经核验的所有权结论"
+          ],
+          "properties": {
+            "record_key": {
+              "title": "来源记录标识",
+              "definition": "资产记录在来源系统及其作用域内的标识；来源和作用域由实例来源绑定声明。",
+              "data_type": "string",
+              "required": true
+            }
+          },
+          "parent": "core:information_record"
+        }
+      },
+      "relations": {
+        "maintains": {
+          "title": "维护职责",
+          "definition": "组织在指定范围和有效期承担对象维护职责；具体合同和时间由实例契约记录。",
+          "source_types": [
+            "core:organization"
+          ],
+          "target_types": [
+            "core:physical_object"
+          ],
+          "symmetric": false
+        },
+        "occupancy_organization": {
+          "title": "入驻组织",
+          "definition": "指派所记录的入驻或使用组织；组织与平台租户分别标识。",
+          "source_types": [
+            "operations:occupancy_assignment"
+          ],
+          "target_types": [
+            "core:organization"
+          ],
+          "symmetric": false
+        },
+        "occupancy_space": {
+          "title": "入驻空间",
+          "definition": "指派所涉及的空间区域；有效期、依据和完整性在实例契约中约束，不将区域内所有设施视为归该组织所有。",
+          "source_types": [
+            "operations:occupancy_assignment"
+          ],
+          "target_types": [
+            "core:spatial_region"
+          ],
+          "symmetric": false
+        },
+        "use_space": {
+          "title": "用途空间",
+          "definition": "用途指派所描述的空间；生产、研发、仓储等用途不替代房间或空间范围的实体类型。",
+          "source_types": [
+            "operations:space_use"
+          ],
+          "target_types": [
+            "core:spatial_region"
+          ],
+          "symmetric": false
+        },
+        "responsible_organization": {
+          "title": "责任组织",
+          "definition": "设施职责指派的责任组织；不从组织名称、入驻或邻近位置推断。",
+          "source_types": [
+            "operations:responsibility_assignment"
+          ],
+          "target_types": [
+            "core:organization"
+          ],
+          "symmetric": false
+        },
+        "responsibility_target": {
+          "title": "职责对象",
+          "definition": "设施职责指派涉及的物理对象、空间或系统；不等同所有权、故障因果或访问权限。",
+          "source_types": [
+            "operations:responsibility_assignment"
+          ],
+          "target_types": [
+            "core:physical_object",
+            "core:spatial_region",
+            "core:system"
+          ],
+          "symmetric": false
+        },
+        "management_scope": {
+          "title": "职责管理范围",
+          "definition": "设施职责指派适用的空间管理范围；该范围不由设备的几何包围盒自动生成。",
+          "source_types": [
+            "operations:responsibility_assignment"
+          ],
+          "target_types": [
+            "operations:management_region"
+          ],
+          "symmetric": false
+        },
+        "asset_object": {
+          "title": "记录描述对象",
+          "definition": "资产记录所描述的物理对象；同一对象可有不同来源的多条记录，不按资产编号跨来源自动合并。",
+          "source_types": [
+            "operations:asset_record"
+          ],
+          "target_types": [
+            "core:physical_object"
+          ],
+          "symmetric": false
+        },
+        "asset_custodian": {
+          "title": "记录管理组织",
+          "definition": "负责维护资产记录的组织；不据此推导物理对象所有者、设施运维责任或授权。",
+          "source_types": [
+            "operations:asset_record"
+          ],
+          "target_types": [
+            "core:organization"
+          ],
+          "symmetric": false
+        }
+      }
+    }
+  ]
+}

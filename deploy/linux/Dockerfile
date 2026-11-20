@@ -3,6 +3,7 @@ FROM node:24-bookworm-slim AS workbench
 WORKDIR /src/apps/workbench
 RUN npm install --global pnpm@10.32.1
 COPY packages/globe-sdk/ /src/packages/globe-sdk/
+COPY packages/ontology-ui/ /src/packages/ontology-ui/
 COPY configs/ontology/ /src/configs/ontology/
 COPY apps/workbench/ ./
 RUN pnpm install --frozen-lockfile && pnpm build

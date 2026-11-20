@@ -1,0 +1,704 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:vxture:schema:ontology-instances:0.1",
+  "title": "Portable ontology instance package 0.1",
+  "type": "object",
+  "properties": {
+    "profile": {
+      "const": "vxture.ontology-instances/0.1"
+    },
+    "package_id": {
+      "$ref": "#/$defs/id"
+    },
+    "namespace": {
+      "type": "string",
+      "format": "uri",
+      "pattern": "^[a-z][a-z0-9+.-]*:[^\\s]+$",
+      "maxLength": 500
+    },
+    "synthetic": {
+      "type": "boolean"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 160
+    },
+    "generated_at": {
+      "$ref": "#/$defs/timestamp"
+    },
+    "definition_refs": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/definition_ref"
+      },
+      "minItems": 1,
+      "maxItems": 32,
+      "uniqueItems": true
+    },
+    "sources": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/source"
+      },
+      "minItems": 1,
+      "maxItems": 100,
+      "uniqueItems": true
+    },
+    "evidence": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/evidence"
+      },
+      "minItems": 1,
+      "maxItems": 10000,
+      "uniqueItems": true
+    },
+    "entities": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/entity"
+      },
+      "minItems": 1,
+      "maxItems": 10000,
+      "uniqueItems": true
+    },
+    "assertions": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/assertion"
+      },
+      "minItems": 0,
+      "maxItems": 20000,
+      "uniqueItems": true
+    },
+    "frames": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/frame"
+      },
+      "minItems": 0,
+      "maxItems": 100,
+      "uniqueItems": true
+    },
+    "geometries": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/geometry"
+      },
+      "minItems": 0,
+      "maxItems": 10000,
+      "uniqueItems": true
+    },
+    "geometry_bindings": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/geometry_binding"
+      },
+      "minItems": 0,
+      "maxItems": 10000,
+      "uniqueItems": true
+    },
+    "coverage": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/coverage"
+      },
+      "minItems": 0,
+      "maxItems": 1000,
+      "uniqueItems": true
+    }
+  },
+  "required": [
+    "profile",
+    "package_id",
+    "namespace",
+    "synthetic",
+    "title",
+    "generated_at",
+    "definition_refs",
+    "sources",
+    "evidence",
+    "entities",
+    "assertions",
+    "frames",
+    "geometries",
+    "geometry_bindings",
+    "coverage"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+    },
+    "term": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_-]{0,63}:[a-z][a-z0-9_-]{0,63}$"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,6})?Z$"
+    },
+    "valid_time": {
+      "type": "object",
+      "properties": {
+        "start": {
+          "$ref": "#/$defs/timestamp"
+        },
+        "end": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/timestamp"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "start",
+        "end"
+      ],
+      "additionalProperties": false
+    },
+    "definition_ref": {
+      "type": "object",
+      "properties": {
+        "module_id": {
+          "$ref": "#/$defs/id"
+        },
+        "version": {
+          "type": "string",
+          "pattern": "^[0-9]{1,4}\\.[0-9]{1,4}\\.[0-9]{1,4}$"
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      },
+      "required": [
+        "module_id",
+        "version",
+        "sha256"
+      ],
+      "additionalProperties": false
+    },
+    "source": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "system": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "scope": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500
+        },
+        "revision": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "synthetic": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id",
+        "system",
+        "scope",
+        "revision",
+        "synthetic"
+      ],
+      "additionalProperties": false
+    },
+    "evidence": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "source_id": {
+          "$ref": "#/$defs/id"
+        },
+        "record_key": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500
+        },
+        "recorded_at": {
+          "$ref": "#/$defs/timestamp"
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2000
+        }
+      },
+      "required": [
+        "id",
+        "source_id",
+        "record_key",
+        "recorded_at",
+        "description"
+      ],
+      "additionalProperties": false
+    },
+    "property": {
+      "type": "object",
+      "properties": {
+        "value": {
+          "type": [
+            "string",
+            "number",
+            "boolean"
+          ],
+          "maxLength": 2000
+        },
+        "source_id": {
+          "$ref": "#/$defs/id"
+        },
+        "evidence_ids": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/id"
+          },
+          "minItems": 1,
+          "maxItems": 100,
+          "uniqueItems": true
+        },
+        "unit": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 40
+        },
+        "quantity": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        }
+      },
+      "required": [
+        "value",
+        "source_id",
+        "evidence_ids"
+      ],
+      "additionalProperties": false,
+      "dependentRequired": {
+        "unit": [
+          "quantity"
+        ],
+        "quantity": [
+          "unit"
+        ]
+      },
+      "allOf": [
+        {
+          "if": {
+            "anyOf": [
+              {
+                "required": [
+                  "unit"
+                ]
+              },
+              {
+                "required": [
+                  "quantity"
+                ]
+              }
+            ]
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "type": "number"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "source_binding": {
+      "type": "object",
+      "properties": {
+        "source_id": {
+          "$ref": "#/$defs/id"
+        },
+        "external_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500
+        }
+      },
+      "required": [
+        "source_id",
+        "external_id"
+      ],
+      "additionalProperties": false
+    },
+    "entity": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "type": {
+          "$ref": "#/$defs/term"
+        },
+        "properties": {
+          "type": "object",
+          "propertyNames": {
+            "$ref": "#/$defs/id"
+          },
+          "maxProperties": 128,
+          "additionalProperties": {
+            "$ref": "#/$defs/property"
+          }
+        },
+        "source_bindings": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/source_binding"
+          },
+          "minItems": 1,
+          "maxItems": 32,
+          "uniqueItems": true
+        },
+        "evidence_ids": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/id"
+          },
+          "minItems": 1,
+          "maxItems": 100,
+          "uniqueItems": true
+        },
+        "valid_time": {
+          "$ref": "#/$defs/valid_time"
+        }
+      },
+      "required": [
+        "id",
+        "type",
+        "properties",
+        "source_bindings",
+        "evidence_ids"
+      ],
+      "additionalProperties": false
+    },
+    "assertion": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "relation": {
+          "$ref": "#/$defs/term"
+        },
+        "subject_id": {
+          "$ref": "#/$defs/id"
+        },
+        "object_id": {
+          "$ref": "#/$defs/id"
+        },
+        "source_id": {
+          "$ref": "#/$defs/id"
+        },
+        "evidence_ids": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/id"
+          },
+          "minItems": 1,
+          "maxItems": 100,
+          "uniqueItems": true
+        },
+        "valid_time": {
+          "$ref": "#/$defs/valid_time"
+        },
+        "epistemic_status": {
+          "enum": [
+            "reported",
+            "corroborated",
+            "disputed"
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "relation",
+        "subject_id",
+        "object_id",
+        "source_id",
+        "evidence_ids",
+        "valid_time",
+        "epistemic_status"
+      ],
+      "additionalProperties": false
+    },
+    "frame": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "kind": {
+          "const": "local_cartesian"
+        },
+        "unit": {
+          "const": "m"
+        },
+        "axes": {
+          "const": [
+            "x",
+            "y",
+            "z"
+          ]
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2000
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "unit",
+        "axes",
+        "description"
+      ],
+      "additionalProperties": false
+    },
+    "vector3": {
+      "type": "array",
+      "items": {
+        "type": "number"
+      },
+      "minItems": 3,
+      "maxItems": 3
+    },
+    "geometry": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "frame_id": {
+          "$ref": "#/$defs/id"
+        },
+        "shape": {
+          "oneOf": [
+            {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "const": "point3"
+                },
+                "coordinates": {
+                  "$ref": "#/$defs/vector3"
+                }
+              },
+              "required": [
+                "kind",
+                "coordinates"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "const": "box3"
+                },
+                "min": {
+                  "$ref": "#/$defs/vector3"
+                },
+                "max": {
+                  "$ref": "#/$defs/vector3"
+                }
+              },
+              "required": [
+                "kind",
+                "min",
+                "max"
+              ],
+              "additionalProperties": false
+            }
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "frame_id",
+        "shape"
+      ],
+      "additionalProperties": false
+    },
+    "geometry_binding": {
+      "type": "object",
+      "properties": {
+        "entity_id": {
+          "$ref": "#/$defs/id"
+        },
+        "geometry_id": {
+          "$ref": "#/$defs/id"
+        },
+        "purpose": {
+          "enum": [
+            "placement",
+            "extent"
+          ]
+        },
+        "source_id": {
+          "$ref": "#/$defs/id"
+        },
+        "evidence_ids": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/id"
+          },
+          "minItems": 1,
+          "maxItems": 100,
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "entity_id",
+        "geometry_id",
+        "purpose",
+        "source_id",
+        "evidence_ids"
+      ],
+      "additionalProperties": false
+    },
+    "coverage": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "scope_entity_ids": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/id"
+          },
+          "minItems": 1,
+          "maxItems": 100,
+          "uniqueItems": true
+        },
+        "concepts": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/term"
+          },
+          "minItems": 1,
+          "maxItems": 256,
+          "uniqueItems": true
+        },
+        "relations": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/term"
+          },
+          "minItems": 0,
+          "maxItems": 256,
+          "uniqueItems": true
+        },
+        "status": {
+          "enum": [
+            "unknown",
+            "partial",
+            "complete"
+          ]
+        },
+        "valid_time": {
+          "$ref": "#/$defs/valid_time"
+        },
+        "source_id": {
+          "$ref": "#/$defs/id"
+        },
+        "evidence_ids": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/id"
+          },
+          "minItems": 1,
+          "maxItems": 100,
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "id",
+        "scope_entity_ids",
+        "concepts",
+        "relations",
+        "status",
+        "valid_time",
+        "source_id",
+        "evidence_ids"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "synthetic": {
+            "const": true
+          }
+        },
+        "required": [
+          "synthetic"
+        ]
+      },
+      "then": {
+        "properties": {
+          "sources": {
+            "items": {
+              "properties": {
+                "synthetic": {
+                  "const": true
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "synthetic": {
+            "const": false
+          }
+        },
+        "required": [
+          "synthetic"
+        ]
+      },
+      "then": {
+        "properties": {
+          "sources": {
+            "items": {
+              "properties": {
+                "synthetic": {
+                  "const": false
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}

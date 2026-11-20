@@ -25,9 +25,9 @@ function readReference(){
 function message(code:string){
  return ({ontology_not_found:'该本体版本不存在。',ontology_reference_mismatch:'本体摘要与固定引用不一致，请核对后重新选择。',ontology_integrity_changed:'已封存规则内容不完整或被修改，已停止读取和校验。',ontology_store_not_configured:'本体规则库尚未配置。',ontology_definition_invalid:'本体规则结构无效。'} as Record<string,string>)[code]||'本体服务读取失败，请检查本机服务后重试。';
 }
-export function OntologyWorkbench(){
+export function OntologyWorkbench({mode='read'}:{mode?:'read'|'edit'}){
  const target=useRecordNavigation();
- const rules=target.tab==='rules'||!target.tab&&new URLSearchParams(location.search).has('ontology_id');
+ const rules=mode==='read';
  const [versions,setVersions]=useState<Version[]>([]),[reference,setReference]=useState(readReference),[loaded,setLoaded]=useState<Loaded|null>(null);
  const [listing,setListing]=useState(false),[reading,setReading]=useState(false),[error,setError]=useState(''),[revision,setRevision]=useState(0);
  const [text,setText]=useState(''),[result,setResult]=useState<Result|null>(null),[checkError,setCheckError]=useState(''),[busy,setBusy]=useState(false);
@@ -74,9 +74,9 @@ export function OntologyWorkbench(){
   finally{if(!controller.signal.aborted)setBusy(false);}
  }
  const current=loaded?.record;
+ if(mode==='edit')return <OntologyAuthoring mode="edit" endpoint={endpoint} source={loaded?.definition as unknown as RuleDocument||null} onSealed={()=>{}}/>;
  return <div className="flex flex-col gap-xl">
-  <div hidden={rules}><OntologyAuthoring endpoint={endpoint} source={loaded?.definition as unknown as RuleDocument||null} onSealed={record=>{setRevision(v=>v+1);const params=new URLSearchParams(location.search);params.set('ontology_id',record.ontology_id);params.set('ontology_version',record.version);params.set('ontology_sha256',record.sha256);appNavigate('ontology?'+params);}}/>
-  </div><div hidden={!rules} className="flex flex-col gap-xl"><div className="flex flex-wrap items-center justify-between gap-md"><p className="text-body-small text-muted-foreground">查看固定版本的类型与关系规则，校验对象草稿。预置模板及当前 Workspace 的规则可供其多个场景引用。</p><Button variant="outline" disabled={listing||reading||busy} onClick={()=>setRevision(n=>n+1)}>刷新规则库</Button></div>
+  <div className="flex flex-col gap-xl"><div className="flex flex-wrap items-center justify-between gap-md"><p className="text-body-small text-muted-foreground">查看固定版本的类型与关系规则，校验对象草稿。预置模板及当前 Workspace 的规则可供其多个场景引用。</p><Button variant="outline" disabled={listing||reading||busy} onClick={()=>setRevision(n=>n+1)}>刷新规则库</Button></div>
   <Card className="module-surface" aria-label="本体版本"><CardHeader><CardTitle>本体版本</CardTitle></CardHeader><CardContent className="flex flex-col gap-md">
    <NativeSelect aria-label="选择本体版本" value={versions.some(v=>key(v)===referenceKey)?referenceKey:''} onChange={e=>choose(e.target.value)} disabled={listing||busy}><option value="">{listing?'读取版本中…':'请选择固定本体版本'}</option>{versions.map(v=><option key={key(v)} value={key(v)}>{v.title} · {v.version_code||`V${v.version}`} </option>)}</NativeSelect>
    {error&&<p role="alert">{error}</p>}{!listing&&!error&&!versions.length&&<p role="status" className="text-body-small text-muted-foreground">尚无封存本体版本，请由工程师配置规则源后启动服务。</p>}

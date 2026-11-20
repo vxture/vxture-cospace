@@ -1,0 +1,823 @@
+{
+  "profile": "vxture.ontology-instances/0.1",
+  "package_id": "research-office-b02",
+  "namespace": "urn:vxture:synthetic:park:research-office",
+  "synthetic": true,
+  "title": "研发办公园（合成）",
+  "generated_at": "2026-11-20T00:00:00Z",
+  "definition_refs": [
+    {
+      "module_id": "built_environment",
+      "version": "0.2.0",
+      "sha256": "3a4867139f6d9004e01b10eb919c207c755fc9ff36b9e622f7ae28aacaa9cd8c"
+    },
+    {
+      "module_id": "core",
+      "version": "0.1.0",
+      "sha256": "d12aec3d679d5c06779e91faf44b4064dfee2a7cbdee2330b20e253b511f169f"
+    },
+    {
+      "module_id": "electrical",
+      "version": "0.1.0",
+      "sha256": "b466e3e92b62c2c925311fffbc23902dc4f577b47da85973eef1406746e2804e"
+    },
+    {
+      "module_id": "monitoring",
+      "version": "0.1.0",
+      "sha256": "e4e0a23d811db921893b038676ad452f9a3d81e256877fa8b83f108d34c4c6d2"
+    },
+    {
+      "module_id": "operations",
+      "version": "0.2.0",
+      "sha256": "0619ee8b503663fb6f3982efaacdf12e8a730039eef7522cb1b4b5069277bf52"
+    }
+  ],
+  "sources": [
+    {
+      "id": "register",
+      "system": "synthetic-park-register",
+      "scope": "research-office",
+      "revision": "fixture-b02-1",
+      "synthetic": true
+    }
+  ],
+  "evidence": [
+    {
+      "id": "basis",
+      "source_id": "register",
+      "record_key": "fixture-design-001",
+      "recorded_at": "2026-11-20T00:00:00Z",
+      "description": "手工编制的合成园区示例依据，无客户采集或现场核验。"
+    }
+  ],
+  "entities": [
+    {
+      "id": "site",
+      "type": "built_environment:site_region",
+      "properties": {
+        "name": {
+          "value": "研发办公园（合成）",
+          "source_id": "register",
+          "evidence_ids": [
+            "basis"
+          ]
+        }
+      },
+      "source_bindings": [
+        {
+          "source_id": "register",
+          "external_id": "site"
+        }
+      ],
+      "evidence_ids": [
+        "basis"
+      ]
+    },
+    {
+      "id": "building",
+      "type": "built_environment:building",
+      "properties": {
+        "name": {
+          "value": "一号楼",
+          "source_id": "register",
+          "evidence_ids": [
+            "basis"
+          ]
+        }
+      },
+      "source_bindings": [
+        {
+          "source_id": "register",
+          "external_id": "building"
+        }
+      ],
+      "evidence_ids": [
+        "basis"
+      ]
+    },
+    {
+      "id": "building-space",
+      "type": "built_environment:building_region",
+      "properties": {
+        "name": {
+          "value": "一号楼空间范围",
+          "source_id": "register",
+          "evidence_ids": [
+            "basis"
+          ]
+        }
+      },
+      "source_bindings": [
+        {
+          "source_id": "register",
+          "external_id": "building-space"
+        }
+      ],
+      "evidence_ids": [
+        "basis"
+      ]
+    },
+    {
+      "id": "level",
+      "type": "built_environment:level",
+      "properties": {
+        "name": {
+          "value": "一层",
+          "source_id": "register",
+          "evidence_ids": [
+            "basis"
+          ]
+        }
+      },
+      "source_bindings": [
+        {
+          "source_id": "register",
+          "external_id": "level"
+        }
+      ],
+      "evidence_ids": [
+        "basis"
+      ]
+    },
+    {
+      "id": "work-space",
+      "type": "built_environment:room",
+      "properties": {
+        "name": {
+          "value": "作业空间",
+          "source_id": "register",
+          "evidence_ids": [
+            "basis"
+          ]
+        }
+      },
+      "source_bindings": [
+        {
+          "source_id": "register",
+          "external_id": "work-space"
+        }
+      ],
+      "evidence_ids": [
+        "basis"
+      ]
+    },
+    {
+      "id": "management",
+      "type": "operations:management_region",
+      "properties": {
+        "name": {
+          "value": "公共设施管理范围",
+          "source_id": "register",
+          "evidence_ids": [
+            "basis"
+          ]
+        }
+      },
+      "source_bindings": [
+        {
+          "source_id": "register",
+          "external_id": "management"
+        }
+      ],
+      "evidence_ids": [
+        "basis"
+      ]
+    },
+    {
+      "id": "operator",
+      "type": "core:organization",
+      "properties": {
+        "name": {
+          "value": "运营单位（合成）",
+          "source_id": "register",
+          "evidence_ids": [
+            "basis"
+          ]
+        }
+      },
+      "source_bindings": [
+        {
+          "source_id": "register",
+          "external_id": "operator"
+        }
+      ],
+      "evidence_ids": [
+        "basis"
+      ]
+    },
+    {
+      "id": "occupant",
+      "type": "core:organization",
+      "properties": {
+        "name": {
+          "value": "使用单位（合成）",
+          "source_id": "register",
+          "evidence_ids": [
+            "basis"
+          ]
+        }
+      },
+      "source_bindings": [
+        {
+          "source_id": "register",
+          "external_id": "occupant"
+        }
+      ],
+      "evidence_ids": [
+        "basis"
+      ]
+    },
+    {
+      "id": "occupancy",
+      "type": "operations:occupancy_assignment",
+      "properties": {
+        "name": {
+          "value": "空间使用安排",
+          "source_id": "register",
+          "evidence_ids": [
+            "basis"
+          ]
+        }
+      },
+      "source_bindings": [
+        {
+          "source_id": "register",
+          "external_id": "occupancy"
+        }
+      ],
+      "evidence_ids": [
+        "basis"
+      ],
+      "valid_time": {
+        "start": "2026-01-01T00:00:00Z",
+        "end": "2027-01-01T00:00:00Z"
+      }
+    },
+    {
+      "id": "use",
+      "type": "operations:space_use",
+      "properties": {
+        "name": {
+          "value": "空间用途安排",
+          "source_id": "register",
+          "evidence_ids": [
+            "basis"
+          ]
+        },
+        "use_label": {
+          "value": "研发实验",
+          "source_id": "register",
+          "evidence_ids": [
+            "basis"
+          ]
+        }
+      },
+      "source_bindings": [
+        {
+          "source_id": "register",
+          "external_id": "use"
+        }
+      ],
+      "evidence_ids": [
+        "basis"
+      ],
+      "valid_time": {
+        "start": "2026-01-01T00:00:00Z",
+        "end": "2027-01-01T00:00:00Z"
+      }
+    },
+    {
+      "id": "responsibility",
+      "type": "operations:responsibility_assignment",
+      "properties": {
+        "name": {
+          "value": "设施维护职责",
+          "source_id": "register",
+          "evidence_ids": [
+            "basis"
+          ]
+        },
+        "responsibility_kind": {
+          "value": "维护",
+          "source_id": "register",
+          "evidence_ids": [
+            "basis"
+          ]
+        }
+      },
+      "source_bindings": [
+        {
+          "source_id": "register",
+          "external_id": "responsibility"
+        }
+      ],
+      "evidence_ids": [
+        "basis"
+      ],
+      "valid_time": {
+        "start": "2026-01-01T00:00:00Z",
+        "end": "2027-01-01T00:00:00Z"
+      }
+    },
+    {
+      "id": "cabinet",
+      "type": "electrical:distribution_cabinet",
+      "properties": {
+        "name": {
+          "value": "配电柜",
+          "source_id": "register",
+          "evidence_ids": [
+            "basis"
+          ]
+        },
+        "rated_voltage": {
+          "value": 380,
+          "source_id": "register",
+          "evidence_ids": [
+            "basis"
+          ],
+          "unit": "V",
+          "quantity": "electric_potential"
+        }
+      },
+      "source_bindings": [
+        {
+          "source_id": "register",
+          "external_id": "cabinet"
+        }
+      ],
+      "evidence_ids": [
+        "basis"
+      ]
+    },
+    {
+      "id": "electrical-system",
+      "type": "electrical:electrical_system",
+      "properties": {
+        "name": {
+          "value": "公共供配电系统",
+          "source_id": "register",
+          "evidence_ids": [
+            "basis"
+          ]
+        }
+      },
+      "source_bindings": [
+        {
+          "source_id": "register",
+          "external_id": "electrical-system"
+        }
+      ],
+      "evidence_ids": [
+        "basis"
+      ]
+    },
+    {
+      "id": "asset",
+      "type": "operations:asset_record",
+      "properties": {
+        "name": {
+          "value": "配电柜台账",
+          "source_id": "register",
+          "evidence_ids": [
+            "basis"
+          ]
+        },
+        "record_key": {
+          "value": "asset-001",
+          "source_id": "register",
+          "evidence_ids": [
+            "basis"
+          ]
+        }
+      },
+      "source_bindings": [
+        {
+          "source_id": "register",
+          "external_id": "asset-001"
+        }
+      ],
+      "evidence_ids": [
+        "basis"
+      ]
+    },
+    {
+      "id": "sensor",
+      "type": "monitoring:sensor",
+      "properties": {
+        "name": {
+          "value": "环境传感器",
+          "source_id": "register",
+          "evidence_ids": [
+            "basis"
+          ]
+        }
+      },
+      "source_bindings": [
+        {
+          "source_id": "register",
+          "external_id": "sensor"
+        }
+      ],
+      "evidence_ids": [
+        "basis"
+      ]
+    }
+  ],
+  "assertions": [
+    {
+      "id": "a01",
+      "relation": "built_environment:region_of_building",
+      "subject_id": "building-space",
+      "object_id": "building",
+      "source_id": "register",
+      "evidence_ids": [
+        "basis"
+      ],
+      "valid_time": {
+        "start": "2026-01-01T00:00:00Z",
+        "end": "2027-01-01T00:00:00Z"
+      },
+      "epistemic_status": "reported"
+    },
+    {
+      "id": "a02",
+      "relation": "built_environment:spatial_part_of",
+      "subject_id": "building-space",
+      "object_id": "site",
+      "source_id": "register",
+      "evidence_ids": [
+        "basis"
+      ],
+      "valid_time": {
+        "start": "2026-01-01T00:00:00Z",
+        "end": "2027-01-01T00:00:00Z"
+      },
+      "epistemic_status": "reported"
+    },
+    {
+      "id": "a03",
+      "relation": "built_environment:spatial_part_of",
+      "subject_id": "level",
+      "object_id": "building-space",
+      "source_id": "register",
+      "evidence_ids": [
+        "basis"
+      ],
+      "valid_time": {
+        "start": "2026-01-01T00:00:00Z",
+        "end": "2027-01-01T00:00:00Z"
+      },
+      "epistemic_status": "reported"
+    },
+    {
+      "id": "a04",
+      "relation": "built_environment:spatial_part_of",
+      "subject_id": "work-space",
+      "object_id": "level",
+      "source_id": "register",
+      "evidence_ids": [
+        "basis"
+      ],
+      "valid_time": {
+        "start": "2026-01-01T00:00:00Z",
+        "end": "2027-01-01T00:00:00Z"
+      },
+      "epistemic_status": "reported"
+    },
+    {
+      "id": "a05",
+      "relation": "core:located_in",
+      "subject_id": "building",
+      "object_id": "site",
+      "source_id": "register",
+      "evidence_ids": [
+        "basis"
+      ],
+      "valid_time": {
+        "start": "2026-01-01T00:00:00Z",
+        "end": "2027-01-01T00:00:00Z"
+      },
+      "epistemic_status": "reported"
+    },
+    {
+      "id": "a06",
+      "relation": "operations:occupancy_organization",
+      "subject_id": "occupancy",
+      "object_id": "occupant",
+      "source_id": "register",
+      "evidence_ids": [
+        "basis"
+      ],
+      "valid_time": {
+        "start": "2026-01-01T00:00:00Z",
+        "end": "2027-01-01T00:00:00Z"
+      },
+      "epistemic_status": "reported"
+    },
+    {
+      "id": "a07",
+      "relation": "operations:occupancy_space",
+      "subject_id": "occupancy",
+      "object_id": "work-space",
+      "source_id": "register",
+      "evidence_ids": [
+        "basis"
+      ],
+      "valid_time": {
+        "start": "2026-01-01T00:00:00Z",
+        "end": "2027-01-01T00:00:00Z"
+      },
+      "epistemic_status": "reported"
+    },
+    {
+      "id": "a08",
+      "relation": "operations:use_space",
+      "subject_id": "use",
+      "object_id": "work-space",
+      "source_id": "register",
+      "evidence_ids": [
+        "basis"
+      ],
+      "valid_time": {
+        "start": "2026-01-01T00:00:00Z",
+        "end": "2027-01-01T00:00:00Z"
+      },
+      "epistemic_status": "reported"
+    },
+    {
+      "id": "a09",
+      "relation": "operations:responsible_organization",
+      "subject_id": "responsibility",
+      "object_id": "operator",
+      "source_id": "register",
+      "evidence_ids": [
+        "basis"
+      ],
+      "valid_time": {
+        "start": "2026-01-01T00:00:00Z",
+        "end": "2027-01-01T00:00:00Z"
+      },
+      "epistemic_status": "reported"
+    },
+    {
+      "id": "a10",
+      "relation": "operations:responsibility_target",
+      "subject_id": "responsibility",
+      "object_id": "electrical-system",
+      "source_id": "register",
+      "evidence_ids": [
+        "basis"
+      ],
+      "valid_time": {
+        "start": "2026-01-01T00:00:00Z",
+        "end": "2027-01-01T00:00:00Z"
+      },
+      "epistemic_status": "reported"
+    },
+    {
+      "id": "a11",
+      "relation": "operations:management_scope",
+      "subject_id": "responsibility",
+      "object_id": "management",
+      "source_id": "register",
+      "evidence_ids": [
+        "basis"
+      ],
+      "valid_time": {
+        "start": "2026-01-01T00:00:00Z",
+        "end": "2027-01-01T00:00:00Z"
+      },
+      "epistemic_status": "reported"
+    },
+    {
+      "id": "a12",
+      "relation": "operations:asset_object",
+      "subject_id": "asset",
+      "object_id": "cabinet",
+      "source_id": "register",
+      "evidence_ids": [
+        "basis"
+      ],
+      "valid_time": {
+        "start": "2026-01-01T00:00:00Z",
+        "end": "2027-01-01T00:00:00Z"
+      },
+      "epistemic_status": "reported"
+    },
+    {
+      "id": "a13",
+      "relation": "operations:asset_custodian",
+      "subject_id": "asset",
+      "object_id": "operator",
+      "source_id": "register",
+      "evidence_ids": [
+        "basis"
+      ],
+      "valid_time": {
+        "start": "2026-01-01T00:00:00Z",
+        "end": "2027-01-01T00:00:00Z"
+      },
+      "epistemic_status": "reported"
+    },
+    {
+      "id": "a14",
+      "relation": "core:located_in",
+      "subject_id": "cabinet",
+      "object_id": "work-space",
+      "source_id": "register",
+      "evidence_ids": [
+        "basis"
+      ],
+      "valid_time": {
+        "start": "2026-01-01T00:00:00Z",
+        "end": "2027-01-01T00:00:00Z"
+      },
+      "epistemic_status": "reported"
+    },
+    {
+      "id": "a15",
+      "relation": "core:member_of",
+      "subject_id": "cabinet",
+      "object_id": "electrical-system",
+      "source_id": "register",
+      "evidence_ids": [
+        "basis"
+      ],
+      "valid_time": {
+        "start": "2026-01-01T00:00:00Z",
+        "end": "2027-01-01T00:00:00Z"
+      },
+      "epistemic_status": "reported"
+    },
+    {
+      "id": "a16",
+      "relation": "core:located_in",
+      "subject_id": "sensor",
+      "object_id": "work-space",
+      "source_id": "register",
+      "evidence_ids": [
+        "basis"
+      ],
+      "valid_time": {
+        "start": "2026-01-01T00:00:00Z",
+        "end": "2027-01-01T00:00:00Z"
+      },
+      "epistemic_status": "reported"
+    },
+    {
+      "id": "a17",
+      "relation": "monitoring:monitors",
+      "subject_id": "sensor",
+      "object_id": "work-space",
+      "source_id": "register",
+      "evidence_ids": [
+        "basis"
+      ],
+      "valid_time": {
+        "start": "2026-01-01T00:00:00Z",
+        "end": "2027-01-01T00:00:00Z"
+      },
+      "epistemic_status": "reported"
+    }
+  ],
+  "frames": [
+    {
+      "id": "local",
+      "kind": "local_cartesian",
+      "unit": "m",
+      "axes": [
+        "x",
+        "y",
+        "z"
+      ],
+      "description": "合成右手局部坐标；原点为样例西南角地面，Z 向上，无地理配准。"
+    }
+  ],
+  "geometries": [
+    {
+      "id": "site-extent",
+      "frame_id": "local",
+      "shape": {
+        "kind": "box3",
+        "min": [
+          0,
+          0,
+          0
+        ],
+        "max": [
+          200,
+          160,
+          30
+        ]
+      }
+    },
+    {
+      "id": "building-extent",
+      "frame_id": "local",
+      "shape": {
+        "kind": "box3",
+        "min": [
+          10,
+          10,
+          0
+        ],
+        "max": [
+          80,
+          60,
+          20
+        ]
+      }
+    },
+    {
+      "id": "work-extent",
+      "frame_id": "local",
+      "shape": {
+        "kind": "box3",
+        "min": [
+          12,
+          12,
+          0
+        ],
+        "max": [
+          40,
+          35,
+          4
+        ]
+      }
+    },
+    {
+      "id": "cabinet-position",
+      "frame_id": "local",
+      "shape": {
+        "kind": "point3",
+        "coordinates": [
+          13,
+          14,
+          0
+        ]
+      }
+    }
+  ],
+  "geometry_bindings": [
+    {
+      "entity_id": "site",
+      "geometry_id": "site-extent",
+      "purpose": "extent",
+      "source_id": "register",
+      "evidence_ids": [
+        "basis"
+      ]
+    },
+    {
+      "entity_id": "building-space",
+      "geometry_id": "building-extent",
+      "purpose": "extent",
+      "source_id": "register",
+      "evidence_ids": [
+        "basis"
+      ]
+    },
+    {
+      "entity_id": "work-space",
+      "geometry_id": "work-extent",
+      "purpose": "extent",
+      "source_id": "register",
+      "evidence_ids": [
+        "basis"
+      ]
+    },
+    {
+      "entity_id": "cabinet",
+      "geometry_id": "cabinet-position",
+      "purpose": "placement",
+      "source_id": "register",
+      "evidence_ids": [
+        "basis"
+      ]
+    }
+  ],
+  "coverage": [
+    {
+      "id": "facility-survey",
+      "scope_entity_ids": [
+        "site"
+      ],
+      "concepts": [
+        "core:physical_object"
+      ],
+      "relations": [
+        "core:member_of"
+      ],
+      "status": "partial",
+      "valid_time": {
+        "start": "2026-01-01T00:00:00Z",
+        "end": "2027-01-01T00:00:00Z"
+      },
+      "source_id": "register",
+      "evidence_ids": [
+        "basis"
+      ]
+    }
+  ]
+}

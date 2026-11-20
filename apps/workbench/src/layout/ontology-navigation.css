@@ -1,0 +1,10 @@
+.ontology-capability-note{padding:12px 16px;background:var(--muted);border-left:2px solid var(--border);margin-bottom:24px;font-size:12px}
+.ontology-return{display:flex;gap:12px;margin-bottom:16px}
+/* Match the service workspace: 1536px shell, 1440px maximum inner content. */
+#workbench-shell .shared-support-layout.ontology-workspace>.shared-data-catalog{padding:0;container-type:inline-size;container-name:ontology-content}
+.ontology-content-shell{box-sizing:border-box;width:100%;max-width:1536px;margin-inline:auto;padding:20px 48px 48px}
+.ontology-content-shell>.workspace-page-heading{align-items:center;margin-bottom:24px}
+@container ontology-content (max-width:1099px){.ontology-content-shell{padding:20px 32px 32px}}
+@container ontology-content (max-width:700px){.ontology-content-shell{padding:20px 16px 32px}.ontology-content-shell .ontology-resource-directory .ontology-list-toolbar{grid-template-columns:minmax(100px,1fr) minmax(140px,2fr) 128px 112px;gap:8px;padding:12px}}
+@container ontology-content (max-width:600px){.ontology-content-shell .ontology-resource-directory .ontology-list-toolbar{grid-template-columns:1fr 1fr}.ontology-content-shell .ontology-list-toolbar>.ontology-directory-count{grid-column:1/-1}.ontology-content-shell .ontology-list-toolbar .ontology-toolbar-search{grid-column:1/-1}}
+.ontology-content-shell .ontology-return{margin-bottom:16px}.ontology-content-shell .ontology-return [data-slot=button]{padding-inline:0;font-size:12px;height:32px;min-height:32px}

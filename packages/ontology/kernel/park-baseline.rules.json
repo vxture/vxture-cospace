@@ -1,0 +1,22 @@
+{
+  "profile": "vxture.ontology-instance-rules/0.1",
+  "rule_set_id": "park-baseline",
+  "version": "0.1.0",
+  "status": "draft",
+  "description": "B02 园区候选完整性规则；B03 由消费方显式选择并执行，不因安装定义而自动应用。",
+  "cardinalities": [
+    {"concept":"built_environment:building_region","relation":"built_environment:region_of_building","minimum":1,"maximum":1},
+    {"concept":"operations:occupancy_assignment","relation":"operations:occupancy_organization","minimum":1,"maximum":1},
+    {"concept":"operations:occupancy_assignment","relation":"operations:occupancy_space","minimum":1,"maximum":null},
+    {"concept":"operations:space_use","relation":"operations:use_space","minimum":1,"maximum":1},
+    {"concept":"operations:responsibility_assignment","relation":"operations:responsible_organization","minimum":1,"maximum":1},
+    {"concept":"operations:responsibility_assignment","relation":"operations:responsibility_target","minimum":1,"maximum":null},
+    {"concept":"operations:responsibility_assignment","relation":"operations:management_scope","minimum":1,"maximum":null},
+    {"concept":"operations:asset_record","relation":"operations:asset_object","minimum":1,"maximum":1},
+    {"concept":"operations:asset_record","relation":"operations:asset_custodian","minimum":1,"maximum":1}
+  ],
+  "temporal_concepts": ["core:role_assignment"],
+  "hierarchies": [
+    {"relation":"built_environment:spatial_part_of","acyclic":true,"maximum_parents":1,"temporal":true}
+  ]
+}

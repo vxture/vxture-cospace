@@ -183,6 +183,8 @@
 - [首版用途与验收矩阵](docs/architecture/首版用途与验收矩阵-v0.1.md)
 - [最小数据与服务发布契约](docs/architecture/最小数据与服务发布契约-v0.1.md)
 - [数据管理与语义本体平台规划](docs/architecture/数据管理与语义本体平台规划-v0.1.md)
+- [三层语义本体体系总体设计](docs/architecture/三层语义本体体系总体设计-v0.1.md)：通用核心、领域本体、场景实例三层规划；[实施批次](docs/architecture/三层语义本体体系实施规划-v0.1.md)明确设计关口与验收，已启动独立目录和定义内核子集。
+- [语义本体独立产品边界](docs/decisions/ADR-007-语义本体独立产品边界.md)：公共资源定位，独立 [Python 内核](packages/ontology/kernel/README.md)与 [React 目录组件](packages/ontology-ui/README.md)；首批定义均为草案，[契约](contracts/schemas/ontology-library-v0.1.md)、[语义盘点](docs/architecture/本体语义盘点与首批定义-TO01-TO02-v0.1.md)及[构建验证](docs/validation/语义本体独立产品首批构建-2026-11-20.md)。
 - [智能体视图运行包与在线离线消费架构](docs/architecture/智能体视图运行包与在线离线消费架构-v0.1.md)：用途裁剪、机器人最小依赖、安装切换及离线有效性草案，尚未实现。
 - [双视图与机器人消费技术栈决策](docs/decisions/ADR-003-双视图与机器人消费技术栈.md)：前端统一方向、Three.js/FastAPI保留及扩展边界。
 

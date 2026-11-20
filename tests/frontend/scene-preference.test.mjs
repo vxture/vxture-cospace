@@ -20,3 +20,7 @@ test('global context retains module queries and explicit scene, while catalog re
  assert.equal(sceneContextHref('/','saved'),'/');
  assert.equal(sceneContextHref('/data?space=','saved'),'/data?space=');
 });
+
+test('ontology configuration never inherits a remembered scene',()=>{
+ assert.equal(sceneContextHref('/settings?section=ontology-groups','remembered'),'/settings?section=ontology-groups');
+});

@@ -94,6 +94,11 @@ export function ManagementFrame({
       title: "业务配置",
       items: [
         {
+          href: managementHref("settings", "", "ontology-groups"),
+          label: "本体分组配置",
+          icon: "tree-structure",
+        },
+        {
           href: managementHref("settings", space, "advanced"),
           label: "高级配置",
           icon: "shield-check",
