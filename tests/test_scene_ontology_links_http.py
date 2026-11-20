@@ -38,7 +38,7 @@ def test_scene_links_authorization_published_definition_and_fixed_source(secured
     saved = client.get(PATH, params=query).json()
     assert saved['links'][0]['reference'] == reference
     assert saved['links'][0]['linked_by'] == 'usr_engineer'
-    assert saved['instance_validation'] == 'not_performed' and not saved['included_in_publication']
+    assert saved['instance_validation'] == 'attributes_checked' and not saved['included_in_publication']
     assert (jobs.model(new['candidate_id']).root / 'model.json').read_bytes() == manifest_before
     assert client.get('/publications/' + old['id'] + '/api/objects').json() == publication_before
     assert client.get(PATH, params={**query, 'workspace_id': 'forged'}).status_code == 422
@@ -77,3 +77,44 @@ def test_archived_candidate_remains_readable_but_cannot_gain_links(secured):
     assert response.status_code == 409, response.text
     assert response.json()['detail'] == 'link_source_inactive'
     assert client.get(PATH, params=query).json()['revision'] == 0
+
+
+def test_properties_authorization_validation_and_source_isolation(secured):
+    rp, client, _, _, jobs, directory, spaces, _, old, new = secured
+    query = {'space_id':spaces[0]['id'], 'candidate_id':old['candidate_id']}
+    headers, _ = sign_in(secured, 'usr_engineer')
+    initial = client.get(PATH, params=query).json()
+    scope = json.dumps([rp.config.issuer, 'org_mock', 'ws_mock'], separators=(',', ':'))
+    reference = publish_core(directory.root, scope)
+    base = {**query, 'source_sha256':initial['source_sha256'], 'object_id':initial['objects'][0]['object_id']}
+    manifest = (jobs.model(old['candidate_id']).root/'model.json').read_bytes()
+    publication = client.get('/publications/'+old['id']+'/api/objects').json()
+    assert client.post(PATH, headers=headers, json={**base, 'action':'set', 'reference':reference,
+        'concept_id':'physical_object', 'request_id':'a'*32, 'expected_revision':0}).status_code==200
+    body = {**base, 'action':'properties', 'properties':{'name':{'value':'manual declaration'}},
+            'valid_time':None, 'evidence_note':'manual inspection pending', 'request_id':'b'*32, 'expected_revision':1}
+    assert client.post(PATH, json=body).status_code==403
+    for field in ('properties', 'valid_time', 'evidence_note'):
+        malformed = dict(body)
+        del malformed[field]
+        response = client.post(PATH, headers=headers, json=malformed)
+        assert response.status_code==422, response.text
+    response = client.post(PATH, headers=headers, json=body)
+    assert response.status_code==200, response.text
+    assert response.json()['revision']==2
+    assert client.post(PATH, headers=headers, json=body).json()['revision']==2
+    saved = client.get(PATH, params=query).json()
+    assert saved['instance_report']['valid'] and not saved['included_in_publication']
+    assert saved['links'][0]['properties_updated_by']=='usr_engineer'
+    bad = {**body, 'properties':{'name':{'value':False}}, 'request_id':'c'*32, 'expected_revision':2}
+    assert client.post(PATH, headers=headers, json=bad).status_code==200
+    assert not client.get(PATH, params=query).json()['instance_report']['valid']
+    readonly, _ = sign_in(secured, 'usr_local_test')
+    assert client.post(PATH, headers=readonly, json=bad).status_code==403
+    headers, _ = sign_in(secured, 'usr_engineer')
+    control_change(jobs.controls, PreviewPublications(jobs), spaces[0]['id'],
+                   'candidate:'+old['candidate_id'], 'archive_candidate')
+    assert client.post(PATH, headers=headers, json={**bad, 'request_id':'d'*32, 'expected_revision':3}).status_code==409
+    assert client.get(PATH, params=query).json()['revision']==3
+    assert (jobs.model(old['candidate_id']).root/'model.json').read_bytes()==manifest
+    assert client.get('/publications/'+old['id']+'/api/objects').json()==publication
