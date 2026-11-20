@@ -7,7 +7,7 @@ dependencies = [
   "pydantic==2.14.3",
   "uvicorn==0.54.0",
   "jsonschema==4.26.0",
-  "sqlalchemy==2.1.8",
+  "sqlalchemy==2.1.9",
   "psycopg[binary]==3.3.8",
   "alembic==1.20.1",
   "joserfc==1.8.0",
