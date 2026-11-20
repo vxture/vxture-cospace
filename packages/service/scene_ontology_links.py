@@ -6,7 +6,9 @@ claim; it does not convert legacy properties or certify an ontology instance.
 from contextlib import closing, nullcontext
 from datetime import datetime, timezone
 from hashlib import sha256
+from copy import deepcopy
 import json
+import math
 from pathlib import Path
 import re
 import sqlite3
@@ -14,6 +16,7 @@ import sqlite3
 from packages.ontology.kernel import Catalog, canonical_bytes
 from packages.service.ontology_definition_workbench import DefinitionWorkbench
 from packages.lifecycle.preview_control_lock import mutation_guard
+from packages.service.scene_ontology_validation import validate_link_properties
 
 
 class SceneLinkError(ValueError):
@@ -103,7 +106,8 @@ class SceneOntologyLinks:
                 'space_id': source['space_id'], 'candidate_id': source['candidate_id'],
                 'objects': [{'object_id': o['object_id'], 'name': o['properties'].get('name', o['object_id'])}
                             for o in source['objects']],
-                'options': self.options(), 'instance_validation': 'not_performed', 'included_in_publication': False}
+                'options': self.options(), 'instance_validation': 'attributes_checked' if value['links'] else 'not_performed',
+                'instance_report': validate_link_properties(source, value), 'included_in_publication': False}
 
     def change(self, source, body):
         guard = mutation_guard(self.jobs.root.parent) if self.jobs is not None else nullcontext()
@@ -122,10 +126,17 @@ class SceneOntologyLinks:
 
     def _change(self, source, body):
         fields = {'action', 'space_id', 'candidate_id', 'source_sha256', 'object_id', 'expected_revision', 'request_id'}
-        require(type(body.get('action')) is str and body['action'] in ('set', 'remove'))
+        require(type(body.get('action')) is str and body['action'] in ('set', 'remove', 'properties'))
         if body['action'] == 'set':
             fields |= {'reference', 'concept_id'}
+            if 'reset_properties' in body:
+                require(type(body['reset_properties']) is bool)
+                fields.add('reset_properties')
+        if body['action'] == 'properties':
+            fields |= {'properties', 'valid_time', 'evidence_note'}
         require(set(body) == fields)
+        if body['action'] == 'properties':
+            self.check_properties(body)
         require(body['space_id'] == source['space_id'] and body['candidate_id'] == source['candidate_id'], 'link_source_changed')
         require(type(body['object_id']) is str and any(o['object_id'] == body['object_id'] for o in source['objects']), 'object_not_found')
         require(type(body['expected_revision']) is int and body['expected_revision'] >= 0)
@@ -151,7 +162,17 @@ class SceneOntologyLinks:
             head = self.head(connection, scope, source)
             require(head['revision'] == body['expected_revision'], 'link_revision_changed')
             old = next((i for i in head['links'] if i['object_id'] == body['object_id']), None)
-            changed = old is not None if link is None else old is None or any(old[k] != link[k] for k in ('reference', 'concept_id'))
+            if body['action'] == 'properties':
+                require(old is not None, 'link_not_found')
+                link = deepcopy(old)
+                link.update(instance_properties=body['properties'], instance_valid_time=body['valid_time'],
+                            evidence_note=body['evidence_note'], properties_updated_by=self.actor,
+                            properties_updated_at=datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z'))
+                changed = any(old.get(k) != link[k] for k in ('instance_properties', 'instance_valid_time', 'evidence_note'))
+            else:
+                changed = old is not None if link is None else old is None or any(old[k] != link[k] for k in ('reference', 'concept_id'))
+                if changed and old is not None and link is not None:
+                    require('instance_properties' not in old or body.get('reset_properties') is True, 'link_attributes_present')
             if changed:
                 links = [i for i in head['links'] if i['object_id'] != body['object_id']]
                 if link:
@@ -161,7 +182,31 @@ class SceneOntologyLinks:
                         'updated_at': datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z')}
                 raw = canonical_bytes(head)
                 require(len(raw) <= 8_388_608, 'link_size_budget')
+                # Recompute from the fixed closure; invalid intermediate claims
+                # remain editable drafts, never masquerade as validated instances.
+                validate_link_properties(source, head)
                 connection.execute('INSERT INTO link_snapshots VALUES(?,?,?,?)', (scope, head['revision'], raw, sha256(raw).hexdigest()))
             result = {'revision': head['revision'], 'changed': changed, 'object_id': body['object_id']}
             connection.execute('INSERT INTO link_requests VALUES(?,?,?,?)', (scope, body['request_id'], fingerprint, canonical_bytes(result)))
             return result
+
+    @staticmethod
+    def check_properties(body):
+        properties = body['properties']
+        require(type(properties) is dict and len(properties) <= 128)
+        require(type(body['evidence_note']) is str and 1 <= len(body['evidence_note'].strip()) <= 2000)
+        period = body['valid_time']
+        require(period is None or type(period) is dict and set(period) == {'start', 'end'}
+                and type(period['start']) is str and len(period['start']) <= 40
+                and (period['end'] is None or type(period['end']) is str and len(period['end']) <= 40))
+        for key, prop in properties.items():
+            require(type(key) is str and re.fullmatch('[a-z][a-z0-9_-]{0,63}', key) is not None)
+            require(type(prop) is dict and 'value' in prop and set(prop) <= {'value', 'unit', 'quantity'})
+            value = prop['value']
+            require(type(value) in (str, int, float, bool))
+            require(type(value) is not str or len(value) <= 2000)
+            require(type(value) is not float or math.isfinite(value))
+            require(type(value) is not int or value.bit_length() <= 1023)
+            for field in ('unit', 'quantity'):
+                if field in prop:
+                    require(type(prop[field]) is str and 1 <= len(prop[field]) <= 80)
