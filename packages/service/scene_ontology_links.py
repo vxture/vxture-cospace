@@ -56,6 +56,11 @@ class SceneOntologyLinks:
     def source(self, space_id, candidate_id):
         # Caller has authorized both scene and candidate before this I/O.
         model = self.jobs.model(candidate_id)
+        return self.source_from_model(model,space_id,candidate_id)
+
+    @staticmethod
+    def source_from_model(model,space_id,candidate_id):
+        # Publication already holds the selection lock; reuse its validated model.
         require(model.manifest['space_id'] == space_id and model.manifest['id'] == candidate_id,
                 'link_source_changed')
         digest = sha256((model.root / 'model.json').read_bytes()).hexdigest()

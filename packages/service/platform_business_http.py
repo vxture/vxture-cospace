@@ -346,10 +346,11 @@ class BusinessAccess:
                 '/api/relation-candidates':ASSOCIATION_EDIT,'/api/semantic-candidates':ASSOCIATION_EDIT,
                 SELECTION_ROUTE:'build.run','/api/candidate-comparisons':'build.run','/api/candidate-reviews':'build.run',
                 '/api/publication-comparisons':SPACE_PREVIEW,PUBLICATIONS_ROUTE:PUBLICATION_MANAGE,
+                '/api/publication-semantic-preflight':PUBLICATION_MANAGE,
                 INPUTS_ROUTE:DATA_MANAGE,'/api/batches':DATA_MANAGE,'/api/builds':'build.run'}
             if path in caps:
                 wanted=references(caps[path])
-                if path in (SELECTION_ROUTE,'/api/candidate-comparisons','/api/candidate-reviews',PUBLICATIONS_ROUTE):
+                if path in (SELECTION_ROUTE,'/api/candidate-comparisons','/api/candidate-reviews',PUBLICATIONS_ROUTE,'/api/publication-semantic-preflight'):
                     selected(wanted,caps[path])
                 if body.get('batch_id'):batch(body['batch_id'],wanted,DATA_MANAGE)
                 return {'principal':principal}
@@ -490,6 +491,20 @@ class BusinessAccess:
             revision,policy=await run_in_threadpool(self.load_policy)
             context=await run_in_threadpool(self.authorize,request,session,policy,body)
             request.state.platform_principal=context['principal'];request.state.policy_revision=revision
+            if path=='/api/publication-semantic-preflight':
+                from packages.service.object_semantic_artifact import preflight
+                if request.query_params or set(body)!={'space_id','candidate_id','semantic_selection'}:
+                    return deny(422,'semantic_selection_invalid')
+                principal=context['principal']
+                scope=json.dumps([principal.issuer,principal.org_id,principal.workspace_id],separators=(',',':'))
+                try:
+                    service=SceneOntologyLinks(self.directory.root,scope,principal.subject,self.jobs)
+                    self.jobs.controls.require_active(body['space_id'],'candidate:'+body['candidate_id'])
+                    source=await run_in_threadpool(service.source,body['space_id'],body['candidate_id'])
+                    selection,report=await run_in_threadpool(preflight,service,source,body['semantic_selection'])
+                    return JSONResponse({'semantic_selection':selection,**report},headers={'Cache-Control':'no-store'})
+                except (ValueError,OSError,KeyError,TypeError,sqlite3.Error) as exc:
+                    return deny(422 if str(exc)=='semantic_selection_invalid' else 409,'semantic_preflight_unavailable' if not isinstance(exc,SceneLinkError) else str(exc))
             if path in ('/api/scene-ontology-links','/api/scene-ontology-view'):
                 principal=context['principal']
                 scope=json.dumps([principal.issuer,principal.org_id,principal.workspace_id],separators=(',',':'))

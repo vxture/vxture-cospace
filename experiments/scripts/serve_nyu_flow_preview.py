@@ -65,6 +65,7 @@ class Selection(BaseModel):
 
 class PublicationRequest(Selection):
     request_id:str|None=Field(default=None,pattern=r'^[a-f0-9]{32}$')
+    semantic_selection:dict|None=None
 
 
 class BuildInfo(BaseModel):
@@ -321,8 +322,14 @@ def create_app(root,jobs=None,update_evidence=None,registration_sources=None,sou
     def publish(body:PublicationRequest,request:Request):
         check_origin(request)
         if publications is None: raise HTTPException(503,'builds_not_configured')
-        try: return versioned('publication',publications.publish(body.candidate_id,body.expected_revision,body.space_id,request_id=body.request_id))
+        try:
+            import json
+            principal=getattr(request.state,'platform_principal',None)
+            semantic_context=(json.dumps([principal.issuer,principal.org_id,principal.workspace_id],separators=(',',':')),principal.subject) if principal else None
+            return versioned('publication',publications.publish(body.candidate_id,body.expected_revision,body.space_id,
+                request_id=body.request_id,semantic_selection=body.semantic_selection,semantic_context=semantic_context))
         except (ValueError,OSError) as exc: raise HTTPException(409,str(exc)) from exc
+        except (sqlite3.Error,KeyError,TypeError) as exc:raise HTTPException(409,'semantic_publication_unavailable') from exc
     @app.post('/api/publication-comparisons')
     def publication_comparison(body:PublicationCompareRequest,request:Request):
         check_origin(request)
@@ -386,6 +393,7 @@ def create_app(root,jobs=None,update_evidence=None,registration_sources=None,sou
     @app.get('/publications/{identity}/offline.zip')
     def publication_bundle(identity:str):
         record,current=publication(identity)
+        if record.get('semantic_artifact'):raise HTTPException(409,'semantic_delivery_not_connected')
         data=export_bundle(record,current)
         return Response(data,media_type='application/zip',headers={
             'Content-Disposition':f'attachment; filename="{identity}-offline.zip"',
@@ -393,6 +401,7 @@ def create_app(root,jobs=None,update_evidence=None,registration_sources=None,sou
     @app.get('/publications/{identity}/offline.json')
     def publication_bundle_info(identity:str):
         record,current=publication(identity)
+        if record.get('semantic_artifact'):raise HTTPException(409,'semantic_delivery_not_connected')
         data=export_bundle(record,current)
         semantic=bool(current.manifest.get('semantic_annotation'))
         return {'profile':bundle_profile(current),'publication_id':identity,
@@ -402,6 +411,7 @@ def create_app(root,jobs=None,update_evidence=None,registration_sources=None,sou
                 'contents':['package.json','publication.json','model.json','agent.npz']+(['objects.json','ontology.json'] if semantic else [])+(['business.json'] if current.manifest.get('business_association') else [])+(['relations.json'] if current.manifest.get('object_relations') else [])}
     def partition_delivery(identity):
         record,current=publication(identity)
+        if record.get('semantic_artifact'):raise HTTPException(409,'semantic_partition_delivery_not_supported')
         try:return export_partitions(record,current)
         except (ValueError,OSError,KeyError,TypeError,OverflowError) as exc:
             raise HTTPException(409,'partition_delivery_unavailable') from exc
