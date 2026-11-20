@@ -28,3 +28,20 @@ POST 公共字段：`action`（`set`、`remove` 或 `properties`）、`space_id`
 `instance_report.scope=linked_object_attributes`，含 `revision`、来源摘要、`valid`、`diagnostics`、逐对象 `objects`，及校验器/实例/定义摘要。固定闭包中同模块版本不一致时返回 `definition_version_conflict`/`conflict`，不自动择新。内核结构错误会阻止整批语义执行；无直接错误路径的对象也不能标为通过，返回 `object_validation_incomplete`/`unknown`。
 
 此报告始终 `relations_checked=false`、`geometry_checked=false`、`professional_review=not_performed`。通过仅表示当前固定定义下属性局部满足，不证明现场事实、完整园区规则、关系或几何正确；不纳入当前或旧服务发布。内核自身的 geometry_not_recorded 信息提示保留，不能当作属性错误。服务端读取时从固定闭包和声明确定性重算报告，不保存可被客户端伪造的通过状态。
+
+
+## B05b2 已保存关系的显式映射（兼容增量）
+
+GET 增加模型原关系清单 `relations`、消费侧 `relation_links` 和 `relation_report`；发布选项增加每个模块自己的关系定义 `options[].relations`。旧修订没有 relation_links 时视为空集合。属性报告保留原范围，不受关系定义冲突混入。
+
+POST 增加 `relation_set`/`relation_remove`。公共字段沿用场景、候选、来源摘要、expected_revision、request_id，但用 `relation_id` 代替 object_id。关系 ID 必须真实存在于固定模型，禁止客户端伪造端点或注入确认状态。设置另要求 `reference`、`definition_id`（所选模块的关系 ID）、`direction`（forward/reverse）、`valid_time`（非 null）、`evidence_note`；解除不接受这些字段。来源和目标来自原声明，forward 沿用、reverse 显式互换；不按旧 type_id 或名称自动匹配、反转。关系定义来自真实发布记录并冻结完整闭包。
+
+两端对象须先有概念引用，否则 409 relation_endpoints_unlinked。映射以 reported 人工报告保存，由服务端记录操作人和时间；不接受客户端声明专业审核或 corroborated。时间区间/类型/固定闭包不符可保存待修正草稿，但集合报告返回失败。
+
+对象引用和关系映射共用同一分区、不可变修订、CAS、幂等与生命周期锁。属性更新保留映射并重算集合校验。有映射引用某对象时，调整/解除该对象概念引用返回 409 link_relations_present，必须先显式解除相关映射；不会级联静默删除关系。解除映射保留原关系和对象引用；同值或重复解除不增号。
+
+relation_report.scope 为 linked_attributes_and_mapped_relations，coverage=mapped_relations_only，含 unmapped_count、逐条 relations 和独立内核诊断。两端继承类型、所有已引用对象的属性、断言引用、有效时间格式与区间顺序共同校验。集合包含任何错误则逐关系 valid 不标为通过；结构失败和版本冲突均不能冒充局部通过。
+
+relations_checked 表示本报告尝试执行映射关系校验；valid 才表示本次实际满足。geometry_checked=false、professional_review=not_performed、included_in_publication=false。当前不启用 park-baseline 的园区完整性、基数及层级规则，也不自动校验断言区间被对象区间覆盖；不得将此报告当作完整关系验收。未映射声明不自动进入断言集合，计数单列。
+
+关系不存在、定义 ID 不存在为 422 relation_not_found/relation_definition_not_found。其余鉴权、CSRF、来源变化、归档、并发和工作区隔离沿用原接口。原模型、几何、对象属性及历史服务发布不写入本次映射。

@@ -118,3 +118,38 @@ def test_properties_authorization_validation_and_source_isolation(secured):
     assert client.get(PATH, params=query).json()['revision']==3
     assert (jobs.model(old['candidate_id']).root/'model.json').read_bytes()==manifest
     assert client.get('/publications/'+old['id']+'/api/objects').json()==publication
+
+
+
+def test_relation_mapping_authorization_and_old_publication_unchanged(secured):
+    rp,client,_,_,jobs,directory,spaces,_,old,new=secured
+    headers,_=sign_in(secured,'usr_engineer')
+    query={'space_id':spaces[0]['id'],'candidate_id':new['candidate_id']}
+    initial=client.get(PATH,params=query).json()
+    assert initial['relations'][0]['type_id']=='contains'
+    scope=json.dumps([rp.config.issuer,'org_mock','ws_mock'],separators=(',',':'))
+    ref=publish_core(directory.root,scope)
+    common={**query,'source_sha256':initial['source_sha256']}
+    before=client.get('/publications/'+new['id']+'/api/objects').json()
+    for revision,(object_id,concept) in enumerate([('room-a','spatial_region'),('cabinet-a','physical_object')]):
+        response=client.post(PATH,headers=headers,json={**common,'action':'set','object_id':object_id,
+            'reference':ref,'concept_id':concept,'expected_revision':revision,'request_id':str(revision+1)*32})
+        assert response.status_code==200,response.text
+    # Original contains direction is room -> cabinet. part_of deliberately
+    # demonstrates a semantic mismatch; neither direction nor name is inferred.
+    body={**common,'action':'relation_set','relation_id':'rel-1','reference':ref,'definition_id':'part_of','direction':'forward',
+          'expected_revision':2,'request_id':'a'*32,'valid_time':{'start':'2026-11-20T00:00:00Z','end':None},'evidence_note':'manual fixture'}
+    assert client.post(PATH,json=body).status_code==403
+    forged={**body,'epistemic_status':'corroborated'}
+    assert client.post(PATH,headers=headers,json=forged).status_code==422
+    assert client.post(PATH,headers=headers,json=body).status_code==200
+    saved=client.get(PATH,params=query).json()
+    assert saved['relation_links'][0]['epistemic_status']=='reported'
+    assert saved['relation_links'][0]['source_id']=='room-a'
+    assert not saved['relation_report']['valid']
+    assert any(issue['code']=='endpoint_type_mismatch' for issue in saved['relation_report']['diagnostics'])
+    assert client.post(PATH,headers=headers,json=body).json()['revision']==3
+    viewer,_=sign_in(secured,'usr_local_test')
+    assert client.get(PATH,params=query).status_code==200
+    assert client.post(PATH,headers=viewer,json=body).status_code==403
+    assert client.get('/publications/'+new['id']+'/api/objects').json()==before
