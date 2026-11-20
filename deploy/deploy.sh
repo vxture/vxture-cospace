@@ -28,6 +28,9 @@ test "$revision" = "$GITHUB_SHA"
 COSPACE_IMAGE="$(docker image inspect "$primary" --format '{{index .RepoDigests 0}}')"
 test -n "$COSPACE_IMAGE"
 export COSPACE_IMAGE STACK_ROOT PROJECT_NAME
+# Preserve each existing ontology database and previous service images before replacement.
+# Failure leaves current containers running; backups remain private on worker02.
+sudo -n timeout --kill-after=10s 180s python3 "$STACK_ROOT/deploy/linux/backup_ontology.py"
 compose=(docker compose --project-name "$PROJECT_NAME" --env-file "$STACK_ROOT/etc/.env" -f linux/compose.yml)
 # Rendered config is piped to validation; never echo secret runtime values.
 "${compose[@]}" config --format json | python3 -c '
