@@ -18,7 +18,7 @@ const issueLabels:Record<string,string>={geometry_not_recorded:'未记录几何�
 const claimFields=(link?:Link)=>Object.fromEntries(Object.entries(link?.instance_properties||{}).map(([id,claim])=>[id,String(claim.value)]));
 const refKey=(ref:Reference)=>`${ref.module_id}@${ref.version}/${ref.sha256}`;
 const endpoint=businessEndpoint+'/api/scene-ontology-links';
-const messages:Record<string,string>={link_source_inactive:'当前模型来源已归档，仍可查看引用；请恢复来源后再修改。',link_revision_changed:'引用已被其他人修改，请关闭面板并重新读取后继续。',link_source_changed:'模型来源已变化，请重新打开当前来源。',release_not_found:'所选本体版本尚未发布或不可用，请重新读取。',link_request_conflict:'请求内容已变化，请关闭面板后重新操作。',link_attributes_present:'当前引用已有实例属性，请明确选择清空后再调整引用。',link_not_found:'请先为当前对象引用本体。',object_not_found:'当前模型快照中没有此对象。'};
+const messages:Record<string,string>={link_source_inactive:'当前模型来源已归档，仍可查看引用；请恢复来源后再修改。',link_revision_changed:'引用已被其他人修改，请关闭面板并重新读取后继续。',link_source_changed:'模型来源已变化，请重新打开当前来源。',release_not_found:'所选本体版本尚未发布或不可用，请重新读取。',link_request_conflict:'请求内容已变化，请关闭面板后重新操作。',link_relations_present:'此对象已有本体关系映射，请先在空间关系中解除相关映射，再调整或解除概念引用。',link_attributes_present:'当前引用已有实例属性，请明确选择清空后再调整引用。',link_not_found:'请先为当前对象引用本体。',object_not_found:'当前模型快照中没有此对象。'};
 async function responseValue(response:Response){
  if(!response.ok){let code='';try{code=(await response.json()).detail;}catch{}
   if(response.status===401)throw new Error('请先登录。');

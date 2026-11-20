@@ -502,7 +502,7 @@ class BusinessAccess:
                     result=await run_in_threadpool(service.change,source,body) if request.method=='POST' else await run_in_threadpool(service.read,source)
                 except SceneLinkError as exc:
                     code=str(exc)
-                    return deny(422 if code in ('invalid_link_request','object_not_found','concept_not_found','link_size_budget') else 503 if code=='link_store_integrity' else 409,code)
+                    return deny(422 if code in ('invalid_link_request','object_not_found','concept_not_found','relation_not_found','relation_definition_not_found','link_size_budget') else 503 if code=='link_store_integrity' else 409,code)
                 except AuthoringError as exc:
                     return deny(422 if exc.code.startswith('invalid_') else 409 if exc.code=='release_not_found' else 503,exc.code)
                 except (CatalogError,OSError,sqlite3.Error,ValueError,KeyError,TypeError):

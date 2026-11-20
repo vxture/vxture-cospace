@@ -9,16 +9,35 @@ from packages.ontology.kernel import Catalog, canonical_bytes, validate_instance
 
 
 def validate_link_properties(source, snapshot):
+    return _validate_links(source, snapshot, False)
+
+
+def validate_link_relations(source, snapshot):
+    return _validate_links(source, snapshot, True)
+
+
+def object_identity(value):
+    return 'object-' + sha256(value.encode()).hexdigest()[:48]
+
+
+def _validate_links(source, snapshot, include_relations):
     links = sorted(snapshot['links'], key=lambda item: item['object_id'])
-    result = {'scope': 'linked_object_attributes', 'revision': snapshot['revision'],
+    relations = sorted(snapshot.get('relation_links', []), key=lambda item: item['relation_id']) if include_relations else []
+    result = {'scope': 'linked_attributes_and_mapped_relations' if include_relations else 'linked_object_attributes', 'revision': snapshot['revision'],
               'source_sha256': source['source_sha256'], 'valid': False,
-              'relations_checked': False, 'geometry_checked': False,
+              'relations_checked': include_relations, 'geometry_checked': False,
               'professional_review': 'not_performed', 'diagnostics': [], 'objects': []}
+    if include_relations:
+        result.update(relations=[], coverage='mapped_relations_only', unmapped_count=len(source.get('relations', [])) - len(relations))
     if not links:
         result['diagnostics'] = [{'code': 'no_linked_objects', 'path': '/links', 'state': 'not_recorded', 'severity': 'error'}]
         return result
+    if include_relations:
+        if not relations:
+            result['diagnostics'] = [{'code': 'no_mapped_relations', 'path': '/relation_links', 'state': 'not_recorded', 'severity': 'error'}]
+            return result
     modules = {}
-    for link in links:
+    for link in links + relations:
         for module in link['bundle']['modules']:
             identity = module['module_id']
             if identity in modules and canonical_bytes(modules[identity]) != canonical_bytes(module):
@@ -38,7 +57,7 @@ def validate_link_properties(source, snapshot):
                 'geometries': [], 'geometry_bindings': [], 'coverage': []}
     for index, link in enumerate(links):
         evidence_id = 'claim-' + str(index)
-        entity_id = 'object-' + sha256(link['object_id'].encode()).hexdigest()[:48]
+        entity_id = object_identity(link['object_id'])
         document['evidence'].append({'id': evidence_id, 'source_id': 'association-claims',
             'record_key': link['object_id'], 'recorded_at': link.get('properties_updated_at', link['linked_at']),
             'description': link.get('evidence_note') or '对象类型引用声明；实例属性尚未人工维护，不表示现场核验。'})
@@ -50,6 +69,15 @@ def validate_link_properties(source, snapshot):
         if link.get('instance_valid_time') is not None:
             entity['valid_time'] = link['instance_valid_time']
         document['entities'].append(entity)
+    for index, link in enumerate(relations):
+        evidence_id = 'relation-claim-' + str(index)
+        document['evidence'].append({'id': evidence_id, 'source_id': 'association-claims',
+            'record_key': link['relation_id'], 'recorded_at': link['linked_at'], 'description': link['evidence_note']})
+        document['assertions'].append({'id': 'relation-' + sha256(link['relation_id'].encode()).hexdigest()[:48],
+            'relation': link['reference']['module_id'] + ':' + link['definition_id'],
+            'subject_id': object_identity(link['source_id']), 'object_id': object_identity(link['target_id']),
+            'source_id': 'association-claims', 'evidence_ids': [evidence_id],
+            'valid_time': link['valid_time'], 'epistemic_status': 'reported'})
     report = validate_instances(canonical_bytes(document), catalog)
     result.update(valid=report['valid'], diagnostics=report['diagnostics'],
                   instance_sha256=report['instance_sha256'], library_sha256=report['library_sha256'],
@@ -66,4 +94,11 @@ def validate_link_properties(source, snapshot):
         result['objects'].append({'object_id': link['object_id'],
                                   'valid': not any(issue['severity'] == 'error' for issue in issues) and not global_errors,
                                   'diagnostics': issues})
+    if include_relations:
+        # Relation validity is a set-level result. Entity, temporal or other
+        # assertion failures can prevent or invalidate relation-set validation.
+        for index, link in enumerate(relations):
+            prefix = f'/assertions/{index}'
+            issues = [issue for issue in report['diagnostics'] if issue['path'] == prefix or issue['path'].startswith(prefix + '/')]
+            result['relations'].append({'relation_id': link['relation_id'], 'valid': report['valid'], 'diagnostics': issues})
     return result
