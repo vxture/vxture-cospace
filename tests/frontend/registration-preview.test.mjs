@@ -49,3 +49,39 @@ test('centimetre display rounding never changes the metre-based acceptance thres
   }
  }
 });
+import {registrationNextStep} from '../../apps/workbench/src/layout/registration-next-step.ts';
+import {associationNextStep} from '../../apps/workbench/src/layout/association-next-step.ts';
+import {publicationForTarget} from '../../apps/workbench/src/layout/publication-target.ts';
+
+test('publication handoffs never substitute a historical release for an unpublished model',()=>{
+ const releases=[{id:'latest',candidate_id:'other-model'},{id:'matched',candidate_id:'target-model'}];
+ assert.equal(publicationForTarget(releases,{job:'target-model'}).id,'matched');
+ assert.equal(publicationForTarget(releases,{job:'new-model'}),undefined);
+ assert.equal(publicationForTarget(releases,{publication:'missing',job:'target-model'}),undefined);
+ assert.equal(publicationForTarget(releases,{publication:'latest',job:'target-model'}).id,'latest');
+ assert.equal(publicationForTarget(releases,{}).id,'latest');
+});
+
+test('registration handoff requires saved checks, independent review and valid adopted approval',()=>{
+ const now=Date.parse('2026-11-22T00:00:00Z');
+ const facts={dirty:false,hasDocument:true,checksPassed:true,synthetic:false,reviewStatus:'draft',canEdit:true,canReview:true,actor:'manager',authoredBy:'author',approvedRevision:null,adoptedRevision:null,validFrom:'2026-11-21T00:00:00Z',validUntil:'2026-11-23T00:00:00Z'};
+ assert.equal(registrationNextStep({...facts,dirty:true},now).action,'save');
+ assert.equal(registrationNextStep({...facts,hasDocument:false},now).action,'import');
+ assert.equal(registrationNextStep(facts,now).action,'submit');
+ for(const changes of [{checksPassed:false},{synthetic:true},{canEdit:false}])assert.equal(registrationNextStep({...facts,...changes},now).action,null);
+ assert.equal(registrationNextStep({...facts,reviewStatus:'submitted'},now).action,'approve');
+ for(const changes of [{actor:'author'},{actor:''},{canReview:false}])assert.equal(registrationNextStep({...facts,reviewStatus:'submitted',...changes},now).action,null);
+ const approved={...facts,reviewStatus:'approved',approvedRevision:3};
+ assert.equal(registrationNextStep(approved,now).action,'adopt');
+ assert.equal(registrationNextStep({...approved,adoptedRevision:3},now).action,'association');
+ for(const validUntil of ['2026-11-21T00:00:00Z','invalid'])assert.equal(registrationNextStep({...approved,adoptedRevision:3,validUntil},now).action,null);
+ assert.equal(registrationNextStep({...approved,adoptedRevision:3,validFrom:'2026-11-23T00:00:00Z'},now).action,null);
+});
+
+test('association follows objects, relations and business before publication and reviews unselected candidates',()=>{
+ for(const [view,tab] of [['overview','objects'],['objects','relations'],['relations','business']]){
+  for(const selected of [true,false])assert.deepEqual([associationNextStep(view,selected).module,associationNextStep(view,selected).tab],['association',tab]);
+ }
+ assert.equal(associationNextStep('business',true).module,'delivery');
+ assert.deepEqual([associationNextStep('business',false).module,associationNextStep('business',false).tab],['build','candidate']);
+});

@@ -132,6 +132,7 @@ def test_viewer_summary_omits_engineering_and_cannot_request_job(secured):
     data = s.json()
     assert data['summary']['work'] is None and data['summary']['candidate_ref'] is None
     assert 'preparation' not in data and data['candidate_ref'] is None
+    assert 'guidance' not in data
     assert data['summary']['primary_action']['allowed']
     assert c.get('/api/workflow', params={'space_id':spaces[0]['id'],'job_id':new['candidate_id']}).status_code == 403
     assert c.get('/api/workflow', params={'space_id':spaces[1]['id'],'publication_id':new['id']}).status_code == 403
@@ -145,12 +146,18 @@ def test_engineer_http_exact_context_and_session_expiry_recovery(secured):
     assert first.status_code == 200, first.text
     assert first.json()['summary']['candidate_ref']['candidate_id'] == new['candidate_id']
     assert first.json()['summary']['viewing_publication']['publication_id'] == old['id']
+    guidance = first.json()['guidance']
+    assert [step['id'] for step in guidance['steps']] == ['data', 'build', 'registration', 'association', 'delivery', 'services']
+    assert guidance['primary_action'] == {'module': 'services', 'label': '前往空间服务', 'allowed': True,
+        'values': {'space': spaces[0]['id'], 'publication': old['id'], 'section': 'directory', 'tab': 'overview'}}
+    assert all('allowed' in step['action'] for step in guidance['steps'] if step['action'])
     clock[0] += 91
     assert c.get('/api/workflow', params=params).status_code == 503
     assert c.post('/api/auth/session', headers=headers).status_code == 200
     restored = c.get('/api/workflow', params=params)
     assert restored.status_code == 200, restored.text
     assert restored.json()['summary'] == first.json()['summary']
+    assert restored.json()['guidance'] == guidance
 
 
 def test_journey_does_not_claim_review_for_readable_unreviewed_candidate(tmp_path):

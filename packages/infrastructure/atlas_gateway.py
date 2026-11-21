@@ -16,6 +16,19 @@ from packages.infrastructure.platform_identity import (
 class AtlasUnavailable(RuntimeError): pass
 
 
+def inference_error_code(error):
+    """Map only Atlas's public code; vendor messages and account details stay private."""
+    try:
+        raw = error.read(8193)
+        value = json.loads(raw) if len(raw) <= 8192 else None
+        if isinstance(value, dict) and value.get('code') == 'UPSTREAM_ACCOUNT_REFUSED':
+            return 'coordinate_ai_provider_account_unavailable'
+    except (OSError, ValueError, TypeError):
+        pass
+    return ('coordinate_ai_rate_limited' if error.code == 429 else
+            'coordinate_ai_access_denied' if error.code in (401, 403, 404) else 'coordinate_ai_unavailable')
+
+
 class AtlasConfig(BaseModel):
     model_config = ConfigDict(extra='forbid', strict=True, frozen=True)
     base_url: str
@@ -103,10 +116,7 @@ class AtlasGateway:
                         raise ValueError('response_shape')
                     return value['message']['content']
             except HTTPError as exc:
-                # Upstream messages can contain source text or internal configuration.
-                code = ('coordinate_ai_rate_limited' if exc.code == 429 else
-                        'coordinate_ai_access_denied' if exc.code in (401,403,404) else 'coordinate_ai_unavailable')
-                raise AtlasUnavailable(code) from None
+                raise AtlasUnavailable(inference_error_code(exc)) from None
             except (OSError, ValueError, TypeError):
                 raise AtlasUnavailable('coordinate_ai_unavailable') from None
         finally:

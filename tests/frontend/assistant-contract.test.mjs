@@ -2,7 +2,7 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {assistantAvailable,assistantScope,buildAssistantReport} from '../../apps/workbench/src/layout/assistant-contract.ts';
 
-const base={loading:false,error:'',canBuild:true,canPublish:true,inputs:1,model:false,selected:false,published:false};
+const base={loading:false,error:'',canBuild:true,canRegister:true,inputs:1,model:false,selected:false};
 test('assistant covers business modules and management but excludes the three browsing areas',()=>{
  for(const route of ['','home','space'])assert.equal(assistantAvailable(route),false);
  for(const route of ['data','build','ontology','association','delivery','services','settings','account','members','identity'])assert.equal(assistantAvailable(route),true);
@@ -15,14 +15,13 @@ test('unreadable or unauthorized facts never generate actionable build suggestio
  for(const changes of [{loading:true},{error:'读取失败'},{canBuild:false}])assert.equal(buildAssistantReport({...base,...changes},()=>{}).tasks.length,0);
 });
 test('build checks follow saved facts and only execute the selected handoff',()=>{
- const cases=[ [{inputs:0},'prepare'],[{},'check'],[{state:'failed'},'model'],[{state:'interrupted'},'model'],[{state:'views_failed'},'model'],[{state:'queued'},'model'],[{state:'running'},'model'],[{state:'succeeded',model:true},'review'],[{state:'succeeded',model:true,selected:true},'publish'] ];
+ const cases=[ [{inputs:0},'prepare'],[{},'check'],[{state:'failed'},'model'],[{state:'interrupted'},'model'],[{state:'views_failed'},'model'],[{state:'queued'},'model'],[{state:'running'},'model'],[{state:'succeeded',model:true},'review'],[{state:'succeeded',model:true,selected:true},'registration'] ];
  for(const [changes,expected] of cases){
   const calls=[];const report=buildAssistantReport({...base,...changes},step=>calls.push(step));
   assert.equal(report.status,'ready');assert.equal(report.tasks[0].id,expected);assert.deepEqual(calls,[]);
   assert.ok(report.tasks[0].evidence);report.tasks[0].run();assert.deepEqual(calls,[expected]);
  }
- assert.equal(buildAssistantReport({...base,state:'succeeded',model:true,selected:true,published:true},()=>{}).tasks.length,0);
- assert.equal(buildAssistantReport({...base,state:'succeeded',model:true,selected:true,canPublish:false},()=>{}).tasks.length,0);
+ assert.equal(buildAssistantReport({...base,state:'succeeded',model:true,selected:true,canRegister:false},()=>{}).tasks.length,0);
 });
 
 test('conversation retrieves current suggestions without calling business operations',async()=>{

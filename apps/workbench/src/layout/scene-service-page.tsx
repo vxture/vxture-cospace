@@ -16,7 +16,7 @@ import {ServiceCard} from './service-card';
 import {ServiceListViewGroup} from './service-list-view-group';
 
 export function FeedbackList({presentation}:Readonly<{presentation:ServicePresentation}>){
- return <section aria-label="态势反馈清单">
+ return <section className="service-list-section" aria-label="态势反馈清单">
   <div className="service-list-toolbar"><ServiceListViewGroup presentation={presentation} count="1 项态势反馈"/></div>
   <FeedbackUnavailable view={presentation.view}/>
  </section>;

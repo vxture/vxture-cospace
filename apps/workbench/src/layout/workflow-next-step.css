@@ -1,0 +1,4 @@
+.workflow-next-step{display:flex;align-items:center;justify-content:space-between;gap:var(--space-lg);min-width:0;padding-top:var(--space-lg);border-top:1px solid var(--border)}
+.workflow-next-step>p{margin:0;min-width:0;font-size:var(--label-small-font-size);color:var(--muted-foreground);overflow-wrap:anywhere}
+.workflow-next-step>[data-slot=button]{flex:none;height:var(--space-control-xl)}
+@media(max-width:639px){.workflow-next-step{align-items:flex-start;flex-wrap:wrap}.workflow-next-step>[data-slot=button]{margin-left:auto}}
