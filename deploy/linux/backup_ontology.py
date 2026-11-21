@@ -10,6 +10,7 @@ import tempfile
 
 DATABASES = ('ontology-group-configuration.sqlite3', 'ontology-authoring.sqlite3',
              'scene-ontology-links.sqlite3')
+CONTROL_DATABASE = 'preview-lifecycle.sqlite3'
 
 
 def checkpoint(root: Path, images: list) -> Path:
@@ -25,8 +26,10 @@ def checkpoint(root: Path, images: list) -> Path:
     manifest = {'complete': False, 'images': images, 'databases': {}}
     manifest_path = target / 'manifest.json'
     manifest_path.write_text(json.dumps(manifest, indent=2), encoding='utf-8')
-    for name in DATABASES:
-        source = runtime / name
+    sources = [(name, runtime / name) for name in DATABASES]
+    # Paused/retired publications must remain quarantined across rollback.
+    sources.append((CONTROL_DATABASE, runtime.parent / CONTROL_DATABASE))
+    for name, source in sources:
         if source.is_symlink():
             raise ValueError('database must not be a symlink')
         if not source.exists():
