@@ -1,0 +1,315 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cospace.local/contracts/spatial-registration-input-v0.1.schema.json",
+  "$defs": {
+    "Control": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "maxLength": 160,
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "purpose": {
+          "enum": [
+            "fit",
+            "check"
+          ],
+          "title": "Purpose",
+          "type": "string"
+        },
+        "source_m": {
+          "items": {
+            "maximum": 10000000,
+            "minimum": -10000000,
+            "type": "number"
+          },
+          "maxItems": 3,
+          "minItems": 3,
+          "title": "Source M",
+          "type": "array"
+        },
+        "target_m": {
+          "items": {
+            "maximum": 10000000,
+            "minimum": -10000000,
+            "type": "number"
+          },
+          "maxItems": 3,
+          "minItems": 3,
+          "title": "Target M",
+          "type": "array"
+        },
+        "evidence_ref": {
+          "maxLength": 160,
+          "minLength": 1,
+          "title": "Evidence Ref",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "purpose",
+        "source_m",
+        "target_m",
+        "evidence_ref"
+      ],
+      "title": "Control",
+      "type": "object"
+    },
+    "Limits": {
+      "additionalProperties": false,
+      "properties": {
+        "horizontal_m": {
+          "exclusiveMinimum": 0,
+          "maximum": 10,
+          "title": "Horizontal M",
+          "type": "number"
+        },
+        "vertical_m": {
+          "exclusiveMinimum": 0,
+          "maximum": 10,
+          "title": "Vertical M",
+          "type": "number"
+        }
+      },
+      "required": [
+        "horizontal_m",
+        "vertical_m"
+      ],
+      "title": "Limits",
+      "type": "object"
+    },
+    "ModelFrame": {
+      "additionalProperties": false,
+      "properties": {
+        "space_id": {
+          "maxLength": 160,
+          "minLength": 1,
+          "title": "Space Id",
+          "type": "string"
+        },
+        "candidate_id": {
+          "maxLength": 160,
+          "minLength": 1,
+          "title": "Candidate Id",
+          "type": "string"
+        },
+        "manifest_sha256": {
+          "pattern": "^[a-f0-9]{64}$",
+          "title": "Manifest Sha256",
+          "type": "string"
+        },
+        "model_sha256": {
+          "pattern": "^[a-f0-9]{64}$",
+          "title": "Model Sha256",
+          "type": "string"
+        },
+        "frame_id": {
+          "maxLength": 160,
+          "minLength": 1,
+          "title": "Frame Id",
+          "type": "string"
+        },
+        "unit": {
+          "const": "m",
+          "title": "Unit",
+          "type": "string"
+        },
+        "axes": {
+          "items": {
+            "maxLength": 160,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 3,
+          "minItems": 3,
+          "title": "Axes",
+          "type": "array"
+        },
+        "handedness": {
+          "const": "right",
+          "title": "Handedness",
+          "type": "string"
+        },
+        "bounds_m": {
+          "items": {
+            "items": {
+              "maximum": 10000000,
+              "minimum": -10000000,
+              "type": "number"
+            },
+            "maxItems": 3,
+            "minItems": 3,
+            "type": "array"
+          },
+          "maxItems": 2,
+          "minItems": 2,
+          "title": "Bounds M",
+          "type": "array"
+        }
+      },
+      "required": [
+        "space_id",
+        "candidate_id",
+        "manifest_sha256",
+        "model_sha256",
+        "frame_id",
+        "unit",
+        "axes",
+        "handedness",
+        "bounds_m"
+      ],
+      "title": "ModelFrame",
+      "type": "object"
+    },
+    "TargetFrame": {
+      "additionalProperties": false,
+      "properties": {
+        "frame_id": {
+          "maxLength": 160,
+          "minLength": 1,
+          "title": "Frame Id",
+          "type": "string"
+        },
+        "title": {
+          "maxLength": 160,
+          "minLength": 1,
+          "title": "Title",
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "engineering",
+            "projected"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "horizontal_reference": {
+          "maxLength": 160,
+          "minLength": 1,
+          "title": "Horizontal Reference",
+          "type": "string"
+        },
+        "definition_ref": {
+          "maxLength": 160,
+          "minLength": 1,
+          "title": "Definition Ref",
+          "type": "string"
+        },
+        "evidence_ref": {
+          "maxLength": 160,
+          "minLength": 1,
+          "title": "Evidence Ref",
+          "type": "string"
+        },
+        "unit": {
+          "const": "m",
+          "title": "Unit",
+          "type": "string"
+        },
+        "axes": {
+          "const": "east_north_up",
+          "title": "Axes",
+          "type": "string"
+        },
+        "vertical_reference": {
+          "maxLength": 160,
+          "minLength": 1,
+          "title": "Vertical Reference",
+          "type": "string"
+        },
+        "geographic_adapter": {
+          "const": "not_connected",
+          "title": "Geographic Adapter",
+          "type": "string"
+        }
+      },
+      "required": [
+        "frame_id",
+        "title",
+        "kind",
+        "horizontal_reference",
+        "definition_ref",
+        "evidence_ref",
+        "unit",
+        "axes",
+        "vertical_reference",
+        "geographic_adapter"
+      ],
+      "title": "TargetFrame",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "profile": {
+      "const": "cospace.spatial-registration-input/0.1",
+      "title": "Profile",
+      "type": "string"
+    },
+    "synthetic": {
+      "title": "Synthetic",
+      "type": "boolean"
+    },
+    "source": {
+      "$ref": "#/$defs/ModelFrame"
+    },
+    "target": {
+      "$ref": "#/$defs/TargetFrame"
+    },
+    "method": {
+      "const": "provided_rigid_3d",
+      "title": "Method",
+      "type": "string"
+    },
+    "direction": {
+      "const": "source_to_target",
+      "title": "Direction",
+      "type": "string"
+    },
+    "matrix": {
+      "items": {
+        "items": {
+          "maximum": 10000000,
+          "minimum": -10000000,
+          "type": "number"
+        },
+        "maxItems": 4,
+        "minItems": 4,
+        "type": "array"
+      },
+      "maxItems": 4,
+      "minItems": 4,
+      "title": "Matrix",
+      "type": "array"
+    },
+    "controls": {
+      "items": {
+        "$ref": "#/$defs/Control"
+      },
+      "maxItems": 128,
+      "minItems": 6,
+      "title": "Controls",
+      "type": "array"
+    },
+    "check_limits": {
+      "$ref": "#/$defs/Limits"
+    }
+  },
+  "required": [
+    "profile",
+    "synthetic",
+    "source",
+    "target",
+    "method",
+    "direction",
+    "matrix",
+    "controls",
+    "check_limits"
+  ],
+  "title": "RegistrationInput",
+  "type": "object"
+}
