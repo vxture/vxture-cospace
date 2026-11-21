@@ -5,6 +5,8 @@ RUN npm install --global pnpm@10.32.1
 COPY packages/globe-sdk/ /src/packages/globe-sdk/
 COPY packages/ontology-ui/ /src/packages/ontology-ui/
 COPY configs/ontology/ /src/configs/ontology/
+# Type-check the development preview; this fixture is not copied to runtime.
+COPY contracts/examples/spatial-registration-campus.json /src/contracts/examples/spatial-registration-campus.json
 COPY apps/workbench/ ./
 RUN pnpm install --frozen-lockfile && pnpm build
 
