@@ -5,3 +5,6 @@
 .geometry-object-markers button{position:absolute;top:0;left:0;max-width:min(200px,65%);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;pointer-events:auto;cursor:pointer;border:1px solid var(--border);border-radius:var(--radius-md);padding:4px 8px;color:var(--foreground);background:var(--popover);font-size:12px}
 .geometry-object-markers button:hover,.geometry-object-markers button:focus-visible,.geometry-object-markers button[aria-pressed=true]{border-color:var(--primary);color:var(--primary);z-index:1;outline-offset:-2px}
 .geometry-object-markers[data-interactive=false] button{pointer-events:none}
+
+.geometry-canvas-fit{position:absolute;right:var(--space-sm);bottom:var(--space-sm);width:var(--space-control-xl);height:var(--space-control-xl);padding:var(--space-2xs);z-index:1;background:var(--card)}
+.geometry-canvas-fit>svg{width:var(--spacing-icon-lg);height:var(--spacing-icon-lg)}

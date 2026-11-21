@@ -2,6 +2,7 @@ import React,{useEffect,useRef,useState} from 'react';
 import * as THREE from 'three/webgpu';
 import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 import {Button} from '@vxture/design-system';
+import {CornersOut} from '@phosphor-icons/react';
 import type {PreviewGeometry,XYZ} from './geometry-preview-data';
 import {scanFocus} from './build-scan-data';
 import {visibleCount,type ProcessPlayback} from './build-process-data';
@@ -10,7 +11,7 @@ function brandPaint(element:HTMLElement){const canvas=document.createElement('ca
 
 export type GeometryMarker={id:string;label:string;position:XYZ;kind?:'fit'|'check'};
 export type GeometryFocus={position:XYZ};
-export default function GeometryPreviewCanvas({data,scan,process,onPick,markers,selected,onSelect,focus,anchor:verifiedAnchor,fitPadding=1.08}:{data:PreviewGeometry;scan?:React.RefObject<{progress:number}>;process?:React.RefObject<ProcessPlayback>;onPick?:(index:number)=>void;markers?:GeometryMarker[];selected?:string;onSelect?:(id:string)=>void;focus?:GeometryFocus;anchor?:XYZ;fitPadding?:number}){
+export default function GeometryPreviewCanvas({data,scan,process,onPick,markers,selected,onSelect,focus,anchor:verifiedAnchor,fitPadding=1.08,fitControl='footer'}:{data:PreviewGeometry;scan?:React.RefObject<{progress:number}>;process?:React.RefObject<ProcessPlayback>;onPick?:(index:number)=>void;markers?:GeometryMarker[];selected?:string;onSelect?:(id:string)=>void;focus?:GeometryFocus;anchor?:XYZ;fitPadding?:number;fitControl?:'footer'|'overlay'}){
  const overlay=useRef({markers,focus,verifiedAnchor});overlay.current={markers,focus,verifiedAnchor};
  const markerNodes=useRef(new Map<string,HTMLButtonElement>());
  const pick=useRef(onPick);pick.current=onPick;
@@ -107,5 +108,5 @@ export default function GeometryPreviewCanvas({data,scan,process,onPick,markers,
   }catch{if(!cancelled)setStatus('三维渲染不可用；仍可核对点数与范围。');}})();
   return()=>{cancelled=true;observer?.disconnect();controls?.dispose();renderer?.domElement.removeEventListener('dblclick',choose);if(ready){renderer?.setAnimationLoop(null);renderer?.dispose();}renderer?.domElement.remove();selectedGeometry.dispose();selectedMaterial.dispose();geometry.dispose();material.dispose();glowGeometry.dispose();glowMaterial.dispose();scanGeometry.dispose();scanMaterial.dispose();trailGeometry.dispose();trailMaterial.dispose();markerGeometry.dispose();markerMaterial.dispose();axes.geometry.dispose();(Array.isArray(axes.material)?axes.material:[axes.material]).forEach(m=>m.dispose());reset.current=()=>{};};
  },[data,scan,process,fitPadding]);
- return <div className="geometry-canvas-wrap"><div className="geometry-canvas-stage"><div ref={host} className="geometry-canvas"/>{!!markers?.length&&<div className="geometry-object-markers" role="group" aria-label="模型对象标记" data-interactive={!!onSelect}>{markers.map(item=><button key={item.id} type="button" data-marker-kind={item.kind} ref={el=>{if(el){markerNodes.current.set(item.id,el);}else{markerNodes.current.delete(item.id);}}} hidden={!markerNodes.current.has(item.id)} aria-label={item.kind?`选择模型控制点 ${item.label}`:`查看对象 ${item.label}`} aria-pressed={selected===item.id} disabled={!onSelect} onClick={()=>onSelect?.(item.id)}>{item.label}</button>)}</div>}</div><div className="geometry-canvas-controls" data-unavailable={status.startsWith('三维渲染')}><span role="status">{status}</span><Button size="sm" variant="outline" type="button" onClick={()=>reset.current()}>适配全图</Button></div></div>;
+ return <div className="geometry-canvas-wrap"><div className="geometry-canvas-stage"><div ref={host} className="geometry-canvas"/>{!!markers?.length&&<div className="geometry-object-markers" role="group" aria-label="模型对象标记" data-interactive={!!onSelect}>{markers.map(item=><button key={item.id} type="button" data-marker-kind={item.kind} ref={el=>{if(el){markerNodes.current.set(item.id,el);}else{markerNodes.current.delete(item.id);}}} hidden={!markerNodes.current.has(item.id)} aria-label={item.kind?`选择模型控制点 ${item.label}`:`查看对象 ${item.label}`} aria-pressed={selected===item.id} disabled={!onSelect} onClick={()=>onSelect?.(item.id)}>{item.label}</button>)}</div>}{fitControl==='overlay'&&<Button className="geometry-canvas-fit" size="icon-md" variant="outline" type="button" aria-label="适配全图" title="适配全图" onClick={()=>reset.current()}><CornersOut size={24}/></Button>}</div><div className="geometry-canvas-controls" data-unavailable={status.startsWith('三维渲染')}><span role="status">{status}</span>{fitControl==='footer'&&<Button size="sm" variant="outline" type="button" onClick={()=>reset.current()}>适配全图</Button>}</div></div>;
 }
