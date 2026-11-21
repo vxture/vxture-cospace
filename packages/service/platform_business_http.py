@@ -1041,7 +1041,17 @@ class BusinessAccess:
                 except sqlite3.Error:return deny(503,'workflow_records_unavailable')
                 except (ValueError,OSError,KeyError,TypeError):return deny(409,'workflow_unavailable_refresh_required')
                 result['business_authorized']=True
-                required={'data':DATA_MANAGE,'build':'build.run','ontology':SPACE_PREVIEW,'association':ASSOCIATION_EDIT,'delivery':SPACE_PREVIEW,'space':SPACE_PREVIEW}
+                required={'data':DATA_MANAGE,'build':'build.run','registration':SPACE_PREVIEW,'ontology':SPACE_PREVIEW,'association':ASSOCIATION_EDIT,'delivery':SPACE_PREVIEW,'space':SPACE_PREVIEW,'services':SPACE_PREVIEW}
+                if 'build.run' in caps:
+                    from packages.service.scene_registrations import SceneRegistrations
+                    from packages.service.workflow_guidance import workflow_guidance
+                    principal=context['principal']
+                    scope=json.dumps([principal.issuer,principal.org_id,principal.workspace_id],separators=(',',':'))
+                    service=SceneRegistrations(self.directory.root,scope,principal.subject,self.jobs)
+                    result['guidance']=await run_in_threadpool(workflow_guidance,result,service)
+                    guidance=result['guidance']
+                    for guided_action in [guidance['primary_action'],*(step['action'] for step in guidance['steps'] if step['action'])]:
+                        guided_action['allowed']=required[guided_action['module']] in caps
                 for stage in result['stages']:
                     stage['action']['allowed']=required[stage['action']['module']] in caps
                 result['next_action']['allowed']=required[result['next_action']['module']] in caps

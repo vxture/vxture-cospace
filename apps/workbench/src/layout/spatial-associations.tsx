@@ -3,6 +3,8 @@ import {SceneOntologyRelationsPanel} from './scene-ontology-relations';
 import {RegistrationSummary} from './registration-summary';
 import {SceneOntologyLinksPanel} from './scene-ontology-links';
 import {WorkflowPageHeader} from './workflow-page-header';
+import {WorkflowNextStep} from './workflow-next-step';
+import {associationNextStep} from './association-next-step';
 import {useAssistantReport} from './workspace-assistant';
 import {candidateScreenHref} from './real-space-data';
 import {associationExamples,associationExample} from './association-examples';
@@ -63,7 +65,8 @@ function AssociationWorkspace(){
  },[current?.id,target.space,refresh]);
  function navigate(next:View,job=current?.id){appNavigate(recordLink('association',{space:target.space,tab:next,...(job&&next!=='ifc'?{job}:{})}));if(innerWidth<1100)setNavOpen(false);}
  const ready=loaded&&!!current&&target.job===current.id;
- useAssistantReport({title:'关联检查',status:error||snapshotError?'error':!loaded||reading?'loading':'ready',note:error||snapshotError||(!current?'当前场景没有可用的模型来源。':undefined),tasks:!loaded||reading||error||snapshotError||!current?[]:[{id:'objects',title:objects?.objects.length?'核对对象与位置':'建立场景对象',evidence:objects?.objects.length?`当前快照已保存 ${objects.objects.length} 个对象。`:'当前模型尚未保存对象标注。',label:'对象管理',run:()=>navigate('objects')},...(objects?.objects.length?[{id:'relations',title:'核对空间关系',evidence:`已保存 ${objects.relations?.length||0} 条关系声明，需按现场含义核实。`,label:'空间关系',run:()=>navigate('relations')},{id:'business',title:'核对业务关联',evidence:'业务引用需要固定台账版本并保留来源。',label:'业务关联',run:()=>navigate('business')}]:[])]});
+ const next=associationNextStep(view,current?.id===selected);
+ useAssistantReport({title:'关联检查',status:error||snapshotError?'error':!loaded||reading?'loading':'ready',note:error||snapshotError||(!current?'当前场景没有可用的模型来源。':undefined),tasks:!loaded||reading||error||snapshotError||!current?[]:[{id:'next',title:'继续下一环节',evidence:next.description,label:next.label,run:()=>appNavigate(recordLink(next.module,{space:target.space,job:current.id,tab:next.tab}))},{id:'objects',title:objects?.objects.length?'核对对象与位置':'建立场景对象',evidence:objects?.objects.length?`当前快照已保存 ${objects.objects.length} 个对象。`:'当前模型尚未保存对象标注。',label:'对象管理',run:()=>navigate('objects')},...(objects?.objects.length?[{id:'relations',title:'核对空间关系',evidence:`已保存 ${objects.relations?.length||0} 条关系声明，需按现场含义核实。`,label:'空间关系',run:()=>navigate('relations')},{id:'business',title:'核对业务关联',evidence:'业务引用需要固定台账版本并保留来源。',label:'业务关联',run:()=>navigate('business')}]:[])]});
 
  return <section className={`publication-workspace association-workspace `} aria-label="空间关联工作区">
   {navOpen?<aside className="publication-nav association-nav workflow-nav-panel" id="association-navigation" aria-label="关联导航"><header className="workflow-nav-heading"><LinkSimple size={18}/><h2>空间关联</h2><Badge variant="outline">{available.length}</Badge><WorkflowNavigationToggle open={true} label="关联" panelId="association-navigation" onToggle={()=>setNavOpen(false)}/></header><div className="publication-nav-surface"><BuildSceneLink selected={view==='info'} onSelect={()=>navigate('info')}/><Select value={current?.id||''} onValueChange={id=>navigate(view,id)} disabled={!loaded}><SelectTrigger aria-label="选择关联模型" className="publication-version-trigger"><span>{current?<><strong>来源构建 {title(current)}</strong><small>快照 {current.id.slice(-8).toUpperCase()} · {time(current.created_at)}</small></>:loaded?'选择来源构建':'读取模型来源…'}</span></SelectTrigger><SelectContent>{[...available].reverse().map(j=><SelectItem key={j.id} value={j.id}><span className="publication-version-option"><strong>{title(j)} · {j.id.slice(-8).toUpperCase()}</strong><small>{time(j.created_at)} · {j.view_parent_id||j.base_candidate_id?'派生候选':'构建候选'}</small></span></SelectItem>)}</SelectContent></Select><nav aria-label="关联功能">{sections.map(s=><Button key={s.id} variant={section?.id===s.id?'secondary':'ghost'} aria-current={section?.id===s.id?'page':undefined} onClick={()=>navigate(s.id)}><s.icon size={18}/>{s.name}</Button>)}</nav><div className="publication-nav-foot"><Info size={14}/><p>模型声明保存为新候选；本体应用保存为消费侧修订。既有服务发布保持固定。</p></div></div></aside>:<WorkflowNavigationToggle open={false} label="关联" panelId="association-navigation" onToggle={()=>setNavOpen(true)}/>}
@@ -85,6 +88,7 @@ function AssociationWorkspace(){
     {visited.includes('relations')&&<div hidden={view!=='relations'} className="association-view"><SceneOntologyRelationsPanel key={current.id+'-ontology'} spaceId={target.space} candidateId={current.id} active={view==='relations'}/><section aria-label="原关系声明"><header className="workspace-section-heading association-stage-heading"><div><h3>原关系声明</h3><p>维护模型候选中的关系；保存并切换新候选后，再显式映射本体。</p></div></header><ObjectRelations key={current.id} embedded/></section></div>}
     {visited.includes('business')&&<div hidden={view!=='business'} className="association-view"><BusinessAssociations key={current.id} embedded/></div>}
    </section></RecordNavigationProvider>}
+   {ready&&!reading&&!error&&!snapshotError&&!!model&&view!=='info'&&view!=='ifc'&&<WorkflowNextStep description={next.description} label={next.label} href={recordLink(next.module,{space:target.space,job:current.id,tab:next.tab})}/>}
   </WorkspaceContent></div>
  </section>;
 }

@@ -1,4 +1,5 @@
 import json
+import io
 from types import SimpleNamespace
 from urllib.error import HTTPError
 
@@ -99,6 +100,29 @@ def test_unconfigured_busy_and_upstream_failure_do_not_retry_or_leak_source(keys
     monkeypatch.setattr(obj,'check_route',lambda *a:None)
     with pytest.raises(AtlasUnavailable,match='^coordinate_ai_access_denied$'):obj.chat(principal,'token','t',[])
     assert len(calls)==1
+
+
+@pytest.mark.parametrize('payload,expected', [
+    ({'code':'UPSTREAM_ACCOUNT_REFUSED','message':'private vendor account and source'}, 'coordinate_ai_provider_account_unavailable'),
+    ({'code':'UPSTREAM_ERROR','message':'private source'}, 'coordinate_ai_unavailable'),
+    ({'message':'UPSTREAM_ACCOUNT_REFUSED is only quoted vendor text'}, 'coordinate_ai_unavailable'),
+    (['UPSTREAM_ACCOUNT_REFUSED'], 'coordinate_ai_unavailable'),
+    ('invalid response', 'coordinate_ai_unavailable'),
+    ({'code':'UPSTREAM_ACCOUNT_REFUSED','message':'x'*9000}, 'coordinate_ai_unavailable'),
+])
+def test_vendor_account_refusal_has_a_safe_actionable_code_without_retry(keys,monkeypatch,payload,expected):
+    obj,principal,calls=gateway(keys)
+    monkeypatch.setattr(obj,'check_route',lambda *a:None)
+    attempts=[]
+    def opener(*handlers):
+        def send(request,timeout):
+            attempts.append(request)
+            raise HTTPError(request.full_url,502,'private upstream message',{},io.BytesIO(json.dumps(payload).encode()))
+        return SimpleNamespace(open=send)
+    monkeypatch.setattr('packages.infrastructure.atlas_gateway.build_opener',opener)
+    with pytest.raises(AtlasUnavailable,match='^'+expected+'$'):
+        obj.chat(principal,'user-access','task-one',[{'role':'user','content':'private source'}])
+    assert len(attempts)==len(calls)==1
 
 
 def routes():
