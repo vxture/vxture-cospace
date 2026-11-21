@@ -11,3 +11,11 @@
 metric target 的参考系标识不自动授予经纬度转换能力。geographic_adapter 固定 not_connected，禁止把源局部坐标或目标工程坐标直接用作地图经纬度。正式投影、高程/格网依赖、有效期、审核持久化和固定地理发布属于 B07b—d 的后续合同。
 
 可视化读取同一输入与计算报告；水平/高程误差和门限必须标单位，配准前/后仅切换空间显示。表格、模型标记、目标标记、误差图共享控制点身份。主图显示真实坐标差，不能把放大误差当实际位置。缺几何时继续提供控制点及误差清单。依据和参数按需抽屉查看。
+
+## 场景资料与固定成果
+
+`scene-registration-command-v0.1.schema.json` 与 `registration-geographic-binding-v0.1.schema.json` 分别从宿主 Command 和 GeographicBinding 模型生成。保存、提交、独立审核、采用是不同操作；身份、权限、来源重算和状态转换不能仅靠 JSON Schema 通过来授予。
+
+B07a 纯数值输入中的 `target.geographic_adapter=not_connected` 继续只表示该计算文档自身不授权定位。场景资料通过独立 `geographic_binding` 侧车、宿主适配器允许列表和核准采用建立地理能力，不改写原始计算合同。
+
+`cospace.registration-artifact/0.1` 包含固定核准 Snapshot、selection 和生成时刻；在线与离线共用同一完整性、范围和有效期验证。完整离线包 `cospace.preview-offline/0.6` 可同时包含旧模型语义、固定实例语义与配准成果；固定成果不读取最新工作资料。消费端默认按当前 UTC 时刻判断核准有效期，也支持显式历史 `at`。分区包不支持新配准闭包，必须拒绝。

@@ -4,12 +4,13 @@ import {ArrowLeft,ArrowsInSimple,ArrowsOutSimple,Cube,FileText,ListBullets,Slide
 import type {PreviewGeometry} from './geometry-preview-data';
 import {displayCentimetres as centimetres,registrationPreview,type Point3,type RegistrationInput} from './registration-preview-data';
 import {RegistrationComparison,RegistrationEvidenceDrawer,RegistrationModel,RegistrationPlan,RegistrationResidualChart,type PlanBuilding} from './registration-views';
+import {useUnsavedNavigation} from './unsaved-navigation';
 
-type Props={input:RegistrationInput;geometry?:PreviewGeometry;buildings:PlanBuilding[];selected:string;onSelect:(id:string)=>void;onClose:()=>void;onApply:(input:RegistrationInput)=>void};
+type Props={input:RegistrationInput;geometry?:PreviewGeometry;buildings:PlanBuilding[];selected:string;onSelect:(id:string)=>void;onClose:()=>void;onApply:(input:RegistrationInput)=>void;production?:boolean};
 type Coordinates=Record<string,[string,string,string]>;
 const validCoordinate=(value:string)=>value.trim()!==''&&Number.isFinite(Number(value))&&Math.abs(Number(value))<=10_000_000;
 
-export function RegistrationEditor({input,geometry,buildings,selected,onSelect,onClose,onApply}:Props){
+export function RegistrationEditor({input,geometry,buildings,selected,onSelect,onClose,onApply,production=false}:Props){
  const [coordinates,setCoordinates]=useState<Coordinates>(()=>Object.fromEntries(input.controls.map(p=>[p.id,p.target_m.map(String) as [string,string,string]])));
  const [compact,setCompact]=useState(()=>!window.matchMedia('(min-width: 1000px)').matches);
  const [listOpen,setListOpen]=useState(!compact),[inspectorOpen,setInspectorOpen]=useState(!compact),[modelOpen,setModelOpen]=useState(!compact);
@@ -19,6 +20,7 @@ export function RegistrationEditor({input,geometry,buildings,selected,onSelect,o
  const candidate=useMemo(()=>({...input,controls:input.controls.map(p=>({...p,target_m:coordinates[p.id].every(validCoordinate)?coordinates[p.id].map(Number) as Point3:p.target_m}))}),[input,coordinates]);
  const duplicate=new Set(candidate.controls.map(p=>p.target_m.join('/'))).size!==candidate.controls.length;
  const dirty=input.controls.some(p=>coordinates[p.id].some((value,i)=>!validCoordinate(value)||Number(value)!==p.target_m[i]));
+ useUnsavedNavigation(dirty,'配准坐标修改',{discard:onClose});
  const report=useMemo(()=>registrationPreview(candidate),[candidate]),point=report.controls.find(p=>p.id===selected)||report.controls[0];
  const requestClose=()=>{if(dirty)setDiscard(true);else onClose();};
  useEffect(()=>{if(!dirty)return;const protect=(event:BeforeUnloadEvent)=>{event.preventDefault();event.returnValue='';};window.addEventListener('beforeunload',protect);return()=>window.removeEventListener('beforeunload',protect);},[dirty]);
@@ -30,8 +32,8 @@ export function RegistrationEditor({input,geometry,buildings,selected,onSelect,o
  const resetPoint=()=>{const original=input.controls.find(p=>p.id===point.id)!;setCoordinates(current=>({...current,[point.id]:original.target_m.map(String) as [string,string,string]}));};
  const leftInset=!compact&&listOpen?252:0,rightInset=!compact&&inspectorOpen?336:0;
  return <Dialog open onOpenChange={open=>{if(!open)requestClose();}}><DialogContent className="registration-editor" aria-describedby="registration-editor-description" onEscapeKeyDown={event=>{event.preventDefault();if(!details&&!discard)requestClose();}}>
-  <header className="registration-editor-header"><div><Button variant="ghost" size="icon-md" aria-label="返回配准展示" onClick={requestClose}><ArrowLeft size={24}/></Button><DialogTitle>编辑配准</DialogTitle><span className="registration-editor-local">本地预览</span></div><div><Button size="sm" variant="outline" onClick={requestClose}>取消</Button><Button size="sm" disabled={!dirty||invalid||duplicate} onClick={()=>onApply(candidate)}>应用到预览</Button></div></header>
-  <DialogDescription id="registration-editor-description" className="registration-editor-description">在全屏工程平面中核对控制点，修改目标坐标仅作用于本次本地预览。</DialogDescription>
+  <header className="registration-editor-header"><div><Button variant="ghost" size="icon-md" aria-label="返回配准展示" onClick={requestClose}><ArrowLeft size={24}/></Button><DialogTitle>编辑配准</DialogTitle><span className="registration-editor-local">{production?'资料草稿':'本地预览'}</span></div><div><Button size="sm" variant="outline" onClick={requestClose}>取消</Button><Button size="sm" disabled={!dirty||invalid||duplicate} onClick={()=>onApply(candidate)}>{production?'核对修改':'应用到预览'}</Button></div></header>
+  <DialogDescription id="registration-editor-description" className="registration-editor-description">在全屏工程平面中核对控制点。{production?'修改需通过服务端核对，返回展示后显式保存。':'修改目标坐标仅作用于本次本地预览。'}</DialogDescription>
   <div className="registration-editor-stage">
    <RegistrationPlan input={candidate} report={report} buildings={buildings} aligned={aligned} selected={point.id} onSelect={choose} interactive leftInset={leftInset} rightInset={rightInset}/>
    <div className="registration-editor-tools" role="group" aria-label="工作面板"><Button size="icon-md" variant="ghost" title="控制点清单" aria-label="切换控制点清单" aria-pressed={listOpen} onClick={toggleList}><ListBullets size={24}/></Button><Button size="icon-md" variant="ghost" title="模型小窗" aria-label="切换模型小窗" aria-pressed={modelOpen} onClick={toggleModel}><Cube size={24}/></Button><Button size="icon-md" variant="ghost" title="点位属性" aria-label="切换点位属性" aria-pressed={inspectorOpen} onClick={toggleInspector}><SlidersHorizontal size={24}/></Button></div>

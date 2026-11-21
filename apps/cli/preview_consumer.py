@@ -33,14 +33,16 @@ def main():
             query.add_argument('--object-id')
             query.add_argument('--semantics', nargs='?', const='', metavar='OBJECT_ID',
                                help='Read the frozen semantic summary, or one object declaration')
+            query.add_argument('--registration', action='store_true',
+                               help='Read fixed registration and geographic object anchors')
             query.add_argument('--bounds', nargs=6, type=float)
-            command.add_argument('--at', help='UTC instant; requires --semantics OBJECT_ID')
+            command.add_argument('--at', help='UTC instant; requires --semantics OBJECT_ID or --registration')
             command.add_argument('--frame-id')
             command.add_argument('--limit', type=int)
     args = parser.parse_args()
     if args.command == 'restore':
-        if args.at is not None and not args.semantics:
-            parser.error('--at requires --semantics OBJECT_ID')
+        if args.at is not None and not (args.semantics or args.registration):
+            parser.error('--at requires --semantics OBJECT_ID or --registration')
         if args.bounds is not None and not args.frame_id:
             parser.error('--bounds requires --frame-id')
         if args.bounds is None and (args.frame_id is not None or args.limit is not None):
@@ -68,6 +70,8 @@ def main():
                     result = session.objects(args.object_id)
                 elif args.semantics is not None:
                     result = session.semantics(args.semantics or None, args.at)
+                elif args.registration:
+                    result = session.registration(args.at)
                 elif args.bounds is not None:
                     result = session.query_range([args.bounds[:3], args.bounds[3:]], args.frame_id,
                                                  args.limit if args.limit is not None else DEFAULT_RANGE_CELLS)

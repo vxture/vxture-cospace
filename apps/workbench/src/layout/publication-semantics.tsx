@@ -4,6 +4,7 @@ import {businessEndpoint as endpoint} from './business-endpoint';
 import './publication-semantics.css';
 
 export type SemanticSelection={consumer_revision:number;source_manifest_sha256:string;snapshot_sha256:string};
+export type RegistrationSelection={registration_revision:number;source_manifest_sha256:string;snapshot_sha256:string};
 type Coverage={objects_total:number;linked_objects:number;unlinked_objects:number;relations_total:number;mapped_relations:number;unmapped_relations:number};
 type Check={semantic_selection:SemanticSelection;coverage:Coverage;mapped_relation_validation:string};
 async function value(response:Response){
@@ -14,10 +15,19 @@ async function value(response:Response){
 }
 function CoverageRows({coverage}:{coverage:Coverage}){return <dl className="publication-semantic-metrics"><div><dt>对象声明</dt><dd>{coverage.linked_objects} / {coverage.objects_total}</dd></div><div><dt>关系映射</dt><dd>{coverage.mapped_relations} / {coverage.relations_total}</dd></div></dl>;}
 
-export function PublicationPrepare({spaceId,selection,onClose,onProceed}:{spaceId:string;selection:{candidate_id:string|null;revision:number};onClose:()=>void;onProceed:(semantic?:SemanticSelection)=>void}){
+export function PublicationPrepare({spaceId,selection,onClose,onProceed}:{spaceId:string;selection:{candidate_id:string|null;revision:number};onClose:()=>void;onProceed:(semantic?:SemanticSelection,registration?:RegistrationSelection)=>void}){
  const [include,setInclude]=useState(false),[revision,setRevision]=useState(''),[source,setSource]=useState('');
  const [loading,setLoading]=useState(true),[checking,setChecking]=useState(false),[error,setError]=useState(''),[check,setCheck]=useState<Check|null>(null);
  const generation=useRef(0),[refresh,setRefresh]=useState(0),mounted=useRef(true);
+ const [includeRegistration,setIncludeRegistration]=useState(false),[registration,setRegistration]=useState<RegistrationSelection|null>(null),[registrationError,setRegistrationError]=useState(''),[registrationLoading,setRegistrationLoading]=useState(false);
+ useEffect(()=>{const abort=new AbortController();setRegistration(null);setRegistrationError('');setRegistrationLoading(includeRegistration);
+  if(!includeRegistration||!selection.candidate_id)return()=>abort.abort();
+  (async()=>{const state=await fetch(endpoint+'/api/scene-registrations?'+new URLSearchParams({space_id:spaceId,candidate_id:selection.candidate_id!}),{signal:abort.signal,cache:'no-store'}).then(value);
+   if(!state.adopted_revision)throw Error('当前模型尚未采用核准配准，请先在空间关联中完成审核采用。');
+   const result=await fetch(endpoint+'/api/publication-registration-preflight',{method:'POST',signal:abort.signal,headers:{'Content-Type':'application/json'},body:JSON.stringify({space_id:spaceId,candidate_id:selection.candidate_id,registration_selection:{registration_revision:state.adopted_revision,source_manifest_sha256:state.source_sha256}})}).then(value);
+   if(!abort.signal.aborted)setRegistration(result.registration_selection);
+  })().catch(e=>{if(!abort.signal.aborted)setRegistrationError(e.message);}).finally(()=>{if(!abort.signal.aborted)setRegistrationLoading(false);});return()=>abort.abort();
+ },[includeRegistration,spaceId,selection.candidate_id]);
  useEffect(()=>{mounted.current=true;return()=>{mounted.current=false;generation.current++;};},[]);
  useEffect(()=>{const abort=new AbortController();generation.current++;setChecking(false);setLoading(true);setCheck(null);setError('');setSource('');
   if(!include||!selection.candidate_id){setLoading(false);return;}
@@ -33,13 +43,13 @@ export function PublicationPrepare({spaceId,selection,onClose,onProceed}:{spaceI
    if(data.semantic_selection.consumer_revision!==number||data.semantic_selection.source_manifest_sha256!==source||!/^[a-f0-9]{64}$/.test(data.semantic_selection.snapshot_sha256))throw Error('预检结果与所选修订不一致。');
    if(mounted.current&&generation.current===seq)setCheck(data);
   }catch(e){if(mounted.current&&generation.current===seq)setError(e instanceof Error?e.message:'预检失败。');}finally{if(mounted.current&&generation.current===seq)setChecking(false);}}
- return <Drawer open side="right" width="md" title="新建发布" description="核对固定来源及本次成果范围" onClose={onClose} closeLabel="关闭发布准备" footer={<div className="publication-semantic-footer"><Button variant="outline" onClick={onClose}>取消</Button><Button disabled={!selection.candidate_id||include&&(!check||checking||loading)} onClick={()=>onProceed(include?check!.semantic_selection:undefined)}>继续发布</Button></div>}><div className="publication-semantic-content">
+ return <Drawer open side="right" width="md" title="新建发布" description="核对固定来源及本次成果范围" onClose={onClose} closeLabel="关闭发布准备" footer={<div className="publication-semantic-footer"><Button variant="outline" onClick={onClose}>取消</Button><Button disabled={!selection.candidate_id||include&&(!check||checking||loading)||includeRegistration&&(!registration||registrationLoading)} onClick={()=>onProceed(include?check!.semantic_selection:undefined,includeRegistration?registration!:undefined)}>继续发布</Button></div>}><div className="publication-semantic-content">
  <section><h4>固定空间成果</h4><p>{selection.candidate_id||'尚未选择候选'}</p><p>选择修订 {selection.revision} · 沿用已有模型与表达。</p></section>
  <section><label className="publication-semantic-choice"><input type="checkbox" checked={include} onChange={e=>setInclude(e.target.checked)}/>纳入对象语义成果</label><p>冻结所选实例修订、定义闭包、对象属性、关系及依据。</p>
  {include&&<>{loading?<output>正在读取实例来源…</output>:source?<><form className="publication-semantic-toolbar" onSubmit={e=>{e.preventDefault();void preflight();}}><Input aria-label="固定实例修订" value={revision} inputMode="numeric" onChange={e=>changeRevision(e.target.value)}/><Button variant="outline" type="submit" disabled={checking}>{checking?'预检中…':'预检修订'}</Button></form>{revision==='0'&&<p>当前候选尚无实例声明，请先在空间关联中维护。</p>}</>:null}
  {error&&<p role="alert">{error}<Button variant="ghost" size="sm" onClick={()=>{generation.current++;setChecking(false);setRefresh(n=>n+1);}}>重新读取</Button></p>}
  {check&&<><CoverageRows coverage={check.coverage}/><p>实例修订 {check.semantic_selection.consumer_revision} · 属性校验通过（局部）</p><p>{check.mapped_relation_validation==='not_applicable'?'未采用关系映射，关系校验不适用。':'已映射关系校验通过（局部）。'}</p></>}</>}
- </section><section><h4>交付边界</h4><p>未引用对象和未映射关系不自动补齐。专业审核与现场核实未执行。</p><p>模型与附件为证据引用；本次语义成果不提供机器人导航或任务执行能力。</p></section></div></Drawer>;
+ </section><section><label className="publication-semantic-choice"><input type="checkbox" checked={includeRegistration} onChange={event=>setIncludeRegistration(event.target.checked)}/>纳入核准配准成果</label><p>显式固定当前采用的核准修订、基准依据和地理适配资料，在线与离线共用。</p>{registrationLoading&&<output>正在预检核准修订…</output>}{registrationError&&<p role="alert">{registrationError}</p>}{registration&&<p>核准修订 {registration.registration_revision} · 已预检</p>}</section><section><h4>交付边界</h4><p>未引用对象和未映射关系不自动补齐。配准核准不替代独立现场精度验收。</p><p>模型与附件为证据引用；本次成果不提供机器人导航或任务执行能力。</p></section></div></Drawer>;
 }
 
 type Summary={profile:string;publication_id:string;state:string;revision:number;coverage:Coverage;objects:{object_id:string;name:string}[]};

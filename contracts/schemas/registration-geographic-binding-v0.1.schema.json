@@ -1,0 +1,68 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "adapter": {
+      "const": "wgs84_local_enu/1",
+      "title": "Adapter",
+      "type": "string"
+    },
+    "target_frame_id": {
+      "maxLength": 160,
+      "minLength": 1,
+      "title": "Target Frame Id",
+      "type": "string"
+    },
+    "longitude_deg": {
+      "maximum": 180,
+      "minimum": -180,
+      "title": "Longitude Deg",
+      "type": "number"
+    },
+    "latitude_deg": {
+      "exclusiveMaximum": 89,
+      "exclusiveMinimum": -89,
+      "title": "Latitude Deg",
+      "type": "number"
+    },
+    "ellipsoidal_height_m": {
+      "maximum": 100000,
+      "minimum": -12000,
+      "title": "Ellipsoidal Height M",
+      "type": "number"
+    },
+    "realization": {
+      "enum": [
+        "WGS84(G1762)",
+        "WGS84(G2139)",
+        "WGS84(G2296)"
+      ],
+      "title": "Realization",
+      "type": "string"
+    },
+    "coordinate_epoch": {
+      "maximum": 2100,
+      "minimum": 1984,
+      "title": "Coordinate Epoch",
+      "type": "number"
+    },
+    "evidence_ref": {
+      "maxLength": 160,
+      "minLength": 1,
+      "title": "Evidence Ref",
+      "type": "string"
+    }
+  },
+  "required": [
+    "adapter",
+    "target_frame_id",
+    "longitude_deg",
+    "latitude_deg",
+    "ellipsoidal_height_m",
+    "realization",
+    "coordinate_epoch",
+    "evidence_ref"
+  ],
+  "title": "GeographicBinding",
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

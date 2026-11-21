@@ -56,7 +56,11 @@ class PreviewPublications:
         return result
 
     @serialized(lambda self:self.jobs.root.parent)
-    def publish(self,candidate_id,expected_revision,space_id=None,*,request_id=None,semantic_selection=None,semantic_context=None):
+    def publish(self,candidate_id,expected_revision,space_id=None,*,request_id=None,semantic_selection=None,semantic_context=None,registration_selection=None):
+        if registration_selection is not None:
+            from packages.service.registration_artifact import validate_selection
+            validate_selection(registration_selection)
+            if semantic_context is None:raise ValueError('registration_authorization_required')
         if semantic_selection is not None:
             from packages.service.object_semantic_artifact import validate_selection
             validate_selection(semantic_selection)
@@ -68,6 +72,8 @@ class PreviewPublications:
             if existing:
                 if (existing['candidate_id']!=candidate_id or existing['selection_revision']!=expected_revision
                         or existing.get('semantic_selection')!=semantic_selection
+                        or existing.get('registration_selection')!=registration_selection
+                        or registration_selection is not None and existing.get('registration_workspace_scope')!='scope-'+sha256(semantic_context[0].encode()).hexdigest()
                         or semantic_selection is not None and existing.get('semantic_workspace_scope')!='scope-'+sha256(semantic_context[0].encode()).hexdigest()):
                     raise ValueError('publication_request_conflict')
                 return existing
@@ -84,6 +90,14 @@ class PreviewPublications:
             if digest(source.root/'model.json')!=selection['model_manifest_sha256']:
                 raise ValueError('selected_model_integrity_changed')
             semantic_manifest=None;semantic_files={}
+            registration_files={}
+            if registration_selection is not None:
+                from packages.service.scene_registrations import SceneRegistrations,source_from_model
+                from packages.service.registration_artifact import freeze as freeze_registration
+                registration_service=SceneRegistrations(self.jobs.directory.root,*semantic_context,self.jobs)
+                registration_source=source_from_model(source,space_id,candidate_id)
+                registration_files=freeze_registration(registration_service,registration_source,registration_selection,source,now().replace('+00:00','Z'))
+                if set(registration_files)&set(source.manifest['members']):raise ValueError('registration_member_conflict')
             if semantic_selection is not None:
                 from packages.service.scene_ontology_links import SceneOntologyLinks
                 from packages.service.object_semantic_artifact import freeze
@@ -100,6 +114,8 @@ class PreviewPublications:
                 shutil.copyfile(source.root/'offline-checks.json',staging/'offline-checks.json')
             for name,raw in semantic_files.items():
                 (staging/name).write_bytes(raw)
+            for name,raw in registration_files.items():
+                (staging/name).write_bytes(raw)
             write_viewer_entry(staging,source.manifest,publication_id=identity)
             PreviewModel(staging)
             if digest(staging/'model.json')!=selection['model_manifest_sha256']:
@@ -114,6 +130,9 @@ class PreviewPublications:
             if selection.get('selection_review'):
                 record['selection_review']=selection['selection_review']
             if request_id is not None:record['request_id']=request_id
+            if registration_selection is not None:
+                record['registration_selection']=registration_selection
+                record['registration_workspace_scope']='scope-'+sha256(semantic_context[0].encode()).hexdigest()
             if semantic_manifest is not None:
                 record['semantic_selection']=semantic_selection
                 record['semantic_workspace_scope']=semantic_manifest['workspace_scope']
@@ -139,4 +158,6 @@ class PreviewPublications:
         if any(key in record for key in ('semantic_artifact','semantic_selection','semantic_workspace_scope')) or 'semantic-artifact.json' in record['files']:
             from packages.service.object_semantic_artifact import verify_publication
             verify_publication(record,root)
+        from packages.service.registration_artifact import read_fixed as read_registration
+        read_registration(record,model)
         return record,model

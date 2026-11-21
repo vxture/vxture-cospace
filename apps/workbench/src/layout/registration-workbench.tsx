@@ -9,10 +9,10 @@ import './registration-workbench.css';
 import {RegistrationComparison,RegistrationEvidenceDrawer,RegistrationMetrics,RegistrationModel,RegistrationPlan,RegistrationResidualChart,RegistrationStatus,type PlanBuilding} from './registration-views';
 import {RegistrationEditor} from './registration-editor';
 export type {PlanBuilding} from './registration-views';
-type Props={input:RegistrationInput;geometry?:PreviewGeometry;buildings:PlanBuilding[];onPreviewChange?:(input:RegistrationInput)=>void};
+type Props={input:RegistrationInput;geometry?:PreviewGeometry;buildings:PlanBuilding[];onPreviewChange?:(input:RegistrationInput)=>void;reviewStatus?:string;production?:boolean};
 const axisNames:Record<string,string>={right:'右',left:'左',forward:'前',backward:'后',up:'上',down:'下',east:'东',north:'北'};
 
-export function RegistrationWorkbench({input,geometry,buildings,onPreviewChange}:Props){
+export function RegistrationWorkbench({input,geometry,buildings,onPreviewChange,reviewStatus,production=false}:Props){
  const report=useMemo(()=>registrationPreview(input),[input]);
  const [selected,setSelected]=useState(input.controls.find(p=>p.purpose==='check')?.id||input.controls[0]?.id||'');
  const [aligned,setAligned]=useState(true),[details,setDetails]=useState(false),[editing,setEditing]=useState(false);
@@ -21,10 +21,10 @@ export function RegistrationWorkbench({input,geometry,buildings,onPreviewChange}
  const targetAxes=[{symbol:'E',name:'东'},{symbol:'N',name:'北'},{symbol:'U',name:'高'}];
  const editButton=useRef<HTMLButtonElement>(null),previousEditing=useRef(false);
  useEffect(()=>{if(previousEditing.current&&!editing)editButton.current?.focus();previousEditing.current=editing;},[editing]);
- if(editing&&onPreviewChange)return <RegistrationEditor input={input} geometry={geometry} buildings={buildings} selected={point.id} onSelect={setSelected} onClose={()=>setEditing(false)} onApply={draft=>{onPreviewChange(draft);setEditing(false);}}/>;
+ if(editing&&onPreviewChange)return <RegistrationEditor input={input} geometry={geometry} buildings={buildings} selected={point.id} onSelect={setSelected} onClose={()=>setEditing(false)} production={production} onApply={draft=>{onPreviewChange(draft);setEditing(false);}}/>;
  return <section className="registration-workbench" aria-label="空间基准工作面">
   <header className="registration-heading"><div className="registration-heading-title"><Compass size={24}/><div><h1>模型与园区坐标对齐</h1><p>{input.source.frame_id} <ArrowsLeftRight size={14}/> {input.target.frame_id}<span>米制工程平面</span></p></div></div><div className="registration-heading-actions"><Button size="sm" variant="outline" onClick={()=>setDetails(true)}><FileText size={16}/>依据与参数</Button>{onPreviewChange&&<Button ref={editButton} size="sm" onClick={()=>setEditing(true)}><PencilSimple size={16}/>编辑配准</Button>}</div></header>
-  <div className="registration-summary" aria-label="参数核对状态"><RegistrationStatus report={report}/><RegistrationMetrics report={report}/><span className="registration-capability">地理定位未开放</span></div>
+  <div className="registration-summary" aria-label="参数核对状态"><RegistrationStatus report={report} reviewStatus={reviewStatus}/><RegistrationMetrics report={report}/><span className="registration-capability">地理定位能力另行核验</span></div>
   <div className="registration-views">
    <section className="registration-model" aria-label="源模型视图"><header className="registration-view-heading"><div><Cube size={18}/><h2>模型局部坐标</h2></div><span>X · Y · Z（m）</span></header>
     <RegistrationModel input={input} geometry={geometry} selected={point.id} onSelect={setSelected}/>
@@ -39,6 +39,6 @@ export function RegistrationWorkbench({input,geometry,buildings,onPreviewChange}
    <RegistrationResidualChart report={report} input={input} selected={point.id} onSelect={setSelected}/>
   </div>
   <p className="registration-footnote">坐标显示至厘米，计算残差显示至 0.1 cm；显示位数不代表地图实测精度。控制资料及成果精度待核验。</p>
-  <RegistrationEvidenceDrawer input={input} open={details} onClose={()=>setDetails(false)}/>
+  <RegistrationEvidenceDrawer input={input} open={details} onClose={()=>setDetails(false)} reviewStatus={reviewStatus}/>
  </section>;
 }

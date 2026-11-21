@@ -16,15 +16,20 @@ def main():
     query.add_argument('--point', nargs=3, type=float)
     query.add_argument('--object-id',help='Read one fixed semantic object')
     query.add_argument('--objects',action='store_true',help='List fixed semantic objects')
+    query.add_argument('--registration',action='store_true',help='Read fixed registration and geographic object anchors')
     query.add_argument('--bounds',nargs=6,type=float,metavar=('MIN_X','MIN_Y','MIN_Z','MAX_X','MAX_Y','MAX_Z'),help='Select surface cell centers in a half-open AABB')
     parser.add_argument('--frame-id',help='Required with --bounds; must match the fixed model frame')
     parser.add_argument('--limit',type=int,help='Range-only maximum cells, 1..4096; excess returns no cells')
+    parser.add_argument('--at',help='UTC instant; requires --registration')
     args = parser.parse_args()
+    if args.at is not None and not args.registration:parser.error('--at requires --registration')
     if args.bounds is not None and not args.frame_id:parser.error('--bounds requires --frame-id')
     if args.bounds is None and (args.frame_id is not None or args.limit is not None):parser.error('--frame-id and --limit require --bounds')
     try:
         model = OfflinePreview.load(args.bundle, args.publication, args.sha256)
-        if args.bounds is not None:
+        if args.registration:
+            result=model.registration(args.at)
+        elif args.bounds is not None:
             result=model.query_range([args.bounds[:3],args.bounds[3:]],args.frame_id,args.limit if args.limit is not None else DEFAULT_RANGE_CELLS)
         else:result=model.query(args.point) if args.point is not None else model.objects(args.object_id)
         print(json.dumps(result, ensure_ascii=False, allow_nan=False))

@@ -67,3 +67,23 @@ def test_corrupt_lifecycle_database_blocks_service_replacement(tmp_path):
     with pytest.raises(sqlite3.DatabaseError):module.checkpoint(tmp_path,[])
     manifest=next((tmp_path/'backups').glob('*/manifest.json'))
     assert not json.loads(manifest.read_text())['complete']
+
+
+def test_registration_checkpoint_restores_fixed_approved_and_adopted_revision(tmp_path):
+    from packages.service.scene_registrations import SceneRegistrations
+    from test_scene_registrations import approval, command, source, service
+    document = json.loads(Path('contracts/examples/spatial-registration-campus.json').read_text(encoding='utf-8'))
+    document['synthetic'] = False
+    runtime = tmp_path / 'data/business/runtime/preview-directory'
+    writer, bound = service(runtime), source(document)
+    writer.change(bound, command(document))
+    writer.change(bound, command(document, 'submit', 1, 2))
+    service(runtime, 'reviewer').change(bound, command(document, 'approve', 2, 3,
+        approval=approval(document)), can_review=True)
+    writer.change(bound, command(document, 'adopt', 3, 4))
+    checkpoint = module.checkpoint(tmp_path, [])
+    writer.change(bound, command(document, 'clear_adoption', 4, 5))
+    restored = SceneRegistrations(checkpoint, 'workspace', 'reader', None).read(bound)
+    assert restored['revision'] == 4 and restored['adopted']['revision'] == 3
+    assert restored['adopted']['reviewed_by'] == 'reviewer'
+    assert writer.read(bound)['adopted'] is None
