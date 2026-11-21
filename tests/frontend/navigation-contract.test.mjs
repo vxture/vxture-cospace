@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {moduleLinkFromUrl,recordLinkFromUrl,sceneLinkFromUrl,headerSceneLinkFromUrl} from '../../apps/workbench/src/layout/navigation-contract.ts';
+import {canonicalModuleHref,moduleLinkFromUrl,recordLinkFromUrl,sceneLinkFromUrl,headerSceneLinkFromUrl} from '../../apps/workbench/src/layout/navigation-contract.ts';
 import {moduleNames,moduleScopes} from '../../apps/workbench/src/layout/product-navigation.ts';
 
 test('all module switches preserve only scene context, including shared support filters',()=>{
@@ -58,4 +58,14 @@ test('data does not retain scene-only basic information as a data view',()=>{
 test('catalog scene switching preserves the catalog route rather than entering legacy preview',()=>{
  assert.equal(headerSceneLinkFromUrl('next','/space'),'/space');
  assert.equal(headerSceneLinkFromUrl('next','/space?filter=ready'),'/space?filter=ready');
+});
+
+test('spatial reference bookmarks migrate with fixed model context and scene switches clear old models',()=>{
+ assert.equal(canonicalModuleHref('/association?space=scene+A%26B&tab=registration&job=model-fixed&example=equipment'),'/registration?space=scene+A%26B&job=model-fixed');
+ assert.equal(canonicalModuleHref('/association?tab=registration&space='),'/registration?space=');
+ assert.equal(canonicalModuleHref('/association?space=a&tab=objects&job=fixed'),'/association?space=a&tab=objects&job=fixed');
+ assert.equal(canonicalModuleHref('/registration?space=a&job=fixed'),'/registration?space=a&job=fixed');
+ assert.equal(headerSceneLinkFromUrl('next','/registration?space=old&job=model-old&publication=old'),'/registration?space=next');
+ assert.equal(headerSceneLinkFromUrl('next','/registration?space=old&job=model-old&tab=info'),'/registration?space=next&tab=info');
+ assert.equal(recordLinkFromUrl('registration',{space:'a',job:'fixed'},'/association?space=a&example=equipment&tab=overview'),'/registration?space=a&job=fixed');
 });

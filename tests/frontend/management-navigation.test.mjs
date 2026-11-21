@@ -22,6 +22,8 @@ test('viewers can read basic information without gaining build or management ope
  assert.equal(canOpenSceneWorkspace('build','tasks',viewer),false);
  assert.equal(canOpenSceneWorkspace('build','info',[]),false);
  assert.equal(canOpenSceneWorkspace('association','objects',viewer),false);
+ assert.equal(canOpenSceneWorkspace('registration','',viewer),false);
+ assert.equal(canOpenSceneWorkspace('registration','',['association.edit']),true);
  assert.equal(canOpenSceneWorkspace('data','inputs',viewer),false);
  assert.equal(canOpenSceneWorkspace('build','flow',['build.run']),true);
 });

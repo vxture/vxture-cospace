@@ -2,13 +2,14 @@ import React,{useCallback,useState} from 'react';
 import {useWorkspaceQuery} from './workspace-queries';
 import {businessEndpoint} from './business-endpoint';
 import {Button,Drawer,StatusBadge,DropdownMenu,DropdownMenuTrigger,DropdownMenuContent,DropdownMenuItem,DropdownMenuSeparator} from '@vxture/design-system';
-import {Cube,Database,FlowArrow,Package,DotsThreeVertical,Link,Broadcast} from '@phosphor-icons/react';
+import {Cube,Database,FlowArrow,Package,DotsThreeVertical,Link,Broadcast,MapPin} from '@phosphor-icons/react';
 import type {SceneSpace} from './scene-directory';
 import {scenePhases,scenePhase,sceneDestinations,publicationAvailable,publicationLabel} from './scene-catalog-contract';
 import {usePlatformSession} from './platform-auth';
 import {sceneBuildMode,sceneViewSummary,type OverviewJob,type OverviewStages} from './scene-overview-contract';
+import {RegistrationSummary} from './registration-summary';
 
-const destinationIcons={data:Database,build:FlowArrow,association:Link,delivery:Package,services:Broadcast};
+const destinationIcons={data:Database,build:FlowArrow,registration:MapPin,association:Link,delivery:Package,services:Broadcast};
 export function SceneMoreMenu({scene,onDetails}:{scene:SceneSpace;onDetails:()=>void}){
  return <DropdownMenu><DropdownMenuTrigger asChild><Button size="icon-xl" variant="secondary" aria-label={scene.name+'更多操作'}><DotsThreeVertical size={16}/></Button></DropdownMenuTrigger>
   <DropdownMenuContent align="end" className="scene-action-menu">
@@ -62,6 +63,7 @@ function SceneOverview({scene}:{scene:SceneSpace}){
    </dl>}
 
   </section>
+  {job?.state==='succeeded'&&report?.candidate_ref&&(!platform||scene.capabilities?.includes('association.edit'))&&<RegistrationSummary spaceId={scene.id} candidateId={report.candidate_ref.candidate_id}/>}
   <section aria-label="场景发布"><div className="scene-detail-section-heading"><h3>场景发布</h3><span>{releases.length} 个版本</span></div>
    {!releases.length?<p>尚未发布</p>:<ol className="scene-overview-releases">{releases.map(release=><li key={release.id}>
     <div className="scene-overview-release-heading"><strong title={release.id}>{publicationLabel(release)}</strong><div className="scene-overview-release-status">{release.id===releases[0]?.id&&<span>最新版本</span>}<StatusBadge size="sm" icon={false} tone={publicationAvailable(release)?'brand':release.lifecycle_state==='paused'?'warning':release.lifecycle_state==='retired'?'neutral':'danger'}>{publicationAvailable(release)?'已发布':release.lifecycle_state==='paused'?'已暂停':release.lifecycle_state==='retired'?'已退役':'不可用'}</StatusBadge></div></div>
