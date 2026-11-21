@@ -47,11 +47,24 @@ if [[ -n "${COSPACE_AMAP_WEB_KEY:-}${COSPACE_AMAP_SECURITY_JS_CODE:-}" ]]; then
   chmod 600 "$amap_config"
   mv -f -- "$amap_config" /srv/md0/cospace/etc/amap.env
 fi
+if [[ -n "${COSPACE_REGISTRATION_ADAPTERS:-}" ]]; then
+  case "$COSPACE_REGISTRATION_ADAPTERS" in
+    wgs84_local_enu/1) registration_adapters="$COSPACE_REGISTRATION_ADAPTERS" ;;
+    disabled) registration_adapters='' ;;
+    *) echo 'Unsupported production registration adapter configuration' >&2; exit 1 ;;
+  esac
+  test ! -L /srv/md0/cospace/etc
+  test ! -L /srv/md0/cospace/etc/registration.env
+  registration_config="$(mktemp /srv/md0/cospace/etc/.registration.XXXXXXXX)"
+  printf 'COSPACE_REGISTRATION_ADAPTERS=%s\n' "$registration_adapters" > "$registration_config"
+  chmod 600 "$registration_config"
+  mv -f -- "$registration_config" /srv/md0/cospace/etc/registration.env
+fi
 bash /srv/md0/cospace/deploy/deploy.sh
 REMOTE
 scp -i ~/.ssh/deploy_key -P "$port" -o StrictHostKeyChecking=yes "$RUNNER_TEMP/cospace-deploy.sh" "$remote:$helper"
 cmd=''
-for name in STACK_ROOT PROJECT_NAME IMAGE_TAG GHCR_NAMESPACE GHCR_USERNAME GHCR_TOKEN ACR_REGISTRY ACR_NAMESPACE ACR_USERNAME ACR_PASSWORD GITHUB_SHA COSPACE_AMAP_WEB_KEY COSPACE_AMAP_SECURITY_JS_CODE; do
+for name in STACK_ROOT PROJECT_NAME IMAGE_TAG GHCR_NAMESPACE GHCR_USERNAME GHCR_TOKEN ACR_REGISTRY ACR_NAMESPACE ACR_USERNAME ACR_PASSWORD GITHUB_SHA COSPACE_AMAP_WEB_KEY COSPACE_AMAP_SECURITY_JS_CODE COSPACE_REGISTRATION_ADAPTERS; do
   printf -v pair '%s=%q ' "$name" "${!name}"
   cmd+="$pair"
 done

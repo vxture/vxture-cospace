@@ -6,7 +6,7 @@
 
 新数据库为 /srv/md0/cospace/data/business/runtime/preview-directory/scene-registrations.sqlite3。只在首次写入创建，部署 checkpoint 已纳入；不更改既有本体数据库与旧发布。新成果成员 registration-artifact.json 位于既有固定发布目录，完整离线包 profile 为0.6。新版支持旧包，旧客户端不支持0.6；分区包明确拒绝包含新闭包的发布。
 
-宿主可选文件 /srv/md0/cospace/etc/registration.env 声明 COSPACE_REGISTRATION_ADAPTERS=wgs84_local_enu/1（无凭据）。空值停用工作数据地理定位和新配准成果发布；已有固定成果自带闭包继续按固定有效期读取，停用分发应使用暂停/退役；不删除历史核准与工作资料。Compose 通过可选 env_file 读取，已有地图密钥与地球配置沿用私有文件。此配置归宿主引擎配置管理，不放入公共资源本体。没有原点测量资料的场景继续工程坐标核对，不借场景入口位置自动配准。
+宿主可选文件 /srv/md0/cospace/etc/registration.env 声明 COSPACE_REGISTRATION_ADAPTERS=wgs84_local_enu/1（无凭据）。production Environment 变量 COSPACE_REGISTRATION_ADAPTERS 设为 wgs84_local_enu/1 时，经过 reviewer 的发布工作流原子写入该文件；设为 disabled 写入空允许列表，未设置保留现有文件。仅接受这两个配置值。空值停用工作数据地理定位和新配准成果发布；已有固定成果自带闭包继续按固定有效期读取，停用分发应使用暂停/退役；不删除历史核准与工作资料。Compose 通过可选 env_file 读取，已有地图密钥与地球配置沿用私有文件。此配置归宿主引擎配置管理，不放入公共资源本体。没有原点测量资料的场景继续工程坐标核对，不借场景入口位置自动配准。
 
 ## 发布流程与验收
 

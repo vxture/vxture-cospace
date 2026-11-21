@@ -89,5 +89,6 @@ jobs:
           ACR_PASSWORD: ${{ secrets.ALIYUN_ACR_PASSWORD }}
           COSPACE_AMAP_WEB_KEY: ${{ secrets.COSPACE_AMAP_WEB_KEY }}
           COSPACE_AMAP_SECURITY_JS_CODE: ${{ secrets.COSPACE_AMAP_SECURITY_JS_CODE }}
+          COSPACE_REGISTRATION_ADAPTERS: ${{ vars.COSPACE_REGISTRATION_ADAPTERS }}
         shell: bash
         run: bash scripts/workflows/deploy-worker02.sh
