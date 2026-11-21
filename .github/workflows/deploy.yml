@@ -90,5 +90,8 @@ jobs:
           COSPACE_AMAP_WEB_KEY: ${{ secrets.COSPACE_AMAP_WEB_KEY }}
           COSPACE_AMAP_SECURITY_JS_CODE: ${{ secrets.COSPACE_AMAP_SECURITY_JS_CODE }}
           COSPACE_REGISTRATION_ADAPTERS: ${{ vars.COSPACE_REGISTRATION_ADAPTERS }}
+          COSPACE_ATLAS_BASE_URL: ${{ vars.COSPACE_ATLAS_BASE_URL }}
+          COSPACE_ATLAS_COORDINATE_ENDPOINT: ${{ vars.COSPACE_ATLAS_COORDINATE_ENDPOINT }}
+          COSPACE_ATLAS_TAILNET_HTTP: ${{ vars.COSPACE_ATLAS_TAILNET_HTTP }}
         shell: bash
         run: bash scripts/workflows/deploy-worker02.sh

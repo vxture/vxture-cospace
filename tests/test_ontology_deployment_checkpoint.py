@@ -87,3 +87,40 @@ def test_registration_checkpoint_restores_fixed_approved_and_adopted_revision(tm
     assert restored['revision'] == 4 and restored['adopted']['revision'] == 3
     assert restored['adopted']['reviewed_by'] == 'reviewer'
     assert writer.read(bound)['adopted'] is None
+
+
+def test_input_coordinate_checkpoint_preserves_wal_revision_history(tmp_path):
+    from packages.data.input_coordinates import InputCoordinates
+    from packages.data.preview_inputs import PreviewInputs
+    from test_input_coordinates import change
+    from test_input_uploads import catalog_at
+    from test_preview_pointcloud import specimen
+    runtime = tmp_path / 'data/business/runtime'
+    (runtime / 'preview-directory').mkdir(parents=True)
+    fixture, spaces = catalog_at(tmp_path / 'fixture')
+    catalog = PreviewInputs(runtime / 'preview-inputs', fixture.directory)
+    original = catalog.register('legacy', specimen(tmp_path / 'fixture'), None, spaces[0], 'ply_pointcloud')
+    store = InputCoordinates(catalog)
+    store.change(original['id'], change(original), 'engineer')
+    with sqlite3.connect(store.path) as writer:
+        writer.execute('PRAGMA journal_mode=WAL')
+        store.change(original['id'], change(original, expected_revision=1, request_id='b'*32,
+            coordinates=change(original).coordinates.model_dump() | {'axes':['右','前','上']}), 'engineer')
+        target = module.checkpoint(tmp_path, [])
+    restored = InputCoordinates(catalog)
+    restored.path = target / module.COORDINATE_DATABASE
+    assert len(restored.events(original)) == 2
+    assert restored.effective(original)['axes'] == ['右','前','上']
+    manifest = json.loads((target / 'manifest.json').read_text())
+    assert manifest['complete'] and manifest['databases'][module.COORDINATE_DATABASE] == 'verified'
+
+
+def test_corrupt_input_coordinate_history_blocks_service_replacement(tmp_path):
+    runtime = tmp_path / 'data/business/runtime'
+    (runtime / 'preview-directory').mkdir(parents=True)
+    (runtime / 'preview-inputs').mkdir()
+    (runtime / 'preview-inputs' / module.COORDINATE_DATABASE).write_bytes(b'corrupt coordinates')
+    with pytest.raises(sqlite3.DatabaseError):
+        module.checkpoint(tmp_path, [])
+    manifest = next((tmp_path / 'backups').glob('*/manifest.json'))
+    assert not json.loads(manifest.read_text())['complete']

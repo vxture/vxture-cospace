@@ -7,7 +7,7 @@ const encoder=new TextEncoder();
 export async function sha256(raw:Uint8Array<ArrayBuffer>){return Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',raw))).map(v=>v.toString(16).padStart(2,'0')).join('');}
 export function validateDeclaration(d:Declaration){
  if(!/^[A-Za-z0-9_/-]{1,100}$/.test(d.frame_id))throw Error('请填写1至100字的局部坐标系标识，仅使用英文字母、数字、下划线、斜线或连字符。');
- if(d.axes.length!==3||new Set(d.axes).size!==3||d.axes.some(v=>!/^[A-Za-z][A-Za-z0-9_-]{0,39}$/.test(v)))throw Error('请明确填写三条不同的轴语义，使用英文字母开头的标识。');
+ if(d.axes.length!==3||new Set(d.axes).size!==3||d.axes.some(v=>!/^[\p{L}][\p{L}\p{N}_ ()（）+\-]{0,39}$/u.test(v)))throw Error('请填写三条不同的轴语义，每条最多40字，可使用中文或英文字母开头的方向名称。');
  if(!['sensor_local','scene_local'].includes(d.scope))throw Error('请选择局部坐标范围。');
  if(!d.description.trim()||d.description.length>500)throw Error('请填写1至500字的来源说明。');
 }

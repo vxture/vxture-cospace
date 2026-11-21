@@ -3,10 +3,10 @@ import json
 import hashlib
 import io
 from pathlib import Path
-import re
 import numpy as np
 from pydantic import BaseModel, ConfigDict, Field, StrictInt
 from typing import Literal
+from packages.spatial.coordinate_axes import valid_axis_label
 
 FORMAT = 'ply_pointcloud'
 MAX_POINTS = 1_000_000
@@ -96,7 +96,7 @@ def manifest(snapshot):
     try: doc=Manifest.model_validate(json.loads(raw,object_pairs_hook=unique)).model_dump(exclude_none=True)
     except (ValueError,TypeError) as exc:raise ValueError('pointcloud_declaration_invalid') from exc
     axes=doc['coordinates']['axes']
-    if len(set(axes))!=3 or any(not re.fullmatch(r'[A-Za-z][A-Za-z0-9_-]{0,39}',v) for v in axes):
+    if len(set(axes))!=3 or any(not valid_axis_label(v) for v in axes):
         raise ValueError('pointcloud_axes_invalid')
     source_receipt(root,doc)
     from packages.data.pointcloud_composition import read_composition

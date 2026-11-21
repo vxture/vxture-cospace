@@ -16,6 +16,7 @@ from packages.lifecycle.preview_control_lock import mutation_guard
 from packages.spatial.georeference import Fixed, Text, Digest, Point, ModelFrame, RegistrationInput, evaluate_registration
 from packages.spatial.scene_identity import canonical, content_digest
 from packages.spatial.registration_geography import GeographicBinding, validate_binding, project_objects, ADAPTER
+from packages.spatial.coordinate_axes import registration_readiness
 
 MAX_REVISIONS = 1000
 MAX_BYTES = 1_048_576
@@ -137,11 +138,7 @@ def source_from_model(model, space_id, candidate_id):
     require(manifest.get('space_id') == space_id and manifest['id'] == candidate_id,
             'registration_source_changed')
     axes = manifest.get('axes', [])
-    basis = {'right': [1, 0, 0], 'left': [-1, 0, 0], 'forward': [0, 1, 0],
-             'backward': [0, -1, 0], 'up': [0, 0, 1], 'down': [0, 0, -1],
-             'east': [1, 0, 0], 'north': [0, 1, 0]}
-    require(len(axes) == 3 and all(axis in basis for axis in axes)
-            and np.linalg.det(np.asarray([basis[axis] for axis in axes])) > .99,
+    require(registration_readiness(axes)['status'] == 'ready',
             'registration_source_axes_unsupported')
     require(manifest.get('unit') == 'm', 'registration_source_unit_unsupported')
     with np.load(model.root / 'spatial.npz', allow_pickle=False) as arrays:
@@ -168,6 +165,27 @@ class SceneRegistrations:
 
     def source(self, space_id, candidate_id):
         return source_from_model(self.jobs.model(candidate_id), space_id, candidate_id)
+
+    def source_diagnostics(self, space_id, candidate_id):
+        """Inspect a blocked source without creating revisions or mutating its manifest."""
+        with mutation_guard(self.jobs.root.parent):
+            model = self.jobs.model(candidate_id)
+            manifest = model.manifest
+            require(manifest.get('space_id') == space_id and manifest['id'] == candidate_id,
+                    'registration_source_changed')
+            binding = manifest.get('source', {}).get('input_binding')
+            input_id = None
+            if binding and self.jobs.inputs is not None:
+                from packages.data.input_coordinates import InputCoordinates
+                original = self.jobs.inputs.read_original(binding['id'])
+                require(original.get('space_id') == space_id and
+                        any({key:value for key,value in record.items() if key not in ('snapshot','tracking')} == binding
+                            for record in InputCoordinates(self.jobs.inputs).fixed_records(original)),
+                        'registration_source_changed')
+                input_id = original['id']
+            return {'profile': 'cospace.registration-source/0.1', 'space_id': space_id,
+                    'candidate_id': candidate_id, 'input_id': input_id, 'frame_id': manifest.get('frame_id'),
+                    'registration_readiness': registration_readiness(manifest.get('axes'), manifest.get('unit'))}
 
     def scope(self, source):
         frame = source['model_source']
