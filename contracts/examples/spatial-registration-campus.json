@@ -1,0 +1,166 @@
+{
+  "profile": "cospace.spatial-registration-input/0.1",
+  "synthetic": true,
+  "source": {
+    "space_id": "synthetic-campus",
+    "candidate_id": "synthetic-model-01",
+    "manifest_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "model_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "frame_id": "model-local",
+    "unit": "m",
+    "axes": [
+      "right",
+      "forward",
+      "up"
+    ],
+    "handedness": "right",
+    "bounds_m": [
+      [
+        -5.0,
+        -5.0,
+        -1.0
+      ],
+      [
+        105.0,
+        65.0,
+        15.0
+      ]
+    ]
+  },
+  "target": {
+    "frame_id": "campus-survey",
+    "title": "园区控制网（合成）",
+    "kind": "engineering",
+    "horizontal_reference": "合成工程坐标，无地理投影",
+    "definition_ref": "synthetic-campus-frame/1",
+    "evidence_ref": "synthetic-control-sheet",
+    "unit": "m",
+    "axes": "east_north_up",
+    "vertical_reference": "合成局部高程基准",
+    "geographic_adapter": "not_connected"
+  },
+  "method": "provided_rigid_3d",
+  "direction": "source_to_target",
+  "matrix": [
+    [
+      0.9510565162951535,
+      -0.3090169943749474,
+      0.0,
+      28.0
+    ],
+    [
+      0.3090169943749474,
+      0.9510565162951535,
+      0.0,
+      18.0
+    ],
+    [
+      0.0,
+      0.0,
+      1.0,
+      3.0
+    ],
+    [
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ]
+  ],
+  "controls": [
+    {
+      "id": "F1",
+      "purpose": "fit",
+      "source_m": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "target_m": [
+        28.01,
+        17.99,
+        3.01
+      ],
+      "evidence_ref": "synthetic-control-sheet#1"
+    },
+    {
+      "id": "F2",
+      "purpose": "fit",
+      "source_m": [
+        100.0,
+        0.0,
+        0.0
+      ],
+      "target_m": [
+        123.09565162951534,
+        48.91169943749474,
+        2.99
+      ],
+      "evidence_ref": "synthetic-control-sheet#2"
+    },
+    {
+      "id": "F3",
+      "purpose": "fit",
+      "source_m": [
+        0.0,
+        60.0,
+        0.0
+      ],
+      "target_m": [
+        9.473980337503157,
+        75.06839097770921,
+        3.0
+      ],
+      "evidence_ref": "synthetic-control-sheet#3"
+    },
+    {
+      "id": "K1",
+      "purpose": "check",
+      "source_m": [
+        100.0,
+        60.0,
+        0.0
+      ],
+      "target_m": [
+        104.5946319670185,
+        105.94509041520395,
+        3.04
+      ],
+      "evidence_ref": "synthetic-control-sheet#4"
+    },
+    {
+      "id": "K2",
+      "purpose": "check",
+      "source_m": [
+        34.0,
+        20.0,
+        9.0
+      ],
+      "target_m": [
+        54.115581666536265,
+        47.54770813465128,
+        11.97
+      ],
+      "evidence_ref": "synthetic-control-sheet#5"
+    },
+    {
+      "id": "K3",
+      "purpose": "check",
+      "source_m": [
+        70.0,
+        44.0,
+        11.0
+      ],
+      "target_m": [
+        80.99720838816306,
+        81.48767632323307,
+        14.02
+      ],
+      "evidence_ref": "synthetic-control-sheet#6"
+    }
+  ],
+  "check_limits": {
+    "horizontal_m": 0.1,
+    "vertical_m": 0.1
+  }
+}

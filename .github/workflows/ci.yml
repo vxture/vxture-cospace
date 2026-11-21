@@ -54,6 +54,8 @@ jobs:
         run: node --experimental-strip-types --test tests/frontend/entry-state.test.mjs tests/frontend/workspace-query-store.test.mjs tests/frontend/assistant-contract.test.mjs
       - name: Globe SDK version isolation and embed message boundary
         run: node --experimental-strip-types --test tests/frontend/globe-sdk.test.mjs tests/frontend/globe-coordinates.test.mjs tests/frontend/geographic-location.test.mjs
+      - name: Spatial registration preview matches fixed numeric controls
+        run: node --experimental-strip-types --test tests/frontend/registration-preview.test.mjs
       - uses: actions/setup-python@v7
         with:
           python-version: '3.14'
