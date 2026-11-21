@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 python scripts/guardrails/check_deploy_target.py
+COSPACE_REGISTRATION_ADAPTERS="${COSPACE_REGISTRATION_ADAPTERS:-}"
 [[ "$DEPLOY_USER" =~ ^[a-z_][a-z0-9_-]*$ ]]
 port="${DEPLOY_PORT:-22}"
 [[ "$port" =~ ^[0-9]+$ ]]
