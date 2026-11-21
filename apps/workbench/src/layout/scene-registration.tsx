@@ -1,10 +1,12 @@
 import React,{useEffect,useRef,useState} from 'react';
-import {ArrowDown,ArrowUp,CheckCircle,Compass,DownloadSimple,DotsThreeVertical,FloppyDisk,UploadSimple,XCircle} from '@phosphor-icons/react';
+import {ArrowDown,ArrowLeft,ArrowUp,CheckCircle,Compass,DownloadSimple,DotsThreeVertical,FloppyDisk,UploadSimple,XCircle} from '@phosphor-icons/react';
 import {Button,Drawer,DropdownMenu,DropdownMenuContent,DropdownMenuItem,DropdownMenuSeparator,DropdownMenuTrigger,Input,StatusBadge,Textarea} from '@vxture/design-system';
 import {businessEndpoint} from './business-endpoint';
 import {readPreview,validatePreview,type PreviewGeometry} from './geometry-preview-data';
 import {type Point3,type RegistrationInput} from './registration-preview-data';
 import {RegistrationWorkbench} from './registration-workbench';
+import {RegistrationEditor} from './registration-editor';
+import {registrationSurfaceHref} from './registration-editor-route';
 import {useUnsavedNavigation} from './unsaved-navigation';
 import {RegistrationMap} from './registration-map';
 import {RegistrationGeographicBinding,type GeographicBinding} from './registration-geographic-binding';
@@ -35,11 +37,12 @@ async function value(response:Response){
 }
 function download(name:string,data:unknown){const url=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}));const link=document.createElement('a');link.href=url;link.download=name;link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
 
-export function SceneRegistration({spaceId,candidateId}:{spaceId:string;candidateId:string}){
+export function SceneRegistration({spaceId,candidateId,editor=false}:{spaceId:string;candidateId:string;editor?:boolean}){
  const session=usePlatformSession();
  const [state,setState]=useState<State|null>(null),[draft,setDraft]=useState<RegistrationInput|null>(null),[geometry,setGeometry]=useState<PreviewGeometry>();
  const [loading,setLoading]=useState(true),[busy,setBusy]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState(''),[geometryError,setGeometryError]=useState('');
  const [sourceBlocked,setSourceBlocked]=useState(false);
+ const [selected,setSelected]=useState(()=>new URLSearchParams(location.search).get('point')||'');
  const [action,setAction]=useState<Action|null>(null),[reason,setReason]=useState(''),[reviewOpen,setReviewOpen]=useState(false),[refresh,setRefresh]=useState(0);
  const [start,setStart]=useState(''),[end,setEnd]=useState(''),[bounds,setBounds]=useState<string[][]>([[],[]]),[checks,setChecks]=useState([false,false,false,false]);
  const [binding,setBinding]=useState<GeographicBinding|null>(null),[mapOpen,setMapOpen]=useState(false);
@@ -50,6 +53,7 @@ export function SceneRegistration({spaceId,candidateId}:{spaceId:string;candidat
  const releaseDraft=useUnsavedNavigation(dirty||busy||!!action&&!!reason,'空间基准资料',{discard:()=>{setDraft(null);setAction(null);}});
  useEffect(()=>{mounted.current=true;return()=>{mounted.current=false;};},[]);
  async function read(signal?:AbortSignal):Promise<State>{
+  if(!spaceId||!candidateId)throw Error('编辑配准需要明确的场景和模型，请从展示页重新进入。');
   const result:State=await value(await fetch(endpoint+'?'+new URLSearchParams({space_id:spaceId,candidate_id:candidateId}),{signal,cache:'no-store'}));
   if(result.profile!=='cospace.scene-registration/0.1'||result.space_id!==spaceId||result.candidate_id!==candidateId||result.model_source.manifest_sha256!==result.source_sha256)throw Error('配准记录与当前模型来源不一致。');
   return result;
@@ -58,6 +62,17 @@ export function SceneRegistration({spaceId,candidateId}:{spaceId:string;candidat
   read(abort.signal).then(result=>{if(!abort.signal.aborted)setState(result);}).catch(e=>{if(!abort.signal.aborted){setError(e.message);setSourceBlocked(e instanceof RegistrationRequestError&&['registration_source_axes_unsupported','registration_source_unit_unsupported'].includes(e.code));}}).finally(()=>{if(!abort.signal.aborted)setLoading(false);});
   return()=>abort.abort();
  },[spaceId,candidateId,refresh]);
+ // A clean display follows saves made in another tab. Local drafts and their
+ // expected revision remain untouched so concurrent edits cannot be overwritten.
+ useEffect(()=>{
+  if(editor||dirty||busy||action||!state)return;
+  const abort=new AbortController();
+  const update=()=>{if(document.visibilityState==='visible')void read(abort.signal).then(result=>{if(!abort.signal.aborted){setState(previous=>!previous||result.revision>=previous.revision?result:previous);setNotice('');}}).catch(()=>{});};
+  window.addEventListener('focus',update);
+  const channel=new BroadcastChannel('cospace.registration');
+  channel.onmessage=event=>{if(event.data?.space===spaceId&&event.data?.job===candidateId)update();};
+  return()=>{abort.abort();window.removeEventListener('focus',update);channel.close();};
+ },[editor,dirty,busy,action,!!state,spaceId,candidateId]);
  useEffect(()=>{const abort=new AbortController();setGeometry(undefined);setGeometryError('');if(!state)return()=>abort.abort();
   readPreview(endpoint+'/geometry?'+new URLSearchParams({space_id:spaceId,candidate_id:candidateId}),abort.signal).then(raw=>{
    const result=validatePreview(raw,{space:spaceId,candidate:candidateId,manifest:state.source_sha256,source:state.model_source.model_sha256});
@@ -65,10 +80,11 @@ export function SceneRegistration({spaceId,candidateId}:{spaceId:string;candidat
   }).catch(e=>{if(!abort.signal.aborted)setGeometryError(e.message);});return()=>abort.abort();
  },[spaceId,candidateId,state?.source_sha256]);
  async function check(document:unknown,geographicBinding=draft?binding:state?.geographic_binding){
-  if(!state||gate.current)return;gate.current=true;setBusy(true);setError('');setNotice('');
+  if(!state||gate.current)return false;gate.current=true;setBusy(true);setError('');setNotice('');
   try{const checked=await value(await fetch(endpoint+'/check',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({space_id:spaceId,candidate_id:candidateId,source_sha256:state.source_sha256,document,geographic_binding:geographicBinding||null})}));
    if(mounted.current){setDraft(checked.document);setBinding(checked.geographic_binding);setNotice('服务端已完成参数核对，资料尚未保存。');}
-  }catch(e){if(mounted.current)setError(e instanceof Error?e.message:'资料核对失败。');}finally{gate.current=false;if(mounted.current)setBusy(false);}
+   return true;
+  }catch(e){if(mounted.current)setError(e instanceof Error?e.message:'资料核对失败。');return false;}finally{gate.current=false;if(mounted.current)setBusy(false);}
  }
  async function importFile(selected?:File){
   if(!selected||busy)return;if(selected.size>1_000_000){setError('资料不能超过 1 MB。');return;}
@@ -86,15 +102,20 @@ export function SceneRegistration({spaceId,candidateId}:{spaceId:string;candidat
    if(action==='approve')request.current.approval={evidence_note:reason,valid_from:new Date(start).toISOString(),valid_until:new Date(end).toISOString(),bounds_m:bounds.map(row=>row.map(Number)),control_evidence_verified:checks[0],independent_checks_verified:checks[1],datum_verified:checks[2],extent_verified:checks[3]};
   }
   try{await value(await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(request.current)}));
-   const result=await read();if(mounted.current){setState(result);setDraft(null);setBinding(null);setAction(null);request.current=null;setNotice(`${actionLabels[action]}完成 · 修订 ${result.revision}`);releaseDraft();}
+   const result=await read();if(mounted.current){setState(result);setDraft(null);setBinding(null);setAction(null);request.current=null;setNotice(`${actionLabels[action]}完成 · 修订 ${result.revision}`);releaseDraft();
+    const channel=new BroadcastChannel('cospace.registration');channel.postMessage({space:spaceId,job:candidateId,revision:result.revision});channel.close();}
   }catch(e){if(mounted.current)setError(e instanceof Error?e.message:'操作失败。');}
   finally{gate.current=false;if(mounted.current)setBusy(false);}
  }
  const adopted=state?.adopted;
  const next=state?registrationNextStep({dirty,hasDocument:!!current,checksPassed:state.report?.calculation_status==='checks_passed',synthetic:!!current?.synthetic,reviewStatus:state.review_status,canEdit:state.can_edit,canReview:state.can_review,actor:session?.user?.subject||'',authoredBy:state.authored_by,approvedRevision:state.approved_revision,adoptedRevision:state.adopted_revision,validFrom:state.approval?.valid_from,validUntil:state.approval?.valid_until}):null;
  function advance(){if(!next?.action)return;if(next.action==='import')file.current?.click();else if(next.action!=='association')open(next.action);}
+ function returnToDisplay(){releaseDraft();appNavigate(registrationSurfaceHref(spaceId,candidateId));}
  useAssistantReport({title:'配准检查',status:loading?'loading':error?'error':'ready',note:error||next?.description,tasks:!loading&&!busy&&!error&&next?.action?[{id:next.action,title:'继续下一环节',evidence:next.description,label:next.label!,run:()=>{if(next.action==='association')appNavigate(recordLink('association',{space:spaceId,job:candidateId,tab:'overview'}));else advance();}}]:[]});
- return <section className="scene-registration" aria-label="场景空间基准">
+ return <section className={`scene-registration${editor?' scene-registration-editor':''}`} aria-label={editor?'独立配准编辑页面':'场景空间基准'}>
+  {editor?<>
+   {state?.document&&state.can_edit&&!loading?<RegistrationEditor key={state.source_sha256+':'+state.revision} production input={state.document} geometry={geometry} buildings={[]} selected={selected} onSelect={setSelected} onClose={returnToDisplay} onApply={async input=>{if(await check(input))open('save');}} busy={busy} pending={dirty} context={`模型 ${candidateId.slice(-8).toUpperCase()} · 修订 ${state.revision} · ${labels[state.review_status]}`} message={notice||geometryError&&`三维预览暂不可用：${geometryError}`||undefined} error={!action?error:undefined}/>:<main className="registration-editor registration-editor-unavailable"><header className="registration-editor-header"><Button size="sm" variant="outline" onClick={returnToDisplay}><ArrowLeft size={16}/>返回配准展示</Button><h1>编辑配准</h1></header><div role={error?'alert':'status'}><p>{loading?'正在读取配准资料…':error||(!state?.can_edit?'当前身份无权编辑此模型的配准资料。':'此模型尚无配准资料，请先在展示页导入并保存。')}</p>{error&&<Button size="sm" variant="outline" onClick={()=>setRefresh(n=>n+1)}>重新读取</Button>}</div></main>}
+  </>:<>
   <header className="scene-registration-toolbar"><div>{state&&<><span>修订 {state.revision}</span><StatusBadge tone="neutral">{dirty?'未保存':labels[state.review_status]}</StatusBadge></>}</div><div>
    {state&&<><Button size="sm" variant="outline" disabled={busy} onClick={()=>download('配准资料.json',{document:current,geographic_binding:draft?binding:state.geographic_binding})}><DownloadSimple size={16}/>导出资料</Button>{state.can_edit&&<><Button size="sm" variant="outline" disabled={busy} onClick={()=>file.current?.click()}><UploadSimple size={16}/>导入资料</Button><Button size="sm" disabled={busy||!dirty} onClick={()=>open('save')}><FloppyDisk size={16}/>保存</Button><DropdownMenu><DropdownMenuTrigger asChild><Button size="icon-md" variant="ghost" aria-label="配准资料更多操作" disabled={busy||dirty}><DotsThreeVertical size={24}/></Button></DropdownMenuTrigger><DropdownMenuContent align="end">
     <DropdownMenuItem disabled={!['draft','rejected'].includes(state.review_status)||state.report?.calculation_status!=='checks_passed'||state.document?.synthetic} onSelect={()=>open('submit')}><ArrowUp size={16}/>提交审核</DropdownMenuItem>
@@ -106,9 +127,10 @@ export function SceneRegistration({spaceId,candidateId}:{spaceId:string;candidat
   {loading&&<output>正在读取配准资料…</output>}{busy&&<output>正在核对并处理配准资料…</output>}{sourceBlocked?<RegistrationSourceRecovery spaceId={spaceId} candidateId={candidateId}/>:error&&!action&&<div className="scene-registration-message" role="alert"><p>{error}</p><Button size="sm" variant="outline" disabled={busy||dirty} onClick={()=>setRefresh(n=>n+1)}>重新读取</Button></div>}{notice&&<output>{notice}</output>}
   {state&&!loading&&<>
    <div className="scene-registration-adoption"><span>{adopted?`当前采用核准修订 ${adopted.revision}`:'尚未采用核准修订'}</span>{adopted&&<><Button size="sm" variant="ghost" onClick={()=>setReviewOpen(true)}>查看核准依据</Button><Button size="sm" variant="outline" onClick={()=>setMapOpen(true)}>查看对象地图</Button></>}<span>已有服务发布保持固定</span></div>
-   {current?<>{state.can_edit&&<div><Button size="sm" variant="outline" disabled={busy} onClick={()=>setBindingOpen(true)}>维护地理基准</Button></div>}<RegistrationWorkbench key={state.source_sha256} production input={current} geometry={geometry} buildings={[]} reviewStatus={dirty?'未保存':labels[state.review_status]} onPreviewChange={state.can_edit&&!busy?input=>void check(input):undefined}/>{geometryError&&<p role="status">三维预览暂不可用：{geometryError} 坐标清单仍可核对。</p>}</>:<div className="scene-registration-empty"><Compass size={36}/><h3>录入模型与目标基准的配准资料</h3><p>准备已知三维刚体参数、至少三个控制点和三个独立检查点，以及水平与高程基准依据。</p>{state.can_edit&&<><Button size="sm" variant="outline" onClick={template}><DownloadSimple size={16}/>下载空白资料模板</Button><p>模板绑定当前模型，参数、点位与门限需按实际控制资料填写，再导入核对。</p></>}</div>}
+   {current?<>{state.can_edit&&<div><Button size="sm" variant="outline" disabled={busy} onClick={()=>setBindingOpen(true)}>维护地理基准</Button></div>}<RegistrationWorkbench key={state.source_sha256} input={current} geometry={geometry} buildings={[]} reviewStatus={dirty?'未保存':labels[state.review_status]} editorHref={state.can_edit&&!busy&&!dirty?registrationSurfaceHref(spaceId,candidateId,true):undefined}/>{dirty&&state.can_edit&&<p className="data-subtle">先保存当前资料，再在新标签页编辑配准。</p>}{geometryError&&<p role="status">三维预览暂不可用：{geometryError} 坐标清单仍可核对。</p>}</>:<div className="scene-registration-empty"><Compass size={36}/><h3>录入模型与目标基准的配准资料</h3><p>准备已知三维刚体参数、至少三个控制点和三个独立检查点，以及水平与高程基准依据。</p>{state.can_edit&&<><Button size="sm" variant="outline" onClick={template}><DownloadSimple size={16}/>下载空白资料模板</Button><p>模板绑定当前模型，参数、点位与门限需按实际控制资料填写，再导入核对。</p></>}</div>}
    {state.changed_at&&<p className="scene-registration-audit">{labels[state.review_status]} · {state.actor} · {new Date(state.changed_at).toLocaleString('zh-CN')}<br/>{state.reason}</p>}
    {next&&<WorkflowNextStep description={next.description} label={next.action?next.label:undefined} disabled={busy||loading} href={next.action==='association'?recordLink('association',{space:spaceId,job:candidateId,tab:'overview'}):undefined} onClick={advance}/>}
+  </>}
   </>}
   <Drawer open={!!action} onClose={close} side="right" width="md" title={action?actionLabels[action]:''} description={action?explanations[action]:''} closeLabel="关闭配准操作" footer={<div className="scene-registration-footer"><Button size="sm" variant="outline" disabled={busy} onClick={close}>取消</Button><Button size="sm" disabled={busy||!reason.trim()||action==='approve'&&!approvalValid} onClick={()=>void execute()}>{action?actionLabels[action]:''}</Button></div>}>
    <div className="scene-registration-form"><label><span>{action==='approve'?'审核依据':'操作依据'}</span><Textarea maxLength={2000} value={reason} disabled={busy||!!request.current} onChange={event=>setReason(event.target.value)} aria-label="配准操作依据"/></label>

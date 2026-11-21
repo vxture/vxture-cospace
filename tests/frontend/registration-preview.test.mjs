@@ -52,6 +52,20 @@ test('centimetre display rounding never changes the metre-based acceptance thres
 import {registrationNextStep} from '../../apps/workbench/src/layout/registration-next-step.ts';
 import {associationNextStep} from '../../apps/workbench/src/layout/association-next-step.ts';
 import {publicationForTarget} from '../../apps/workbench/src/layout/publication-target.ts';
+import {registrationEditorTarget,registrationSurfaceHref} from '../../apps/workbench/src/layout/registration-editor-route.ts';
+
+test('standalone registration editor carries a fixed source and returns to its display',()=>{
+ const space='scene A&B',job='model?fixed=1';
+ const editor=registrationSurfaceHref(space,job,true);
+ assert.deepEqual(registrationEditorTarget(editor),{space,job});
+ const display=registrationSurfaceHref(space,job);
+ assert.equal(registrationEditorTarget(display),null);
+ assert.equal(new URLSearchParams(display.split('?')[1]).get('job'),job);
+ assert.equal(registrationEditorTarget('/association?mode=edit&space=a&job=b'),null);
+ // An incomplete deep link stays explicit: the editor reports missing context
+ // instead of substituting the latest model or the remembered active scene.
+ assert.deepEqual(registrationEditorTarget('/registration?mode=edit&space=a'),{space:'a',job:''});
+});
 
 test('publication handoffs never substitute a historical release for an unpublished model',()=>{
  const releases=[{id:'latest',candidate_id:'other-model'},{id:'matched',candidate_id:'target-model'}];

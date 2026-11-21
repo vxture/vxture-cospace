@@ -41,6 +41,8 @@ import {ModuleWorkspace} from './module-workspace';
 import {OntologyWorkbench} from './ontology-workbench';
 import {SpatialAssociations} from './spatial-associations';
 import {SpatialReferenceWorkspace} from './spatial-reference-workspace';
+import {SceneRegistration} from './scene-registration';
+import {registrationEditorTarget} from './registration-editor-route';
 import {moduleNames} from './product-navigation';
 import {HomeLayout} from './home-layout';
 import {AuthBoundary,usePlatformSession,platformLogout} from './platform-auth';
@@ -69,6 +71,7 @@ function App(){
  // Header links must refresh even when only the scene changes on the same route.
  const navigation=useRecordNavigation();
  const route=currentRoute();
+ const registrationEditor=registrationEditorTarget(appLocation());
  useEffect(()=>{const url=appLocation(),next=canonicalModuleHref(url);if(next!==url)appNavigate(next,true);},[route,navigation.space,navigation.job,navigation.tab]);
  const panorama=route==='space'&&new URLSearchParams(location.search).get('view')==='map';
  const [preview,setPreview]=useState(()=>Boolean(platform)||sessionStorage.getItem('cospace.ui.ds.preview')==='1' || (new URLSearchParams(location.search).get('screen')==='space' && new URLSearchParams(location.search).get('preview')==='1'));
@@ -82,10 +85,10 @@ function App(){
   let title='登录';
   if(preview){
    if(route==='home')title='首页';
-   else title=panorama?'空间全景':names[route];
+   else title=registrationEditor?'编辑配准':panorama?'空间全景':names[route];
   }
   document.title=`CoSpace · ${title}`;
- },[route,preview,panorama]);
+ },[route,preview,panorama,!!registrationEditor]);
  useEffect(()=>{if(!notice)return;const t=setTimeout(()=>setNotice(''),3500);return()=>clearTimeout(t);},[notice]);
  const enter=()=>{sessionStorage.setItem('cospace.ui.ds.preview','1');setPreview(true);};
  const exit=()=>{if(platform?.csrf){return platformLogout(platform.csrf);}sessionStorage.removeItem('cospace.ui.ds.preview');setPreview(false);};
@@ -96,6 +99,7 @@ function App(){
  const assistantKey=assistantScope(route,location.pathname+location.search,sessionScopeKey(platform));
  const header=(assistant?:{open:boolean;toggle:()=>void})=><ShellHeader height="md" leading={<>{launcherControl}{identity}<HeaderContext/></>} trailing={<div className="platform-header-actions">{assistant&&<Button className="platform-assistant-entry" variant={assistant.open?'secondary':'ghost'} size="icon-xl" aria-label="智能助手" aria-controls="workspace-assistant" title="智能助手" aria-expanded={assistant.open} onClick={assistant.toggle}><Sparkle size={24} className="size-icon-lg"/></Button>}<ShellIconGroup label="全局工具"><ShellThemeToggle currentTheme={theme} onThemeChange={setTheme} buttonLabel="切换主题"/><HeaderSupportControls/><Button asChild variant="ghost" size="icon-md" className="platform-settings-entry"><a href={managementHref('settings',navigation.space)} target="_blank" rel="noopener noreferrer" aria-label="配置管理" title="配置管理（新标签页）"><Gear size={16}/></a></Button></ShellIconGroup><ShellIconGroup label="账户"><ProductUserMenu onLogout={exit}/></ShellIconGroup></div>}/>;
  if(preview&&route==='space'&&new URLSearchParams(location.search).get('embed')==='globe')return <React.Suspense fallback={<main role="status">正在打开三维地球…</main>}><GlobeEmbed/></React.Suspense>;
+ if(preview&&registrationEditor)return <SceneRegistration key={registrationEditor.space+':'+registrationEditor.job} editor spaceId={registrationEditor.space} candidateId={registrationEditor.job}/>;
  const showLoginInfo=()=>setModal({title:'平台登录 · 独立接入验证',body:'已按 yucer 接通 OIDC + PKCE、中央会话与全局登出的独立验证入口。当前工程服务保持 UI 预览，尚未配置 CoSpace 平台客户端和业务空间授权。'});
  const renderWorkspace=()=>{
   if(route==='build'&&new URLSearchParams(location.search).get('screen')==='build')return <React.Suspense fallback={<output className="flex flex-1 items-center justify-center" role="status">正在打开构建画布…</output>}><BuildScan/></React.Suspense>;
