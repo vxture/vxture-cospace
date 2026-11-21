@@ -40,8 +40,10 @@ export function createGlobe(host:HTMLElement,config:GlobeConfiguration,callbacks
  if(command.type==='reset'){home(true);return;}
  if(command.type==='fit'){
   if(!scenes.length)throw new Error('globe_scene_not_available');
-  const sphere=BoundingSphere.fromPoints(scenes.map(scene=>Cartesian3.fromDegrees(scene.position[0],scene.position[1],scene.position[2]||0)));
-  viewer.camera.flyToBoundingSphere(sphere,{offset:new HeadingPitchRange(0,CesiumMath.toRadians(-50),Math.max(12000,sphere.radius*2.5)),duration:1.5});return;
+  const features=layers.filter(layer=>layer.visible!==false).flatMap(layer=>layer.features.flatMap(feature=>feature.geometry.type==='point'?[feature.geometry.position]:feature.geometry.positions));
+  const positions=features.length?features:scenes.map(scene=>scene.position);
+  const sphere=BoundingSphere.fromPoints(positions.map(position=>Cartesian3.fromDegrees(position[0],position[1],position[2]||0)));
+  viewer.camera.flyToBoundingSphere(sphere,{offset:new HeadingPitchRange(0,CesiumMath.toRadians(-50),Math.max(features.length?80:12000,sphere.radius*2.5)),duration:1.5});return;
  }
  if(command.type==='focus'){const scene=scenes.find(item=>bindingKey(item)===bindingKey(command.binding));if(!scene)throw Error('globe_scene_not_available');viewer.camera.flyToBoundingSphere(new BoundingSphere(Cartesian3.fromDegrees(scene.position[0],scene.position[1],scene.position[2]||0),1),{offset:new HeadingPitchRange(0,CesiumMath.toRadians(-50),12000),duration:1.5});return;}
  if(command.type==='zoom-in'||command.type==='zoom-out'){const amount=Math.max(50,viewer.camera.positionCartographic.height*.4);if(command.type==='zoom-in')viewer.camera.zoomIn(amount);else viewer.camera.zoomOut(amount);viewer.scene.requestRender();return;}

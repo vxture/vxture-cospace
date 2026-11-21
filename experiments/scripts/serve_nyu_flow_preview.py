@@ -66,6 +66,7 @@ class Selection(BaseModel):
 class PublicationRequest(Selection):
     request_id:str|None=Field(default=None,pattern=r'^[a-f0-9]{32}$')
     semantic_selection:dict|None=None
+    registration_selection:dict|None=None
 
 
 class BuildInfo(BaseModel):
@@ -327,7 +328,8 @@ def create_app(root,jobs=None,update_evidence=None,registration_sources=None,sou
             principal=getattr(request.state,'platform_principal',None)
             semantic_context=(json.dumps([principal.issuer,principal.org_id,principal.workspace_id],separators=(',',':')),principal.subject) if principal else None
             return versioned('publication',publications.publish(body.candidate_id,body.expected_revision,body.space_id,
-                request_id=body.request_id,semantic_selection=body.semantic_selection,semantic_context=semantic_context))
+                request_id=body.request_id,semantic_selection=body.semantic_selection,semantic_context=semantic_context,
+                registration_selection=body.registration_selection))
         except (ValueError,OSError) as exc: raise HTTPException(409,str(exc)) from exc
         except (sqlite3.Error,KeyError,TypeError) as exc:raise HTTPException(409,'semantic_publication_unavailable') from exc
     @app.post('/api/publication-comparisons')
@@ -374,6 +376,18 @@ def create_app(root,jobs=None,update_evidence=None,registration_sources=None,sou
             code=str(exc)
             raise HTTPException(422 if code in ('invalid_query_time','invalid_link_request') else 404 if code=='object_not_found' else 409,
                 code if isinstance(exc,ValueError) else 'semantic_consumption_unavailable') from exc
+    @app.get('/publications/{identity}/api/registration')
+    def publication_registration(identity:str,request:Request):
+        from packages.service.registration_artifact import read_fixed,geographic_result
+        from packages.construction.preview_jobs import now
+        if request.query_params:raise HTTPException(422,'registration_invalid_request')
+        record,current=publication(identity)
+        try:
+            artifact=read_fixed(record,current)
+            result=geographic_result(artifact,current.manifest,current.objects()['objects'],now().replace('+00:00','Z'))
+            return JSONResponse({**result,'publication_id':identity},headers={'Cache-Control':'no-store'})
+        except (ValueError,OSError,KeyError,TypeError) as exc:
+            raise HTTPException(409,'registration_consumption_unavailable') from exc
     @app.get('/publications/{identity}/api/checklist')
     def publication_checklist(identity:str):
         if publications is None: raise HTTPException(404,'publication_not_found')
@@ -428,10 +442,12 @@ def create_app(root,jobs=None,update_evidence=None,registration_sources=None,sou
                 'download_url':record['preview_url']+'offline.zip',
                 'sha256':sha(data),'bytes':len(data),'quality':'unverified','robot_ready':False,
                 'semantic_artifact':'included' if record.get('semantic_artifact') else 'not_included',
-                'contents':['package.json','publication.json','model.json','agent.npz']+(['objects.json','ontology.json'] if semantic else [])+(['business.json'] if current.manifest.get('business_association') else [])+(['relations.json'] if current.manifest.get('object_relations') else [])+([MANIFEST,*MEMBERS] if record.get('semantic_artifact') else [])}
+                'registration_artifact':'included' if record.get('registration_selection') else 'not_included',
+                'contents':['package.json','publication.json','model.json','agent.npz']+(['objects.json','ontology.json'] if semantic else [])+(['business.json'] if current.manifest.get('business_association') else [])+(['relations.json'] if current.manifest.get('object_relations') else [])+([MANIFEST,*MEMBERS] if record.get('semantic_artifact') else [])+(['registration-artifact.json'] if record.get('registration_selection') else [])}
     def partition_delivery(identity):
         record,current=publication(identity)
         if record.get('semantic_artifact'):raise HTTPException(409,'semantic_partition_delivery_not_supported')
+        if record.get('registration_selection'):raise HTTPException(409,'registration_partition_delivery_not_supported')
         try:return export_partitions(record,current)
         except (ValueError,OSError,KeyError,TypeError,OverflowError) as exc:
             raise HTTPException(409,'partition_delivery_unavailable') from exc

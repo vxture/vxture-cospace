@@ -22,6 +22,8 @@ services:
         required: false
       - path: ${STACK_ROOT:?set worker02 production stack root}/etc/globe.env
         required: false
+      - path: ${STACK_ROOT:?set worker02 production stack root}/etc/registration.env
+        required: false
     environment:
       COSPACE_OIDC_ISSUER: https://accounts.vxture.com
       COSPACE_OIDC_BACKCHANNEL: https://accounts.vxture.com

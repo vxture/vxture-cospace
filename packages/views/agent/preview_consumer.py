@@ -24,6 +24,10 @@ class PreviewSession:
         return {**self._model.semantics(object_id, at), 'consumer_revision': self.revision,
                 'package_sha256': self.package_sha256}
 
+    def registration(self, at=None):
+        return {**self._model.registration(at), 'consumer_revision': self.revision,
+                'package_sha256': self.package_sha256}
+
     def query_range(self, bounds_m, frame_id, limit=DEFAULT_RANGE_CELLS):
         return {**self._model.query_range(bounds_m, frame_id, limit),
                 'consumer_revision': self.revision, 'package_sha256': self.package_sha256}

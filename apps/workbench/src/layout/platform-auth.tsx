@@ -240,7 +240,8 @@ function BusinessSession({children}:{children:React.ReactNode}){
     // Reference files and IFC version commands do not change scene directory or builds.
     // Their editors refresh their own state and must stay mounted during upload → enqueue.
     const referenceRequest=['/api/scene-attachments','/api/scene-ifc/references','/api/scene-ifc/references/activate',
-      '/api/scene-ifc/nearest-surface','/api/scene-ifc/opening-observations','/api/scene-ifc/type-proposals'].includes(url.pathname);
+      '/api/scene-ifc/nearest-surface','/api/scene-ifc/opening-observations','/api/scene-ifc/type-proposals',
+      '/api/scene-registrations','/api/scene-registrations/check','/api/publication-registration-preflight'].includes(url.pathname);
     if(result.ok&&!referenceRequest&&!['GET','HEAD'].includes(method)&&url.pathname.startsWith('/api/')&&!url.pathname.startsWith('/api/auth/')&&!url.pathname.includes("comparisons")&&!/\/query(?:-range)?$/.test(url.pathname))window.dispatchEvent(new Event('cospace:records-changed'));
     return result;
    };

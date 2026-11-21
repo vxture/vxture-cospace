@@ -1,6 +1,6 @@
 import React,{useEffect,useState} from 'react';
 import {getJSON} from './real-space-data';
-type Info={publication_id:string;sha256:string;space_id?:string;quality:string;robot_ready:boolean;semantic_artifact?:string};
+type Info={publication_id:string;sha256:string;space_id?:string;quality:string;robot_ready:boolean;semantic_artifact?:string;registration_artifact?:string};
 export function PreviewConsumerGuide({publication,space}:{publication:string;space:string}){
  const [info,setInfo]=useState<Info|null>(null),[error,setError]=useState('');
  useEffect(()=>{const controller=new AbortController();setInfo(null);setError('');getJSON<Info>(`/publications/${encodeURIComponent(publication)}/offline.json`,controller.signal).then(value=>{
@@ -26,6 +26,11 @@ export function PreviewConsumerGuide({publication,space}:{publication:string;spa
  `${cli} restore ${binding} --expected-revision R --semantics`,
  `${cli} restore ${binding} --expected-revision R --semantics OBJECT_ID`,
  '# 可追加 --at 2026-11-20T00:00:00Z，分类声明与关系在该时刻的有效性',
+ ]:[]),
+ ...(info.registration_artifact==='included'?[
+ '# 查询固定配准与地理对象点锚；默认按当前 UTC 时刻检查核准有效期',
+ `${cli} restore ${binding} --expected-revision R --registration`,
+ '# 复核历史有效性时可追加 --at YYYY-MM-DDTHH:MM:SSZ',
  ]:[]),
  ].join('\n')}</pre><p className="text-label-small text-muted-foreground">每次命令都是独立进程；激活命令结束后保存引用仍在，下次查询需要显式恢复。恢复会重新检查包内容及绑定，不增加版本序号。旧无语义对象包可改用 --point X Y Z。精度、时效与设备授权仍未验收。</p></>}</div></section>;
 }

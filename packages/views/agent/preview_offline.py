@@ -4,6 +4,7 @@ import io
 import json
 from pathlib import Path
 import zipfile
+from datetime import datetime, timezone
 import numpy as np
 from packages.construction.preview_model import PreviewModel
 from packages.lifecycle.preview_scope import match,owned
@@ -23,9 +24,12 @@ RELATION_PROFILE = 'cospace.preview-offline/0.4'
 INSTANCE_PROFILE = 'cospace.preview-offline/0.5'
 from packages.service.object_semantic_artifact import MANIFEST as INSTANCE_MANIFEST, MEMBERS as INSTANCE_MEMBERS
 INSTANCE_FILES = set(INSTANCE_MEMBERS + (INSTANCE_MANIFEST,))
+from packages.service.registration_artifact import MEMBER as REGISTRATION_MEMBER, read_fixed as read_registration, verify as verify_registration, geographic_result
+REGISTRATION_PROFILE = 'cospace.preview-offline/0.6'
 
 
 def bundle_profile(model,record=None):
+    if record and record.get('registration_selection'):return REGISTRATION_PROFILE
     if record and record.get('semantic_artifact'):return INSTANCE_PROFILE
     return RELATION_PROFILE if model.manifest.get('object_relations') else BUSINESS_PROFILE if model.manifest.get('business_association') else SEMANTIC_PROFILE if model.manifest.get('semantic_annotation') else PROFILE
 
@@ -38,6 +42,7 @@ def export_bundle(record, model):
     """Caller supplies a validated fixed publication. Never modify its snapshot."""
     from packages.service.fixed_semantic_consumption import read_fixed
     read_fixed(record,model)
+    registration=read_registration(record,model)
     files = {name: (model.root/name).read_bytes()
              for name in ('publication.json', 'model.json', 'agent.npz')}
     semantic=bool(model.manifest.get('semantic_annotation'))
@@ -47,6 +52,7 @@ def export_bundle(record, model):
     if model.manifest.get('object_relations'):files['relations.json']=(model.root/'relations.json').read_bytes()
     if record.get('semantic_artifact'):
         files.update({name:(model.root/name).read_bytes() for name in INSTANCE_FILES})
+    if registration is not None:files[REGISTRATION_MEMBER]=(model.root/REGISTRATION_MEMBER).read_bytes()
     manifest = {'profile': bundle_profile(model,record), 'publication_id': record['id'],
                 'quality': 'unverified', 'robot_ready': False, **owned(record),
                 'files': {name: {'sha256': sha(data), 'bytes': len(data)}
@@ -80,11 +86,12 @@ class OfflinePreview(PreviewModel):
             raise ValueError('package_integrity_or_size')
         with zipfile.ZipFile(io.BytesIO(data)) as archive:names=set(archive.namelist())
         has_instance=bool(names & INSTANCE_FILES)
-        base_names=names-INSTANCE_FILES
+        has_registration=REGISTRATION_MEMBER in names
+        base_names=names-INSTANCE_FILES-{REGISTRATION_MEMBER}
         if (has_instance and not INSTANCE_FILES <= names or base_names not in (MEMBERS,MEMBERS|SEMANTIC_MEMBERS,MEMBERS|SEMANTIC_MEMBERS|{'business.json'},MEMBERS|SEMANTIC_MEMBERS|{'relations.json'},MEMBERS|SEMANTIC_MEMBERS|{'business.json','relations.json'})):raise ValueError('invalid_archive_members_or_size')
         files = bounded_zip(data, names, MAX_BYTES)
         package = json.loads(files['package.json'])
-        expected_profile=INSTANCE_PROFILE if has_instance else RELATION_PROFILE if 'relations.json' in names else BUSINESS_PROFILE if 'business.json' in names else SEMANTIC_PROFILE if base_names==MEMBERS|SEMANTIC_MEMBERS else PROFILE
+        expected_profile=REGISTRATION_PROFILE if has_registration else INSTANCE_PROFILE if has_instance else RELATION_PROFILE if 'relations.json' in names else BUSINESS_PROFILE if 'business.json' in names else SEMANTIC_PROFILE if base_names==MEMBERS|SEMANTIC_MEMBERS else PROFILE
         if (package['profile'] != expected_profile or package['publication_id'] != expected_publication
                 or package['quality'] != 'unverified' or package['robot_ready'] is not False
                 or set(package['files']) != names - {'package.json'}):
@@ -93,6 +100,7 @@ class OfflinePreview(PreviewModel):
             if sha(files[name]) != member['sha256'] or len(files[name]) != member['bytes']:
                 raise ValueError('member_integrity')
         record = json.loads(files['publication.json'])
+        if bool(record.get('registration_selection'))!=has_registration:raise ValueError('registration_publication_binding')
         if bool(record.get('semantic_artifact'))!=has_instance:raise ValueError('semantic_publication_binding')
         self.manifest = json.loads(files['model.json'])
         semantic=bool(self.manifest.get('semantic_annotation'))
@@ -138,6 +146,17 @@ class OfflinePreview(PreviewModel):
             if member.get('sha256')!=sha(files['relations.json']) or member.get('bytes')!=len(files['relations.json']):raise ValueError('relation_publication_binding')
             self.relation_snapshot=relation_snapshot(self.manifest,self.semantic_snapshot,json.loads(files['ontology.json']),files['relations.json'])
         self.fixed_semantics=None
+        self.fixed_registration=None
+        if has_registration:
+            member=record['files'].get(REGISTRATION_MEMBER,{})
+            if member.get('sha256')!=sha(files[REGISTRATION_MEMBER]) or member.get('bytes')!=len(files[REGISTRATION_MEMBER]):
+                raise ValueError('registration_publication_binding')
+            artifact=json.loads(files[REGISTRATION_MEMBER])
+            if artifact['selection']!=record['registration_selection'] or artifact['selection']['source_manifest_sha256']!=model_hash:
+                raise ValueError('registration_publication_binding')
+            verify_registration(artifact,self.manifest)
+            self.fixed_registration=artifact
+        elif REGISTRATION_MEMBER in record['files']:raise ValueError('registration_publication_binding')
         if has_instance:
             from packages.service.fixed_semantic_consumption import FixedSemantics
             self.fixed_semantics=FixedSemantics(record,{name:files[name] for name in INSTANCE_FILES},self.manifest,
@@ -169,6 +188,11 @@ class OfflinePreview(PreviewModel):
             if object_id is not None:raise ValueError('semantic_not_included')
             return not_included(self.record)
         return self.fixed_semantics.summary() if object_id is None else self.fixed_semantics.query(object_id,at)
+
+    def registration(self,at=None):
+        at = at if at is not None else datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z')
+        return {**geographic_result(self.fixed_registration,self.manifest,self.objects()['objects'],at),
+                'publication_id':self.publication_id}
 
     @classmethod
     def load(cls, path, expected_publication, expected_sha256):

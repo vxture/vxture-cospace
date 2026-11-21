@@ -180,6 +180,16 @@ class BusinessAccess:
             record=self.jobs.batches.read(identity,wanted)
             if record.get('space_id')!=wanted:raise PermissionError()
 
+        if path in ('/api/scene-registrations','/api/scene-registrations/geometry','/api/scene-registrations/check','/api/scene-registrations/map'):
+            if (method not in ('GET','POST') or path.endswith(('/geometry','/map')) and method!='GET'
+                    or path.endswith('/check') and method!='POST'):raise PermissionError()
+            values=body if method=='POST' else q
+            wanted=values.get('space_id');cap=ASSOCIATION_EDIT if method=='POST' else SPACE_PREVIEW
+            space(wanted,cap);artifact('candidate:'+str(values.get('candidate_id','')),cap,wanted)
+            can_edit=ASSOCIATION_EDIT in policy.capabilities(principal,wanted)
+            can_review=principal.workspace_owner or wanted in policy.role_spaces(principal,{'manager'})
+            if method=='POST' and body.get('action') in ('approve','reject') and not can_review:raise PermissionError()
+            return {'principal':principal,'can_edit':can_edit,'can_review':can_review}
         if path in ('/api/scene-ontology-links','/api/scene-ontology-view'):
             if method not in ('GET','POST') or path=='/api/scene-ontology-view' and method!='GET':raise PermissionError()
             values=body if method=='POST' else q
@@ -289,6 +299,7 @@ class BusinessAccess:
                     return {'principal':principal}
                 if suffix in ('/','/index.html','/human.ply','/views.js','/model.json','/objects.json','/ontology.json','/business.json','/relations.json',
                               '/api/preview','/api/thumbnail','/api/objects','/api/checklist','/api/lineage') or re.fullmatch(r'/api/objects/[^/]+',suffix) or kind=='publication' and suffix=='/api/semantics':cap=SPACE_PREVIEW
+                elif kind=='publication' and suffix=='/api/registration':cap=SPACE_PREVIEW
                 elif suffix in ('/api/anchor','/api/anchor-preview') and kind=='candidate':cap=ASSOCIATION_EDIT
                 elif re.fullmatch(r'/[^/]+',suffix):cap='space.export'
             if method=='POST' and suffix in ('/api/query','/api/query-range'):cap='space.query'
@@ -324,6 +335,9 @@ class BusinessAccess:
             m=re.fullmatch(r'/api/batches/([^/]+)',path)
             if m:batch(m[1],q.get('space_id'),DATA_MANAGE);return {'principal':principal}
         if method=='POST':
+            if path=='/api/publication-registration-preflight':
+                wanted=references(PUBLICATION_MANAGE)
+                return {'principal':principal}
             if path=='/api/view-derivations':
                 wanted=body.get('space_id');space(wanted,'build.run')
                 artifact('candidate:'+str(body.get('candidate_id','')),'build.run',wanted)
@@ -491,6 +505,55 @@ class BusinessAccess:
             revision,policy=await run_in_threadpool(self.load_policy)
             context=await run_in_threadpool(self.authorize,request,session,policy,body)
             request.state.platform_principal=context['principal'];request.state.policy_revision=revision
+            if path in ('/api/scene-registrations','/api/scene-registrations/geometry','/api/scene-registrations/check','/api/scene-registrations/map'):
+                from packages.service.scene_registrations import SceneRegistrations,RegistrationError
+                principal=context['principal']
+                scope=json.dumps([principal.issuer,principal.org_id,principal.workspace_id],separators=(',',':'))
+                values=body if request.method=='POST' else dict(request.query_params)
+                if request.method=='POST' and request.query_params or request.method=='GET' and (
+                    not {'space_id','candidate_id'}<=set(values) or set(values)-{'space_id','candidate_id','revision'}
+                    or path.endswith(('/geometry','/map')) and 'revision' in values):return deny(422,'registration_invalid_request')
+                try:
+                    service=SceneRegistrations(self.directory.root,scope,principal.subject,self.jobs)
+                    if path.endswith('/geometry'):
+                        result=await run_in_threadpool(service.geometry,values['space_id'],values['candidate_id'])
+                        return JSONResponse(result,headers={'Cache-Control':'no-store'})
+                    source=await run_in_threadpool(service.source,values['space_id'],values['candidate_id'])
+                    if path.endswith('/map'):
+                        result=await run_in_threadpool(service.map,source)
+                    elif path.endswith('/check'):
+                        result=await run_in_threadpool(service.check,source,body)
+                    elif request.method=='POST':
+                        result=await run_in_threadpool(service.change,source,body,can_review=context['can_review'])
+                    else:
+                        selected=values.get('revision')
+                        if selected is not None and re.fullmatch(r'[1-9][0-9]{0,3}',selected) is None:
+                            return deny(422,'registration_invalid_revision')
+                        result=await run_in_threadpool(service.read,source,int(selected) if selected else None)
+                except RegistrationError as exc:
+                    code=str(exc)
+                    return deny(503 if code=='registration_store_integrity' else 404 if code=='registration_revision_not_found'
+                        else 422 if code in ('registration_invalid_request','registration_invalid_document','registration_invalid_time','registration_invalid_approval',
+                            'registration_invalid_extent','registration_invalid_revision','registration_reason_required',
+                            'registration_evidence_required','registration_extent_outside_model')
+                        else 403 if code=='registration_review_denied' else 409,code)
+                except ValidationError:return deny(422,'registration_invalid_request')
+                except (OSError,sqlite3.Error,ValueError,KeyError,TypeError):return deny(503,'scene_registration_unavailable')
+                return JSONResponse({**result,'can_edit':context['can_edit'],'can_review':context['can_review']},headers={'Cache-Control':'no-store'})
+            if path=='/api/publication-registration-preflight':
+                from packages.service.scene_registrations import SceneRegistrations,RegistrationError
+                from packages.service.registration_artifact import preflight
+                if request.query_params or set(body)!={'space_id','candidate_id','registration_selection'}:
+                    return deny(422,'registration_selection_invalid')
+                principal=context['principal']
+                scope=json.dumps([principal.issuer,principal.org_id,principal.workspace_id],separators=(',',':'))
+                try:
+                    service=SceneRegistrations(self.directory.root,scope,principal.subject,self.jobs)
+                    source=await run_in_threadpool(service.source,body['space_id'],body['candidate_id'])
+                    selection=await run_in_threadpool(preflight,service,source,body['registration_selection'])
+                    return JSONResponse({'registration_selection':selection},headers={'Cache-Control':'no-store'})
+                except (RegistrationError,ValidationError,ValueError,OSError,sqlite3.Error,KeyError,TypeError):
+                    return deny(409,'registration_preflight_unavailable')
             if path=='/api/publication-semantic-preflight':
                 from packages.service.object_semantic_artifact import preflight
                 if request.query_params or set(body)!={'space_id','candidate_id','semantic_selection'}:
