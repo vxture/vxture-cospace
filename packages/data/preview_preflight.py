@@ -1,6 +1,7 @@
 """Human-readable, read-only diagnostics for a registered local preview input."""
 from datetime import datetime, timezone
 from packages.lifecycle.preview_scope import owned
+from packages.spatial.coordinate_axes import registration_readiness
 
 
 REASONS = {
@@ -42,11 +43,16 @@ def preflight(catalog, identity):
     mapping=record['format']=='ros1_lidar_multiframe_icp'
     lidar=record['format'] in ('ros1_lidar_single_frame','ros1_lidar_multiframe_icp')
     pointcloud=record['format']=='ply_pointcloud'
+    axes = record.get('axes') if pointcloud or lidar else ['right', 'down', 'forward']
+    readiness = registration_readiness(axes, record.get('unit', 'm'))
+    if issue:
+        readiness = None  # Invalid files cannot establish usable model coordinates.
     return {'profile': 'cospace.preview-input-preflight/0.1', 'input_id': record['id'],
             **owned(record),
             'snapshot_sha256': record['snapshot_sha256'], **({'cloud_sha256':record['cloud_sha256']} if pointcloud else {k:record[k] for k in ('bag_sha256','selected_frame')} if lidar else {'tracking_sha256':record['tracking_sha256']}),
             'checked_at': datetime.now(timezone.utc).isoformat(),
             'status': 'failed' if issue else 'passed', 'issue': issue,
+            'registration_readiness': readiness,
             'checks_scope': ['点云文件摘要与字节数','二进制XYZ/XYZRGB布局、有限坐标与数量预算','显式米制局部坐标；不执行场景配准'] if pointcloud else ['样本清单与bag摘要绑定','逐消息摘要、话题、时间和结构预算','多帧有效点、递增源时间和一致坐标系；配准在构建时执行' if mapping else '首帧有效点及局部坐标声明；不执行位姿配准'] if lidar else ['报告与轨迹摘要绑定', '位姿结构与数量', '接受帧的图像格式、尺寸、摘要及字节数'],
             'counts': {k: record[k] for k in (('point_count','cloud_bytes') if pointcloud else ('input_frames','used_frames','verified_messages','valid_points') if lidar else ('input_frames', 'used_frames', 'verified_image_members'))},
             'counts_basis': 'registration', 'quality': 'unverified', 'robot_ready': False,

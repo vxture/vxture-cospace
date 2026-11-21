@@ -6,9 +6,10 @@ import React,{useEffect,useRef,useState} from 'react';
 import {Button,StatusBadge} from '@vxture/design-system';
 import {inputCounts,inputRoute,InputRoute,validRoute} from './input-format';
 import {PreflightHistory} from './preflight-history';
+import {CoordinateReadiness,type AxisReadiness} from './coordinate-readiness';
 
 type Detail={route?:InputRoute;registration_ref?:{source_id?:string;settings_revision?:number;actor:string;method?:string;package_sha256?:string};id:string;snapshot:string;tracking?:string;format:string;input_frames:number;used_frames:number;point_count?:number;verified_image_members?:number;verified_messages?:number;supported_format:string;limitations:string[]};
-type Check={space_id?:string;registration_matches?:boolean;sequence?:number;actor?:string;input_id:string;status:string;checked_at:string;issue:null|{title:string;action:string};notice:string};
+type Check={space_id?:string;registration_matches?:boolean;sequence?:number;actor?:string;input_id:string;status:string;checked_at:string;issue:null|{title:string;action:string};notice:string;registration_readiness?:AxisReadiness|null};
 export function InputDetails({endpoint,identity,showBuild=false,lifecycleState,onChecked,batchId,preparation}:{preparation?:Preparation|null;endpoint:string;identity:string;showBuild?:boolean;lifecycleState?:string;onChecked?:()=>void;batchId?:string}){
  const target=useRecordNavigation(),platform=usePlatformSession();
  const [detail,setDetail]=useState<Detail|null>(null),[check,setCheck]=useState<Check|null>(null),[error,setError]=useState(''),[busy,setBusy]=useState(false),[loading,setLoading]=useState(true);
@@ -38,6 +39,8 @@ export function InputDetails({endpoint,identity,showBuild=false,lifecycleState,o
  const passed=check?.status==='passed'&&check.registration_matches!==false;
  return <section aria-label="资料详情与预检" className="data-input-preflight flex flex-col gap-md border-t border-border pt-md" tabIndex={-1}>
   <h3 className="text-body-small font-medium">预检与构建</h3>
+  {check?.registration_readiness&&check.registration_matches!==false&&<CoordinateReadiness value={check.registration_readiness}/>}
+  {check?.status==='passed'&&check.registration_matches!==false&&!check.registration_readiness&&<p className="text-label-small text-muted-foreground">此历史预检未记录地图配准准备情况，请重新执行预检。</p>}
   {loading&&<p role="status" className="text-body-small text-muted-foreground">正在读取资料与预检记录…</p>}
   {!check&&!loading&&!busy&&!error&&<p className="text-body-small text-muted-foreground">待预检。先核对文件完整性，再交给构建中心。</p>}
   {error&&<p role="alert" className="text-body-small text-destructive">{error}</p>}

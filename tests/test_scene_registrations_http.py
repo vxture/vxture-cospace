@@ -104,10 +104,47 @@ def test_denied_registration_has_no_model_io_or_store_creation(secured, monkeypa
     def forbidden(*args, **kwargs):
         raise AssertionError('authorization must precede model access')
     monkeypatch.setattr(jobs, 'model', forbidden)
-    for suffix in ('', '/geometry'):
+    for suffix in ('', '/geometry', '/source'):
         assert client.get(PATH + suffix, params={'space_id': spaces[0]['id'],
                                                 'candidate_id': new['candidate_id']}).status_code == 403
     assert not (directory.root / 'scene-registrations.sqlite3').exists()
+
+
+def test_blocked_source_diagnostic_is_authorized_bound_and_read_only(secured):
+    _,client,_,_,jobs,directory,spaces,_,_,new=secured
+    query={'space_id':spaces[0]['id'],'candidate_id':new['candidate_id']}
+    assert client.get(PATH+'/source',params=query).status_code==401
+    sign_in(secured,'usr_engineer')
+    model=jobs.model(new['candidate_id']);manifest=dict(model.manifest,axes=['x','y','z'])
+    (model.root/'model.json').write_text(json.dumps(manifest),encoding='utf-8')
+    before=(model.root/'model.json').read_bytes()
+    assert client.get(PATH,params=query).status_code==409
+    response=client.get(PATH+'/source',params=query)
+    assert response.status_code==200,response.text
+    result=response.json()
+    assert result['profile']=='cospace.registration-source/0.1' and result['candidate_id']==new['candidate_id']
+    assert result['registration_readiness']['status']=='needs_declaration' and result['can_manage_input']
+    assert result['input_id']==manifest['source']['input_binding']['id']
+    sign_in(secured)
+    assert not client.get(PATH+'/source',params=query).json()['can_manage_input']
+    assert client.post(PATH+'/source',json=query).status_code==403
+    assert client.get(PATH+'/source',params=query|{'revision':'1'}).status_code==422
+    assert client.get(PATH+'/source',params=query|{'space_id':spaces[1]['id']}).status_code==403
+    assert (model.root/'model.json').read_bytes()==before
+    assert not (directory.root/'scene-registrations.sqlite3').exists()
+
+
+@pytest.mark.parametrize('axes',[['右','前','上'],['R','F','U'],['N','E','D'],['Right','Down','Forward']])
+def test_explicit_axis_alias_models_open_without_rewriting_them(secured,axes):
+    _,client,_,_,jobs,_,spaces,_,_,new=secured
+    sign_in(secured)
+    model=jobs.model(new['candidate_id']);manifest=dict(model.manifest,axes=axes)
+    (model.root/'model.json').write_text(json.dumps(manifest,ensure_ascii=False),encoding='utf-8')
+    before=(model.root/'model.json').read_bytes()
+    response=client.get(PATH,params={'space_id':spaces[0]['id'],'candidate_id':new['candidate_id']})
+    assert response.status_code==200,response.text
+    assert response.json()['model_source']['axes']==axes
+    assert (model.root/'model.json').read_bytes()==before
 
 
 def test_registration_source_binding_and_workspace_boundary(secured):

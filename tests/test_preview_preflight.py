@@ -27,10 +27,13 @@ def test_detail_and_preflight_are_read_only_and_not_build_authority(tmp_path):
         assert client.post(base+'/preflight',headers={'Origin':'https://example.com'}).status_code==403
         report=client.post(base+'/preflight').json()
         assert report['status']=='passed' and report['robot_ready'] is False
+        assert report['registration_readiness']['status']=='ready'
+        assert report['registration_readiness']['resolved_axes']==['right','down','forward']
         assert report['input_id']==record['id'] and report['counts_basis']=='registration'
         (snapshot/'raw'/'d.pgm').write_bytes(b'changed')
         failed=client.post(base+'/preflight').json()
         assert failed['status']=='failed' and failed['issue']['code']=='input_integrity'
+        assert failed['registration_readiness'] is None
         assert failed['issue']['action']
         # Earlier successful preview does not authorize building changed input.
         assert client.post('/api/builds',json={'input_id':record['id']}).status_code==409

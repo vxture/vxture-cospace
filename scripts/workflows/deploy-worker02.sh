@@ -2,6 +2,11 @@
 set -euo pipefail
 python scripts/guardrails/check_deploy_target.py
 COSPACE_REGISTRATION_ADAPTERS="${COSPACE_REGISTRATION_ADAPTERS:-}"
+COSPACE_ATLAS_BASE_URL="${COSPACE_ATLAS_BASE_URL:-}"
+COSPACE_ATLAS_COORDINATE_ENDPOINT="${COSPACE_ATLAS_COORDINATE_ENDPOINT:-}"
+COSPACE_ATLAS_TAILNET_HTTP="${COSPACE_ATLAS_TAILNET_HTTP:-0}"
+# Validate before SSH; the same parser is checked in with the deployment assets.
+python deploy/linux/configure_atlas.py --check
 [[ "$DEPLOY_USER" =~ ^[a-z_][a-z0-9_-]*$ ]]
 port="${DEPLOY_PORT:-22}"
 [[ "$port" =~ ^[0-9]+$ ]]
@@ -61,11 +66,12 @@ if [[ -n "${COSPACE_REGISTRATION_ADAPTERS:-}" ]]; then
   chmod 600 "$registration_config"
   mv -f -- "$registration_config" /srv/md0/cospace/etc/registration.env
 fi
+python3 /srv/md0/cospace/deploy/linux/configure_atlas.py --directory /srv/md0/cospace/etc
 bash /srv/md0/cospace/deploy/deploy.sh
 REMOTE
 scp -i ~/.ssh/deploy_key -P "$port" -o StrictHostKeyChecking=yes "$RUNNER_TEMP/cospace-deploy.sh" "$remote:$helper"
 cmd=''
-for name in STACK_ROOT PROJECT_NAME IMAGE_TAG GHCR_NAMESPACE GHCR_USERNAME GHCR_TOKEN ACR_REGISTRY ACR_NAMESPACE ACR_USERNAME ACR_PASSWORD GITHUB_SHA COSPACE_AMAP_WEB_KEY COSPACE_AMAP_SECURITY_JS_CODE COSPACE_REGISTRATION_ADAPTERS; do
+for name in STACK_ROOT PROJECT_NAME IMAGE_TAG GHCR_NAMESPACE GHCR_USERNAME GHCR_TOKEN ACR_REGISTRY ACR_NAMESPACE ACR_USERNAME ACR_PASSWORD GITHUB_SHA COSPACE_AMAP_WEB_KEY COSPACE_AMAP_SECURITY_JS_CODE COSPACE_REGISTRATION_ADAPTERS COSPACE_ATLAS_BASE_URL COSPACE_ATLAS_COORDINATE_ENDPOINT COSPACE_ATLAS_TAILNET_HTTP; do
   printf -v pair '%s=%q ' "$name" "${!name}"
   cmd+="$pair"
 done

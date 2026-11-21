@@ -59,6 +59,54 @@ def test_stable_identity_history_preflight_and_fixed_models(tmp_path):
     assert len(catalog.list())==1
 
 
+def test_legacy_manifest_can_be_repaired_without_fabricating_a_receipt(tmp_path):
+    from types import SimpleNamespace
+    from packages.service.scene_registrations import source_from_model, RegistrationError
+    root=specimen(tmp_path,True)
+    catalog,spaces=catalog_at(tmp_path)
+    original=catalog.register('legacy source',root,None,spaces[0],'ply_pointcloud')
+    identity=original['id'];store=InputCoordinates(catalog)
+    before={p.name:p.read_bytes() for p in root.iterdir()}
+    assert store.read(identity,spaces[0])['supported']
+    check=preflight(catalog,identity)
+    assert check['status']=='passed' and check['registration_readiness']['status']=='needs_declaration'
+    first=build(root,tmp_path/'before','before',original)
+    request=change(original,coordinates=change(original).coordinates.model_dump()|{'axes':['右','前','上']},
+                   reason='依据原始导出说明第3节补充方向；未改变点坐标')
+    state=store.change(identity,request,'usr_engineer')
+    assert state['registration_readiness']['status']=='ready'
+    assert state['history'][0]['before']['axes']==original['axes']
+    assert state['history'][0]['reason']==request.reason
+    effective=catalog.resolve(identity)
+    check=preflight(catalog,identity)
+    assert check['status']=='passed' and check['registration_readiness']['resolved_axes']==['right','forward','up']
+    second=build(root,tmp_path/'after','after',effective)
+    for meta,name in [(first,'before'),(second,'after')]:
+        model_root=tmp_path/name
+        manifest=meta|{'members':json.loads((model_root/'frozen.json').read_bytes())['members']}
+        (model_root/'model.json').write_text(json.dumps(manifest),encoding='utf-8')
+        model=SimpleNamespace(root=model_root,manifest=manifest)
+        if name=='before':
+            with pytest.raises(RegistrationError,match='source_axes_unsupported'):
+                source_from_model(model,spaces[0],meta['id'])
+        else:
+            assert source_from_model(model,spaces[0],meta['id'])['model_source']['axes']==['右','前','上']
+    assert {p.name:p.read_bytes() for p in root.iterdir()}==before
+    assert 'source_receipt' not in second['source'] and not (root/'source.json').exists()
+    with np.load(tmp_path/'before/spatial.npz') as a,np.load(tmp_path/'after/spatial.npz') as b:
+        np.testing.assert_array_equal(a['points'],b['points'])
+    assert catalog.read_original(identity)==original and first['axes']==original['axes']
+
+
+def test_legacy_repair_rejects_tampered_source_bytes(tmp_path):
+    root=specimen(tmp_path);catalog,spaces=catalog_at(tmp_path)
+    original=catalog.register('legacy',root,None,spaces[0],'ply_pointcloud')
+    (root/'cloud.ply').write_bytes(b'changed')
+    with pytest.raises(ValueError,match='pointcloud_integrity'):
+        InputCoordinates(catalog).change(original['id'],change(original),'actor')
+    assert not InputCoordinates(catalog).path.exists()
+
+
 def test_audited_revisions_match_historical_artifacts_and_admission(tmp_path,monkeypatch):
     from packages.construction.preview_jobs import PreviewJobs
     from packages.service.preview_publications import PreviewPublications

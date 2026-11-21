@@ -4,6 +4,8 @@ import {Button,Input,Textarea,NativeSelect,Switch,DialogFooter,StatusBadge} from
 import {checkCloud,preparePackage,Declaration,CheckedCloud} from './pointcloud-package';
 import {UploadCapabilities,canPreparePointcloud} from './input-format';
 import {GeometryPreview} from './geometry-preview';
+import {axisConventions} from './coordinate-readiness';
+import {CoordinateAssistance} from './coordinate-assistance';
 
 type Prepared=Awaited<ReturnType<typeof preparePackage>>&{cloud:CheckedCloud};
 export function PointcloudPrepare({endpoint,spaceId,capabilities,capabilityError,onRetry,onRegistered,onCancel,onBusyChange}:{endpoint:string;spaceId:string;capabilities:UploadCapabilities|null;capabilityError:string;onRetry:()=>void;onRegistered:(id:string,created:boolean)=>void;onCancel:()=>void;onBusyChange:(busy:boolean)=>void}){
@@ -12,7 +14,8 @@ export function PointcloudPrepare({endpoint,spaceId,capabilities,capabilityError
  const [checked,setChecked]=useState<CheckedCloud|null>(null);
  const completed=useRef(false);
  const [formRevision,setFormRevision]=useState(0);
- const acknowledge=useUnsavedNavigation(!completed.current&&!!(file||name||frame||description||scope||axes.some(Boolean)||metres),'PLY准备参数',{discard:()=>{setFile(null);setName('');setFrame('');setDescription('');setAxes(['','','']);setScope('');setMetres(false);setConfirmed(false);setPrepared(null);setChecked(null);setFormRevision(v=>v+1);}});
+ const [assistanceDirty,setAssistanceDirty]=useState(false);
+ const acknowledge=useUnsavedNavigation(!completed.current&&!!(file||name||frame||description||scope||axes.some(Boolean)||metres||assistanceDirty),'PLY准备参数',{discard:()=>{setFile(null);setName('');setFrame('');setDescription('');setAxes(['','','']);setScope('');setMetres(false);setConfirmed(false);setPrepared(null);setChecked(null);setFormRevision(v=>v+1);}});
  const generation=useRef(0),request=useRef<AbortController|null>(null),gate=useRef(false);
  useEffect(()=>{onBusyChange(!!busy);return()=>onBusyChange(false);},[busy,onBusyChange]);
  useEffect(()=>{return()=>{generation.current++;request.current?.abort();};},[spaceId,endpoint]);
@@ -51,7 +54,10 @@ export function PointcloudPrepare({endpoint,spaceId,capabilities,capabilityError
    {geometry&&<GeometryPreview data={geometry} label="本机资料预览"/>}
    <label>资料名称<Input aria-label="PLY资料名称" value={name} required maxLength={100} onChange={e=>{completed.current=false;setName(e.target.value);}}/></label>
    <div className="pointcloud-coordinate-grid"><label>局部坐标系<Input aria-label="PLY局部坐标系" placeholder="例如 os1_16/os_sensor" value={frame} maxLength={100} required onChange={e=>{invalidate();setFrame(e.target.value);}}/></label><label>坐标范围<NativeSelect aria-label="PLY坐标范围" value={scope} required onChange={e=>{invalidate();setScope(e.target.value);}}><option value="" disabled>明确选择范围</option><option value="sensor_local">传感器局部</option><option value="scene_local">场景局部</option></NativeSelect></label></div>
-   <div className="pointcloud-axes">{['X','Y','Z'].map((axis,i)=><label key={axis}>{axis}轴语义<Input aria-label={`PLY ${axis}轴语义`} placeholder={`如 sensor_${axis.toLowerCase()}`} value={axes[i]} maxLength={40} required onChange={e=>{invalidate();setAxes(values=>values.map((v,index)=>index===i?e.target.value:v) as [string,string,string]);}}/></label>)}</div>
+   <label>坐标约定<NativeSelect aria-label="PLY坐标约定" value={axisConventions.find(v=>JSON.stringify(v.axes)===JSON.stringify(axes))?.id||''} onChange={e=>{const selected=axisConventions.find(v=>v.id===e.target.value);if(selected?.axes.length){invalidate();setAxes([...selected.axes] as [string,string,string]);}}}>{axisConventions.map(v=><option key={v.id} value={v.id}>{v.label}</option>)}</NativeSelect></label>
+   <div className="pointcloud-axes">{['X','Y','Z'].map((axis,i)=><label key={axis}>{axis}轴语义<Input aria-label={`PLY ${axis}轴语义`} placeholder="填写来源明确的方向" value={axes[i]} maxLength={40} required onChange={e=>{invalidate();setAxes(values=>values.map((v,index)=>index===i?e.target.value:v) as [string,string,string]);}}/></label>)}</div>
+   <p className="text-label-small text-muted-foreground">兼容明确的中英文方向名称。选择约定不会转换坐标；仅有 X/Y/Z 等名称时，可用于普通构建，地图配准前需补齐方向。</p>
+   <CoordinateAssistance endpoint={endpoint} space={spaceId} contextKey={JSON.stringify([frame,scope,axes,metres])} onEvidenceChange={setAssistanceDirty} onApply={(values,basis)=>{invalidate();setAxes(values as [string,string,string]);setDescription(value=>value||basis);}}/>
    <label>来源说明<Textarea aria-label="PLY来源说明" placeholder="说明文件来自哪里、包含什么范围，以及已知处理情况。" value={description} required maxLength={500} onChange={e=>{invalidate();setDescription(e.target.value);}}/></label>
    <label className="pointcloud-confirm"><Switch aria-label="确认原文件单位为米" checked={metres} onCheckedChange={value=>{invalidate();setMetres(value);}}/><span>确认原文件数值单位为米（m）</span></label>
   </fieldset>

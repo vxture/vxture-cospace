@@ -5,7 +5,8 @@ import hashlib
 import json
 import sqlite3
 from pydantic import BaseModel, ConfigDict, Field, field_validator
-from packages.data.preview_pointcloud import Coordinates, manifest, source_receipt
+from packages.data.preview_pointcloud import Coordinates, manifest
+from packages.spatial.coordinate_axes import registration_readiness, valid_axis_label
 from packages.lifecycle.preview_control_lock import serialized
 
 
@@ -33,10 +34,9 @@ class CoordinateChange(BaseModel):
 
 
 def validate_coordinates(value):
-    import re
     result = Coordinates.model_validate(value).model_dump()
     axes = result['axes']
-    if len(set(axes)) != 3 or any(not re.fullmatch(r'[A-Za-z][A-Za-z0-9_-]{0,39}', a) for a in axes):
+    if len(set(axes)) != 3 or any(not valid_axis_label(a) for a in axes):
         raise ValueError('pointcloud_axes_invalid')
     return result
 
@@ -97,11 +97,14 @@ class InputCoordinates:
         if original['format'] == 'ply_pointcloud':
             doc, sha = manifest(original['snapshot'])
             if sha != original['snapshot_sha256']: raise ValueError('registered_input_changed')
-            supported = bool(source_receipt(original['snapshot'], doc))
+            # Original manifests already bind coordinates to immutable point bytes.
+            # Older packages need no invented source.json receipt to add an audited interpretation.
+            supported = True
         events = self.events(original)
         coords = events[-1]['coordinates'] if events else ({k:original[k] for k in ('unit','frame_id','axes','scope','scene_alignment')} if original['format']=='ply_pointcloud' else None)
         return {'profile':'cospace.input-coordinates/0.1', 'input_id':identity, 'space_id':space,
-                'supported':supported, 'revision':len(events), 'coordinates':coords, 'history':events}
+                'supported':supported, 'revision':len(events), 'coordinates':coords, 'history':events,
+                'registration_readiness': registration_readiness(coords['axes'], coords['unit']) if coords else None}
 
     @serialized(lambda self:self.catalog.root.parent)
     def change(self, identity, change, actor):

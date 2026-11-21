@@ -56,6 +56,8 @@ from packages.views.agent.ifc_geometry_exchange import export_geometry_component
 from packages.service.ifc_type_proposals import TypeProposalRequest, type_proposals
 from packages.views.agent.ifc_offline_package import export_design_package
 from packages.service.ifc_surface_query import SurfaceQuery, query_surface
+from packages.infrastructure.atlas_gateway import AtlasGateway, AtlasUnavailable
+from packages.service.coordinate_assistance import AssistanceRequest, suggest as coordinate_suggestion
 
 
 DATA_MANAGE='data.manage'
@@ -93,6 +95,7 @@ class BusinessAccess:
         self.scene_permissions=ScenePermissions(policies,directory,workspace_scene_visibility=workspace_scene_visibility,roster=roster)
         self.amap=AmapGateway.from_env()
         self.globe=GlobeRuntime.from_env()
+        self.atlas=AtlasGateway.from_env(rp)
         self.scene_pointclouds=ScenePointcloudWorkspace(jobs.inputs,scene_pointcloud_config) if jobs.inputs else None
         self.attachments=SceneAttachments(jobs.inputs) if jobs.inputs else None
         self.ifc_versions=None
@@ -180,8 +183,8 @@ class BusinessAccess:
             record=self.jobs.batches.read(identity,wanted)
             if record.get('space_id')!=wanted:raise PermissionError()
 
-        if path in ('/api/scene-registrations','/api/scene-registrations/geometry','/api/scene-registrations/check','/api/scene-registrations/map'):
-            if (method not in ('GET','POST') or path.endswith(('/geometry','/map')) and method!='GET'
+        if path in ('/api/scene-registrations','/api/scene-registrations/geometry','/api/scene-registrations/check','/api/scene-registrations/map','/api/scene-registrations/source'):
+            if (method not in ('GET','POST') or path.endswith(('/geometry','/map','/source')) and method!='GET'
                     or path.endswith('/check') and method!='POST'):raise PermissionError()
             values=body if method=='POST' else q
             wanted=values.get('space_id');cap=ASSOCIATION_EDIT if method=='POST' else SPACE_PREVIEW
@@ -189,7 +192,8 @@ class BusinessAccess:
             can_edit=ASSOCIATION_EDIT in policy.capabilities(principal,wanted)
             can_review=principal.workspace_owner or wanted in policy.role_spaces(principal,{'manager'})
             if method=='POST' and body.get('action') in ('approve','reject') and not can_review:raise PermissionError()
-            return {'principal':principal,'can_edit':can_edit,'can_review':can_review}
+            return {'principal':principal,'can_edit':can_edit,'can_review':can_review,
+                    'can_manage_input':DATA_MANAGE in policy.capabilities(principal,wanted)}
         if path in ('/api/scene-ontology-links','/api/scene-ontology-view'):
             if method not in ('GET','POST') or path=='/api/scene-ontology-view' and method!='GET':raise PermissionError()
             values=body if method=='POST' else q
@@ -260,6 +264,11 @@ class BusinessAccess:
         if metadata_path and (method in ('GET','HEAD') or method=='POST' and metadata_path[2] in ('description','coordinates')):
             wanted=body.get('space_id') if method=='POST' else q.get('space_id')
             space(wanted,DATA_MANAGE);artifact('input:'+metadata_path[1],DATA_MANAGE,wanted)
+            return {'principal':principal}
+        if path=='/api/coordinate-assistance' and method in ('GET','POST'):
+            values=body if method=='POST' else q
+            wanted=values.get('space_id');space(wanted,DATA_MANAGE)
+            if values.get('input_id'):artifact('input:'+values['input_id'],DATA_MANAGE,wanted)
             return {'principal':principal}
         if path in ('/api/source-settings','/api/registration-sources') and method in ('GET','HEAD'):
             space(q.get('space_id'),DATA_MANAGE);return {'principal':principal}
@@ -505,16 +514,40 @@ class BusinessAccess:
             revision,policy=await run_in_threadpool(self.load_policy)
             context=await run_in_threadpool(self.authorize,request,session,policy,body)
             request.state.platform_principal=context['principal'];request.state.policy_revision=revision
-            if path in ('/api/scene-registrations','/api/scene-registrations/geometry','/api/scene-registrations/check','/api/scene-registrations/map'):
+            if path=='/api/coordinate-assistance':
+                if request.method=='GET':
+                    if set(request.query_params)!={'space_id'}:return deny(422,'coordinate_ai_invalid_request')
+                    return JSONResponse({'profile':'cospace.coordinate-assistance-capability/0.1',
+                        'space_id':request.query_params['space_id'],'available':self.atlas.available},headers={'Cache-Control':'no-store'})
+                if request.query_params:return deny(422,'coordinate_ai_invalid_request')
+                try:
+                    change=AssistanceRequest.model_validate(body)
+                    def current():
+                        if not change.input_id:return
+                        if self.jobs.inputs is None:raise ValueError('input_catalog_not_configured')
+                        self.jobs.controls.require_active(change.space_id,'input:'+change.input_id)
+                        state=InputCoordinates(self.jobs.inputs).read(change.input_id,change.space_id)
+                        if not state['supported'] or state['revision']!=change.expected_revision:
+                            raise CoordinatesConflict('coordinate_revision_changed')
+                    await run_in_threadpool(current)
+                    result=await run_in_threadpool(coordinate_suggestion,self.atlas,context['principal'],session['access_token'],change)
+                    await run_in_threadpool(current)
+                except ValidationError:return deny(422,'coordinate_ai_invalid_request')
+                except AtlasUnavailable as exc:return deny(503,str(exc))
+                return JSONResponse(result,headers={'Cache-Control':'no-store'})
+            if path in ('/api/scene-registrations','/api/scene-registrations/geometry','/api/scene-registrations/check','/api/scene-registrations/map','/api/scene-registrations/source'):
                 from packages.service.scene_registrations import SceneRegistrations,RegistrationError
                 principal=context['principal']
                 scope=json.dumps([principal.issuer,principal.org_id,principal.workspace_id],separators=(',',':'))
                 values=body if request.method=='POST' else dict(request.query_params)
                 if request.method=='POST' and request.query_params or request.method=='GET' and (
                     not {'space_id','candidate_id'}<=set(values) or set(values)-{'space_id','candidate_id','revision'}
-                    or path.endswith(('/geometry','/map')) and 'revision' in values):return deny(422,'registration_invalid_request')
+                    or path.endswith(('/geometry','/map','/source')) and 'revision' in values):return deny(422,'registration_invalid_request')
                 try:
                     service=SceneRegistrations(self.directory.root,scope,principal.subject,self.jobs)
+                    if path.endswith('/source'):
+                        result=await run_in_threadpool(service.source_diagnostics,values['space_id'],values['candidate_id'])
+                        return JSONResponse({**result,'can_manage_input':context['can_manage_input']},headers={'Cache-Control':'no-store'})
                     if path.endswith('/geometry'):
                         result=await run_in_threadpool(service.geometry,values['space_id'],values['candidate_id'])
                         return JSONResponse(result,headers={'Cache-Control':'no-store'})

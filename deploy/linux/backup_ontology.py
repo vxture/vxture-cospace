@@ -11,6 +11,7 @@ import tempfile
 DATABASES = ('ontology-group-configuration.sqlite3', 'ontology-authoring.sqlite3',
              'scene-ontology-links.sqlite3', 'scene-registrations.sqlite3')
 CONTROL_DATABASE = 'preview-lifecycle.sqlite3'
+COORDINATE_DATABASE = 'input-coordinates.sqlite3'
 
 
 def checkpoint(root: Path, images: list) -> Path:
@@ -29,8 +30,10 @@ def checkpoint(root: Path, images: list) -> Path:
     sources = [(name, runtime / name) for name in DATABASES]
     # Paused/retired publications must remain quarantined across rollback.
     sources.append((CONTROL_DATABASE, runtime.parent / CONTROL_DATABASE))
+    # Audited input interpretations bind both new and historical model sources.
+    sources.append((COORDINATE_DATABASE, runtime.parent / 'preview-inputs' / COORDINATE_DATABASE))
     for name, source in sources:
-        if source.is_symlink():
+        if source.is_symlink() or source.resolve() != source:
             raise ValueError('database must not be a symlink')
         if not source.exists():
             manifest['databases'][name] = 'absent'
