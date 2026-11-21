@@ -36,10 +36,11 @@ function geometry(dark:boolean):PreviewGeometry{
 
 function Preview(){
  const [theme,setTheme]=useState<'light'|'dark'>('light'),[sample,setSample]=useState('within');
+ const [editedInput,setEditedInput]=useState<RegistrationInput|null>(null);
  useEffect(()=>{document.documentElement.classList.toggle('dark',theme==='dark');},[theme]);
  const input=useMemo(()=>{const doc=structuredClone(seed) as RegistrationInput;if(sample==='exceeded')doc.controls[5].target_m[0]+=.32;return doc;},[sample]);
  const dark=theme==='dark';
  const cloud=useMemo(()=>geometry(dark),[dark]);
- return <div className="registration-preview-page"><header className="registration-preview-bar"><div><Compass size={20}/><span>CoSpace</span><span className="registration-preview-separator">/</span><span>空间关联</span><span className="registration-preview-separator">/</span><strong>空间基准</strong></div><div><span className="registration-preview-tag">B07a · 交互预览</span><ShellThemeToggle currentTheme={theme} onThemeChange={setTheme} buttonLabel="切换主题"/></div></header><main><div className="registration-preview-notice"><span><i/>合成园区算例 · 不对应真实场地</span><NativeSelect aria-label="切换检查算例" value={sample} onChange={e=>setSample(e.target.value)}><option value="within">检查在门限内</option><option value="exceeded">K3 水平偏差超限</option></NativeSelect></div><RegistrationWorkbench input={input} geometry={cloud} buildings={buildings}/></main></div>;
+ return <div className="registration-preview-page"><header className="registration-preview-bar"><div><Compass size={20}/><span>CoSpace</span><span className="registration-preview-separator">/</span><span>空间关联</span><span className="registration-preview-separator">/</span><strong>空间基准</strong></div><div><span className="registration-preview-tag">B07a · 交互预览</span><ShellThemeToggle currentTheme={theme} onThemeChange={setTheme} buttonLabel="切换主题"/></div></header><main><div className="registration-preview-notice"><span><i/>合成园区算例 · 不对应真实场地{editedInput?' · 本地修改':''}</span><NativeSelect aria-label="切换检查算例" value={sample} onChange={e=>{setSample(e.target.value);setEditedInput(null);}}><option value="within">检查在门限内</option><option value="exceeded">K3 水平偏差超限</option></NativeSelect></div><RegistrationWorkbench input={editedInput??input} geometry={cloud} buildings={buildings} onPreviewChange={setEditedInput}/></main></div>;
 }
 createRoot(document.getElementById('root')!).render(<TooltipProvider><Preview/></TooltipProvider>);
