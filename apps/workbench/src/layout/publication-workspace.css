@@ -22,7 +22,7 @@
 .publication-nav nav>[data-slot=button]:hover,.publication-nav nav>[aria-current=page]{background:var(--accent)}
 .publication-nav-foot{margin-top:auto;display:flex;align-items:flex-start;gap:8px;padding:12px 8px;color:var(--muted-foreground)}
 .publication-nav-foot svg{flex:none;margin-top:2px}.publication-nav-foot p{margin:0;line-height:1.7;font-size:12px}
-.publication-content{flex:1;min-width:0;min-height:0;overflow:auto;display:flex;flex-direction:column;gap:16px;padding:20px 48px 48px;container-type:inline-size}
+.publication-content{flex:1;min-width:0;min-height:0;overflow:auto;display:flex;flex-direction:column;gap:var(--space-md);container-type:inline-size}
 .publication-content>*{flex-shrink:0}
 .publication-page-header{display:flex;align-items:center;gap:14px;padding:4px 0 16px;border-bottom:1px solid color-mix(in srgb,var(--border) 65%,transparent)}
 .publication-page-header>svg{flex:none;color:var(--primary)}
@@ -48,4 +48,4 @@
 .publication-message{display:flex;align-items:flex-start;gap:8px;padding:12px 16px;background:color-mix(in srgb,var(--primary) 3%,var(--card));border-radius:var(--radius-md);font-size:12px;line-height:1.7;color:var(--muted-foreground)}.publication-message>svg{flex:none;margin-top:2px}.publication-message>span{flex:1;min-width:0}
 .publication-empty{display:flex;flex-direction:column;align-items:center;gap:16px;padding:64px 24px;text-align:center}.publication-empty>svg{color:var(--muted-foreground)}.publication-empty h3{font-size:16px;margin:0}.publication-empty p{font-size:12px;color:var(--muted-foreground);margin:0;line-height:1.7}
 @container (max-width:780px){.publication-page-header{flex-wrap:wrap}.publication-title-copy{flex-basis:calc(100% - 46px)}.publication-page-actions{margin-left:46px}.publication-artifact-grid{grid-template-columns:1fr}.publication-source dl,.publication-package dl{grid-template-columns:1fr}.publication-use-grid{grid-template-columns:1fr}}
-@media(max-width:620px){.publication-content{padding:16px 20px 40px}.publication-link{flex-wrap:wrap}.publication-confirm-facts{grid-template-columns:1fr}}
+@media(max-width:620px){.publication-link{flex-wrap:wrap}.publication-confirm-facts{grid-template-columns:1fr}}

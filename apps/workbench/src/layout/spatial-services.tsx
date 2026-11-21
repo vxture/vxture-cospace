@@ -1,3 +1,4 @@
+import {WorkspaceContent} from './workspace-content';
 import React,{useEffect,useLayoutEffect,useMemo,useRef,useState} from 'react';
 import {useSearchParams} from 'react-router-dom';
 import {Button,Input,NativeSelect,ShellSidebarFrame,Drawer,useMediaQuery} from '@vxture/design-system';
@@ -70,7 +71,7 @@ export function SpatialServices(){
  function changeVersion(id:string){setVersions(current=>({...current,[space]:id}));appNavigate(servicePageHref(section,space,id,tab,filter));}
  return <main className="scene-catalog spatial-services" aria-label="空间服务">
   {!narrow&&<ShellSidebarFrame mode={collapsed?'collapsed':'expanded'}><ServiceNavigation section={section} collapsed={collapsed} onToggle={()=>setCollapsed(value=>!value)}/></ShellSidebarFrame>}
-  <div ref={content} className="spatial-service-content" onScroll={()=>{if(!space&&!deviceId&&content.current)listScroll.current[section]=content.current.scrollTop;}}><div className="service-workspace-shell">
+  <div ref={content} className="spatial-service-content workspace-content-viewport" onScroll={()=>{if(!space&&!deviceId&&content.current)listScroll.current[section]=content.current.scrollTop;}}><WorkspaceContent className="service-workspace-shell">
    {narrow&&<Button className="service-mobile-navigation" variant="ghost" size="sm" onClick={()=>setNavigationOpen(true)}><SidebarSimple size={16}/>功能导航</Button>}
    {space?<>
     {loading?<p role="status" className="service-list-empty">正在读取场景服务…</p>:error?<div role="alert" className="service-list-empty"><p>{error}</p><Button variant="secondary" onClick={()=>setRevision(value=>value+1)}>重新加载</Button></div>:group?deviceId?<ServiceRecipients presentation={presentation} spaceId={group.scene.id} sceneName={group.scene.name} revision={revision}/>:<SceneServicePage presentation={presentation} group={group} version={version} tab={tab} revision={revision} onTab={value=>appNavigate(servicePageHref(section,space,publication||version?.release.id||'',value,filter))} onVersion={changeVersion} onRefresh={()=>setRevision(value=>value+1)}/>:<div className="service-list-empty" role="alert"><h2>此场景服务不可访问</h2><p>场景已不可访问，或暂无已授权的发布服务。</p><Button variant="secondary" onClick={()=>appNavigate('/services?section='+section)}>返回服务清单</Button></div>}
@@ -82,7 +83,7 @@ export function SpatialServices(){
      {loading?<p role="status" className="service-list-empty">正在读取服务清单…</p>:error?<div role="alert" className="service-list-empty"><p>{error}</p><Button variant="secondary" onClick={()=>setRevision(value=>value+1)}>重新加载</Button></div>:<div className={visible.length&&view==='cards'?'service-card-grid':'service-directory-list'}>{visible.map(value=><ServiceListEntry key={value.scene.id} group={value} version={selectedServiceVersion(value,versions[value.scene.id])!} section={section} filter={filter} view={view}/>)}{!visible.length&&<div className="service-list-empty"><h2>{groups.length?'没有匹配的服务':'暂无已授权的场景服务'}</h2><p>{groups.length?'调整关键词或发布状态后重试。':'场景发布成果并授权后，服务会显示在这里。'}</p>{(query||state!=='all')&&<Button variant="secondary" onClick={()=>setParams({section},{replace:true})}>清除筛选</Button>}</div>}</div>}
     </section>}
    </>}
-  </div></div>
+  </WorkspaceContent></div>
   <Drawer open={narrow&&navigationOpen} onClose={()=>setNavigationOpen(false)} side="left" width="sm" title="功能导航" closeLabel="关闭功能导航"><ServiceNavigation section={section} collapsed={false} onToggle={()=>setNavigationOpen(false)}/></Drawer>
  </main>;
 }

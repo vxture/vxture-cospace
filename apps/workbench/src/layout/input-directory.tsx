@@ -1,3 +1,4 @@
+import {WorkspaceContent} from './workspace-content';
 import {useAssistantReport} from './workspace-assistant';
 import {DataNavigation} from './data-navigation';
 import {WorkspaceHeading} from './workspace-frame';
@@ -125,7 +126,7 @@ export function InputDirectory(){
   </div>
   <DataNavigation view={view}/>
 
-  <section className="data-main" aria-label="数据管理工作区">
+  <section className="data-main workspace-content-viewport" aria-label="数据管理工作区"><WorkspaceContent className="data-directory-content">
    {directoryError&&<p role="alert" className="data-notice">{directoryError}<Button variant="ghost" size="sm" onClick={()=>setDirectoryRevision(v=>v+1)}>重新读取</Button></p>}
    <WorkspaceHeading icon={Database} title="数据管理" description="按当前场景维护资料、采集批次、模型版本与来源引用。" actions={<><Button asChild size="sm" variant="secondary"><a href={recordLink('data',{scope:'all'})}>共用数据目录</a></Button><Button variant="secondary" size="sm" className="data-icon-button" aria-label="刷新数据" title="刷新数据" disabled={busy} onClick={()=>{void runGuarded(refresh);}}><ArrowClockwise size={16} className={busy?'data-spin':''}/></Button><SampleLibrary key={`samples-${target.space}`} endpoint={endpoint} spaceId={scene?.id||''} spaceName={scene?.name||''} authorized={!!platform} onRegistered={registered} onManageSources={()=>setTools('sources')}/><InputRegistration key={target.space} spaceId={scene?.id||''} endpoint={endpoint} triggerLabel="导入资料" spaceName={scene?.name} open={importOpen} onOpenChange={setImportOpen} onManageSources={()=>setTools('sources')} onRegistered={registered}/></>}/>
 
@@ -157,7 +158,7 @@ export function InputDirectory(){
     </section>
 
    </div>
-  </section>
+  </WorkspaceContent></section>
     {hasSelection&&!referenceSelected&&<aside className="data-detail" id="data-detail-panel" aria-label={selectedEntry?"资料详情面板":"数据详情面板"} onKeyDown={e=>{if(e.key==='Escape')navigate({});}}>
      <header className="data-detail-heading"><span>{selectedEntry?'资料详情':selectedArtifact?kindNames[selectedArtifact.kind]+'详情':'详情'}</span><Button variant="ghost" size="sm" className="data-icon-button" aria-label="关闭数据详情" onClick={()=>navigate({})}><X size={17}/></Button></header>
      <div className="data-detail-scroll"><div className="data-detail-title"><span className="data-detail-symbol">{selectedEntry?<FileText size={26} weight="duotone"/>:<Cube size={26} weight="duotone"/>}</span><h2>{title}</h2><Availability item={selectedArtifact}/></div>

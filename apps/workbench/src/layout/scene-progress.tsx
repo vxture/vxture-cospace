@@ -7,7 +7,7 @@ import {realScreenHref} from './real-space-data';
 import {SpaceWorkflow} from './space-workflow';
 import './scene-progress.css';
 
-type Action={module:'space'|'build'|'data'|'delivery'|'ontology'|'association';label:string;values:Record<string,string>;allowed?:boolean};
+type Action={module:'space'|'build'|'data'|'registration'|'delivery'|'ontology'|'association';label:string;values:Record<string,string>;allowed?:boolean};
 type Release={publication_id:string;candidate_id:string|null;status:string;matches_current:boolean};
 type Journey={target:{kind:string;id:string};current_step:string|null;steps:{id:string;title:string;status:string;detail:string;action:Action|null}[]};
 type Summary={journey:Journey|null;work:{status:string;label:string;detail:string;action:Action}|null;candidate_ref:{candidate_id:string}|null;service_status:string;tracked_job:{job_id:string;state:string;is_current:boolean}|null;viewing_publication:Release|null;publications:Release[];available_publication_count:number;primary_action:Action;consumer_status:'unobserved'};

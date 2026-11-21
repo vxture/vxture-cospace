@@ -31,7 +31,7 @@ def test_root_serves_application_and_only_assets_are_public(runtime,tmp_path):
             assert old.status_code==404 and 'location' not in old.headers
 
 
-@pytest.mark.parametrize('target',['/','/space?space=test','/build?space=test&tab=flow','/data'])
+@pytest.mark.parametrize('target',['/','/space?space=test','/build?space=test&tab=flow','/registration?space=test&job=fixed','/data'])
 def test_login_returns_directly_to_app_route(runtime,target):
     rp,client,accounts,_=runtime
     q,code=begin(rp,client,accounts,returnTo=target)

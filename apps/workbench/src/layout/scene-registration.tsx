@@ -1,5 +1,5 @@
 import React,{useEffect,useRef,useState} from 'react';
-import {ArrowLeft,ArrowDown,ArrowUp,CheckCircle,Compass,DownloadSimple,DotsThreeVertical,FloppyDisk,UploadSimple,XCircle} from '@phosphor-icons/react';
+import {ArrowDown,ArrowUp,CheckCircle,Compass,DownloadSimple,DotsThreeVertical,FloppyDisk,UploadSimple,XCircle} from '@phosphor-icons/react';
 import {Button,Drawer,DropdownMenu,DropdownMenuContent,DropdownMenuItem,DropdownMenuSeparator,DropdownMenuTrigger,Input,StatusBadge,Textarea} from '@vxture/design-system';
 import {businessEndpoint} from './business-endpoint';
 import {readPreview,validatePreview,type PreviewGeometry} from './geometry-preview-data';
@@ -27,7 +27,7 @@ async function value(response:Response){
 }
 function download(name:string,data:unknown){const url=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}));const link=document.createElement('a');link.href=url;link.download=name;link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
 
-export function SceneRegistration({spaceId,candidateId,onBack}:{spaceId:string;candidateId:string;onBack:()=>void}){
+export function SceneRegistration({spaceId,candidateId}:{spaceId:string;candidateId:string}){
  const [state,setState]=useState<State|null>(null),[draft,setDraft]=useState<RegistrationInput|null>(null),[geometry,setGeometry]=useState<PreviewGeometry>();
  const [loading,setLoading]=useState(true),[busy,setBusy]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState(''),[geometryError,setGeometryError]=useState('');
  const [action,setAction]=useState<Action|null>(null),[reason,setReason]=useState(''),[reviewOpen,setReviewOpen]=useState(false),[refresh,setRefresh]=useState(0);
@@ -82,7 +82,7 @@ export function SceneRegistration({spaceId,candidateId,onBack}:{spaceId:string;c
  }
  const adopted=state?.adopted;
  return <section className="scene-registration" aria-label="场景空间基准">
-  <header className="scene-registration-toolbar"><div><Button size="icon-md" variant="ghost" aria-label="返回关联概览" onClick={onBack} disabled={busy}><ArrowLeft size={24}/></Button><Compass size={20}/><span>空间基准</span>{state&&<><span>修订 {state.revision}</span><StatusBadge tone="neutral">{dirty?'未保存':labels[state.review_status]}</StatusBadge></>}</div><div>
+  <header className="scene-registration-toolbar"><div>{state&&<><span>修订 {state.revision}</span><StatusBadge tone="neutral">{dirty?'未保存':labels[state.review_status]}</StatusBadge></>}</div><div>
    {state&&<><Button size="sm" variant="outline" disabled={busy} onClick={()=>download('配准资料.json',{document:current,geographic_binding:draft?binding:state.geographic_binding})}><DownloadSimple size={16}/>导出资料</Button>{state.can_edit&&<><Button size="sm" variant="outline" disabled={busy} onClick={()=>file.current?.click()}><UploadSimple size={16}/>导入资料</Button><Button size="sm" disabled={busy||!dirty} onClick={()=>open('save')}><FloppyDisk size={16}/>保存</Button><DropdownMenu><DropdownMenuTrigger asChild><Button size="icon-md" variant="ghost" aria-label="配准资料更多操作" disabled={busy||dirty}><DotsThreeVertical size={24}/></Button></DropdownMenuTrigger><DropdownMenuContent align="end">
     <DropdownMenuItem disabled={!['draft','rejected'].includes(state.review_status)||state.report?.calculation_status!=='checks_passed'||state.document?.synthetic} onSelect={()=>open('submit')}><ArrowUp size={16}/>提交审核</DropdownMenuItem>
     {state.can_review&&<><DropdownMenuSeparator/><DropdownMenuItem disabled={state.review_status!=='submitted'} onSelect={()=>open('approve')}><CheckCircle size={16}/>核准配准</DropdownMenuItem><DropdownMenuItem disabled={state.review_status!=='submitted'} onSelect={()=>open('reject')}><XCircle size={16}/>退回资料</DropdownMenuItem></>}

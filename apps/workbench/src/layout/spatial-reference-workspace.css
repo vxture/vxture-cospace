@@ -1,0 +1,8 @@
+.registration-module.data-workspace{padding:0;gap:0;background:var(--card)}
+.registration-module .scene-scope,.registration-module .data-heading{display:none}
+.registration-module .data-main{margin-left:0!important}
+.registration-module .module-body{padding:0;overflow:hidden;display:flex;flex-direction:column}
+.registration-module .spatial-reference-content button,.registration-module .spatial-reference-content [data-slot=button]{height:32px;min-height:32px;font-size:14px}
+.spatial-reference-message{display:flex;gap:12px;align-items:center;flex-wrap:wrap;font-size:14px}.spatial-reference-message>span{flex:1;min-width:160px}
+.spatial-reference-empty{display:flex;flex-direction:column;align-items:center;gap:16px;padding:64px 16px;text-align:center;color:var(--muted-foreground)}
+.spatial-reference-empty h3{margin:0;font-size:18px;font-weight:500;color:var(--foreground)}.spatial-reference-empty p{margin:0;font-size:14px;line-height:1.8;max-width:600px}

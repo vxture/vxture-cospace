@@ -44,7 +44,7 @@ function AssistantTasks({report,route,scene,onSelect}:{report:AssistantReport|nu
  const go=(path:string)=>appNavigate(path);
  const params=new URLSearchParams(location.search),section=params.get('space')&&params.get('tab')?params.get('tab')!:params.get('section')||'directory';
  const link=(route:string,tab:string)=>`/${route}?${new URLSearchParams({space:scene,tab})}`;
- const fallback:AssistantReport={title:({services:'空间服务检查',data:'资料检查',ontology:'规则检查',build:'构建检查',association:'关联检查',delivery:'发布检查'} as Record<string,string>)[route]||'账户与工作区',status:directory.loading?'loading':directory.error?'error':'ready',note:directory.error||undefined,tasks:[]};
+ const fallback:AssistantReport={title:({services:'空间服务检查',data:'资料检查',ontology:'规则检查',build:'构建检查',registration:'空间基准检查',association:'关联检查',delivery:'发布检查'} as Record<string,string>)[route]||'账户与工作区',status:directory.loading?'loading':directory.error?'error':'ready',note:directory.error||undefined,tasks:[]};
  if(route==='services'){
   if(section==='feedback')fallback.note='态势反馈接入尚未开放，暂无可检查的上报任务。';
   else if(section==='recipients')fallback.note='正在读取设备登记信息。';

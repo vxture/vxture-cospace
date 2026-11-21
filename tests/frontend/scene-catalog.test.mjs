@@ -48,7 +48,7 @@ test('newest activity sorts across phases, with invalid or missing dates last',(
 
 test('scene operation destinations retain disabled entries and explicit scene scope',()=>{
  const items=sceneDestinations({id:'scene A&B',capabilities:['space.preview','data.manage']});
- assert.deepEqual(items.map(s=>[s.key,s.enabled]),[['services',true],['build',false],['association',false],['delivery',true],['data',true]]);
+ assert.deepEqual(items.map(s=>[s.key,s.enabled]),[['services',true],['build',false],['registration',false],['association',false],['delivery',true],['data',true]]);
  assert.equal(items.find(item=>item.key==='data').href,'/data?space=scene+A%26B');
  assert.equal(new URL(items[0].href,'https://example.test').pathname,'/services');
  assert.ok(sceneDestinations({id:'none'}).every(s=>!s.enabled));
@@ -65,6 +65,7 @@ test('scene handoffs use only the selected scene and honor each operation permis
   assert.equal(item.enabled,true);
  }
  assert.equal(destinations.find(item=>item.key==='association').href,'/association?space=scene+A%26B');
+ assert.equal(destinations.find(item=>item.key==='registration').href,'/registration?space=scene+A%26B');
  assert.equal(sceneDestinations({...scene,capabilities:['space.preview']}).find(item=>item.key==='association').enabled,false);
 });
 

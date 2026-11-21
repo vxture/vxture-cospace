@@ -14,7 +14,8 @@ import {WorkspaceQueries} from './workspace-queries';
 import {WorkspaceHome} from './workspace-home';
 import {SpatialServices} from './spatial-services';
 import {createBrowserRouter,RouterProvider} from 'react-router-dom';
-import {bindAppRouter,subscribeAppLocation} from './app-router';
+import {appNavigate,appLocation,bindAppRouter,subscribeAppLocation} from './app-router';
+import {canonicalModuleHref} from './navigation-contract';
 import {appRoute} from './app-router';
 import {SignInContent} from './signin-content';
 
@@ -39,6 +40,7 @@ import {SharedOntology} from './shared-ontology';
 import {ModuleWorkspace} from './module-workspace';
 import {OntologyWorkbench} from './ontology-workbench';
 import {SpatialAssociations} from './spatial-associations';
+import {SpatialReferenceWorkspace} from './spatial-reference-workspace';
 import {moduleNames} from './product-navigation';
 import {HomeLayout} from './home-layout';
 import {AuthBoundary,usePlatformSession,platformLogout} from './platform-auth';
@@ -55,7 +57,7 @@ const names = {...moduleNames,services:'空间服务',settings:'配置管理',me
 type Route = keyof typeof names|'home';
 const adminRoutes:Route[] = ['settings','members','identity','account'];
 const defaults = {workspace:'内部工程空间'};
-function currentRoute():Route {const key=appRoute();return !key?'home':Object.hasOwn(names,key)?key as Route:'space';}
+function currentRoute():Route {const key=appRoute();if(key==='association'&&new URLSearchParams(location.search).get('tab')==='registration')return 'registration';return !key?'home':Object.hasOwn(names,key)?key as Route:'space';}
 function LoginPage({identity,tools,login,enter}:{identity:React.ReactNode;tools:React.ReactNode;login:()=>void;enter:()=>void}){
  return <HomeLayout tools={tools} footerTools={<Button variant="link" id="enter-preview" onClick={enter}>预览界面<Icon name="arrow-right"/></Button>}>
   <SignInContent onLogin={login}/>
@@ -67,6 +69,7 @@ function App(){
  // Header links must refresh even when only the scene changes on the same route.
  const navigation=useRecordNavigation();
  const route=currentRoute();
+ useEffect(()=>{const url=appLocation(),next=canonicalModuleHref(url);if(next!==url)appNavigate(next,true);},[route,navigation.space,navigation.job,navigation.tab]);
  const panorama=route==='space'&&new URLSearchParams(location.search).get('view')==='map';
  const [preview,setPreview]=useState(()=>Boolean(platform)||sessionStorage.getItem('cospace.ui.ds.preview')==='1' || (new URLSearchParams(location.search).get('screen')==='space' && new URLSearchParams(location.search).get('preview')==='1'));
  const config=defaults;
@@ -110,7 +113,7 @@ function App(){
   }
   if(route==='ontology')return <SharedOntology/>;
   if(adminRoutes.includes(route))return <ManagementFrame route={route as 'settings'|'members'|'identity'|'account'}><ManagementWorkspace route={route} onLogout={exit}/></ManagementFrame>;
-  return <ModuleWorkspace route={route as keyof typeof moduleNames}><Business route={route as 'data'|'ontology'|'build'|'delivery'|'association'}/></ModuleWorkspace>;
+  return <ModuleWorkspace route={route as keyof typeof moduleNames}><Business route={route as 'data'|'ontology'|'build'|'registration'|'delivery'|'association'}/></ModuleWorkspace>;
  };
  return <>
  {!preview?<LoginPage identity={identity} tools={<ShellThemeToggle currentTheme={theme} onThemeChange={setTheme} buttonLabel="切换主题"/>} login={showLoginInfo} enter={enter}/> :
@@ -121,11 +124,12 @@ function App(){
  </>;
 }
 
-function Business({route}:Readonly<{route:'data'|'ontology'|'build'|'delivery'|'association'}>){
+function Business({route}:Readonly<{route:'data'|'ontology'|'build'|'registration'|'delivery'|'association'}>){
  const context=useRecordNavigation();
  if(route==='data')return <InputDirectory key={context.space}/>;
  if(route==='ontology')return <OntologyWorkbench/>;
  if(route==='association')return <SpatialAssociations key={context.space}/>;
+ if(route==='registration')return <SpatialReferenceWorkspace key={context.space}/>;
  if(route==='delivery')return <PreviewPublications key={`publications-${context.space}`}/>;
  return <BuildWorkspaceViews key={context.space}/>;
 }

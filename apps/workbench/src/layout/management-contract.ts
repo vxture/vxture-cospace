@@ -13,12 +13,12 @@ export function managementHref(route:string,space='',section=route==='members'?'
 export function sceneInformationHref(space:string){return '/build?'+new URLSearchParams({space,tab:'info'});}
 export function canOpenSceneWorkspace(route:string,tab:string,capabilities:readonly string[]){
  if(route==='build'&&tab==='info')return capabilities.includes('space.preview');
- const required:Record<string,string>={build:'build.run',data:'data.manage',association:'association.edit'};
+ const required:Record<string,string>={build:'build.run',data:'data.manage',registration:'association.edit',association:'association.edit'};
  return !required[route]||capabilities.includes(required[route]);
 }
 export const capabilityNames:Record<string,string>={
  'space.preview':'空间浏览','space.query':'空间查询','space.export':'成果导出','data.manage':'数据管理',
- 'build.run':'模型构建','association.edit':'空间关联','publication.manage':'服务发布','space.manage':'名称与描述管理','space.location.edit':'空间位置编辑',
+ 'build.run':'模型构建','association.edit':'空间基准与关联','publication.manage':'服务发布','space.manage':'名称与描述管理','space.location.edit':'空间位置编辑',
 };
 
 export const managementSections={

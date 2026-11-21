@@ -1,6 +1,7 @@
 import React,{useEffect,useRef,useState} from 'react';
 import {Button,Drawer,Input,NativeSelect} from '@vxture/design-system';
 import {businessEndpoint as endpoint} from './business-endpoint';
+import {recordLink} from './record-navigation';
 import './publication-semantics.css';
 
 export type SemanticSelection={consumer_revision:number;source_manifest_sha256:string;snapshot_sha256:string};
@@ -23,7 +24,7 @@ export function PublicationPrepare({spaceId,selection,onClose,onProceed}:{spaceI
  useEffect(()=>{const abort=new AbortController();setRegistration(null);setRegistrationError('');setRegistrationLoading(includeRegistration);
   if(!includeRegistration||!selection.candidate_id)return()=>abort.abort();
   (async()=>{const state=await fetch(endpoint+'/api/scene-registrations?'+new URLSearchParams({space_id:spaceId,candidate_id:selection.candidate_id!}),{signal:abort.signal,cache:'no-store'}).then(value);
-   if(!state.adopted_revision)throw Error('当前模型尚未采用核准配准，请先在空间关联中完成审核采用。');
+   if(!state.adopted_revision)throw Error('当前模型尚未采用核准配准，请先在空间基准中完成审核采用。');
    const result=await fetch(endpoint+'/api/publication-registration-preflight',{method:'POST',signal:abort.signal,headers:{'Content-Type':'application/json'},body:JSON.stringify({space_id:spaceId,candidate_id:selection.candidate_id,registration_selection:{registration_revision:state.adopted_revision,source_manifest_sha256:state.source_sha256}})}).then(value);
    if(!abort.signal.aborted)setRegistration(result.registration_selection);
   })().catch(e=>{if(!abort.signal.aborted)setRegistrationError(e.message);}).finally(()=>{if(!abort.signal.aborted)setRegistrationLoading(false);});return()=>abort.abort();
@@ -49,7 +50,7 @@ export function PublicationPrepare({spaceId,selection,onClose,onProceed}:{spaceI
  {include&&<>{loading?<output>正在读取实例来源…</output>:source?<><form className="publication-semantic-toolbar" onSubmit={e=>{e.preventDefault();void preflight();}}><Input aria-label="固定实例修订" value={revision} inputMode="numeric" onChange={e=>changeRevision(e.target.value)}/><Button variant="outline" type="submit" disabled={checking}>{checking?'预检中…':'预检修订'}</Button></form>{revision==='0'&&<p>当前候选尚无实例声明，请先在空间关联中维护。</p>}</>:null}
  {error&&<p role="alert">{error}<Button variant="ghost" size="sm" onClick={()=>{generation.current++;setChecking(false);setRefresh(n=>n+1);}}>重新读取</Button></p>}
  {check&&<><CoverageRows coverage={check.coverage}/><p>实例修订 {check.semantic_selection.consumer_revision} · 属性校验通过（局部）</p><p>{check.mapped_relation_validation==='not_applicable'?'未采用关系映射，关系校验不适用。':'已映射关系校验通过（局部）。'}</p></>}</>}
- </section><section><label className="publication-semantic-choice"><input type="checkbox" checked={includeRegistration} onChange={event=>setIncludeRegistration(event.target.checked)}/>纳入核准配准成果</label><p>显式固定当前采用的核准修订、基准依据和地理适配资料，在线与离线共用。</p>{registrationLoading&&<output>正在预检核准修订…</output>}{registrationError&&<p role="alert">{registrationError}</p>}{registration&&<p>核准修订 {registration.registration_revision} · 已预检</p>}</section><section><h4>交付边界</h4><p>未引用对象和未映射关系不自动补齐。配准核准不替代独立现场精度验收。</p><p>模型与附件为证据引用；本次成果不提供机器人导航或任务执行能力。</p></section></div></Drawer>;
+ </section><section><label className="publication-semantic-choice"><input type="checkbox" checked={includeRegistration} onChange={event=>setIncludeRegistration(event.target.checked)}/>纳入核准配准成果</label><p>显式固定当前采用的核准修订、基准依据和地理适配资料，在线与离线共用。</p>{registrationLoading&&<output>正在预检核准修订…</output>}{registrationError&&<p role="alert">{registrationError}{selection.candidate_id&&<Button asChild size="sm" variant="ghost"><a href={recordLink('registration',{space:spaceId,job:selection.candidate_id})}>前往空间基准</a></Button>}</p>}{registration&&<p>核准修订 {registration.registration_revision} · 已预检</p>}</section><section><h4>交付边界</h4><p>未引用对象和未映射关系不自动补齐。配准核准不替代独立现场精度验收。</p><p>模型与附件为证据引用；本次成果不提供机器人导航或任务执行能力。</p></section></div></Drawer>;
 }
 
 type Summary={profile:string;publication_id:string;state:string;revision:number;coverage:Coverage;objects:{object_id:string;name:string}[]};

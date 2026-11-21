@@ -10,7 +10,7 @@ type Navigation={tab:string;batch:string;space:string;input:string;job:string;pu
 const NavigationScope=createContext<Navigation|null>(null);
 export const RecordNavigationProvider=NavigationScope.Provider;
 
-export function recordLink(route:'space'|'data'|'build'|'delivery'|'association'|'ontology'|'settings', values:Record<string,string>){
+export function recordLink(route:'space'|'data'|'build'|'registration'|'delivery'|'association'|'ontology'|'settings', values:Record<string,string>){
  return recordLinkFromUrl(route,values,appLocation());
 }
 export function moduleLink(route:ModuleRoute,space?:string){return space?recordLinkFromUrl(route,{space},appLocation()):moduleLinkFromUrl(route,appLocation());}

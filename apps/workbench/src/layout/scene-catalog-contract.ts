@@ -18,6 +18,7 @@ export const sceneHref=(route:string,id:string)=>`/${route}?${new URLSearchParam
 export const sceneDestinations=(scene:SceneSpace)=>[
  {key:'services',label:'空间服务',capability:'space.preview'},
  {key:'build',label:'构建中心',capability:'build.run'},
+ {key:'registration',label:'空间基准',capability:'association.edit'},
  {key:'association',label:'空间关联',capability:'association.edit'},
  {key:'delivery',label:'服务发布',capability:'space.preview'},
  {key:'data',label:'数据管理',capability:'data.manage'},

@@ -1,3 +1,4 @@
+import {WorkspaceContent} from './workspace-content';
 import {SpatialMotif} from './spatial-motif';
 import {useState} from 'react';
 import {Button,StatusBadge} from '@vxture/design-system';
@@ -31,9 +32,9 @@ export function WorkspaceHome(){
  const generatedAt=monitor.rows.map(row=>row.generatedAt).filter((value):value is string=>!!value).sort((a,b)=>Date.parse(b)-Date.parse(a))[0]||null;
  const recent=filterScenes(spaces,'','all','time').slice(0,4);
  const resume=!error&&(spaces.find(scene=>scene.id===remembered)||recent[0]);
- return <main className="workspace-home" aria-labelledby="workspace-home-title">
+ return <main className="workspace-home workspace-content-viewport" aria-labelledby="workspace-home-title">
    <section className="workspace-home-hero">
-    <div className="workspace-home-wrap workspace-home-hero-layout">
+    <WorkspaceContent section className="workspace-home-wrap workspace-home-hero-layout">
      <SpatialMotif className="workspace-home-motif"/>
      <div className="workspace-home-intro">
      <span className="workspace-home-kicker"><Cube size={17} weight="duotone"/> CoSpace</span>
@@ -45,10 +46,10 @@ export function WorkspaceHome(){
      </div>
      <div className="workspace-home-resume">{resume&&<span title={resume.name}>{resume.id===remembered?'上次选择':'最近更新'} · {resume.name} · {homeSceneEntry(resume).label}</span>}</div>
      </div>
-    </div>
+    </WorkspaceContent>
    </section>
    <section className="workspace-home-summary" aria-labelledby="workspace-home-progress">
-    <div className="workspace-home-wrap workspace-home-summary-layout">
+    <WorkspaceContent section className="workspace-home-wrap workspace-home-summary-layout">
      <div><h2 id="workspace-home-progress">服务运行</h2><p>{monitorPending?'正在读取监测':!monitor.total?'暂无可读取的服务监测':`已读取 ${monitor.rows.length} / ${monitor.total} 个授权场景${incomplete?' · 已读取部分':''}`}</p></div>
       <dl className="workspace-home-metrics">
        <div><dt>场景数量</dt><dd>{loading||error?'—':spaces.length.toLocaleString()}</dd></div>
@@ -56,9 +57,9 @@ export function WorkspaceHome(){
        <div><dt>服务异常</dt><dd data-alert={sum('failed')>0||undefined}>{metric('failed')}</dd></div>
        <div><dt>请求拒绝</dt><dd data-alert={sum('rejected')>0||undefined}>{metric('rejected')}</dd></div>
       </dl>
-    </div>
+    </WorkspaceContent>
    </section>
-   <div className="workspace-home-wrap workspace-home-content">
+   <WorkspaceContent className="workspace-home-wrap workspace-home-content">
     <section className="workspace-home-section workspace-home-watch" aria-labelledby="workspace-home-watch">
      <header><h2 id="workspace-home-watch">需要关注</h2><Button size="sm" variant="outline" onClick={()=>setRevision(n=>n+1)}><ArrowsClockwise size={15}/>刷新监测</Button></header>
      <div className="workspace-home-watch-grid">
@@ -94,6 +95,6 @@ export function WorkspaceHome(){
        <div className="workspace-home-empty"><Cube size={28} weight="duotone"/><strong>暂无可访问的场景</strong><p>有创建权限时可从上方新建，也可以联系管理员分配场景权限。</p></div>}
      </div>
     </section>
-   </div>
+   </WorkspaceContent>
  </main>;
 }

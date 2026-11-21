@@ -2,7 +2,7 @@ import React,{useEffect,useState} from 'react';
 import {Button,Card,CardHeader,CardTitle,CardContent,StatusBadge} from '@vxture/design-system';
 import {previewEndpoint,realScreenHref} from './real-space-data';
 import {recordLink,useRecordNavigation} from './record-navigation';
-type Module='data'|'build'|'ontology'|'association'|'delivery'|'space';
+type Module='data'|'build'|'registration'|'ontology'|'association'|'delivery'|'space';
 type Action={allowed?:boolean;label:string;module:Module;values:Record<string,string>};
 type Stage={id:string;title:string;module:Module;status:string;detail:string;basis:string;optional?:boolean;action:Action};
 type Preparation={source_revision:number;enabled_source_count:number;selected_input_id:string|null;inputs:{input_id:string;label:string;lifecycle_state:string;saved_build_counts:Record<string,number>;check_status:string;checked_at:string|null;action:Action}[];detail:string;next_action:Action};

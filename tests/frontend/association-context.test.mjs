@@ -18,4 +18,5 @@ test('only association function-page changes preserve mounted drafts',()=>{
  for(const tab of ['overview','objects','relations','business','ifc','info'])assert.equal(keepsAssociationDrafts(current,`/association?job=base&tab=${tab}&space=a`),true);
  for(const next of ['/association?space=a&job=new&tab=relations','/association?space=b&job=base&tab=relations','/build?space=a&job=base&tab=flow','/association?space=a&job=base&tab=unknown','/association?space=a&job=base&tab=relations&from=elsewhere'])assert.equal(keepsAssociationDrafts(current,next),false);
  assert.equal(keepsAssociationDrafts('/association?space=a&tab=objects','/association?space=a&tab=info'),false);
+ assert.equal(keepsAssociationDrafts(current,'/registration?space=a&job=base'),false);
 });
