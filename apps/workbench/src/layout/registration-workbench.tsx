@@ -1,4 +1,4 @@
-import React,{useEffect,useMemo,useRef,useState} from 'react';
+import React,{useMemo,useState} from 'react';
 import {Button,Table,TableHeader,TableBody,TableHead,TableRow,TableCell} from '@vxture/design-system';
 import {ArrowsLeftRight,Compass,Cube,FileText,PencilSimple,Target} from '@phosphor-icons/react';
 import type {PreviewGeometry} from './geometry-preview-data';
@@ -7,23 +7,19 @@ import './geometry-preview.css';
 import './registration-workbench.css';
 
 import {RegistrationComparison,RegistrationEvidenceDrawer,RegistrationMetrics,RegistrationModel,RegistrationPlan,RegistrationResidualChart,RegistrationStatus,type PlanBuilding} from './registration-views';
-import {RegistrationEditor} from './registration-editor';
 export type {PlanBuilding} from './registration-views';
-type Props={input:RegistrationInput;geometry?:PreviewGeometry;buildings:PlanBuilding[];onPreviewChange?:(input:RegistrationInput)=>void;reviewStatus?:string;production?:boolean};
+type Props={input:RegistrationInput;geometry?:PreviewGeometry;buildings:PlanBuilding[];editorHref?:string;reviewStatus?:string};
 const axisNames:Record<string,string>={right:'右',left:'左',forward:'前',backward:'后',up:'上',down:'下',east:'东',north:'北'};
 
-export function RegistrationWorkbench({input,geometry,buildings,onPreviewChange,reviewStatus,production=false}:Props){
+export function RegistrationWorkbench({input,geometry,buildings,editorHref,reviewStatus}:Props){
  const report=useMemo(()=>registrationPreview(input),[input]);
  const [selected,setSelected]=useState(input.controls.find(p=>p.purpose==='check')?.id||input.controls[0]?.id||'');
- const [aligned,setAligned]=useState(true),[details,setDetails]=useState(false),[editing,setEditing]=useState(false);
+ const [aligned,setAligned]=useState(true),[details,setDetails]=useState(false);
  const point=report.controls.find(p=>p.id===selected)||report.controls[0];
  const modelAxes=['X','Y','Z'].map((symbol,i)=>({symbol,name:axisNames[input.source.axes[i]]||input.source.axes[i]}));
  const targetAxes=[{symbol:'E',name:'东'},{symbol:'N',name:'北'},{symbol:'U',name:'高'}];
- const editButton=useRef<HTMLButtonElement>(null),previousEditing=useRef(false);
- useEffect(()=>{if(previousEditing.current&&!editing)editButton.current?.focus();previousEditing.current=editing;},[editing]);
- if(editing&&onPreviewChange)return <RegistrationEditor input={input} geometry={geometry} buildings={buildings} selected={point.id} onSelect={setSelected} onClose={()=>setEditing(false)} production={production} onApply={draft=>{onPreviewChange(draft);setEditing(false);}}/>;
  return <section className="registration-workbench" aria-label="空间基准工作面">
-  <header className="registration-heading"><div className="registration-heading-title"><Compass size={24}/><div><h1>模型与园区坐标对齐</h1><p>{input.source.frame_id} <ArrowsLeftRight size={14}/> {input.target.frame_id}<span>米制工程平面</span></p></div></div><div className="registration-heading-actions"><Button size="sm" variant="outline" onClick={()=>setDetails(true)}><FileText size={16}/>依据与参数</Button>{onPreviewChange&&<Button ref={editButton} size="sm" onClick={()=>setEditing(true)}><PencilSimple size={16}/>编辑配准</Button>}</div></header>
+  <header className="registration-heading"><div className="registration-heading-title"><Compass size={24}/><div><h1>模型与园区坐标对齐</h1><p>{input.source.frame_id} <ArrowsLeftRight size={14}/> {input.target.frame_id}<span>米制工程平面</span></p></div></div><div className="registration-heading-actions"><Button size="sm" variant="outline" onClick={()=>setDetails(true)}><FileText size={16}/>依据与参数</Button>{editorHref&&<Button asChild size="sm"><a href={editorHref+'&point='+encodeURIComponent(point.id)} target="_blank" rel="noopener noreferrer" title="在新标签页编辑配准"><PencilSimple size={16}/>编辑配准</a></Button>}</div></header>
   <div className="registration-summary" aria-label="参数核对状态"><RegistrationStatus report={report} reviewStatus={reviewStatus}/><RegistrationMetrics report={report}/><span className="registration-capability">地理定位能力另行核验</span></div>
   <div className="registration-views">
    <section className="registration-model" aria-label="源模型视图"><header className="registration-view-heading"><div><Cube size={18}/><h2>模型局部坐标</h2></div><span>X · Y · Z（m）</span></header>
