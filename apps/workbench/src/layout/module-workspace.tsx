@@ -1,4 +1,5 @@
 import {canOpenSceneWorkspace,sceneInformationHref} from './management-contract';
+import {WorkspaceContent} from './workspace-content';
 import {appNavigate,appLocation} from './app-router';
 import {runGuarded} from './unsaved-navigation';
 import {sceneLinkFromUrl} from './navigation-contract';
@@ -30,12 +31,13 @@ export function ModuleWorkspace({route,children}:{route:ModuleRoute;children:Rea
  const allowed=!!scene&&(!platform||canOpenSceneWorkspace(route,target.tab,scene.capabilities||[]));
  const common=route==='ontology';
  const capabilities=useMemo(()=>scene?.capabilities||[],[scene?.capabilities]);
+ const fallback=(content:React.ReactNode)=><div className="module-empty-content workspace-content-viewport"><WorkspaceContent>{content}</WorkspaceContent></div>;
  const renderContent=()=>{
   if(common)return <RecordNavigationProvider value={target}><EmbeddedScene.Provider value>{children}</EmbeddedScene.Provider></RecordNavigationProvider>;
-  if(loading)return <output className="data-subtle">正在读取场景空间…</output>;
-  if(error&&!scene)return <div role="alert" className="data-empty"><p>{error}</p><Button variant="outline" onClick={()=>setRevision(v=>v+1)}>重试</Button></div>;
-  if(!scene)return <div className="data-empty"><Cube size={36}/><h2>选择场景空间</h2><p>{target.space?'所选场景无权访问或不存在，请重新选择。':'从上方选择操作场景，继续处理资料、模型与发布。'}</p></div>;
-  if(!allowed)return <div className="data-empty" role="alert"><h2>当前场景无此操作权限</h2><p>可切换有权限的场景空间，或返回我的场景。</p></div>;
+  if(loading)return fallback(<output className="data-subtle">正在读取场景空间…</output>);
+  if(error&&!scene)return fallback(<div role="alert" className="data-empty"><p>{error}</p><Button variant="outline" onClick={()=>setRevision(v=>v+1)}>重试</Button></div>);
+  if(!scene)return fallback(<div className="data-empty"><Cube size={36}/><h2>选择场景空间</h2><p>{target.space?'所选场景无权访问或不存在，请重新选择。':'从上方选择操作场景，继续处理资料、模型与发布。'}</p></div>);
+  if(!allowed)return fallback(<div className="data-empty" role="alert"><h2>当前场景无此操作权限</h2><p>可切换有权限的场景空间，或返回我的场景。</p></div>);
   return <RecordNavigationProvider value={target}><EmbeddedScene.Provider value><SceneCapabilities.Provider value={capabilities}>{route!=='build'&&route!=='delivery'&&route!=='association'&&route!=='registration'&&<SceneProgress key={[scene.id,target.job,target.publication,target.input].join(':')} space={scene.id} name={scene.name} input={target.input} revision={revision}/>} {children}</SceneCapabilities.Provider></EmbeddedScene.Provider></RecordNavigationProvider>;
  };
  let moduleClass='';

@@ -1,3 +1,4 @@
+import {WorkspaceContent} from './workspace-content';
 import {useBuildDraft,emptyBuildInfo} from './build-draft';
 import {sessionScopeKey} from './session-continuity';
 import {WorkflowPageHeader} from './workflow-page-header';
@@ -137,7 +138,7 @@ export function ConstructionFlow({active=true}:{active?:boolean}={}){
   </aside>
   {!historyOpen&&<WorkflowNavigationToggle open={false} label="构建" panelId="build-navigation-panel" onToggle={()=>setHistoryOpen(true)}/>}
   <div className="build-work">
-   <div className="build-work-scroll" tabIndex={0} aria-label="构建内容">
+   <div className="build-work-scroll workspace-content-viewport" tabIndex={0} aria-label="构建内容"><WorkspaceContent className="workspace-content-stack">
    <WorkflowPageHeader space={target.space} icon={<FlowArrow size={32}/>} process="场景构建" revision={step==='info'?information.revision:undefined} stage={step==='info'?'基本信息':steps.find(item=>item.id===step)?.title||'构建记录'} version={step!=='info'&&job?(job.display_code||job.build_code||job.id.slice(-8).toUpperCase()):undefined}
     status={step!=='info'&&<StatusBadge tone={model?'success':job?.state==='failed'?'danger':'info'}>{draft?'待准备':state}</StatusBadge>}
     details={step!=='info'&&<>{draft&&draftTime}{job&&<>{job.build_info?.name&&<span>{job.build_info.name}</span>}<time dateTime={job.created_at}>{shortTime(job.created_at)}</time></>}{canBuild&&(job||draft)&&<BuildContext endpoint={endpoint} space={target.space} draft={draft} value={draft?buildInfo:job?.build_info||{name:'',purpose:'',changes:''}} onChange={setBuildInfo} jobId={job?.id} revision={job?.build_info_revision||0} onSaved={()=>setRevision(n=>n+1)}/>}</>}
@@ -187,7 +188,7 @@ export function ConstructionFlow({active=true}:{active?:boolean}={}){
     {job&&<details className="build-execution"><summary>执行记录与技术信息</summary>{step!=='model'&&<Button asChild variant="outline" size="sm"><a href={buildScanHref(target.space,job.id,job.input_id||'')} target="_blank" rel="noopener noreferrer"><Eye size={16}/>查看构建过程</a></Button>}<dl className="build-facts"><div><dt>创建时间</dt><dd>{new Date(job.created_at).toLocaleString('zh-CN',{hour12:false})}</dd></div><div><dt>执行状态</dt><dd>{labels[job.state]||job.state}</dd></div>{job.retry_of&&<div><dt>重试来源</dt><dd><a href={recordLink('build',{tab:'flow',job:job.retry_of})}>{job.retry_of}</a></dd></div>}{job.view_parent_id&&<div><dt>派生来源</dt><dd><a href={recordLink('build',{tab:'flow',job:job.view_parent_id})}>{job.view_parent_id}</a></dd></div>}{job.error&&<div><dt>错误代码</dt><dd>{job.error}</dd></div>}{model&&<div><dt>模型 SHA-256</dt><dd>{model.members['spatial.npz'].sha256}</dd></div>}</dl></details>}
    </>}
    </>}
-   </div>
+   </WorkspaceContent></div>
   </div>
 
   <Drawer open={preflightOpen} onClose={()=>setPreflightOpen(false)} side="right" width={400} title="预检历史" description={currentInput} closeLabel="关闭预检历史">{job?.input_id&&<PreflightHistory endpoint={endpoint} identity={job.input_id} embedded/>}</Drawer>

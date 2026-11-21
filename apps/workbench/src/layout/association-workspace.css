@@ -2,7 +2,6 @@
 .association-module .scene-scope,.association-module .data-heading{display:none}
 .association-module .data-main{margin-left:0!important}
 .association-module .module-body{padding:0;overflow:hidden;display:flex;flex-direction:column}
-.association-workspace .association-content{padding-top:16px;gap:20px}
 .association-workspace .association-view[hidden]{display:none}
 .association-workspace .association-current{min-width:0;display:flex;flex-direction:column;gap:24px}
 .association-workspace .association-stage-heading{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;padding-bottom:16px}

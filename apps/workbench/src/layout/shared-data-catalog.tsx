@@ -1,3 +1,4 @@
+import {WorkspaceContent} from './workspace-content';
 import {useAssistantReport} from './workspace-assistant';
 import {WorkspaceHeading} from './workspace-frame';
 import {DataNavigation} from './data-navigation';
@@ -39,7 +40,7 @@ export function SharedDataCatalog(){
   return()=>controller.abort();
  },[key]);
  useAssistantReport({title:'资料检查',status:busy?'loading':error?'error':'ready',note:error||(report?.status==='partial'?'部分目录未读取，不能据此判断全部数据状态。':report&&!report.items.length?'当前筛选范围暂无资料记录。':undefined),tasks:busy||error?[]:(report?.items||[]).filter(item=>['failed','interrupted','views_failed','registration_changed'].includes(item.state)).slice(0,5).map(item=>({id:item.key,title:`核查${kinds[item.kind]||'资料记录'}`,evidence:`${item.space_name} · ${item.label} · ${states[item.state]}`,label:'进入处理',tone:'warning',run:()=>appNavigate(item.href.replace(/^#/,'/'))}))});
- return <div className="shared-support-layout" data-layout="management"><DataNavigation category={category}/><section className="shared-data-catalog" aria-label="共用数据管理">
+ return <div className="shared-support-layout" data-layout="management"><DataNavigation category={category}/><section className="shared-data-catalog workspace-content-viewport" aria-label="共用数据管理"><WorkspaceContent>
   <WorkspaceHeading icon={Database} title="数据管理" description="统一管理原始资料、过程记录与成果，按场景与生命周期查阅。" actions={<>{filter&&<Button asChild variant="secondary" size="sm"><a href={recordLink('data',{space:filter,tab:'inputs'})}><Files size={16}/>场景资料</a></Button>}<Button variant="secondary" size="sm" onClick={()=>setRevision(v=>v+1)} disabled={busy}><ArrowClockwise size={16}/>刷新目录</Button></>}/>
   <div className="shared-data-toolbar">
    <div className="shared-data-scope"><NativeSelect aria-label="筛选数据所属场景" value={filter} onChange={e=>navigate({filter_space:e.target.value})}><option value="">全部授权场景</option>{filter&&!report?.spaces.some(s=>s.id===filter)&&<option value={filter}>当前筛选场景</option>}{report?.spaces.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</NativeSelect></div>
@@ -49,5 +50,5 @@ export function SharedDataCatalog(){
   {report?.status==='partial'&&<p role="alert">部分记录暂不可读取，当前列表不完整。请刷新或进入场景核查。</p>}
   {report&&<><div className="shared-data-list-head" aria-hidden="true"><span>数据名称</span><span>数据类型</span><span>所属场景</span><span>记录状态</span><span>操作</span></div><div className="shared-data-list" role="list" aria-label="共用数据列表">{report.items.map(item=><article role="listitem" key={item.key}><div><strong>{item.label}</strong><small>{item.record_id}</small></div><span>{kinds[item.kind]||item.kind}</span><span>{item.space_name}</span><span>{states[item.state]||'状态待核查'} · 元数据记录</span><div><Button asChild variant="ghost" size="sm"><a href={item.href.replace(/^#/,'/')}>查看记录</a></Button>{item.kind==='publication'&&<a className="ml-md" href={recordLink('data',{space:item.space_id,scope:'all',publication:item.record_id})}>追溯来源</a>}</div></article>)}</div>{!report.items.length&&<p role="status">{report.status==='partial'?'当前未返回可读取记录，目录仍有读取问题。':report.spaces.length?'此筛选范围暂无数据。':'当前工作区暂无可管理的数据场景。'}</p>}<footer><span>{report.total} 项 · {new Date(report.observed_at).toLocaleString('zh-CN',{hour12:false})} 读取</span><Button size="sm" variant="outline" disabled={!offset} onClick={()=>navigate({offset:String(Math.max(0,offset-50))})}>上一页</Button><Button size="sm" variant="outline" disabled={report.next_offset===null} onClick={()=>navigate({offset:String(report.next_offset)})}>下一页</Button></footer></>}
  {target.publication&&target.space&&<PublicationProvenance key={target.space+target.publication} space={target.space} publication={target.publication}/>}
- </section></div>;
+ </WorkspaceContent></section></div>;
 }

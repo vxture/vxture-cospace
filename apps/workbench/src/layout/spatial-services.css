@@ -1,7 +1,6 @@
 /* DS supplies controls, tabs and badges; product CSS arranges service entries. */
 .spatial-services{display:flex;overflow:hidden;background:var(--card)}
 .spatial-service-content{flex:1;min-width:0;overflow:auto;container-type:inline-size}
-.service-workspace-shell{width:100%;max-width:1536px;margin-inline:auto;padding:20px 48px 48px}
 .service-list-toolbar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;margin-block:24px}
 .service-list-count{font-size:var(--body-small-font-size);color:var(--muted-foreground)}
 .service-list-view-group{display:flex;align-items:center;gap:12px;flex-shrink:0}
@@ -67,8 +66,7 @@
 .service-monitor-metrics dt{font-size:var(--body-small-font-size);color:var(--muted-foreground)}
 .service-monitor-metrics dd{margin:4px 0 0;font-size:var(--heading-3-font-size);font-weight:600;color:var(--foreground)}
 .service-monitor-metrics dd.text-body-small{font-size:var(--body-small-font-size);font-weight:400}
-@container(max-width:1099px){.service-workspace-shell{padding:20px 32px 32px}}
-@container(max-width:700px){.service-workspace-shell{padding:20px 16px 32px}.service-capability-summary{gap:16px;grid-template-columns:1fr}.service-capability-summary>div{justify-content:flex-start;gap:20px}}
+@container(max-width:700px){.service-capability-summary{gap:16px;grid-template-columns:1fr}.service-capability-summary>div{justify-content:flex-start;gap:20px}}
 @container(max-width:580px){.service-list-toolbar{align-items:flex-start}.service-list-filters{width:100%;flex-wrap:wrap;flex-basis:100%}.service-summary-metrics{grid-template-columns:1fr;gap:16px}.service-page-section,.service-access{padding:20px}.service-publication-date{flex-basis:100%}.scene-service-version-bar{gap:8px}.scene-service-version-bar .scene-service-version-select{flex:1;min-width:160px}.scene-service-top .workspace-page-heading{flex-wrap:wrap}.scene-service-top .workspace-page-actions{margin-left:auto}}
 
 

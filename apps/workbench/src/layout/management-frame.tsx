@@ -1,3 +1,4 @@
+import {WorkspaceContent} from './workspace-content';
 import { ShellSidebarNav } from "./shell-navigation";
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
@@ -6,7 +7,6 @@ import {
   Drawer,
   ShellSidebarFrame,
   ViewHeader,
-  ViewLayout,
   Popover,
   PopoverTrigger,
   PopoverContent,
@@ -142,8 +142,8 @@ export function ManagementFrame({
           {navigation(collapsed, () => setCollapsed((value) => !value))}
         </ShellSidebarFrame>
       )}
-      <div className="spatial-service-content">
-        <ViewLayout className="scene-catalog-shell management-view-layout">
+      <div className="spatial-service-content workspace-content-viewport">
+        <WorkspaceContent className="scene-catalog-shell management-view-layout gap-xl">
           {narrow && (
             <Button variant="ghost" size="sm" onClick={() => setOpen(true)}>
               <SidebarSimple size={16} />
@@ -183,7 +183,7 @@ export function ManagementFrame({
             }
           />
           <div className="management-page-content">{children}</div>
-        </ViewLayout>
+        </WorkspaceContent>
       </div>
       <Drawer
         open={narrow && open}

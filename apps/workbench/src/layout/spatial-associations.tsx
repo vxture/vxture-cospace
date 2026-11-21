@@ -1,3 +1,4 @@
+import {WorkspaceContent} from './workspace-content';
 import {SceneOntologyRelationsPanel} from './scene-ontology-relations';
 import {RegistrationSummary} from './registration-summary';
 import {SceneOntologyLinksPanel} from './scene-ontology-links';
@@ -66,7 +67,7 @@ function AssociationWorkspace(){
 
  return <section className={`publication-workspace association-workspace `} aria-label="空间关联工作区">
   {navOpen?<aside className="publication-nav association-nav workflow-nav-panel" id="association-navigation" aria-label="关联导航"><header className="workflow-nav-heading"><LinkSimple size={18}/><h2>空间关联</h2><Badge variant="outline">{available.length}</Badge><WorkflowNavigationToggle open={true} label="关联" panelId="association-navigation" onToggle={()=>setNavOpen(false)}/></header><div className="publication-nav-surface"><BuildSceneLink selected={view==='info'} onSelect={()=>navigate('info')}/><Select value={current?.id||''} onValueChange={id=>navigate(view,id)} disabled={!loaded}><SelectTrigger aria-label="选择关联模型" className="publication-version-trigger"><span>{current?<><strong>来源构建 {title(current)}</strong><small>快照 {current.id.slice(-8).toUpperCase()} · {time(current.created_at)}</small></>:loaded?'选择来源构建':'读取模型来源…'}</span></SelectTrigger><SelectContent>{[...available].reverse().map(j=><SelectItem key={j.id} value={j.id}><span className="publication-version-option"><strong>{title(j)} · {j.id.slice(-8).toUpperCase()}</strong><small>{time(j.created_at)} · {j.view_parent_id||j.base_candidate_id?'派生候选':'构建候选'}</small></span></SelectItem>)}</SelectContent></Select><nav aria-label="关联功能">{sections.map(s=><Button key={s.id} variant={section?.id===s.id?'secondary':'ghost'} aria-current={section?.id===s.id?'page':undefined} onClick={()=>navigate(s.id)}><s.icon size={18}/>{s.name}</Button>)}</nav><div className="publication-nav-foot"><Info size={14}/><p>模型声明保存为新候选；本体应用保存为消费侧修订。既有服务发布保持固定。</p></div></div></aside>:<WorkflowNavigationToggle open={false} label="关联" panelId="association-navigation" onToggle={()=>setNavOpen(true)}/>}
-  <div className="publication-content association-content" role="region" tabIndex={0} aria-label="关联内容"><WorkflowPageHeader space={target.space} icon={<LinkSimple size={32}/>} process="空间关联" stage={view==='info'?'基本信息':view==='ifc'?'参考资料':section?.name||'关联概览'} version={view!=='info'&&view!=='ifc'&&current?(current.display_code||current.build_code||current.id.slice(-8).toUpperCase()):undefined}
+  <div className="publication-content association-content workspace-content-viewport" role="region" tabIndex={0} aria-label="关联内容"><WorkspaceContent className="workspace-content-stack"><WorkflowPageHeader space={target.space} icon={<LinkSimple size={32}/>} process="空间关联" stage={view==='info'?'基本信息':view==='ifc'?'参考资料':section?.name||'关联概览'} version={view!=='info'&&view!=='ifc'&&current?(current.display_code||current.build_code||current.id.slice(-8).toUpperCase()):undefined}
     revision={view==='info'?information.revision:undefined}
     status={view!=='info'&&view!=='ifc'&&current&&<StatusBadge tone="neutral">历史快照</StatusBadge>}
     details={view!=='info'&&view!=='ifc'&&current&&<><time dateTime={current.created_at}>{time(current.created_at)}</time></>}
@@ -84,7 +85,7 @@ function AssociationWorkspace(){
     {visited.includes('relations')&&<div hidden={view!=='relations'} className="association-view"><SceneOntologyRelationsPanel key={current.id+'-ontology'} spaceId={target.space} candidateId={current.id} active={view==='relations'}/><section aria-label="原关系声明"><header className="workspace-section-heading association-stage-heading"><div><h3>原关系声明</h3><p>维护模型候选中的关系；保存并切换新候选后，再显式映射本体。</p></div></header><ObjectRelations key={current.id} embedded/></section></div>}
     {visited.includes('business')&&<div hidden={view!=='business'} className="association-view"><BusinessAssociations key={current.id} embedded/></div>}
    </section></RecordNavigationProvider>}
-  </div>
+  </WorkspaceContent></div>
  </section>;
 }
 function AssociationSourceEmpty({requested,count}:{requested:boolean;count:number}){return <section className="publication-empty"><Cube size={36}/><h3>{requested?'目标模型不可用':'选择关联模型'}</h3><p>{requested?'目标候选不存在、未成功或无权访问。请从左栏重新选择。':count?'从左栏选择一个成功构建的模型，开始维护关联。':'当前场景暂无可用模型，请先完成模型构建。'}</p>{!count&&<Button asChild variant="secondary"><a href={recordLink('build',{tab:'flow'})}><ArrowRight size={16}/>前往构建</a></Button>}</section>;}

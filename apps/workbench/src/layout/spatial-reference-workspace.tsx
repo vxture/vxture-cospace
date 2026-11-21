@@ -1,3 +1,4 @@
+import {WorkspaceContent} from './workspace-content';
 import React,{useEffect,useState} from 'react';
 import {Badge,Button,Select,SelectContent,SelectItem,SelectTrigger} from '@vxture/design-system';
 import {ArrowClockwise,ArrowRight,Compass,Cube,Eye,Info,WarningCircle} from '@phosphor-icons/react';
@@ -42,7 +43,7 @@ export function SpatialReferenceWorkspace(){
    <nav aria-label="空间基准功能"><Button variant={!showInfo?'secondary':'ghost'} aria-current={!showInfo?'page':undefined} onClick={()=>navigate('overview')}><Compass size={18}/>地图配准</Button></nav>
    <div className="publication-nav-foot"><Info size={14}/><p>配准资料绑定固定模型；核准后显式采用，已有服务发布保持固定。</p></div>
   </div></aside>:<WorkflowNavigationToggle open={false} label="空间基准" panelId="registration-navigation" onToggle={()=>setNavOpen(true)}/>}
-  <div className="publication-content spatial-reference-content" role="region" tabIndex={0} aria-label="空间基准内容">
+  <div className="publication-content spatial-reference-content workspace-content-viewport" role="region" tabIndex={0} aria-label="空间基准内容"><WorkspaceContent className="workspace-content-stack">
   <WorkflowPageHeader space={target.space} icon={<Compass size={32}/>} process="空间基准" stage={showInfo?'基本信息':'地图配准'} version={!showInfo&&current?(current.display_code||current.build_code||current.id.slice(-8).toUpperCase()):undefined} revision={showInfo?information.revision:undefined} details={!showInfo&&current&&<time dateTime={current.created_at}>{associationTime(current.created_at)}</time>} actions={!showInfo&&<>{current&&<Button asChild size="sm" variant="outline"><a href={candidateScreenHref(target.space,current.id)} target="_blank" rel="noopener noreferrer"><Eye size={16}/>查看模型</a></Button>}<Button size="icon-md" variant="ghost" aria-label="刷新配准模型" onClick={()=>{void runGuarded(()=>setRefresh(value=>value+1));}}><ArrowClockwise size={20}/></Button></>}/>
   {showInfo?<SpaceSettings embedded onRevisionChange={information.onRevisionChange}/>:<>
    {error&&<div className="spatial-reference-message" role="alert"><WarningCircle size={20}/><span>{error}</span><Button size="sm" variant="outline" onClick={()=>setRefresh(value=>value+1)}>重试</Button></div>}
@@ -50,5 +51,5 @@ export function SpatialReferenceWorkspace(){
    {loaded&&!current&&<div className="spatial-reference-empty"><Cube size={36}/><h3>{target.job?'目标模型不可用':available.length?'选择配准模型':'尚无可用模型'}</h3><p>{target.job?'目标模型不存在、未完成或无权访问，请从导航栏重新选择。':available.length?'从板块导航栏选择已完成的模型，维护该模型的空间基准。':'先完成模型构建，再录入控制资料并进行配准。'}</p>{!available.length&&<Button asChild size="sm" variant="secondary"><a href={recordLink('build',{space:target.space})}>前往构建中心<ArrowRight size={16}/></a></Button>}</div>}
    {ready&&<SceneRegistration key={current.id+':'+refresh} spaceId={target.space} candidateId={current.id}/>}
   </>}
- </div></section>;
+ </WorkspaceContent></div></section>;
 }
