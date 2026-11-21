@@ -85,8 +85,8 @@ function RecipientWorkspace({spaceId,sceneName,revision,csrf,presentation}:Reado
    {editorPanel}
   </section>;
  }
- return <section className="recipient-workspace" aria-label={spaceId?'此场景关联的设备':'智能设备'}>
-  <div className="recipient-operation-bar">
+ return <section className="service-list-section" aria-label={spaceId?'此场景关联的设备':'智能设备'}>
+  <div className="service-list-toolbar">
    <ServiceListViewGroup presentation={presentation} count={loading?'正在读取…':error?'暂不可读':`${data?.total||0} 台设备`}/>
    <div className="recipient-operation-right"><div className="recipient-filter-group">
     <div className="recipient-search"><MagnifyingGlass size={16}/><Input aria-label="搜索设备" placeholder="搜索名称、标识或厂家" maxLength={160} value={query} onChange={e=>{setQuery(e.target.value);setOffset(0);}}/></div>
