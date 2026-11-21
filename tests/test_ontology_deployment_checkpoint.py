@@ -42,3 +42,28 @@ def test_corrupt_database_blocks_deployment_with_incomplete_checkpoint(tmp_path)
     manifests = list((tmp_path / 'backups').glob('*/manifest.json'))
     assert len(manifests) == 1
     assert json.loads(manifests[0].read_text())['complete'] is False
+
+
+def test_publication_lifecycle_checkpoint_preserves_rollback_quarantine(tmp_path):
+    runtime=tmp_path/'data/business/runtime'
+    (runtime/'preview-directory').mkdir(parents=True)
+    source=runtime/module.CONTROL_DATABASE
+    with sqlite3.connect(source) as writer:
+        writer.execute('PRAGMA journal_mode=WAL')
+        writer.execute('CREATE TABLE controls (artifact TEXT, state TEXT)')
+        writer.execute("INSERT INTO controls VALUES ('publication:fixed', 'paused')")
+        writer.commit()
+        target=module.checkpoint(tmp_path,[])
+        writer.execute("UPDATE controls SET state='active'");writer.commit()
+        with sqlite3.connect(target/source.name) as restored:
+            assert restored.execute('SELECT state FROM controls').fetchall()==[('paused',)]
+    manifest=json.loads((target/'manifest.json').read_text())
+    assert manifest['complete'] and manifest['databases'][module.CONTROL_DATABASE]=='verified'
+
+
+def test_corrupt_lifecycle_database_blocks_service_replacement(tmp_path):
+    runtime=tmp_path/'data/business/runtime';(runtime/'preview-directory').mkdir(parents=True)
+    (runtime/module.CONTROL_DATABASE).write_bytes(b'corrupt lifecycle')
+    with pytest.raises(sqlite3.DatabaseError):module.checkpoint(tmp_path,[])
+    manifest=next((tmp_path/'backups').glob('*/manifest.json'))
+    assert not json.loads(manifest.read_text())['complete']
