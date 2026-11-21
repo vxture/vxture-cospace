@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {registrationPreview,transformRegistrationPoint,displayMetres} from '../../apps/workbench/src/layout/registration-preview-data.ts';
+import {registrationPreview,transformRegistrationPoint,displayMetres,displayCentimetres} from '../../apps/workbench/src/layout/registration-preview-data.ts';
 
 const fixture=JSON.parse(readFileSync(new URL('../../contracts/examples/spatial-registration-campus.json',import.meta.url),'utf8'));
 const golden=JSON.parse(readFileSync(new URL('../../contracts/examples/spatial-registration-campus-report.json',import.meta.url),'utf8'));
@@ -31,5 +31,21 @@ test('horizontal or vertical overflow remains visible without changing the contr
   assert.equal(preview.passed,false);
   assert.equal(preview.controls[5].within_limits,false);
   assert.deepEqual(preview.controls.slice(0,3),registrationPreview(fixture).controls.slice(0,3));
+ }
+});
+
+test('centimetre display rounding never changes the metre-based acceptance threshold',()=>{
+ for(const axis of [0,2]){
+  for(const residual of [.09999,.10001]){
+   const input=structuredClone(fixture),point=input.controls[5];
+   point.target_m=transformRegistrationPoint(point.source_m,input.matrix);
+   point.target_m[axis]-=residual;
+   const preview=registrationPreview(input),result=preview.controls[5];
+   const computed=axis===0?result.horizontal_m:result.vertical_m;
+   close(computed,residual);
+   assert.equal(displayCentimetres(computed),'10.0');
+   assert.equal(result.within_limits,residual<.1);
+   assert.equal(preview.passed,residual<.1);
+  }
  }
 });

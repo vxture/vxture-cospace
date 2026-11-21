@@ -19,3 +19,5 @@ export function registrationPreview(input:RegistrationInput){
 }
 export type RegistrationPreview=ReturnType<typeof registrationPreview>;
 export function displayMetres(value:number){return value.toFixed(3);}
+// Display conversion only: validation and thresholds always use the original metres.
+export function displayCentimetres(value:number){return (value*100).toFixed(1);}
