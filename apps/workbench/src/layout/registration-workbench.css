@@ -68,3 +68,9 @@
 .registration-bottom>.registration-residuals>.registration-error-points{grid-column:1/-1;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px}.registration-bottom .registration-error-point{padding:8px 12px}
 .registration-bottom>.registration-residuals>.registration-limits{grid-column:1/-1;flex-direction:row;justify-content:flex-end;gap:24px;margin:0;padding:0;border:0}.registration-bottom .registration-limits>div{flex:none;gap:12px}
 @media(max-width:760px){.registration-bottom>.registration-residuals{grid-template-columns:minmax(0,1fr);gap:8px}.registration-bottom>.registration-residuals>.registration-error-legend{justify-self:start}.registration-bottom>.registration-residuals>.registration-error-points{grid-template-columns:minmax(0,1fr);gap:4px}.registration-bottom>.registration-residuals>.registration-limits{flex-direction:column;gap:8px;margin-top:4px;padding-top:8px;border-top:1px solid var(--border)}.registration-bottom .registration-limits>div{justify-content:space-between}}
+
+/* Review viewports use their own column width (4:3), capped below one screen.
+   The full-screen editor keeps its independent map and floating model sizes. */
+.registration-views>section{container-type:inline-size}
+.registration-views :is(.geometry-canvas-stage,.registration-plan,.registration-model-loading){height:min(75cqi,calc(100dvh - var(--spacing-header-md) - var(--space-control-xl) - var(--space-6xl) - var(--space-md) * 2));min-height:0;flex:none}
+.registration-views .geometry-canvas{height:100%;min-height:0}
