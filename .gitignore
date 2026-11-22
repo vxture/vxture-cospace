@@ -11,6 +11,7 @@ node_modules/
 dist/
 .cache/
 var/
+apps/workbench/public/assets/potree-1.8.2/
 
 # Ephemeral browser profiles and snapshots may contain authentication state.
 .playwright-cli/

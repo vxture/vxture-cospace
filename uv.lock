@@ -330,6 +330,18 @@ wheels = [
 ]
 
 [[package]]
+name = "laspy"
+version = "2.6.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "numpy" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/72/54/b6387699d944653955fcb80ceb2bb2a9d5fc8a9a56acccb4a45d16b29ef3/laspy-2.6.1.tar.gz", hash = "sha256:ce9cb9a18528b2a2b985583df40a4dea68cdda7995e47e4b00b6d48df0e88daa", size = 1940211, upload-time = "2025-07-07T19:49:32.873Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/28/d1/c3d09cadb41b6d7381a01e41db70419b21c9ccb3cc8ab1e3a0bd37397d82/laspy-2.6.1-py3-none-any.whl", hash = "sha256:44c4d3c38fcef81cdb9201a0b98e5e4f09831c98d2ec1335b9ee59da16a37349", size = 86053, upload-time = "2025-07-07T19:49:08.842Z" },
+]
+
+[[package]]
 name = "lz4"
 version = "4.4.5"
 source = { registry = "https://pypi.org/simple" }
@@ -808,6 +820,7 @@ input = [
     { name = "rosbags" },
 ]
 preview = [
+    { name = "laspy" },
     { name = "numpy" },
     { name = "scipy" },
 ]
@@ -826,6 +839,7 @@ requires-dist = [
     { name = "httpx2", specifier = "==2.16.0" },
     { name = "joserfc", specifier = "==1.8.0" },
     { name = "jsonschema", specifier = "==4.26.0" },
+    { name = "laspy", marker = "extra == 'preview'", specifier = "==2.6.1" },
     { name = "numpy", marker = "extra == 'preview'", specifier = "==2.5.4" },
     { name = "psycopg", extras = ["binary"], specifier = "==3.3.8" },
     { name = "pydantic", specifier = "==2.14.3" },

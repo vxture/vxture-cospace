@@ -308,6 +308,7 @@ class BusinessAccess:
                     return {'principal':principal}
                 if suffix in ('/','/index.html','/human.ply','/views.js','/model.json','/objects.json','/ontology.json','/business.json','/relations.json',
                               '/api/preview','/api/thumbnail','/api/objects','/api/checklist','/api/lineage') or re.fullmatch(r'/api/objects/[^/]+',suffix) or kind=='publication' and suffix=='/api/semantics':cap=SPACE_PREVIEW
+                elif suffix=='/api/display' or re.fullmatch(r'/display/[a-f0-9]{64}/(metadata\.json|hierarchy\.bin|octree\.bin)',suffix):cap=SPACE_PREVIEW
                 elif kind=='publication' and suffix=='/api/registration':cap=SPACE_PREVIEW
                 elif suffix in ('/api/anchor','/api/anchor-preview') and kind=='candidate':cap=ASSOCIATION_EDIT
                 elif re.fullmatch(r'/[^/]+',suffix):cap='space.export'

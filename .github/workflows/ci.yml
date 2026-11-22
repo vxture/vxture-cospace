@@ -33,6 +33,8 @@ jobs:
           node-version: '24'
       - run: npm install --global pnpm@10.32.1
       - run: pnpm --dir apps/workbench install --frozen-lockfile
+      - name: Prepare checksum-pinned pointcloud viewer
+        run: python scripts/prepare_pointcloud_tools.py --web
       - run: pnpm --dir apps/workbench build
       - name: Build independent globe consumer
         run: |
@@ -42,6 +44,8 @@ jobs:
         run: pnpm --dir apps/workbench build:map-lab
       - name: Scene display planner, tile integrity and bounded cache tests
         run: node --experimental-strip-types --test tests/frontend/scene-cloud-data.test.mjs
+      - name: Progressive model display version and precision boundaries
+        run: node --experimental-strip-types --test tests/frontend/model-display.test.mjs
       - name: Module navigation context and explicit business handoff tests
         run: node --experimental-strip-types --test tests/frontend/management-navigation.test.mjs tests/frontend/navigation-contract.test.mjs tests/frontend/association-context.test.mjs tests/frontend/association-examples.test.mjs tests/frontend/continuity-contract.test.mjs tests/frontend/scene-catalog.test.mjs tests/frontend/build-timing.test.mjs tests/frontend/home-scene-entry.test.mjs tests/frontend/home-monitor-status.test.mjs tests/frontend/scene-preference.test.mjs tests/frontend/spatial-services.test.mjs tests/frontend/service-diagnostics.test.mjs tests/frontend/account-profile.test.mjs tests/frontend/amap-sdk.test.mjs
       - name: Fixed ontology version comparison tests
@@ -66,6 +70,8 @@ jobs:
         run: docker build --file deploy/linux/Dockerfile --build-arg GIT_SHA="$GITHUB_SHA" --tag cospace:ci .
       - name: Verify frozen model and dual-view composition inside production image
         run: docker run --rm -i --entrypoint python cospace:ci < tests/container_preview_smoke.py
+      - name: Verify native progressive conversion and large-coordinate roundtrip
+        run: docker run --rm --entrypoint python cospace:ci -m experiments.scripts.check_model_display --converter /opt/potree/PotreeConverter
       - name: Verify native parser isolation, durable queue and readiness recovery
         run: python scripts/guardrails/smoke_ifc_sidecar.py cospace:ci
   test-coverage:

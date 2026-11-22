@@ -150,6 +150,11 @@ def create_app(root,jobs=None,update_evidence=None,registration_sources=None,sou
     if jobs and jobs.inputs and (jobs.batches is None or jobs.batches.inputs is not jobs.inputs):
         jobs.batches=PreviewBatches(jobs.inputs)
     publications=PreviewPublications(jobs) if jobs else None
+    if jobs:
+        from packages.construction.model_display import ModelDisplays
+        from packages.service.model_display_http import install as install_display
+        jobs.displays = ModelDisplays(jobs)
+        install_display(app, jobs.displays)
     from packages.lifecycle.business_versions import BusinessVersions
     versions=BusinessVersions(jobs.root.parent) if jobs and space_directory else None
     if versions:versions.sync()

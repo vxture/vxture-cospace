@@ -17,7 +17,7 @@ def disabled_auth_routes(app):
     def disabled_config(): return {'enabled': False, 'mode': 'engineering_preview', 'business_authorization': False}
 
 
-def create_auth_app(rp, workbench=Path('apps/workbench/dist'), business=None, access=None, subscriptions=None, reconciler=None, usage_reporter=None):
+def create_auth_app(rp, workbench=Path('apps/workbench/dist'), business=None, access=None, subscriptions=None, reconciler=None, usage_reporter=None, background_workers=()):
     if (business is None) != (access is None):raise ValueError('business_and_access_must_be_assembled_together')
     if business is not None and rp.config.issuer.startswith('https://') and (subscriptions is None or access.subscriptions is not subscriptions):
         raise ValueError('production_subscription_gate_required')
@@ -25,7 +25,7 @@ def create_auth_app(rp, workbench=Path('apps/workbench/dist'), business=None, ac
     @asynccontextmanager
     async def lifespan(app):
         async with AsyncExitStack() as stack:
-            for worker in (reconciler,usage_reporter):
+            for worker in (reconciler,usage_reporter,*background_workers):
                 if worker is not None:await stack.enter_async_context(worker.lifespan(app))
             yield
     app = FastAPI(title='CoSpace platform identity pilot', docs_url=None, redoc_url=None, openapi_url=None,
