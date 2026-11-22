@@ -123,6 +123,10 @@
 .build-module .build-step-entry>button{padding-inline:8px}
 .build-records-section .build-step-nav::before{left:16px}
 .build-step-timing{margin-left:32px;margin-right:8px}
+.build-flow-stat>dl{display:flex;flex-direction:column;gap:var(--space-2xs);margin:0;font-size:var(--label-small-font-size);color:var(--muted-foreground)}
+.build-flow-stat>dl>div{display:flex;flex-wrap:wrap;justify-content:space-between;gap:var(--space-2xs)}
+.build-flow-stat dt,.build-flow-stat dd{margin:0;font-variant-numeric:tabular-nums}
+.build-flow-stat small{margin-left:var(--space-2xs);font-size:var(--label-small-font-size);font-weight:400;color:var(--muted-foreground)}
 
 .build-nav-heading>.build-nav-count{display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;padding:0 5px;border:1px solid color-mix(in srgb,var(--primary) 25%,transparent);border-radius:var(--radius-sm);background:color-mix(in srgb,var(--primary) 6%,transparent);color:var(--primary);font-size:10px;line-height:18px;font-weight:500}
 

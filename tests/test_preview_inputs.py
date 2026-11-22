@@ -24,8 +24,11 @@ def source(tmp_path):
 
 
 def test_registration_persists_and_rechecks_changes(tmp_path):
+    from datetime import datetime, timezone
+    before = datetime.now(timezone.utc)
     snapshot,tracking=source(tmp_path); catalog=PreviewInputs(tmp_path/'catalog')
     record=catalog.register('办公室',snapshot,tracking)
+    assert before <= datetime.fromisoformat(record['registered_at']) <= datetime.now(timezone.utc)
     assert record['verified_image_members']==2 and record['used_frames']==1
     assert 'snapshot' not in catalog.list()[0] and 'tracking' not in catalog.list()[0]
     assert PreviewInputs(catalog.root).resolve(record['id'])==record
