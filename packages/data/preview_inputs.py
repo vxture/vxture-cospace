@@ -1,5 +1,6 @@
 """Local engineering catalog for sealed NYU RGB-D plus existing pose inputs."""
 import json
+from datetime import datetime, timezone
 from pathlib import Path
 import re
 import uuid
@@ -62,7 +63,7 @@ class PreviewInputs:
         if not isinstance(label,str) or not 1<=len(label.strip())<=100: raise ValueError('invalid_input_label')
         checked=inspect(snapshot,tracking,format)
         record={'profile':'cospace.preview-input/0.1','id':'input-'+uuid.uuid4().hex[:16],
-                'label':label.strip(),'format':format,
+                'label':label.strip(),'format':format,'registered_at':datetime.now(timezone.utc).isoformat(),
                 'snapshot':str(Path(snapshot).resolve()),**checked,**ownership}
         if tracking is not None:record['tracking']=str(Path(tracking).resolve())
         if registration_ref is not None:record['registration_ref']=dict(registration_ref)

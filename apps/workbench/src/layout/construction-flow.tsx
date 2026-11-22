@@ -1,4 +1,6 @@
 import {WorkspaceContent} from './workspace-content';
+import {buildTiming,buildTimingReferenceSeconds,timingDuration,type TimingSource} from './build-timing';
+import {useSceneDirectory} from './use-scene-directory';
 import {useBuildDraft,emptyBuildInfo} from './build-draft';
 import {sessionScopeKey} from './session-continuity';
 import {WorkflowPageHeader} from './workflow-page-header';
@@ -33,10 +35,9 @@ import './construction-flow.css';
 type Input={cloud_sha256?:string;snapshot_sha256?:string;tracking_sha256?:string;registered_at?:string;registered_at_estimated?:boolean;id:string;space_id:string;label:string;format:string;input_frames:number;used_frames:number;verified_image_members?:number;verified_messages?:number;lifecycle_state?:string};
 type Job=RecoverableJob&{display_code?:string;build_code?:string;demo_timeline?:{estimated:boolean;basis:string;stages:{start:string;end:string;estimated:boolean}[]};build_info?:BuildInfo;build_info_revision?:number;created_at:string;started_at?:string;finished_at?:string;candidate_url:string|null;pipeline?:string;view_parent_id?:string;stage?:string;input_binding?:{label:string}};
 type Model={id:string;space_id:string;profile:string;frame_id:string;unit:string;axes:string[];bounds_m:number[][];data_kind:string;construction:{model_points:number;used_frames:number;input_frames:number};source:{input_binding?:{id:string}};human_view:{path:string;source_model_sha256:string};agent_view:{path:string;source_model_sha256:string;resolution_m:number;surface_cells:number;unlisted_state:string};members:Record<string,{bytes:number;sha256:string}>};
-type Release={id:string;candidate_id:string;source_model_sha256:string;lifecycle_state?:string;selection_review?:{reviewed_at?:string}};
+type Release={created_at?:string;id:string;candidate_id:string;source_model_sha256:string;lifecycle_state?:string;selection_review?:{reviewed_at?:string}};
 type Snapshot={inputs:Input[];jobs:Job[];job?:Job;model?:Model;stages?:BuildStages;modelIssue?:string;selection:{candidate_id:string|null;revision:number;selected_at?:string;selection_review?:{reviewed_at?:string}};releases:Release[]};
 const buildVersion=(job:Job)=>job.display_code||job.build_code||`历史记录 · ${job.id.slice(-8).toUpperCase()}`;
-const elapsed=(start?:string,end?:string)=>{if(!start||!end)return '待记录';const ms=Date.parse(end)-Date.parse(start);if(!Number.isFinite(ms)||ms<0)return '待记录';const minutes=Math.floor(ms/60000);if(ms>0&&minutes===0)return '不足1分钟';return `${Math.floor(minutes/60)}小时${minutes%60}分钟`;};
 const shortTime=(value?:string)=>value?new Date(value).toLocaleString('zh-CN',{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}):'待开始';
 const bytes=(value:number)=>value>=1024*1024?`${(value/1024/1024).toFixed(2)} MB`:`${(value/1024).toFixed(1)} KB`;
 
@@ -52,6 +53,8 @@ export function ConstructionFlow({active=true}:{active?:boolean}={}){
  const platform=usePlatformSession(),capabilities=useSceneCapabilities();
  const canBuild=!platform||capabilities.includes('build.run');
  const information=useSpaceInformationRevision(target.space);
+ const {spaces}=useSceneDirectory();
+ const scene=spaces.find(value=>value.id===target.space);
  const [data,setData]=useState<Snapshot|null>(null),[error,setError]=useState(''),[busy,setBusy]=useState(true),[revision,setRevision]=useState(0);
  const [step,setStep]=useState(()=>entryStep(target.tab,target.job)),[restart,setRestart]=useState(false),[historyOpen,setHistoryOpen]=useState(()=>innerWidth>=1100);
  const draft=target.tab==='tasks';
@@ -113,18 +116,18 @@ export function ConstructionFlow({active=true}:{active?:boolean}={}){
   {id:'check',title:'检查整理',icon:ListChecks,status:modelReady?'已通过':job?'待核查':'待检查',tone:modelReady?'success':'neutral',mark:modelReady?CheckCircle:Circle},
   {id:'model',title:'模型构建',icon:Cpu,status:data?.modelIssue?'待核查':job?.state==='succeeded'?'已完成':failed?'异常':running?(job.state==='queued'?'排队中':'进行中'):'待构建',tone:data?.modelIssue||failed?'danger':job?.state==='succeeded'?'success':running?'info':'neutral',mark:data?.modelIssue||failed?WarningCircle:job?.state==='succeeded'?CheckCircle:running?SpinnerGap:Circle},
   {id:'review',title:'成果核对',icon:Eye,status:selected?'已核对':model?'待核对':'待生成',tone:selected?'success':model?'warning':'neutral',mark:selected?CheckCircle:model?Clock:Circle}];
- // Legacy demo selection timestamps approximate confirmation; never present them as recorded reviews.
- const confirmedAt=reviewTime||(selected?data?.selection.selected_at:undefined);
- const totalStart=job?.demo_timeline?.stages[0]?.start||input?.registered_at||job?.created_at;
- const reviewEstimated=!!confirmedAt&&!reviewTime;
- const boundaries=[input?.registered_at,job?.created_at,job?.started_at,job?.finished_at,confirmedAt];
- const stageTimes=job?.demo_timeline?.stages||steps.map((s,i)=>({start:boundaries[i],end:boundaries[i+1]||((i===2&&running)||(i===3&&model&&!selected)?clockNow:undefined),estimated:i===0?!!input?.registered_at_estimated:i===1?true:i===3?reviewEstimated:false}));
- const flowDone=!!(confirmedAt||job?.demo_timeline?.stages[3]?.end);
- const totalEnd=job?.demo_timeline?.stages[3]?.end||confirmedAt||(failed?job?.finished_at:job?clockNow:undefined);
- const totalEstimated=!!job?.demo_timeline?.estimated||!!input?.registered_at_estimated||reviewEstimated;
- const stepNavigation=<nav className="build-step-nav" aria-label="构建环节">{steps.map((s,i)=>{const timing=stageTimes[i];return <div className="build-step-entry" key={s.id}><Button disabled={!canBuild} variant={step===s.id?'secondary':'ghost'} aria-current={step===s.id?'step':undefined} onClick={()=>void runGuarded(()=>{setStep(s.id);if(innerWidth<1100)setHistoryOpen(false);})}><s.icon size={16}/><strong>{String(i+1).padStart(2,'0')} {s.title}</strong><span className={`build-step-state build-step-state-${s.tone}`}><s.mark size={12}/>{s.status}</span></Button><dl className="build-step-timing"><div><dt>开始时间：</dt><dd>{shortTime(timing.start)}{timing.estimated&&<small title={job?.demo_timeline?.basis}>估算</small>}</dd></div><div><dt>完成时间：</dt><dd>{timing.end?shortTime(timing.end):'待完成'}</dd></div><div><dt>总计耗时：</dt><dd title={timing.start&&timing.end?`${Math.max(0,(Date.parse(timing.end)-Date.parse(timing.start))/1000).toFixed(1)} 秒${timing.estimated?'；依据登记、提交或选定时间估算':''}`:undefined}>{elapsed(timing.start,timing.end)}{timing.estimated&&timing.start&&timing.end&&<small>估算</small>}</dd></div></dl></div>;})}</nav>;
+ const timing=buildTiming({sceneCreatedAt:scene?.created_at,input,job,reviewedAt:reviewTime,selectedAt:selected?data?.selection.selected_at:undefined,
+  publishedAt:data?.releases.filter(r=>r.candidate_id===job?.id&&r.created_at).map(r=>r.created_at!).sort()[0],selected,modelReady:!!model,now:clockNow});
+ const stageTimes=timing.stages,flowDone=timing.complete,overReference=timing.stages.some(value=>value.overdue);
+ const timeSource=(source:TimingSource)=>source==='recorded'?'实际':source==='inferred'?'推算':'预计';
+ const stepNavigation=<nav className="build-step-nav" aria-label="构建环节">{steps.map((s,i)=>{const time=stageTimes[i];return <div className="build-step-entry" key={s.id}><Button disabled={!canBuild} variant={step===s.id?'secondary':'ghost'} aria-current={step===s.id?'step':undefined} onClick={()=>void runGuarded(()=>{setStep(s.id);if(innerWidth<1100)setHistoryOpen(false);})}><s.icon size={16}/><strong>{String(i+1).padStart(2,'0')} {s.title}</strong><span className={`build-step-state build-step-state-${s.tone}`}><s.mark size={12}/>{s.status}</span></Button><dl className="build-step-timing"><div><dt>{time.startSource==='forecast'?'预计开始：':'开始时间：'}</dt><dd><time dateTime={time.start}>{shortTime(time.start)}</time><small>{timeSource(time.startSource)}</small></dd></div><div><dt>{time.endSource==='forecast'?'预计完成：':time.state==='stopped'?'中止时间：':'完成时间：'}</dt><dd>{time.overdue?<span>超出参考，待确认</span>:<><time dateTime={time.end}>{shortTime(time.end)}</time><small>{timeSource(time.endSource)}</small></>}</dd></div><div><dt>{time.state==='current'||time.state==='stopped'?'已用耗时：':time.state==='pending'?'参考耗时：':'总计耗时：'}</dt><dd>{timingDuration(time.seconds)}{time.estimated&&time.state==='complete'&&<small>含推算</small>}{time.overdue&&<small>超出参考</small>}</dd></div></dl></div>;})}</nav>;
  useAssistantReport(buildAssistantReport({loading:busy,error:error||data?.modelIssue||'',canBuild,canRegister:!platform||capabilities.includes('association.edit'),inputs:data?.inputs.length||0,state:job?.state,model:!!model,selected},next=>{if(next==='registration'){if(model)appNavigate(recordLink('registration',{space:target.space,job:model.id}));}else void runGuarded(()=>setStep(next));}));
- const materialPreparation=<BuildMaterials endpoint={endpoint} space={target.space} items={data?.inputs||[]} selectedId={job?.input_id||target.input} locked={!!job} onRegistered={id=>{setRevision(n=>n+1);if(draft)appNavigate(recordLink('build',{tab:'tasks',input:id}));}} onNext={()=>setStep('check')}/>;
+ const materialItems=(data?.inputs||[]).map(item=>{
+  const firstJob=(data?.jobs||[]).filter(value=>value.input_id===item.id).sort((a,b)=>Date.parse(a.created_at)-Date.parse(b.created_at))[0];
+  const boundary=buildTiming({sceneCreatedAt:scene?.created_at,input:item,job:firstJob,now:clockNow}).stages[0];
+  return {...item,registered_at:boundary.end,registered_at_estimated:boundary.endSource!=='recorded'};
+ });
+ const materialPreparation=<BuildMaterials endpoint={endpoint} space={target.space} items={materialItems} selectedId={job?.input_id||target.input} locked={!!job} onRegistered={id=>{setRevision(n=>n+1);if(draft)appNavigate(recordLink('build',{tab:'tasks',input:id}));}} onNext={()=>setStep('check')}/>;
  return <section className={`construction-flow build-desk ${historyOpen?'':'build-history-hidden'}`} aria-label="构建工作操作台">
   <aside className="build-history workflow-nav-panel" aria-label="构建导航与记录" id="build-navigation-panel">
    <div className="build-nav-heading workflow-nav-heading"><Layout size={18}/><h2>构建中心</h2><Badge variant="outline" className="build-nav-count" aria-label={`${history.length} 次构建`}>{history.length}</Badge><WorkflowNavigationToggle open={true} label="构建" panelId="build-navigation-panel" onToggle={()=>setHistoryOpen(false)}/></div>
@@ -132,7 +135,7 @@ export function ConstructionFlow({active=true}:{active?:boolean}={}){
     <BuildSceneLink selected={step==='info'} onSelect={()=>void runGuarded(()=>setStep('info'))}/>
     <Select value={draft?'draft':job?.id||''} disabled={busy&&!data} onValueChange={id=>{if(id==='draft'){if(canBuild)newBuild();return;}const picked=history.find(j=>j.id===id);if(picked)appNavigate(recordLink('build',{tab:'flow',job:picked.id,...(picked.input_id?{input:picked.input_id}:{})}));}}><SelectTrigger aria-label="选择构建版本" className="build-version-select"><SelectValue placeholder="选择构建版本"><span className="build-version-current"><strong>{draft||!job?(localDraft?'本机构建草稿':'新建构建'):buildVersion(job)}</strong><span>{job?<time dateTime={job.created_at}>{shortTime(job.created_at)}</time>:draftTime}<span>{job?labels[job.state]||job.state:'待准备'}</span></span></span></SelectValue></SelectTrigger><SelectContent className="build-version-menu"><SelectItem value="draft" disabled={!canBuild}><span className="build-version-option"><strong>{localDraft?'本机构建草稿':'新建构建'}</strong>{localDraft&&<span>{draftTime}<span>未提交</span></span>}</span></SelectItem>{history.map(j=><SelectItem key={j.id} value={j.id} textValue={buildVersion(j)}><span className="build-version-option"><strong>{buildVersion(j)}</strong><span><time dateTime={j.created_at}>{new Date(j.created_at).toLocaleString('zh-CN',{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false})}</time><span>{labels[j.state]||j.state} · {publicationStatus(j.id)}</span></span></span></SelectItem>)}</SelectContent></Select>
     <article className="build-record-group build-record-active">{stepNavigation}</article>
-    <section className="build-flow-stat" aria-label="流程统计"><header><strong>全程耗时</strong><StatusBadge tone={failed?'danger':flowDone?'success':job?'info':'neutral'}>{failed?'异常':flowDone?'已完成':job?'进行中':'未开始'}</StatusBadge></header><p title="从资料准备到成果核对完成，包含人工等待时间">{elapsed(totalStart,totalEnd)}</p><span>包含人工确认{totalEstimated?' · 估算':''}</span></section>
+    <section className="build-flow-stat" aria-label="流程统计"><header><strong>{flowDone?'全程耗时':'已累计耗时'}</strong><StatusBadge tone={failed?'danger':flowDone?'success':'info'}>{failed?'已中止':flowDone?'已完成':'进行中'}</StatusBadge></header><p>{timingDuration(timing.elapsedSeconds)}{timing.elapsedEstimated&&<small>含推算</small>}</p><dl><div><dt>场景创建</dt><dd><time dateTime={timing.start}>{shortTime(timing.start)}</time><small>{timeSource(timing.startSource)}</small></dd></div>{!flowDone&&!failed&&<><div><dt>预计剩余</dt><dd>{overReference?'至少 ':''}{timingDuration(timing.remainingSeconds)}</dd></div><div><dt>预计全程</dt><dd>{overReference?'至少 ':''}{timingDuration(timing.totalSeconds)}</dd></div></>}</dl><span>包含人工等待 · 初始参考 {timingDuration(buildTimingReferenceSeconds)}</span>{overReference&&<span>当前环节已超参考，完成时间待确认。</span>}{timing.warnings&&<span>部分时间记录异常，已按参考耗时推算。</span>}<span>实际记录优先，推算与预计仅供安排参考。</span></section>
    </section>
 
   </aside>
