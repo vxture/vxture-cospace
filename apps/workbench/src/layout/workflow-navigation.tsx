@@ -6,5 +6,5 @@ import './workflow-navigation.css';
 /** Shared navigation control for scene workflow workspaces. */
 export function WorkflowNavigationToggle({open,label,panelId,onToggle}:Readonly<{open:boolean;label:string;panelId:string;onToggle:()=>void}>) {
  const Icon=open?CaretLeft:CaretRight;
- return <Button variant="ghost" size="icon-md" className={open?'workflow-nav-collapse':'workflow-nav-edge'} aria-label={`${open?'收起':'展开'}${label}导航`} aria-expanded={open} aria-controls={panelId} onClick={onToggle} onPointerEnter={event=>{if(!open&&event.pointerType==='mouse')onToggle();}}><Icon size={16}/></Button>;
+ return <Button variant="ghost" size="icon-md" className={open?'workflow-nav-collapse':'workflow-nav-edge'} aria-label={`${open?'收起':'展开'}${label}导航`} aria-expanded={open} aria-controls={panelId} onClick={onToggle}><Icon size={16}/></Button>;
 }

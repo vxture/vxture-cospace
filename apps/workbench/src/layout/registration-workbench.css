@@ -97,6 +97,9 @@
 .registration-workbench .registration-view-heading .registration-compare [data-slot=button]{height:var(--space-control-xl);min-height:var(--space-control-xl);font-size:var(--label-small-font-size)}
 
 /* Coordinate rows prioritize reading; purpose is emphasized on the maps. */
+.registration-coordinate-table tbody tr{cursor:pointer}
+.registration-coordinate-table tbody tr:hover{background:var(--muted)}
+.registration-coordinate-table tbody tr[data-selected=true],.registration-coordinate-table tbody tr:active{background:var(--accent)}
 .registration-coordinate-table tbody td{height:var(--space-control-2xl);padding-block:var(--space-2xs)}
 .registration-coordinate-table .registration-point-key{border-color:var(--border);color:var(--muted-foreground);background:transparent}
 .registration-coordinate-table .registration-name button:hover .registration-point-key{border-color:var(--ring);color:var(--primary)}
