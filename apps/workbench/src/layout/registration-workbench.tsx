@@ -8,19 +8,20 @@ import './registration-workbench.css';
 
 import {RegistrationComparison,RegistrationEvidenceDrawer,RegistrationMetrics,RegistrationModel,RegistrationPlan,RegistrationResidualChart,RegistrationStatus,type PlanBuilding} from './registration-views';
 export type {PlanBuilding} from './registration-views';
-type Props={input:RegistrationInput;geometry?:PreviewGeometry;buildings:PlanBuilding[];editorHref?:string;reviewStatus?:string};
+type Props={input:RegistrationInput;geometry?:PreviewGeometry;buildings:PlanBuilding[];editorHref?:string;reviewStatus?:string;embedded?:boolean;summaryPrefix?:React.ReactNode;selected?:string;onSelect?:(id:string)=>void};
 const axisNames:Record<string,string>={right:'右',left:'左',forward:'前',backward:'后',up:'上',down:'下',east:'东',north:'北'};
 
-export function RegistrationWorkbench({input,geometry,buildings,editorHref,reviewStatus}:Props){
+export function RegistrationWorkbench({input,geometry,buildings,editorHref,reviewStatus,embedded=false,summaryPrefix,selected,onSelect}:Props){
  const report=useMemo(()=>registrationPreview(input),[input]);
- const [selected,setSelected]=useState(input.controls.find(p=>p.purpose==='check')?.id||input.controls[0]?.id||'');
+ const [localSelected,setLocalSelected]=useState(input.controls.find(p=>p.purpose==='check')?.id||input.controls[0]?.id||'');
+ const setSelected=onSelect||setLocalSelected;
  const [aligned,setAligned]=useState(true),[details,setDetails]=useState(false);
- const point=report.controls.find(p=>p.id===selected)||report.controls[0];
+ const point=report.controls.find(p=>p.id===(selected??localSelected))||report.controls[0];
  const modelAxes=['X','Y','Z'].map((symbol,i)=>({symbol,name:axisNames[input.source.axes[i]]||input.source.axes[i]}));
  const targetAxes=[{symbol:'E',name:'东'},{symbol:'N',name:'北'},{symbol:'U',name:'高'}];
  return <section className="registration-workbench" aria-label="空间基准工作面">
-  <header className="registration-heading"><div className="registration-heading-title"><Compass size={24}/><div><h1>模型与园区坐标对齐</h1><p>{input.source.frame_id} <ArrowsLeftRight size={14}/> {input.target.frame_id}<span>米制工程平面</span></p></div></div><div className="registration-heading-actions"><Button size="sm" variant="outline" onClick={()=>setDetails(true)}><FileText size={16}/>依据与参数</Button>{editorHref&&<Button asChild size="sm"><a href={editorHref+'&point='+encodeURIComponent(point.id)} target="_blank" rel="noopener noreferrer" title="在新标签页编辑配准"><PencilSimple size={16}/>编辑配准</a></Button>}</div></header>
-  <div className="registration-summary" aria-label="参数核对状态"><RegistrationStatus report={report} reviewStatus={reviewStatus}/><RegistrationMetrics report={report}/><span className="registration-capability">地理定位能力另行核验</span></div>
+  {!embedded&&<header className="registration-heading"><div className="registration-heading-title"><Compass size={24}/><div><h1>模型与园区坐标对齐</h1><p>{input.source.frame_id} <ArrowsLeftRight size={14}/> {input.target.frame_id}<span>米制工程平面</span></p></div></div><div className="registration-heading-actions"><Button size="sm" variant="outline" onClick={()=>setDetails(true)}><FileText size={16}/>依据与参数</Button>{editorHref&&<Button asChild size="sm"><a href={editorHref+'&point='+encodeURIComponent(point.id)} target="_blank" rel="noopener noreferrer" title="在新标签页编辑配准"><PencilSimple size={16}/>编辑配准</a></Button>}</div></header>}
+  <div className="registration-check-summary" aria-label="参数核对状态">{summaryPrefix}<RegistrationStatus report={report} reviewStatus={reviewStatus}/><RegistrationMetrics report={report}/><span className="registration-coordinate-context" title={`${input.source.frame_id} → ${input.target.frame_id} · 米制工程平面`}><span>{input.source.frame_id}</span><ArrowsLeftRight size={14}/><span>{input.target.frame_id}</span></span></div>
   <div className="registration-views">
    <section className="registration-model" aria-label="源模型视图"><header className="registration-view-heading"><div><Cube size={18}/><h2>模型局部坐标</h2></div><span>X · Y · Z（m）</span></header>
     <RegistrationModel input={input} geometry={geometry} selected={point.id} onSelect={setSelected}/>

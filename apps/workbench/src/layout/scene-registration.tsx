@@ -1,10 +1,11 @@
 import React,{useEffect,useRef,useState} from 'react';
-import {ArrowDown,ArrowLeft,ArrowUp,CheckCircle,Compass,DownloadSimple,DotsThreeVertical,FloppyDisk,UploadSimple,XCircle} from '@phosphor-icons/react';
+import {ArrowDown,ArrowLeft,ArrowUp,CheckCircle,Compass,DownloadSimple,DotsThreeVertical,FileText,FloppyDisk,MapTrifold,PencilSimple,UploadSimple,XCircle} from '@phosphor-icons/react';
 import {Button,Drawer,DropdownMenu,DropdownMenuContent,DropdownMenuItem,DropdownMenuSeparator,DropdownMenuTrigger,Input,StatusBadge,Textarea} from '@vxture/design-system';
 import {businessEndpoint} from './business-endpoint';
 import {readPreview,validatePreview,type PreviewGeometry} from './geometry-preview-data';
 import {type Point3,type RegistrationInput} from './registration-preview-data';
 import {RegistrationWorkbench} from './registration-workbench';
+import {RegistrationEvidenceDrawer} from './registration-views';
 import {RegistrationEditor} from './registration-editor';
 import {registrationSurfaceHref} from './registration-editor-route';
 import {useUnsavedNavigation} from './unsaved-navigation';
@@ -37,7 +38,7 @@ async function value(response:Response){
 }
 function download(name:string,data:unknown){const url=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}));const link=document.createElement('a');link.href=url;link.download=name;link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
 
-export function SceneRegistration({spaceId,candidateId,editor=false}:{spaceId:string;candidateId:string;editor?:boolean}){
+export function SceneRegistration({spaceId,candidateId,editor=false,renderHeader}:{spaceId:string;candidateId:string;editor?:boolean;renderHeader?:(actions:React.ReactNode)=>React.ReactNode}){
  const session=usePlatformSession();
  const [state,setState]=useState<State|null>(null),[draft,setDraft]=useState<RegistrationInput|null>(null),[geometry,setGeometry]=useState<PreviewGeometry>();
  const [loading,setLoading]=useState(true),[busy,setBusy]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState(''),[geometryError,setGeometryError]=useState('');
@@ -46,7 +47,7 @@ export function SceneRegistration({spaceId,candidateId,editor=false}:{spaceId:st
  const [action,setAction]=useState<Action|null>(null),[reason,setReason]=useState(''),[reviewOpen,setReviewOpen]=useState(false),[refresh,setRefresh]=useState(0);
  const [start,setStart]=useState(''),[end,setEnd]=useState(''),[bounds,setBounds]=useState<string[][]>([[],[]]),[checks,setChecks]=useState([false,false,false,false]);
  const [binding,setBinding]=useState<GeographicBinding|null>(null),[mapOpen,setMapOpen]=useState(false);
- const [bindingOpen,setBindingOpen]=useState(false);
+ const [bindingOpen,setBindingOpen]=useState(false),[evidenceOpen,setEvidenceOpen]=useState(false);
  const file=useRef<HTMLInputElement>(null),mounted=useRef(true),gate=useRef(false),request=useRef<Record<string,unknown>|null>(null);
  const current=draft||state?.document;
  const dirty=!!draft&&(JSON.stringify(draft)!==JSON.stringify(state?.document)||JSON.stringify(binding)!==JSON.stringify(state?.geographic_binding));
@@ -112,25 +113,34 @@ export function SceneRegistration({spaceId,candidateId,editor=false}:{spaceId:st
  function advance(){if(!next?.action)return;if(next.action==='import')file.current?.click();else if(next.action!=='association')open(next.action);}
  function returnToDisplay(){releaseDraft();appNavigate(registrationSurfaceHref(spaceId,candidateId));}
  useAssistantReport({title:'配准检查',status:loading?'loading':error?'error':'ready',note:error||next?.description,tasks:!loading&&!busy&&!error&&next?.action?[{id:next.action,title:'继续下一环节',evidence:next.description,label:next.label!,run:()=>{if(next.action==='association')appNavigate(recordLink('association',{space:spaceId,job:candidateId,tab:'overview'}));else advance();}}]:[]});
- return <section className={`scene-registration${editor?' scene-registration-editor':''}`} aria-label={editor?'独立配准编辑页面':'场景空间基准'}>
+ const activePoint=current?.controls.find(point=>point.id===selected)||current?.controls.find(point=>point.purpose==='check')||current?.controls[0];
+ const status=<><span>修订 {state?.revision}</span><span className="scene-registration-current-adoption" title="已有服务发布保持固定">{adopted?`采用修订 ${adopted.revision}`:'尚未采用'}</span></>;
+ const actions=state&&<>
+  {state.can_edit&&<Button size="sm" variant="outline" disabled={busy} onClick={()=>file.current?.click()}><UploadSimple size={16}/>导入资料</Button>}
+  {current&&<><Button size="sm" variant="outline" disabled={busy} onClick={()=>setEvidenceOpen(true)}><FileText size={16}/>依据与参数</Button>{state.can_edit&&(busy||dirty?<Button size="sm" disabled><PencilSimple size={16}/>编辑配准</Button>:<Button asChild size="sm"><a href={registrationSurfaceHref(spaceId,candidateId,true)+'&point='+encodeURIComponent(activePoint?.id||'')} target="_blank" rel="noopener noreferrer" title="在新标签页编辑配准"><PencilSimple size={16}/>编辑配准</a></Button>)}</>}
+  {state.can_edit&&dirty&&<Button size="sm" disabled={busy} onClick={()=>open('save')}><FloppyDisk size={16}/>保存</Button>}
+  <DropdownMenu><DropdownMenuTrigger asChild><Button size="icon-md" variant="ghost" aria-label="配准资料更多操作" disabled={busy}><DotsThreeVertical size={24}/></Button></DropdownMenuTrigger><DropdownMenuContent align="end">
+   <DropdownMenuItem onSelect={()=>download('配准资料.json',{document:current,geographic_binding:draft?binding:state.geographic_binding})}><DownloadSimple size={16}/>导出资料</DropdownMenuItem>
+   {state.can_edit&&current&&<DropdownMenuItem onSelect={()=>setBindingOpen(true)}><Compass size={16}/>维护地理基准</DropdownMenuItem>}
+   {adopted&&<><DropdownMenuSeparator/><DropdownMenuItem onSelect={()=>setReviewOpen(true)}><FileText size={16}/>查看核准依据</DropdownMenuItem><DropdownMenuItem onSelect={()=>setMapOpen(true)}><MapTrifold size={16}/>查看对象地图</DropdownMenuItem></>}
+   {state.can_edit&&<><DropdownMenuSeparator/><DropdownMenuItem disabled={dirty||!['draft','rejected'].includes(state.review_status)||state.report?.calculation_status!=='checks_passed'||state.document?.synthetic} onSelect={()=>open('submit')}><ArrowUp size={16}/>提交审核</DropdownMenuItem>
+    {state.can_review&&<><DropdownMenuItem disabled={dirty||state.review_status!=='submitted'} onSelect={()=>open('approve')}><CheckCircle size={16}/>核准配准</DropdownMenuItem><DropdownMenuItem disabled={dirty||state.review_status!=='submitted'} onSelect={()=>open('reject')}><XCircle size={16}/>退回资料</DropdownMenuItem></>}
+    <DropdownMenuSeparator/><DropdownMenuItem disabled={dirty||state.review_status!=='approved'||state.approved_revision===state.adopted_revision} onSelect={()=>open('adopt')}><CheckCircle size={16}/>采用核准修订</DropdownMenuItem><DropdownMenuItem disabled={dirty||!adopted} onSelect={()=>open('clear_adoption')}><ArrowDown size={16}/>撤下当前采用</DropdownMenuItem></>}
+  </DropdownMenuContent></DropdownMenu>
+ </>;
+ return <>{!editor&&renderHeader?.(actions)}<section className={`scene-registration${editor?' scene-registration-editor':''}`} aria-label={editor?'独立配准编辑页面':'场景空间基准'}>
   {editor?<>
    {state?.document&&state.can_edit&&!loading?<RegistrationEditor key={state.source_sha256+':'+state.revision} production input={state.document} geometry={geometry} buildings={[]} selected={selected} onSelect={setSelected} onClose={returnToDisplay} onApply={async input=>{if(await check(input))open('save');}} busy={busy} pending={dirty} context={`模型 ${candidateId.slice(-8).toUpperCase()} · 修订 ${state.revision} · ${labels[state.review_status]}`} message={notice||geometryError&&`三维预览暂不可用：${geometryError}`||undefined} error={!action?error:undefined}/>:<main className="registration-editor registration-editor-unavailable"><header className="registration-editor-header"><Button size="sm" variant="outline" onClick={returnToDisplay}><ArrowLeft size={16}/>返回配准展示</Button><h1>编辑配准</h1></header><div role={error?'alert':'status'}><p>{loading?'正在读取配准资料…':error||(!state?.can_edit?'当前身份无权编辑此模型的配准资料。':'此模型尚无配准资料，请先在展示页导入并保存。')}</p>{error&&<Button size="sm" variant="outline" onClick={()=>setRefresh(n=>n+1)}>重新读取</Button>}</div></main>}
   </>:<>
-  <header className="scene-registration-toolbar"><div>{state&&<><span>修订 {state.revision}</span><StatusBadge tone="neutral">{dirty?'未保存':labels[state.review_status]}</StatusBadge></>}</div><div>
-   {state&&<><Button size="sm" variant="outline" disabled={busy} onClick={()=>download('配准资料.json',{document:current,geographic_binding:draft?binding:state.geographic_binding})}><DownloadSimple size={16}/>导出资料</Button>{state.can_edit&&<><Button size="sm" variant="outline" disabled={busy} onClick={()=>file.current?.click()}><UploadSimple size={16}/>导入资料</Button><Button size="sm" disabled={busy||!dirty} onClick={()=>open('save')}><FloppyDisk size={16}/>保存</Button><DropdownMenu><DropdownMenuTrigger asChild><Button size="icon-md" variant="ghost" aria-label="配准资料更多操作" disabled={busy||dirty}><DotsThreeVertical size={24}/></Button></DropdownMenuTrigger><DropdownMenuContent align="end">
-    <DropdownMenuItem disabled={!['draft','rejected'].includes(state.review_status)||state.report?.calculation_status!=='checks_passed'||state.document?.synthetic} onSelect={()=>open('submit')}><ArrowUp size={16}/>提交审核</DropdownMenuItem>
-    {state.can_review&&<><DropdownMenuSeparator/><DropdownMenuItem disabled={state.review_status!=='submitted'} onSelect={()=>open('approve')}><CheckCircle size={16}/>核准配准</DropdownMenuItem><DropdownMenuItem disabled={state.review_status!=='submitted'} onSelect={()=>open('reject')}><XCircle size={16}/>退回资料</DropdownMenuItem></>}
-    <DropdownMenuSeparator/><DropdownMenuItem disabled={state.review_status!=='approved'||state.approved_revision===state.adopted_revision} onSelect={()=>open('adopt')}><CheckCircle size={16}/>采用核准修订</DropdownMenuItem><DropdownMenuItem disabled={!adopted} onSelect={()=>open('clear_adoption')}><ArrowDown size={16}/>撤下当前采用</DropdownMenuItem>
-   </DropdownMenuContent></DropdownMenu></>}</>}
-  </div></header>
+  {!renderHeader&&<header className="scene-registration-toolbar">{actions}</header>}
   <input ref={file} type="file" accept=".json,application/json" hidden aria-label="导入配准资料文件" onChange={event=>{void importFile(event.target.files?.[0]);event.target.value='';}}/>
   {loading&&<output>正在读取配准资料…</output>}{busy&&<output>正在核对并处理配准资料…</output>}{sourceBlocked?<RegistrationSourceRecovery spaceId={spaceId} candidateId={candidateId}/>:error&&!action&&<div className="scene-registration-message" role="alert"><p>{error}</p><Button size="sm" variant="outline" disabled={busy||dirty} onClick={()=>setRefresh(n=>n+1)}>重新读取</Button></div>}{notice&&<output>{notice}</output>}
   {state&&!loading&&<>
-   <div className="scene-registration-adoption"><span>{adopted?`当前采用核准修订 ${adopted.revision}`:'尚未采用核准修订'}</span>{adopted&&<><Button size="sm" variant="ghost" onClick={()=>setReviewOpen(true)}>查看核准依据</Button><Button size="sm" variant="outline" onClick={()=>setMapOpen(true)}>查看对象地图</Button></>}<span>已有服务发布保持固定</span></div>
-   {current?<>{state.can_edit&&<div><Button size="sm" variant="outline" disabled={busy} onClick={()=>setBindingOpen(true)}>维护地理基准</Button></div>}<RegistrationWorkbench key={state.source_sha256} input={current} geometry={geometry} buildings={[]} reviewStatus={dirty?'未保存':labels[state.review_status]} editorHref={state.can_edit&&!busy&&!dirty?registrationSurfaceHref(spaceId,candidateId,true):undefined}/>{dirty&&state.can_edit&&<p className="data-subtle">先保存当前资料，再在新标签页编辑配准。</p>}{geometryError&&<p role="status">三维预览暂不可用：{geometryError} 坐标清单仍可核对。</p>}</>:<div className="scene-registration-empty"><Compass size={36}/><h3>录入模型与目标基准的配准资料</h3><p>准备已知三维刚体参数、至少三个控制点和三个独立检查点，以及水平与高程基准依据。</p>{state.can_edit&&<><Button size="sm" variant="outline" onClick={template}><DownloadSimple size={16}/>下载空白资料模板</Button><p>模板绑定当前模型，参数、点位与门限需按实际控制资料填写，再导入核对。</p></>}</div>}
+   {current?<><RegistrationWorkbench key={state.source_sha256} embedded input={current} geometry={geometry} buildings={[]} summaryPrefix={status} selected={activePoint?.id} onSelect={setSelected} reviewStatus={dirty?'未保存':labels[state.review_status]}/>{dirty&&state.can_edit&&<p className="data-subtle">先保存当前资料，再在新标签页编辑配准。</p>}{geometryError&&<p role="status">三维预览暂不可用：{geometryError} 坐标清单仍可核对。</p>}</>:<><div className="scene-registration-toolbar">{status}<StatusBadge tone="neutral">{labels[state.review_status]}</StatusBadge></div><div className="scene-registration-empty"><Compass size={36}/><h3>录入模型与目标基准的配准资料</h3><p>准备已知三维刚体参数、至少三个控制点和三个独立检查点，以及水平与高程基准依据。</p>{state.can_edit&&<><Button size="sm" variant="outline" onClick={template}><DownloadSimple size={16}/>下载空白资料模板</Button><p>模板绑定当前模型，参数、点位与门限需按实际控制资料填写，再导入核对。</p></>}</div></>}
    {state.changed_at&&<p className="scene-registration-audit">{labels[state.review_status]} · {state.actor} · {new Date(state.changed_at).toLocaleString('zh-CN')}<br/>{state.reason}</p>}
    {next&&<WorkflowNextStep description={next.description} label={next.action?next.label:undefined} disabled={busy||loading} href={next.action==='association'?recordLink('association',{space:spaceId,job:candidateId,tab:'overview'}):undefined} onClick={advance}/>}
   </>}
+  {!editor&&current&&<RegistrationEvidenceDrawer input={current} open={evidenceOpen} onClose={()=>setEvidenceOpen(false)} reviewStatus={dirty?'未保存':labels[state?.review_status||'empty']}/>}
   </>}
   <Drawer open={!!action} onClose={close} side="right" width="md" title={action?actionLabels[action]:''} description={action?explanations[action]:''} closeLabel="关闭配准操作" footer={<div className="scene-registration-footer"><Button size="sm" variant="outline" disabled={busy} onClick={close}>取消</Button><Button size="sm" disabled={busy||!reason.trim()||action==='approve'&&!approvalValid} onClick={()=>void execute()}>{action?actionLabels[action]:''}</Button></div>}>
    <div className="scene-registration-form"><label><span>{action==='approve'?'审核依据':'操作依据'}</span><Textarea maxLength={2000} value={reason} disabled={busy||!!request.current} onChange={event=>setReason(event.target.value)} aria-label="配准操作依据"/></label>
@@ -144,5 +154,5 @@ export function SceneRegistration({spaceId,candidateId,editor=false}:{spaceId:st
   <Drawer open={reviewOpen} onClose={()=>setReviewOpen(false)} side="right" width="md" title="当前采用的核准依据" description={adopted?`固定修订 ${adopted.revision}`:''} closeLabel="关闭核准依据" footer={<div className="scene-registration-footer"><Button size="sm" onClick={()=>setReviewOpen(false)}>关闭</Button></div>}>
    {adopted&&<div className="scene-registration-form"><dl><dt>审核人</dt><dd>{adopted.reviewed_by}</dd><dt>审核时刻</dt><dd>{adopted.reviewed_at}</dd><dt>有效期</dt><dd>{adopted.approval?.valid_from}<br/>{adopted.approval?.valid_until}</dd><dt>审核依据</dt><dd>{adopted.approval?.evidence_note}</dd></dl><Button size="sm" variant="outline" onClick={()=>download('核准配准修订.json',adopted)}>导出核准修订</Button></div>}
   </Drawer>
- </section>;
+ </section></>;
 }
