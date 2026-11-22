@@ -10,7 +10,8 @@ export type PublishedModel={id:string;label:string;space_id:string;frame_id:stri
  construction:{input_frames:number;used_frames:number;model_points:number};agent_view:{surface_cells:number;resolution_m:number;source_model_sha256:string};
  human_view:{appearance?:string;source_model_sha256:string};members:Record<string,{sha256:string;bytes:number}>;
  semantic_annotation?:{object_count:number};bounds_m:[XYZ,XYZ];limitations:string[]};
-export type SceneData={model:PublishedModel;positions:Float32Array;colors:Float32Array;agent_points:XYZ[];objects:ModelObject[];relations:ObjectRelation[]};
+export type ModelDisplay={profile:string;id:string;provider:string;state:'preparing'|'ready'|'failed'|'unavailable';entry?:string;source_manifest_sha256:string;source_model_sha256:string;origin_m?:XYZ;model_to_display?:number[][];point_count?:number;encoding_error_m?:number};
+export type SceneData={model:PublishedModel;display?:ModelDisplay;positions:Float32Array;colors:Float32Array;agent_points:XYZ[];objects:ModelObject[];relations:ObjectRelation[]};
 export function realScreenHref(space:string,publication:string){return `/space?screen=space&preview=1&space=${encodeURIComponent(space)}&publication=${encodeURIComponent(publication)}`;}
 export async function getJSON<T>(path:string,signal?:AbortSignal):Promise<T>{const response=await fetch(`${previewEndpoint}${path}`,{signal});if(!response.ok)throw Error(`读取失败（${response.status}），请核对空间与发布记录。`);return response.json();}
 function xyz(value:unknown):value is XYZ{return Array.isArray(value)&&value.length===3&&value.every(v=>typeof v==='number'&&Number.isFinite(v));}

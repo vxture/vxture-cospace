@@ -183,6 +183,10 @@ jsonschema-specifications==2025.9.1 \
     --hash=sha256:98802fee3a11ee76ecaca44429fda8a41bff98b00a0f2838151b113f210cc6fe \
     --hash=sha256:b540987f239e745613c7a9176f3edb72b832a4ac465cf02712288397832b5e8d
     # via jsonschema
+laspy==2.6.1 \
+    --hash=sha256:44c4d3c38fcef81cdb9201a0b98e5e4f09831c98d2ec1335b9ee59da16a37349 \
+    --hash=sha256:ce9cb9a18528b2a2b985583df40a4dea68cdda7995e47e4b00b6d48df0e88daa
+    # via vxture-cospace
 lz4==4.4.5 \
     --hash=sha256:0bba042ec5a61fa77c7e380351a61cb768277801240249841defd2ff0a10742f \
     --hash=sha256:3b84a42da86e8ad8537aabef062e7f661f4a877d1c74d65606c49d835d36d668 \
@@ -260,6 +264,7 @@ numpy==2.5.4 \
     --hash=sha256:e94aef2c639da4a960ad0db8e06471208d8589974953d78b61d345b4eb99e394 \
     --hash=sha256:ffa6ce09a1c6a08e9667dd9c97aa0b14184e8d18f2a14b78b2a2328c9147f076
     # via
+    #   laspy
     #   rosbags
     #   scipy
     #   vxture-cospace
