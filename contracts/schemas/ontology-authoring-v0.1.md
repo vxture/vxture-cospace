@@ -76,3 +76,11 @@ SQLite 参考实现使用注入 root 下的 ontology-authoring.sqlite3；scope �
 目录 `/api/ontology-resources` 在可信作用域内叠加各模块最新已发布版本，只把它用于摘要显示；不能把多个各自依赖旧版核心的目录条目拼成一个可解释定义包。`/definition` 始终通过对应发布快照返回自身闭包，因此通用核心升版不会使旧领域版本改用新核心。草稿保存不改变目录共享定义或发布日期。
 
 首版业务表单从现有模块进入，支持元数据与概念/属性/关系新建、编辑、从草稿移除，依赖选择仅引用已发布版本。整体新模块创建向导、任意文件导入、批量编辑、依赖影响分析、正式专业标准成熟度工作流不在本批范围；不宣称完整行业标准治理平台。
+
+## B09a 便携工作台接口
+
+`vxture_ontology.workbench.DefinitionWorkbench(port, scope, actor, authorize=..., templates=None, clock=None)` 将受信上下文绑定到接口。可注入 `Catalog` 作为宿主模板；省略使用内置库。它暴露 `read(module_id)`、`change(command)`、`released_library()`、`definition(reference)` 和 `review_definition(review_id)`。这些方法复用本章的字段、响应和精确版本规则；`released_library` 是目录视图，不能当成可互换的依赖闭包。
+
+读取目录、模块与固定版本先校验 `read`；草稿、验证细节和送审记录还要求工作台权限 `read_private`。工作台 `can_manage` 表示可查看编制信息，`can_decide` 还要求 `review` 和可审批状态。写命令按既有操作逐一校验，宿主可区分编辑、送审、审批和发布。底层 `DefinitionAuthoring` 是可信宿主接口，其原有 `read` 语义包含私有操作；客户端接入应使用工作台或实现同等的额外授权。CoSpace 继续把原管理权限映射到 `read_private` 和各写操作，URL、响应及存储兼容。
+
+工作台模块详情从一次作用域事务中读取，返回的一组草稿、审批摘要、诊断与差异基于同一快照。支持读取已冻结的历史版本，不能把模板当作已发布依赖；独立宿主也必须使用不同的可信审批者，不能以表单字段代替身份。

@@ -22,7 +22,7 @@ from copy import deepcopy
 sys.path.insert(0,sys.argv[1])
 import vxture_ontology
 from vxture_ontology import Catalog,builtin_catalog,canonical_bytes,instance_schema,park_baseline_rules,validate_instances
-from vxture_ontology.authoring import DefinitionAuthoring
+from vxture_ontology.workbench import DefinitionWorkbench
 assert instance_schema()['$id']=='urn:vxture:schema:ontology-instances:0.1'
 assert len(park_baseline_rules()['cardinalities'])==9
 assert validate_instances(b'{}',builtin_catalog())['valid'] is False
@@ -40,12 +40,23 @@ class MemoryPort:
         value=deepcopy(self.state.get(scope,{}))
         yield value
         self.state[scope]=value
-service=DefinitionAuthoring(MemoryPort(),authorize=lambda scope,actor,action:True)
-service.save('synthetic','editor','a'*32,module_id='core',expected_revision=0,bundle=builtin_catalog().export('core'))
-service.submit('synthetic','editor','b'*32,module_id='core',expected_revision=1)
-service.decide('synthetic','reviewer','c'*32,review_id='b'*32,decision='approved',reason='synthetic smoke only')
-release=service.publish('synthetic','publisher','d'*32,review_id='b'*32,expected_revision=1)
-assert service.read_release('synthetic','reader',release['reference'])==release
+store=MemoryPort()
+core=builtin_catalog().export('core')
+templates=Catalog(core['modules'])
+roles={'editor':{'read','read_private','edit','submit'},'reviewer':{'read','read_private','review'},
+       'publisher':{'read','publish'},'reader':{'read'}}
+def workspace(actor):
+    return DefinitionWorkbench(store,'synthetic',actor,templates=templates,
+        authorize=lambda s,a,action:s=='synthetic' and action in roles.get(a,set()))
+editor,reviewer,publisher,reader=(workspace(actor) for actor in roles)
+editor.change(dict(action='save',request_id='a'*32,module_id='core',expected_revision=0,bundle=core,base_reference=None))
+editor.change(dict(action='submit',request_id='b'*32,module_id='core',expected_revision=1))
+assert reviewer.read('core')['reviews'][0]['can_decide']
+assert reader.read('core')['draft'] is None and not reader.read('core')['reviews']
+reviewer.change(dict(action='decide',request_id='c'*32,review_id='b'*32,decision='approved',reason='synthetic smoke only'))
+release=publisher.change(dict(action='publish',request_id='d'*32,review_id='b'*32,expected_revision=1))
+assert reader.definition(release['reference'])['modules'][0]['reference']==release['reference']
+assert reader.released_library()['modules'][0]['published_at']==release['published_at']
 assert 'sqlite3' not in sys.modules
 catalog=builtin_catalog()
 subset=catalog.export('electrical')
