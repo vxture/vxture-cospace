@@ -24,7 +24,13 @@ def declared_three_dimensional_models(monkeypatch):
                             colors=np.full((len(points), 3), 100, dtype='u1'))
         manifest = json.loads((root / 'model.json').read_bytes())
         manifest.update(axes=['right', 'forward', 'up'], unit='m')
-        manifest['members']['spatial.npz']['sha256'] = digest(root / 'spatial.npz')
+        canonical = digest(root / 'spatial.npz')
+        manifest['members']['spatial.npz']['sha256'] = canonical
+        manifest['construction'] = {'model_points': len(points)}
+        (root / 'human.ply').write_bytes(b'fixed fixture geometry')
+        manifest['members']['human.ply'] = {'sha256': digest(root / 'human.ply')}
+        manifest['human_view'] = {'path': 'human.ply', 'source_model_sha256': canonical}
+        manifest['agent_view'].update(path='agent.npz', source_model_sha256=canonical)
         (root / 'model.json').write_text(json.dumps(manifest), encoding='utf-8')
         return root
     monkeypatch.setattr(test_preview_publications, 'make_preview', make)
@@ -34,6 +40,9 @@ def prepared(secured):
     _, client, _, _, jobs, _, spaces, _, _, new = secured
     query = {'space_id': spaces[0]['id'], 'candidate_id': new['candidate_id']}
     response = client.get(PATH, params=query)
+    if response.status_code == 409 and response.json()['detail'] == 'registration_source_preparing':
+        jobs.displays.exact.scan()
+        response = client.get(PATH, params=query)
     assert response.status_code == 200, response.text
     state = response.json()
     doc = json.loads(Path('contracts/examples/spatial-registration-campus.json').read_text(encoding='utf-8'))
@@ -141,7 +150,11 @@ def test_explicit_axis_alias_models_open_without_rewriting_them(secured,axes):
     model=jobs.model(new['candidate_id']);manifest=dict(model.manifest,axes=axes)
     (model.root/'model.json').write_text(json.dumps(manifest,ensure_ascii=False),encoding='utf-8')
     before=(model.root/'model.json').read_bytes()
-    response=client.get(PATH,params={'space_id':spaces[0]['id'],'candidate_id':new['candidate_id']})
+    query={'space_id':spaces[0]['id'],'candidate_id':new['candidate_id']}
+    response=client.get(PATH,params=query)
+    if response.status_code==409 and response.json()['detail']=='registration_source_preparing':
+        jobs.displays.exact.scan()
+        response=client.get(PATH,params=query)
     assert response.status_code==200,response.text
     assert response.json()['model_source']['axes']==axes
     assert (model.root/'model.json').read_bytes()==before

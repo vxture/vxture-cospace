@@ -2,7 +2,7 @@ import React,{useEffect,useRef,useState} from 'react';
 import {ArrowDown,ArrowLeft,ArrowUp,CheckCircle,Compass,DownloadSimple,DotsThreeVertical,FileText,FloppyDisk,MapTrifold,PencilSimple,UploadSimple,XCircle} from '@phosphor-icons/react';
 import {Button,Drawer,DropdownMenu,DropdownMenuContent,DropdownMenuItem,DropdownMenuSeparator,DropdownMenuTrigger,Input,StatusBadge,Textarea} from '@vxture/design-system';
 import {businessEndpoint} from './business-endpoint';
-import {readPreview,validatePreview,type PreviewGeometry} from './geometry-preview-data';
+import {waitForModel} from './model-exact-data';
 import {type Point3,type RegistrationInput} from './registration-preview-data';
 import {RegistrationWorkbench} from './registration-workbench';
 import {RegistrationEvidenceDrawer} from './registration-views';
@@ -27,7 +27,7 @@ type State=Snapshot&{profile:string;space_id:string;candidate_id:string;source_s
 const labels={empty:'未录入',draft:'草稿',submitted:'待审核',approved:'已核准',rejected:'已退回'};
 const actionLabels:Record<Action,string>={save:'保存资料',submit:'提交审核',approve:'核准配准',reject:'退回资料',adopt:'采用核准修订',clear_adoption:'撤下当前采用'};
 const explanations:Record<Action,string>={save:'保存为新草稿；原已采用修订继续保留。',submit:'检查通过的真实资料提交独立审核。',approve:'核实控制资料、独立检查、基准和适用范围后核准。录入者不能审核自己的资料。',reject:'填写退回依据，录入者修改并重新提交。',adopt:'固定采用此核准修订。此操作不改变已有服务发布。',clear_adoption:'后续消费停止使用当前采用；历史修订和已有发布继续保留。'};
-const errors:Record<string,string>={registration_source_axes_unsupported:'来源模型缺少可核验的右手轴向声明。请先在资料与构建阶段明确坐标后重新构建。',registration_source_unit_unsupported:'来源模型未明确米制单位。请先修订资料坐标并重新构建。',registration_source_geometry_invalid:'来源模型的三维范围无效，暂不能进入此配准路线。',registration_source_changed:'资料绑定的模型已变化，请重新读取并核对来源。',registration_revision_changed:'资料已由其他人修改，请保留本地资料后重新读取。',registration_independent_reviewer_required:'录入者不能审核自己的资料，请由另一位场景管理员审核。',registration_synthetic_not_approvable:'合成算例不能提交真实成果审核。',registration_checks_failed:'独立检查点超限，请修正资料后再提交。',registration_outside_valid_time:'当前不在核准有效期内，不能采用。',registration_extent_outside_model:'核准范围必须位于来源模型范围内。',registration_approval_expired:'核准有效期已经结束。',registration_invalid_document:'刚体参数、控制点或独立检查不符合要求，请核对资料。',registration_invalid_request:'资料格式不符合合同，请核对字段、数值、至少各三个非共线控制点与检查点。',registration_source_inactive:'来源模型已归档，请恢复后再修改。',registration_store_integrity:'配准记录完整性检查失败，请联系管理员。',registration_already_adopted:'此核准修订已采用。'};
+const errors:Record<string,string>={registration_source_preparing:'原始模型索引正在准备，请稍后重新读取。',registration_exact_unavailable:'原始模型索引暂不可用，请稍后重试或联系管理员。',registration_exact_point_invalid:'原始点依据与模型坐标不一致，请重新选点。',registration_source_axes_unsupported:'来源模型缺少可核验的右手轴向声明。请先在资料与构建阶段明确坐标后重新构建。',registration_source_unit_unsupported:'来源模型未明确米制单位。请先修订资料坐标并重新构建。',registration_source_geometry_invalid:'来源模型的三维范围无效，暂不能进入此配准路线。',registration_source_changed:'资料绑定的模型已变化，请重新读取并核对来源。',registration_revision_changed:'资料已由其他人修改，请保留本地资料后重新读取。',registration_independent_reviewer_required:'录入者不能审核自己的资料，请由另一位场景管理员审核。',registration_synthetic_not_approvable:'合成算例不能提交真实成果审核。',registration_checks_failed:'独立检查点超限，请修正资料后再提交。',registration_outside_valid_time:'当前不在核准有效期内，不能采用。',registration_extent_outside_model:'核准范围必须位于来源模型范围内。',registration_approval_expired:'核准有效期已经结束。',registration_invalid_document:'刚体参数、控制点或独立检查不符合要求，请核对资料。',registration_invalid_request:'资料格式不符合合同，请核对字段、数值、至少各三个非共线控制点与检查点。',registration_source_inactive:'来源模型已归档，请恢复后再修改。',registration_store_integrity:'配准记录完整性检查失败，请联系管理员。',registration_already_adopted:'此核准修订已采用。'};
 const endpoint=businessEndpoint+'/api/scene-registrations';
 class RegistrationRequestError extends Error{constructor(message:string,readonly code:string){super(message);}}
 async function value(response:Response){
@@ -40,8 +40,8 @@ function download(name:string,data:unknown){const url=URL.createObjectURL(new Bl
 
 export function SceneRegistration({spaceId,candidateId,editor=false,renderHeader}:{spaceId:string;candidateId:string;editor?:boolean;renderHeader?:(actions:React.ReactNode)=>React.ReactNode}){
  const session=usePlatformSession();
- const [state,setState]=useState<State|null>(null),[draft,setDraft]=useState<RegistrationInput|null>(null),[geometry,setGeometry]=useState<PreviewGeometry>();
- const [loading,setLoading]=useState(true),[busy,setBusy]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState(''),[geometryError,setGeometryError]=useState('');
+ const [state,setState]=useState<State|null>(null),[draft,setDraft]=useState<RegistrationInput|null>(null);
+ const [loading,setLoading]=useState(true),[busy,setBusy]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState('');
  const [sourceBlocked,setSourceBlocked]=useState(false);
  const [selected,setSelected]=useState(()=>new URLSearchParams(location.search).get('point')||'');
  const [action,setAction]=useState<Action|null>(null),[reason,setReason]=useState(''),[reviewOpen,setReviewOpen]=useState(false),[refresh,setRefresh]=useState(0);
@@ -55,7 +55,8 @@ export function SceneRegistration({spaceId,candidateId,editor=false,renderHeader
  useEffect(()=>{mounted.current=true;return()=>{mounted.current=false;};},[]);
  async function read(signal?:AbortSignal):Promise<State>{
   if(!spaceId||!candidateId)throw Error('编辑配准需要明确的场景和模型，请从展示页重新进入。');
-  const result:State=await value(await fetch(endpoint+'?'+new URLSearchParams({space_id:spaceId,candidate_id:candidateId}),{signal,cache:'no-store'}));
+  let result:State;const deadline=performance.now()+60_000;
+  while(true){try{result=await value(await fetch(endpoint+'?'+new URLSearchParams({space_id:spaceId,candidate_id:candidateId}),{signal,cache:'no-store'}));break;}catch(error){if(!(error instanceof RegistrationRequestError)||error.code!=='registration_source_preparing'||performance.now()>deadline)throw error;await waitForModel(signal||new AbortController().signal);}}
   if(result.profile!=='cospace.scene-registration/0.1'||result.space_id!==spaceId||result.candidate_id!==candidateId||result.model_source.manifest_sha256!==result.source_sha256)throw Error('配准记录与当前模型来源不一致。');
   return result;
  }
@@ -74,12 +75,7 @@ export function SceneRegistration({spaceId,candidateId,editor=false,renderHeader
   channel.onmessage=event=>{if(event.data?.space===spaceId&&event.data?.job===candidateId)update();};
   return()=>{abort.abort();window.removeEventListener('focus',update);channel.close();};
  },[editor,dirty,busy,action,!!state,spaceId,candidateId]);
- useEffect(()=>{const abort=new AbortController();setGeometry(undefined);setGeometryError('');if(!state)return()=>abort.abort();
-  readPreview(endpoint+'/geometry?'+new URLSearchParams({space_id:spaceId,candidate_id:candidateId}),abort.signal).then(raw=>{
-   const result=validatePreview(raw,{space:spaceId,candidate:candidateId,manifest:state.source_sha256,source:state.model_source.model_sha256});
-   if(!abort.signal.aborted)setGeometry(result);
-  }).catch(e=>{if(!abort.signal.aborted)setGeometryError(e.message);});return()=>abort.abort();
- },[spaceId,candidateId,state?.source_sha256]);
+
  async function check(document:unknown,geographicBinding=draft?binding:state?.geographic_binding){
   if(!state||gate.current)return false;gate.current=true;setBusy(true);setError('');setNotice('');
   try{const checked=await value(await fetch(endpoint+'/check',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({space_id:spaceId,candidate_id:candidateId,source_sha256:state.source_sha256,document,geographic_binding:geographicBinding||null})}));
@@ -108,6 +104,7 @@ export function SceneRegistration({spaceId,candidateId,editor=false,renderHeader
   }catch(e){if(mounted.current)setError(e instanceof Error?e.message:'操作失败。');}
   finally{gate.current=false;if(mounted.current)setBusy(false);}
  }
+ const modelSource=state?{space:spaceId,candidate:candidateId,manifest:state.source_sha256,source:state.model_source.model_sha256,frame:state.model_source.frame_id}:undefined;
  const adopted=state?.adopted;
  const next=state?registrationNextStep({dirty,hasDocument:!!current,checksPassed:state.report?.calculation_status==='checks_passed',synthetic:!!current?.synthetic,reviewStatus:state.review_status,canEdit:state.can_edit,canReview:state.can_review,actor:session?.user?.subject||'',authoredBy:state.authored_by,approvedRevision:state.approved_revision,adoptedRevision:state.adopted_revision,validFrom:state.approval?.valid_from,validUntil:state.approval?.valid_until}):null;
  function advance(){if(!next?.action)return;if(next.action==='import')file.current?.click();else if(next.action!=='association')open(next.action);}
@@ -130,13 +127,13 @@ export function SceneRegistration({spaceId,candidateId,editor=false,renderHeader
  </>;
  return <>{!editor&&renderHeader?.(actions)}<section className={`scene-registration${editor?' scene-registration-editor':''}`} aria-label={editor?'独立配准编辑页面':'场景空间基准'}>
   {editor?<>
-   {state?.document&&state.can_edit&&!loading?<RegistrationEditor key={state.source_sha256+':'+state.revision} production input={state.document} geometry={geometry} buildings={[]} selected={selected} onSelect={setSelected} onClose={returnToDisplay} onApply={async input=>{if(await check(input))open('save');}} busy={busy} pending={dirty} context={`模型 ${candidateId.slice(-8).toUpperCase()} · 修订 ${state.revision} · ${labels[state.review_status]}`} message={notice||geometryError&&`三维预览暂不可用：${geometryError}`||undefined} error={!action?error:undefined}/>:<main className="registration-editor registration-editor-unavailable"><header className="registration-editor-header"><Button size="sm" variant="outline" onClick={returnToDisplay}><ArrowLeft size={16}/>返回配准展示</Button><h1>编辑配准</h1></header><div role={error?'alert':'status'}><p>{loading?'正在读取配准资料…':error||(!state?.can_edit?'当前身份无权编辑此模型的配准资料。':'此模型尚无配准资料，请先在展示页导入并保存。')}</p>{error&&<Button size="sm" variant="outline" onClick={()=>setRefresh(n=>n+1)}>重新读取</Button>}</div></main>}
+   {state?.document&&state.can_edit&&!loading?<RegistrationEditor key={state.source_sha256+':'+state.revision} production input={state.document} source={modelSource} buildings={[]} selected={selected} onSelect={setSelected} onClose={returnToDisplay} onApply={async input=>{if(await check(input))open('save');}} busy={busy} pending={dirty} context={`模型 ${candidateId.slice(-8).toUpperCase()} · 修订 ${state.revision} · ${labels[state.review_status]}`} message={notice||undefined} error={!action?error:undefined}/>:<main className="registration-editor registration-editor-unavailable"><header className="registration-editor-header"><Button size="sm" variant="outline" onClick={returnToDisplay}><ArrowLeft size={16}/>返回配准展示</Button><h1>编辑配准</h1></header><div role={error?'alert':'status'}><p>{loading?'正在读取配准资料…':error||(!state?.can_edit?'当前身份无权编辑此模型的配准资料。':'此模型尚无配准资料，请先在展示页导入并保存。')}</p>{error&&<Button size="sm" variant="outline" onClick={()=>setRefresh(n=>n+1)}>重新读取</Button>}</div></main>}
   </>:<>
   {!renderHeader&&<header className="scene-registration-toolbar">{actions}</header>}
   <input ref={file} type="file" accept=".json,application/json" hidden aria-label="导入配准资料文件" onChange={event=>{void importFile(event.target.files?.[0]);event.target.value='';}}/>
   {loading&&<output>正在读取配准资料…</output>}{busy&&<output>正在核对并处理配准资料…</output>}{sourceBlocked?<RegistrationSourceRecovery spaceId={spaceId} candidateId={candidateId}/>:error&&!action&&<div className="scene-registration-message" role="alert"><p>{error}</p><Button size="sm" variant="outline" disabled={busy||dirty} onClick={()=>setRefresh(n=>n+1)}>重新读取</Button></div>}{notice&&<output>{notice}</output>}
   {state&&!loading&&<>
-   {current?<><RegistrationWorkbench key={state.source_sha256} embedded input={current} geometry={geometry} buildings={[]} summaryPrefix={status} selected={activePoint?.id} onSelect={setSelected} reviewStatus={dirty?'未保存':labels[state.review_status]}/>{dirty&&state.can_edit&&<p className="data-subtle">先保存当前资料，再在新标签页编辑配准。</p>}{geometryError&&<p role="status">三维预览暂不可用：{geometryError} 坐标清单仍可核对。</p>}</>:<><div className="scene-registration-toolbar">{status}<StatusBadge tone="neutral">{labels[state.review_status]}</StatusBadge></div><div className="scene-registration-empty"><Compass size={36}/><h3>录入模型与目标基准的配准资料</h3><p>准备已知三维刚体参数、至少三个控制点和三个独立检查点，以及水平与高程基准依据。</p>{state.can_edit&&<><Button size="sm" variant="outline" onClick={template}><DownloadSimple size={16}/>下载空白资料模板</Button><p>模板绑定当前模型，参数、点位与门限需按实际控制资料填写，再导入核对。</p></>}</div></>}
+   {current?<><RegistrationWorkbench key={state.source_sha256} embedded input={current} source={modelSource} buildings={[]} summaryPrefix={status} selected={activePoint?.id} onSelect={setSelected} reviewStatus={dirty?'未保存':labels[state.review_status]}/>{dirty&&state.can_edit&&<p className="data-subtle">先保存当前资料，再在新标签页编辑配准。</p>}</>:<><div className="scene-registration-toolbar">{status}<StatusBadge tone="neutral">{labels[state.review_status]}</StatusBadge></div><div className="scene-registration-empty"><Compass size={36}/><h3>录入模型与目标基准的配准资料</h3><p>准备已知三维刚体参数、至少三个控制点和三个独立检查点，以及水平与高程基准依据。</p>{state.can_edit&&<><Button size="sm" variant="outline" onClick={template}><DownloadSimple size={16}/>下载空白资料模板</Button><p>模板绑定当前模型，参数、点位与门限需按实际控制资料填写，再导入核对。</p></>}</div></>}
    {state.changed_at&&<p className="scene-registration-audit">{labels[state.review_status]} · {state.actor} · {new Date(state.changed_at).toLocaleString('zh-CN')}<br/>{state.reason}</p>}
    {next&&<WorkflowNextStep description={next.description} label={next.action?next.label:undefined} disabled={busy||loading} href={next.action==='association'?recordLink('association',{space:spaceId,job:candidateId,tab:'overview'}):undefined} onClick={advance}/>}
   </>}

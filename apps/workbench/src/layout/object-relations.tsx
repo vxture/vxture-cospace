@@ -1,3 +1,4 @@
+import {engineeringObjects} from './model-exact-data';
 import {collectionImpact} from './operation-impact';
 import {useOperationConfirmation} from './operation-confirmation';
 import {useUnsavedNavigation,runGuarded} from './unsaved-navigation';
@@ -34,10 +35,9 @@ export function ObjectRelations({embedded=false}:{embedded?:boolean}={}){
  useEffect(()=>{
   const abort=new AbortController();setHash('');setObjects([]);setRelations([]);setReference('');setOriginal('');setOriginalRef('');setDraft(empty);setEditing('');setFormOpen(false);invalidate();
   if(!base){setReading(false);return()=>abort.abort();}setReading(true);
-  Promise.all([fetch(`${endpoint}/candidates/${base}/api/anchor?point_index=0`,{signal:abort.signal}),fetch(`${endpoint}/candidates/${base}/api/objects`,{signal:abort.signal})]).then(async rs=>{
-   if(rs.some(r=>!r.ok))throw Error('基础候选尚无对象标注或固定快照不可用。');const [a,o]=await Promise.all(rs.map(r=>r.json()));if(abort.signal.aborted)return;
-   if(a.candidate_id!==base||o.model_id!==base||o.space_id!==target.space)throw Error('基础对象与空间不一致。');
-   const ref=key(o.ontology_ref),saved=(o.relations||[]).map(clean);setHash(a.model_manifest_sha256);setObjects(o.objects);setRelations(saved);setOriginal(JSON.stringify(saved));setOriginalRef(ref);setReference(versions.some(v=>key(v)===ref)?ref:'');
+  engineeringObjects(target.space,base,abort.signal).then(({manifest,objects:o})=>{
+   if(abort.signal.aborted)return;
+   const ref=key(o.ontology_ref),saved=(o.relations||[]).map(clean);setHash(manifest);setObjects(o.objects);setRelations(saved);setOriginal(JSON.stringify(saved));setOriginalRef(ref);setReference(versions.some(v=>key(v)===ref)?ref:'');
   }).catch(e=>{if(!abort.signal.aborted)setError(e.message);}).finally(()=>{if(!abort.signal.aborted)setReading(false);});return()=>abort.abort();
  },[base,versions]);
  useEffect(()=>{

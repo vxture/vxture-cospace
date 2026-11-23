@@ -3,7 +3,7 @@
   'use strict';
   const channel = 'cospace.pointcloud/1';
   let session = '', viewer, cloud, agent, config, objects = [], firstFrame = false, disposed = false;
-  let lastReport = 0, requests = 0, transferred = 0, fatal = false, paused = false, geometry = true, human = true;
+  let lastReport = 0, requests = 0, transferred = 0, fatal = false, paused = false, geometry = true, human = true, picking = false;
   const controllers = new Set();
   const send = (type, values = {}) => parent.postMessage({channel, session, type, ...values}, location.origin);
   function fail(message, access = false) {
@@ -113,6 +113,17 @@
       viewer.setBackground('black');
       viewer.renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
       viewer.renderer.domElement.setAttribute('aria-label', '真实空间渐进三维画布');
+      viewer.renderer.domElement.addEventListener('dblclick', event => {
+        if (!picking || !cloud || !human || !geometry || paused || fatal || disposed) return;
+        event.preventDefault(); event.stopImmediatePropagation();
+        const rect = viewer.renderer.domElement.getBoundingClientRect();
+        const hit = Potree.Utils.getMousePointCloudIntersection(new THREE.Vector2(event.clientX - rect.left, event.clientY - rect.top), viewer.scene.getActiveCamera(), viewer, [cloud]);
+        if (!hit) return;
+        const p = hit.location.toArray();
+        // A displayed LOD hit supplies only a candidate region, never an original row ID.
+        const point = config.origin_m.map((n, i) => n + config.model_to_display.reduce((sum, row, j) => sum + row[i] * p[j], 0));
+        send('pick', {point});
+      }, true);
       viewer.addEventListener('render.pass.end', report);
       // 1.8.2's convenience loadPointCloud invokes OctreeLoader twice for metadata.json.
       // Use its exported native loader directly, retaining the upstream LOD/decoder.
@@ -165,6 +176,8 @@
       geometry = value.geometry;
       human = value.view === 'human';
       objects = Array.isArray(value.objects) ? value.objects : [];
+      picking = value.picking === true;
+      if (value.engineering) viewer.setBackground('gradient');
       apply();
     }
     if (value.type === 'agent' && value.positions instanceof ArrayBuffer) {

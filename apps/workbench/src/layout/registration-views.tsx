@@ -1,15 +1,16 @@
 import React,{lazy,Suspense,useEffect,useMemo,useRef,useState} from 'react';
 import {Button,Drawer,StatusBadge} from '@vxture/design-system';
 import {Crosshair,Minus,Plus} from '@phosphor-icons/react';
+import {EngineeringModelCanvas,type EngineeringSource,type ExactPoint} from './engineering-model-canvas';
 import type {PreviewGeometry} from './geometry-preview-data';
 import {displayCentimetres as centimetres,type RegistrationInput,type RegistrationPreview,type ControlResidual} from './registration-preview-data';
 const ModelCanvas=lazy(()=>import('./geometry-preview-canvas'));
 export type PlanBuilding={id:string;name:string;x:number;y:number;width:number;depth:number;height:number};
 type Selection={selected:string;onSelect:(id:string)=>void};
 
-export function RegistrationModel({input,geometry,selected,onSelect,fitPadding=.84}:{input:RegistrationInput;geometry?:PreviewGeometry;fitPadding?:number}&Selection){
+export function RegistrationModel({input,geometry,source,selected,onSelect,fitPadding=.84,onConfirmPoint,contextKey}:{input:RegistrationInput;geometry?:PreviewGeometry;source?:EngineeringSource;fitPadding?:number;onConfirmPoint?:(point:ExactPoint)=>void;contextKey?:string}&Selection){
  const markers=useMemo(()=>input.controls.map(p=>({id:p.id,label:p.id,position:p.source_m,kind:p.purpose})),[input.controls]);
- return geometry?<Suspense fallback={<div className="registration-model-loading" role="status">正在加载三维画面…</div>}><ModelCanvas fitPadding={fitPadding} data={geometry} fitControl="overlay" markers={markers} selected={selected} onSelect={onSelect}/></Suspense>:<div className="registration-model-loading">没有可用模型预览，可从清单核对坐标。</div>;
+ return source?<EngineeringModelCanvas source={source} markers={markers} selected={selected} onSelect={onSelect} onConfirmPoint={onConfirmPoint} contextKey={contextKey}/>:geometry?<Suspense fallback={<div className="registration-model-loading" role="status">正在加载三维画面…</div>}><ModelCanvas fitPadding={fitPadding} data={geometry} fitControl="overlay" markers={markers} selected={selected} onSelect={onSelect}/></Suspense>:<div className="registration-model-loading">没有可用模型预览，可从清单核对坐标。</div>;
 }
 export function RegistrationComparison({aligned,onChange}:{aligned:boolean;onChange:(value:boolean)=>void}){
  return <div className="registration-compare" role="group" aria-label="配准前后"><Button size="sm" variant={!aligned?'secondary':'ghost'} aria-pressed={!aligned} onClick={()=>onChange(false)}>配准前</Button><Button size="sm" variant={aligned?'secondary':'ghost'} aria-pressed={aligned} onClick={()=>onChange(true)}>配准后</Button></div>;
