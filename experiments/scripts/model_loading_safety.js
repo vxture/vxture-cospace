@@ -29,7 +29,11 @@ globalThis.cospaceLoadingSafety = async page => {
     return {hidden, resumed: !v.getFreeze()};
   });
   check(states.hidden && states.resumed, 'Hidden native selection did not pause/resume');
-  await page.evaluate(() => post('settings', {view: 'agent', geometry: true}));
+  await page.evaluate(() => {
+    const positions = new Float64Array(fixture.anchors.flat());
+    post('agent', {positions: positions.buffer});
+    post('settings', {view: 'agent', geometry: true});
+  });
   await frame.waitForFunction(() => window.__labViewer.getFreeze());
   await page.evaluate(() => post('retry'));
   check(await frame.evaluate(() => window.__labViewer.getFreeze()), 'Retry bypassed nonhuman pause');
