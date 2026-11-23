@@ -1,0 +1,67 @@
+{
+  "profile": "vxture.ontology-module/0.1",
+  "module_id": "monitoring",
+  "version": "0.1.0",
+  "title": "环境与监测",
+  "description": "传感器、监测点及观测语义候选定义，观测时序和值域仍需消费契约。",
+  "layer": "domain",
+  "status": "draft",
+  "requires": [
+    {
+      "module_id": "core",
+      "version": "0.1.0",
+      "sha256": "d12aec3d679d5c06779e91faf44b4064dfee2a7cbdee2330b20e253b511f169f"
+    }
+  ],
+  "concepts": {
+    "sensor": {
+      "title": "传感器",
+      "definition": "通过某程序形成对被观测属性报告的物理设备。",
+      "examples": [
+        "温度传感器"
+      ],
+      "counterexamples": [
+        "一次温度观测结果"
+      ],
+      "properties": {},
+      "parent": "core:physical_object"
+    },
+    "monitoring_point": {
+      "title": "监测点",
+      "definition": "业务指定的监测目标或位置记录，不等同传感器物理设备。",
+      "examples": [
+        "区域温度监测点"
+      ],
+      "counterexamples": [
+        "安装该区域外的传感器本体"
+      ],
+      "properties": {},
+      "parent": "core:information_record"
+    },
+    "temperature_observation": {
+      "title": "温度观测",
+      "definition": "对指定对象温度属性的一次来源报告，需时间、方法及单位。",
+      "examples": [
+        "某房间某时刻的温度报告"
+      ],
+      "counterexamples": [
+        "传感器量程上限"
+      ],
+      "properties": {},
+      "parent": "core:observation"
+    }
+  },
+  "relations": {
+    "monitors": {
+      "title": "监测对象",
+      "definition": "声明传感器监测的目标；安装位置不同不能自动视为不合法。",
+      "source_types": [
+        "monitoring:sensor"
+      ],
+      "target_types": [
+        "core:entity"
+      ],
+      "symmetric": false
+    }
+  }
+}

@@ -181,3 +181,52 @@ def test_water_documents_connections_without_direction_or_spatial_inference(tmp_
     with pytest.raises(ValueError, match='semantic_attributes_invalid'):
         delivery.selection(source, revision)
     assert delivery.selection(source, selected['consumer_revision'])[0] == selected
+
+
+def test_monitoring_and_operations_fixed_together_without_conflating_records(tmp_path):
+    sample = json.loads((EXAMPLES / 'manufacturing-monitoring-operations-b08d.json').read_bytes())
+    delivery = Delivery(tmp_path)
+    for module, version, index in (('monitoring', '0.1.0', 0), ('operations', '0.2.0', 5)):
+        bundle = upgrade_and_verify_previous(
+            tmp_path, delivery, sample, module, f'{module}-v{version}.json', sample['objects'][index])
+        assert {m['module_id'] for m in bundle['modules']} == {'core', module}
+
+    source = delivery.plan(sample, 'build-monitoring-operations')
+    revision = 0
+    for obj in sample['objects']:
+        revision = delivery.link(source, revision, obj)
+    for row in sample['relations'][:-1]:
+        revision = delivery.map(source, revision, row, sample['valid_time'])
+    selected, report = delivery.selection(source, revision)
+    assert report['coverage']['unmapped_relations'] == 1
+    manifest, payload = freeze(delivery.links, source, selected, STAMP)
+    verify_fixed(tmp_path / 'mixed-artifact', source, selected, manifest, payload)
+    assert {m['module_id']: m['version'] for m in Catalog.from_bytes(payload['definitions.json']).export()['modules']} == {
+        'core': '0.1.0', 'monitoring': '0.2.0', 'operations': '0.3.0'}
+    claims = json.loads(payload['claims.json'])
+    assert {(r['definition_id'], r['source_id'], r['target_id']) for r in claims['relation_links']} == {
+        ('located_in', 'sensor', 'corridor'),
+        ('air_observation_subject', 'air-sample', 'room'),
+        ('observation_reported_by_sensor', 'air-sample', 'sensor'),
+        ('inspection_point_target', 'inspection-point', 'fan'),
+        ('inspection_at_point', 'inspection-report', 'inspection-point')}
+    by_object = {r['object_id']: r for r in claims['links']}
+    assert by_object['air-sample']['instance_properties']['air_temperature']['unit'] == '°C'
+    assert by_object['inspection-report']['instance_properties']['reported_outcome'] == {
+        'value': '记录时外观未见明显破损'}
+    assert 'reported_outcome' not in by_object['fan']['instance_properties']
+
+    invalid_report = delivery.map(source, revision, sample['relations'][-1], sample['valid_time'],
+                                  relation='operations:inspection_at_point')
+    with pytest.raises(ValueError, match='semantic_relations_invalid'):
+        delivery.selection(source, invalid_report)
+    revision = delivery.change(source, invalid_report, 'relation_remove', relation_id='related-work-order')
+    props = by_object['air-sample']['instance_properties']
+    missing_method = {k: v for k, v in props.items() if k != 'measurement_method'}
+    for invalid_props in (missing_method, {**props, 'air_temperature':
+                                           {'value': 295.55, 'unit': 'K', 'quantity': 'temperature'}}):
+        revision = delivery.change(source, revision, 'properties', object_id='air-sample', valid_time=None,
+                                   evidence_note='合成温度反例', properties=invalid_props)
+        with pytest.raises(ValueError, match='semantic_attributes_invalid'):
+            delivery.selection(source, revision)
+    assert delivery.selection(source, selected['consumer_revision'])[0] == selected

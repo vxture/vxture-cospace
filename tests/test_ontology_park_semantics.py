@@ -1,5 +1,4 @@
 """Cross-park semantic boundaries and consumer upgrade compatibility."""
-from copy import deepcopy
 from hashlib import sha256
 import json
 from pathlib import Path
@@ -17,12 +16,12 @@ def definitions():
 def test_competency_plan_references_resolve_without_scene_owned_definitions():
     plan = json.loads(Path('examples/ontology/park-competency-questions.json').read_text(encoding='utf-8'))
     modules = definitions()
-    assert {q['id'] for q in plan['questions']} == {f'PCQ{i:02}' for i in range(1, 14)}
+    assert {q['id'] for q in plan['questions']} == {f'PCQ{i:02}' for i in range(1, 16)}
     assert len(plan['questions']) == len({q['id'] for q in plan['questions']})
     for question in plan['questions']:
         assert set(question['park_types']) == set(plan['park_types'])
         assert question['required_inputs'] and question['forbidden_inferences']
-        assert question['acceptance_batch'] in {'B03', 'B05', 'B08b', 'B08c', 'extension'}
+        assert question['acceptance_batch'] in {'B03', 'B05', 'B08a', 'B08b', 'B08c', 'B08d', 'extension'}
         for field in ('concepts', 'relations'):
             for reference in question[field]:
                 module_id, term_id = reference.split(':')
@@ -72,9 +71,10 @@ def test_domain_revision_does_not_rewrite_shared_core_or_export_unrelated_module
     catalog = builtin_catalog()
     modules = definitions()
     assert sha256(canonical_bytes(modules['core'])).hexdigest() == 'd12aec3d679d5c06779e91faf44b4064dfee2a7cbdee2330b20e253b511f169f'
-    upgraded = {'built_environment', 'operations', 'electrical', 'fire_safety', 'water'}
-    for identity in sorted(upgraded):
-        assert modules[identity]['version'] == '0.2.0'
+    upgraded = dict.fromkeys(('built_environment', 'electrical', 'fire_safety', 'water', 'monitoring'), '0.2.0')
+    upgraded['operations'] = '0.3.0'
+    for identity, version in upgraded.items():
+        assert modules[identity]['version'] == version
         exported = catalog.export(identity)
         assert {m['module_id'] for m in exported['modules']} == {'core', identity}
         assert Catalog.from_bytes(canonical_bytes(exported)).export() == exported
@@ -83,9 +83,8 @@ def test_domain_revision_does_not_rewrite_shared_core_or_export_unrelated_module
 
 
 def test_definition_upgrade_invalidates_snapshot_but_preserves_explicit_membership(tmp_path):
-    # Emulate a consumer holding a previous version; do not require a history service.
-    previous = deepcopy(builtin_catalog().export()['modules'])
-    next(m for m in previous if m['module_id'] == 'operations')['version'] = '0.1.0'
+    previous = [m for m in builtin_catalog().export()['modules'] if m['module_id'] != 'operations']
+    previous.append(json.loads(Path('tests/fixtures/ontology-instances/operations-v0.2.0.json').read_bytes()))
     old_store = ResourceDirectory(tmp_path, Catalog(previous).describe())
     old_page = old_store.read('park-a', {})
     old_reference = next(i['reference'] for i in old_page['items'] if i['reference']['module_id'] == 'operations')
@@ -98,6 +97,6 @@ def test_definition_upgrade_invalidates_snapshot_but_preserves_explicit_membersh
     with pytest.raises(ResourceDirectoryError, match='directory_changed'):
         upgraded.read('park-a', {'snapshot': before_upgrade['snapshot']})
     item = next(i for i in upgraded.read('park-a', {})['items'] if i['reference']['module_id'] == 'operations')
-    assert item['reference']['version'] == '0.2.0'
+    assert item['reference']['version'] == '0.3.0'
     assert item['revision'] == 1 and item['group_ids'] == []
     assert upgraded.read('park-b', {'group': 'preset-operations'})['total'] == 1

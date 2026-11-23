@@ -23,13 +23,13 @@
     },
     {
       "module_id": "monitoring",
-      "version": "0.1.0",
-      "sha256": "e4e0a23d811db921893b038676ad452f9a3d81e256877fa8b83f108d34c4c6d2"
+      "version": "0.2.0",
+      "sha256": "97af76906c072b63a22495d2d27683586e15d612c2cf5de2ce9e39177b80a167"
     },
     {
       "module_id": "operations",
-      "version": "0.2.0",
-      "sha256": "0619ee8b503663fb6f3982efaacdf12e8a730039eef7522cb1b4b5069277bf52"
+      "version": "0.3.0",
+      "sha256": "b7d27790f85b720a46c46349807c16f41a0ff367b7a32ef6b64b63d4bbdb287e"
     }
   ],
   "sources": [

@@ -757,9 +757,9 @@
     {
       "profile": "vxture.ontology-module/0.1",
       "module_id": "monitoring",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "title": "环境与监测",
-      "description": "传感器、监测点及观测语义候选定义，观测时序和值域仍需消费契约。",
+      "description": "传感器、监测点及观测语义候选定义，支持带方法、单位及来源的空气温度报告；时序、实时状态与质量由消费契约负责。",
       "layer": "domain",
       "status": "draft",
       "requires": [
@@ -805,6 +805,30 @@
           ],
           "properties": {},
           "parent": "core:observation"
+        },
+        "air_temperature_observation": {
+          "title": "空气温度观测",
+          "definition": "来源对指定空间空气温度的一次报告。观测时间由来源记录提供，观测值不作为设备温度、实时状态或达标结论。",
+          "examples": ["来源台账中以摄氏度记录的一次房间空气温度采样"],
+          "counterexamples": ["设备壳体温度", "没有来源的最新环境状态"],
+          "properties": {
+            "air_temperature": {
+              "title": "报告温度",
+              "definition": "来源报告的空气温度，以摄氏度记录。保留来源和方法；不自动推导实时状态或有效覆盖范围。",
+              "data_type": "number",
+              "required": true,
+              "unit": "°C",
+              "quantity": "temperature",
+              "minimum": -273.15
+            },
+            "measurement_method": {
+              "title": "观测方法",
+              "definition": "来源记录明确说明的采样程序或方法名称；记录名称不代表平台校验方法适用性。",
+              "data_type": "string",
+              "required": true
+            }
+          },
+          "parent": "monitoring:temperature_observation"
         }
       },
       "relations": {
@@ -818,15 +842,29 @@
             "core:entity"
           ],
           "symmetric": false
+        },
+        "air_observation_subject": {
+          "title": "空气温度观测空间",
+          "definition": "从一次空气温度观测指向来源明确描述的空间；不从传感器安装位置推导。",
+          "source_types": ["monitoring:air_temperature_observation"],
+          "target_types": ["core:spatial_region"],
+          "symmetric": false
+        },
+        "observation_reported_by_sensor": {
+          "title": "观测来源传感器",
+          "definition": "从一次空气温度观测指向来源资料明确标识的传感器，不等同该传感器的可用或校准状态。",
+          "source_types": ["monitoring:air_temperature_observation"],
+          "target_types": ["monitoring:sensor"],
+          "symmetric": false
         }
       }
     },
     {
       "profile": "vxture.ontology-module/0.1",
       "module_id": "operations",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "title": "组织与运营",
-      "description": "跨园区的空间用途、入驻指派、管理范围、设施职责与资产记录候选定义；实例和时效证据由消费方承载，不定义平台租户、商业权益或权限。",
+      "description": "跨园区的空间用途、入驻指派、管理范围、设施职责、资产及巡检记录候选定义；实例和时效证据由消费方承载，不定义平台租户、商业权益或权限。",
       "layer": "domain",
       "status": "draft",
       "requires": [
@@ -866,6 +904,21 @@
             "检测柜物理设备"
           ],
           "properties": {},
+          "parent": "core:information_record"
+        },
+        "inspection_report": {
+          "title": "巡检报告",
+          "definition": "来自人工或业务系统的单次巡检记录，保留来源表述；不等同于巡检任务、设备实时状态或验收结论。",
+          "examples": ["某次例行巡检的记录条目"],
+          "counterexamples": ["巡检点主档", "没有现场依据的设备当前状态"],
+          "properties": {
+            "reported_outcome": {
+              "title": "来源结果记录",
+              "definition": "来源对本次检查的原始结果表述，不能用作设备实时状态字段或专业验收结果。",
+              "data_type": "string",
+              "required": true
+            }
+          },
           "parent": "core:information_record"
         },
         "work_order": {
@@ -1055,6 +1108,20 @@
           "target_types": [
             "core:organization"
           ],
+          "symmetric": false
+        },
+        "inspection_point_target": {
+          "title": "巡检点目标",
+          "definition": "从巡检点指向资料明确指定的受检物理对象或空间；点锚不构成目标关系，也不证明到达条件。",
+          "source_types": ["operations:inspection_point"],
+          "target_types": ["core:physical_object", "core:spatial_region"],
+          "symmetric": false
+        },
+        "inspection_at_point": {
+          "title": "报告所涉巡检点",
+          "definition": "从单次巡检报告指向来源所记录的巡检点，不表示计划已全部执行或设备当前可用。",
+          "source_types": ["operations:inspection_report"],
+          "target_types": ["operations:inspection_point"],
           "symmetric": false
         }
       }

@@ -12,6 +12,8 @@
 
 [研发办公园区给排水 B08c](research-office-water-b08c.json) 区分设备、端口、直接物理连接和系统成员，并验证管段内径的单位。使用同一领域交付验收入口。
 
+[制造园区环境与运维 B08d](manufacturing-monitoring-operations-b08d.json) 在同一固定交付中组合两份独立发布的定义，区分安装空间、被测空间和巡检点、受检设备、工单、巡检报告。使用同一领域交付验收入口。
+
 契约见 [ontology-instances-v0.1.md](../../../contracts/schemas/ontology-instances-v0.1.md)。反例补丁矩阵单独保存在 `tests/fixtures/ontology-instances/negative-matrix.json`，不作为正常消费实例传播。
 
 从仓库根目录运行：
