@@ -1,9 +1,9 @@
 # 空间模型渐进加载技术方案
 
 日期：2026-11-23。修订目标：以行业成熟方案作为交付基线，以经过对照验证的能力挑战领先性。
-状态：L01 已随 [v0.14.0](https://github.com/vxture/vxture-cospace/releases/tag/v0.14.0) 上线；L02 工程统一消费已实施，正在发布前验证。原始问题基线为 v0.13.7 / 69a2f86687f384774035aacaf0d9f5d99be69a85。本文的性能目标及行业比较要求仍是验收约束，不能把选型或单次本地测量当作全部门槛已通过。
+状态：L01 已随 [v0.14.0](https://github.com/vxture/vxture-cospace/releases/tag/v0.14.0) 上线；L02 已随 [v0.15.0](https://github.com/vxture/vxture-cospace/releases/tag/v0.15.0) 上线。L03 进入独立策略对照，默认保持成熟基线。原始问题基线为 v0.13.7 / 69a2f86687f384774035aacaf0d9f5d99be69a85。本文的性能目标及行业比较要求仍是验收约束，不能把选型或单次本地测量当作全部门槛已通过。
 
-本轮 L02 分为原始点查询、配准接入、空间关联接入、回归发布四项。实现和证据见 [L02 工程统一消费记录](../validation/model-progressive-L02-2026-11-23.md)。L03 作业优先与预算自适应继续独立迭代。
+L02 的原始点查询、配准接入、空间关联接入、回归发布见 [L02 工程统一消费记录](../validation/model-progressive-L02-2026-11-23.md)。L03 的作业优先、预算自适应、无效传输治理见 [L03 策略验证记录](../validation/model-progressive-L03-2026-11-23.md)。
 
 ## 1. 架构决策
 

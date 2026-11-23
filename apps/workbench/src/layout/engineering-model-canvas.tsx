@@ -41,7 +41,7 @@ export function EngineeringModelCanvas({source,markers=[],selected='',onSelect,f
   finally{if(!abort.signal.aborted)setWorking(false);}
  }
  return <div className="engineering-model-canvas" data-picking={!!onConfirmPoint} data-engineering-context={contextKey}>
-  {scene&&!denied&&<ModelDisplayCanvas data={scene} view="human" geometry markers selected={selected} select={id=>{if(markers.some(p=>p.id===id))onSelect?.(id);}} api={api} engineering onReady={()=>{if(focus)api.current?.focus(focus.position);}} onPick={onConfirmPoint?point=>void search(point):undefined} onAccessLost={accessLost}/>}
+  {scene&&!denied&&<ModelDisplayCanvas data={scene} view="human" geometry markers selected={selected} select={id=>{if(markers.some(p=>p.id===id))onSelect?.(id);}} api={api} engineering focus={focus?.position} onReady={()=>{if(focus)api.current?.focus(focus.position);}} onPick={onConfirmPoint?point=>void search(point):undefined} onAccessLost={accessLost}/>}
   {!data&&!error&&<p className="engineering-model-message" role="status">正在读取固定模型…</p>}
   {error&&<div className="engineering-model-message" role="alert"><p>{error}</p>{!denied&&<Button size="sm" variant="outline" onClick={()=>setAttempt(n=>n+1)}>重试显示</Button>}</div>}
   {data?.display?.state==='ready'&&!denied&&<Button className="engineering-model-fit" size="icon-md" variant="outline" aria-label="适配全图" title="适配全图" onClick={()=>api.current?.reset()}><CubeFocus size={24}/></Button>}

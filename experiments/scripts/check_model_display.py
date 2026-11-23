@@ -11,9 +11,9 @@ from packages.construction.model_display import ModelDisplays, encoded
 from packages.construction.preview_model import digest
 
 
-def park(root, count=100_000):
+def park(root, count=100_000, layout='grid'):
     root = Path(root)
-    name = 'build-display-probe'
+    name = 'build-linear-probe' if layout == 'linear' else 'build-display-probe'
     output = root / name / 'output'
     output.mkdir(parents=True, exist_ok=False)
     rng = np.random.default_rng(20261123)
@@ -26,6 +26,9 @@ def park(root, count=100_000):
     points[walls == 0, 0] = (building[walls == 0] % 6) * 40
     points[walls == 1, 2] = 18
     points[walls == 2, 1] = (building[walls == 2] // 6) * 45
+    if layout == 'linear':
+        points[:, 0] *= 4
+        points[:, 1] *= .2
     points += [500_000, 600_000, 100]
     colors = np.tile(np.array([126, 166, 190], dtype='u1'), (count, 1))
     colors[walls == 1] = [190, 165, 100]
