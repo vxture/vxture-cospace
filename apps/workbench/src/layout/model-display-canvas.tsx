@@ -12,7 +12,12 @@ export function ModelDisplayCanvas({data,view,geometry,markers,selected,select,a
  const [viewFault,setViewFault]=useState('');
  const display=data?.display;
  function post(type:string,values:Record<string,unknown>={}){frame.current?.contentWindow?.postMessage({channel,session:session.current,type,...values},location.origin);}
- function init(){const current=latest.current,config=current.data?.display;if(config?.state!=='ready')return;activeDisplay.current=config.id;post('init',{config,agent:current.dual?current.data?.agentDisplay:undefined,dual:current.dual,focus:current.focus});}
+ function init(){
+  const current=latest.current,config=current.data?.display;
+  if(config?.state!=='ready')return;
+  activeDisplay.current=config.id;
+  post('init',{config,agent:current.dual?current.data?.agentDisplay:undefined,dual:current.dual,focus:current.focus});
+ }
  function settings(){if(initialized.current){const current=latest.current;post('settings',{view:current.view,geometry:current.geometry,objects:current.data?.objects||[],picking:!!current.onPick,engineering:current.engineering});}}
  useEffect(()=>{settings();},[data?.objects,view,geometry,!!onPick,engineering]);
  useEffect(()=>{
@@ -29,11 +34,19 @@ export function ModelDisplayCanvas({data,view,geometry,markers,selected,select,a
    const message=event.data;
    if(message.type==='ready'){runtimeReady.current=true;init();return;}
    if(message.session!==session.current)return;
-   if(message.type==='initialized'){initialized.current=true;settings();if(latest.current.dual)post('agent-descriptor',{config:latest.current.data?.agentDisplay});api.current={reset:()=>post('reset'),focus:(point:XYZ)=>post('focus',{point})};latest.current.onReady?.();}
+   if(message.type==='initialized'){
+    initialized.current=true;settings();
+    if(latest.current.dual)post('agent-descriptor',{config:latest.current.data?.agentDisplay});
+    api.current={reset:()=>post('reset'),focus:(point:XYZ)=>post('focus',{point})};latest.current.onReady?.();
+   }
    if(message.type==='first-frame'){setStatus('概览已显示 · 正在细化当前视野');latest.current.onFirstFrame?.();if(host.current){host.current.dataset.firstModelMs=String(performance.now());host.current.dataset.firstModelBytes=String(message.transferred);}}
    if(message.type==='frame'){
     if(message.view==='human'||message.view==='agent')latest.current.onView?.(message.view);
-    const current=latest.current,refining=!message.diagnostics?.viewReadyMs;setStatus(!current.geometry?'几何已隐藏':message.points>0?(refining?'可浏览 · 正在细化当前视野':'当前视野已就绪'):message.view==='agent'&&message.empty?'计算表达暂无表面单元':'正在加载当前视野…');
+    const current=latest.current;
+    if(!current.geometry)setStatus('几何已隐藏');
+    else if(message.points>0)setStatus(message.diagnostics?.viewReadyMs?'当前视野已就绪':'可浏览 · 正在细化当前视野');
+    else if(message.view==='agent'&&message.empty)setStatus('计算表达暂无表面单元');
+    else setStatus('正在加载当前视野…');
     setViewFault(message.fault||'');
     if(host.current){host.current.dataset.displayPoints=String(message.points);host.current.dataset.renderedView=message.view;host.current.dataset.viewPending=String(message.pending);host.current.dataset.displayLoading=String(message.loading);host.current.dataset.rangeRequests=String(message.requests);host.current.dataset.transferredBytes=String(message.transferred);host.current.dataset.cachedPoints=String(message.cached_points);}
     if(host.current&&message.diagnostics){for(const [key,value] of Object.entries(message.diagnostics))host.current.dataset[key]=String(value);}

@@ -13,6 +13,14 @@ import {DisplayAccessError,loadDisplayScene,loadSceneObjects,type ModelRef} from
 import {getJSON,previewEndpoint,realScreenHref,type DirectorySpace,type FixedPublication,type SceneData,type ModelObject} from './real-space-data';
 
 function target(){const p=new URLSearchParams(location.search);return {space:p.get('space')||'',publication:p.get('publication')||'',job:p.get('job')||''};}
+function modelRef(current:ReturnType<typeof target>,space:DirectorySpace):ModelRef{
+ if(current.job&&current.publication)throw new Error('候选与发布引用不能同时指定，请从来源页面重新打开。');
+ if(current.job)return {space:space.id,identity:current.job,kind:'candidate'};
+ const publication=space.publications.find(p=>p.id===current.publication);
+ if(!publication)throw new Error(current.publication?'所选发布不属于当前空间或已不可读。':'此入口未指定固定发布，请从我的场景打开。');
+ if(!publicationAvailable(publication))throw new Error('此固定发布不可用、已暂停或退役，请前往服务发布查看状态及替代版本。');
+ return {space:space.id,identity:publication.id,kind:'publication'};
+}
 function Handle({side,open,toggle}:{side:'left'|'right';open:boolean;toggle:()=>void}){return <Button variant="ghost" className={`rail-handle rail-handle-${side}`} data-open={open} aria-label={side==='left'?'展开或收起对象列表':'展开或收起空间概览'} aria-expanded={open} onClick={toggle}><img src="/assets/fold-bracket.png" className="rail-handle-art" alt=""/></Button>;}
 export function RealSpace({full,workspace}:{full:()=>void;workspace:string}){
  const platform=usePlatformSession();
@@ -32,7 +40,10 @@ export function RealSpace({full,workspace}:{full:()=>void;workspace:string}){
    while((result.display?.state==='preparing'||result.agentDisplay?.state==='preparing')&&!controller.signal.aborted){
     await new Promise<void>((resolve,reject)=>{const abort=()=>{clearTimeout(timer);reject(new DOMException('Aborted','AbortError'));};const timer=setTimeout(()=>{controller.signal.removeEventListener('abort',abort);resolve();},2000);controller.signal.addEventListener('abort',abort,{once:true});});
     let next;
-    try{next=await loadDisplayScene(ref,controller.signal);}catch(e){if(e instanceof DisplayAccessError||result.display?.state!=='ready')throw e;continue;}
+    try{next=await loadDisplayScene(ref,controller.signal);}catch(e){
+     if(e instanceof DisplayAccessError||result.display?.state!=='ready')throw e;
+     continue;
+    }
     if(controller.signal.aborted)return;
     if(next.display?.id!==result.display?.id)throw new DisplayAccessError('当前模型版本已变化。');
     result=next;setData(value=>value?{...value,model:next.model,display:next.display,agentDisplay:next.agentDisplay}:value);
@@ -40,12 +51,8 @@ export function RealSpace({full,workspace}:{full:()=>void;workspace:string}){
   }
   (async()=>{try{
    const directory=await getJSON<{spaces:DirectorySpace[]}>('/api/spaces',controller.signal);if(controller.signal.aborted)return;setSpaces(directory.spaces);
-   const space=directory.spaces.find(s=>s.id===current.space);if(!space)throw Error('空间不存在，请返回我的场景重新选择。');
-   if(current.job&&current.publication)throw Error('候选与发布引用不能同时指定，请从来源页面重新打开。');
-   if(candidate){await read({space:space.id,identity:current.job,kind:'candidate'});return;}
-   const publication=space.publications.find(p=>p.id===current.publication);if(!publication)throw Error(current.publication?'所选发布不属于当前空间或已不可读。':'此入口未指定固定发布，请从我的场景打开。');
-   if(!publicationAvailable(publication))throw Error('此固定发布不可用、已暂停或退役，请前往服务发布查看状态及替代版本。');
-   await read({space:space.id,identity:publication.id,kind:'publication'});
+   const space=directory.spaces.find(s=>s.id===current.space);if(!space)throw new Error('空间不存在，请返回我的场景重新选择。');
+   await read(modelRef(current,space));
   }catch(e){if(!controller.signal.aborted){if(e instanceof DisplayAccessError)accessLost();else setError(e instanceof Error?e.message:'空间读取失败。');}}})();
   return()=>controller.abort();
  },[current.space,current.publication,current.job,retry]);

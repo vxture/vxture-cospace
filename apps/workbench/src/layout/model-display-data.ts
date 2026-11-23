@@ -6,7 +6,7 @@ export class DisplayAccessError extends Error {}
 export async function loadDisplayScene(ref:ModelRef,signal:AbortSignal){
  const response=await fetch(previewEndpoint+modelBase(ref)+'api/display',{signal,cache:'no-store'});
  if([401,403,409].includes(response.status))throw new DisplayAccessError('当前模型的访问或版本状态已变化，请重新打开。');
- if(!response.ok)throw Error('显示资料暂不可读，请重试。');
+ if(!response.ok)throw new Error('显示资料暂不可读，请重试。');
  return validateDisplay(await response.json(),ref);
 }
 

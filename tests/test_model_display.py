@@ -109,7 +109,8 @@ def test_computation_uses_original_grid_and_independent_versioned_ranges(display
     response = client.get('/candidates/build-one/api/display')
     assert response.status_code == 200
     summary = response.json()['agent_display']
-    assert 'files' not in summary and summary['source_agent_sha256'] == digest(source)
+    assert 'files' not in summary
+    assert summary['source_agent_sha256'] == digest(source)
     assert summary['id'] != response.json()['display']['id']
     url = summary['entry'].replace('metadata.json', 'octree.bin')
     assert client.get(url).status_code == 416
@@ -121,13 +122,15 @@ def test_computation_uses_original_grid_and_independent_versioned_ranges(display
     (fixed / 'publication.json').write_bytes(encoded({'id': publication, 'candidate_id': model['id'],
         'model_manifest_sha256': sha256(raw).hexdigest(), 'source_model_sha256': model['members']['spatial.npz']['sha256']}))
     published = client.get(f'/publications/{publication}/api/display').json()['agent_display']
-    assert published['id'] == summary['id'] and published['source_manifest_sha256'] == summary['source_manifest_sha256']
+    assert published['id'] == summary['id']
+    assert published['source_manifest_sha256'] == summary['source_manifest_sha256']
     assert published['entry'].startswith(f'/publications/{publication}/')
     assert client.get(published['entry'].replace('metadata.json', 'octree.bin'), headers={'Range': 'bytes=5-10'}).content == payload[5:11]
     (folder / 'display.json').write_bytes(encoded(agent | {'source_agent_sha256': '0' * 64}))
     assert client.get(url, headers={'Range': 'bytes=5-10'}).status_code == 409
     response = client.get('/candidates/build-one/api/display').json()
-    assert response['display']['state'] == 'ready' and response['agent_display']['state'] == 'failed'
+    assert response['display']['state'] == 'ready'
+    assert response['agent_display']['state'] == 'failed'
 
 
 @pytest.mark.parametrize('strategy', ['baseline', 'task', 'adaptive', 'governance', 'combined', 'invalid'])

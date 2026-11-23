@@ -35,11 +35,12 @@ import {LoadingPolicy, TransferLedger, BASELINE, percentile} from './loading-pol
   }
   const nativeFetch = window.fetch.bind(window);
   window.fetch = async (input, init = {}) => {
-    const url = new URL(typeof input === 'string' ? input : input.url, location.href);
+    const url = new URL(input instanceof Request ? input.url : input, location.href);
     if (!config || !url.pathname.includes('/display/')) return nativeFetch(input, init);
-    const key = Object.keys(layers).find(name => layers[name].descriptor?.entry?.replace(/metadata\.json$/, '') === url.pathname.replace(/[^/]+$/, ''));
+    const directory = url.pathname.slice(0, url.pathname.lastIndexOf('/'));
+    const key = Object.keys(layers).find(name => layers[name].descriptor?.entry?.slice(0, -'/metadata.json'.length) === directory);
     if (!key || url.origin !== location.origin || url.search || !/\/(metadata\.json|hierarchy\.bin|octree\.bin)$/.test(url.pathname) || fatal || paused || disposed) {
-      throw Error('display_context_changed');
+      throw new Error('display_context_changed');
     }
     const item = layers[key];
     const controller = new AbortController();
@@ -53,26 +54,26 @@ import {LoadingPolicy, TransferLedger, BASELINE, percentile} from './loading-pol
       const ttfb = performance.now() - started;
       if ([401, 403, 409].includes(response.status)) {
         fail('当前模型的访问或版本状态已变化，请重新打开。', true);
-        throw Error('display_access_changed');
+        throw new Error('display_access_changed');
       }
       const range = new Headers(init.headers || (input instanceof Request ? input.headers : undefined)).get('range');
-      const requested = /^bytes=(\d+)-(\d+)$/.exec(range || '');
+      const requestedRange = /^bytes=(\d+)-(\d+)$/.exec(range || '');
       const returned = /^bytes (\d+)-(\d+)\/(\d+)$/.exec(response.headers.get('content-range') || '');
-      const validRange = requested && returned && response.status === 206 &&
-        Number(returned[1]) === Number(requested[1]) && Number(returned[2]) === Number(requested[2]) &&
+      const validRange = requestedRange && returned && response.status === 206 &&
+        Number(returned[1]) === Number(requestedRange[1]) && Number(returned[2]) === Number(requestedRange[2]) &&
         Number(returned[2]) < Number(returned[3]) && Number(returned[2]) - Number(returned[1]) < 16 * 1024 * 1024;
       if (!response.ok || (range ? !validRange : response.status !== 200 || !url.pathname.endsWith('/metadata.json'))) {
         await response.body?.cancel();
-        throw Error('display_read_failed');
+        throw new Error('display_read_failed');
       }
       // Keep cancellation attached through the body, not just until headers arrive.
       const expected = range ? Number(returned[2]) - Number(returned[1]) + 1 : Number(response.headers.get('content-length'));
       if (!Number.isSafeInteger(expected) || expected <= 0 || expected > (range ? 16 * 1024 * 1024 : 50 * 1024)) {
-        await response.body?.cancel(); throw Error('display_response_budget');
+        await response.body?.cancel(); throw new Error('display_response_budget');
       }
       const raw = await response.arrayBuffer();
       if (signal.aborted || fatal || disposed) throw new DOMException('Aborted', 'AbortError');
-      if (raw.byteLength !== expected) throw Error('display_response_truncated');
+      if (raw.byteLength !== expected) throw new Error('display_response_truncated');
       requests++;
       transferred += raw.byteLength;
       item.requests++; item.bytes += raw.byteLength;
@@ -279,7 +280,7 @@ import {LoadingPolicy, TransferLedger, BASELINE, percentile} from './loading-pol
     const item = layers[key], descriptor = item.descriptor;
     const loaded = await Potree.OctreeLoader.load(new URL(descriptor.entry, location.origin).href);
     if (disposed || fatal) return;
-    if (loaded.geometry.loader.metadata.points !== descriptor.point_count) throw Error('display_point_count');
+    if (loaded.geometry.loader.metadata.points !== descriptor.point_count) throw new Error('display_point_count');
     const cloud = new Potree.PointCloudOctree(loaded.geometry);
     const position = loaded.geometry.loader.metadata.attributes.find(a => a.name === 'position');
     const offset = loaded.geometry.offset;

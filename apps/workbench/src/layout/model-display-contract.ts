@@ -18,9 +18,9 @@ export function validateDisplay(value:{model:PublishedModel;display:ModelDisplay
   (ref.kind==='candidate'?model.id!==ref.identity:!pub||pub.id!==ref.identity||pub.space_id!==ref.space||pub.candidate_id!==model.id||pub.source_model_sha256!==canonical))throw Error('空间或固定模型的来源绑定不一致。');
  if(display?.profile!=='cospace.model-display/0.1'||display.provider!=='potree/1.8.2'||!sha(display.id)||!sha(display.source_manifest_sha256)||display.source_model_sha256!==canonical||!['ready','preparing','unavailable','failed'].includes(display.state)||
   (ref.kind==='publication'&&display.source_manifest_sha256!==pub?.model_manifest_sha256))throw Error('显示派生与固定模型不一致。');
- if(display.state==='ready'&&!readyGeometry(display,ref,model.construction.model_points))throw Error('显示坐标契约或精度预算无效。');
+ if(display.state==='ready'&&!readyGeometry(display,ref,model.construction.model_points))throw new Error('显示坐标契约或精度预算无效。');
  const agent=value.agent_display, cells=model.agent_view.surface_cells;
- const validAgent=agent&&agent.view==='agent'&&agent.profile===display.profile&&agent.provider===display.provider&&sha(agent.id)&&agent.id!==display.id&&
+ const validAgent=agent?.view==='agent'&&agent.profile===display.profile&&agent.provider===display.provider&&sha(agent.id)&&agent.id!==display.id&&
   agent.source_manifest_sha256===display.source_manifest_sha256&&agent.source_model_sha256===canonical&&sha(agent.source_agent_sha256)&&
   agent.source_agent_sha256===model.members['agent.npz']?.sha256&&Number.isFinite(agent.resolution_m)&&agent.resolution_m>0&&agent.resolution_m===model.agent_view.resolution_m&&
   Number.isSafeInteger(cells)&&cells>=0&&['ready','empty','preparing','unavailable','failed'].includes(agent.state)&&

@@ -18,6 +18,8 @@ from packages.lifecycle.preview_scope import scope, match, owned
 
 PROFILE = 'cospace.model-display/0.1'
 CONVERTER = 'potree-converter/2.1.5'
+PROVIDER = 'potree/1.8.2'
+AGENT_SOURCE = 'agent.npz'
 BLOCK_BYTES = 256 * 1024
 MAX_RANGE = 16 * 1024 * 1024
 FILES = {'metadata.json', 'hierarchy.bin', 'octree.bin'}
@@ -52,9 +54,10 @@ def agent_identity(manifest_raw):
 
 def surface_centers(root, model):
     source = model['agent_view']
-    if source.get('path') != 'agent.npz' or digest(root / 'agent.npz') != model['members']['agent.npz']['sha256']:
+    path = root / AGENT_SOURCE
+    if source.get('path') != AGENT_SOURCE or digest(path) != model['members'][AGENT_SOURCE]['sha256']:
         raise ValueError('agent_display_source_changed')
-    with np.load(root / 'agent.npz', allow_pickle=False) as data:
+    with np.load(path, allow_pickle=False) as data:
         cells = data['cells']
     resolution = source['resolution_m']
     if (cells.dtype.kind not in 'iu' or cells.shape != (source['surface_cells'], 3)
@@ -151,12 +154,12 @@ class ModelDisplays:
     def _describe_display(self, kind, name, model, raw, *, agent=False):
         key = agent_identity(raw) if agent else identity(raw)
         path = self.root / key / 'display.json'
-        result = {'profile': PROFILE, 'id': key, 'provider': 'potree/1.8.2',
+        result = {'profile': PROFILE, 'id': key, 'provider': PROVIDER,
                   'source_manifest_sha256': sha256(raw).hexdigest(),
                   'source_model_sha256': model['members']['spatial.npz']['sha256']}
         if agent:
             source = model['agent_view']
-            result.update(view='agent', source_agent_sha256=model['members']['agent.npz']['sha256'],
+            result.update(view='agent', source_agent_sha256=model['members'][AGENT_SOURCE]['sha256'],
                           resolution_m=source['resolution_m'])
             if source['surface_cells'] == 0:
                 return result | {'state': 'empty', 'point_count': 0}
@@ -196,10 +199,10 @@ class ModelDisplays:
 
     @staticmethod
     def _agent_failed(model, raw):
-        return {'profile': PROFILE, 'id': agent_identity(raw), 'provider': 'potree/1.8.2', 'view': 'agent',
+        return {'profile': PROFILE, 'id': agent_identity(raw), 'provider': PROVIDER, 'view': 'agent',
                 'source_manifest_sha256': sha256(raw).hexdigest(), 'state': 'failed',
                 'source_model_sha256': model['members']['spatial.npz']['sha256'],
-                'source_agent_sha256': model.get('members', {}).get('agent.npz', {}).get('sha256'),
+                'source_agent_sha256': model.get('members', {}).get(AGENT_SOURCE, {}).get('sha256'),
                 'resolution_m': model['agent_view'].get('resolution_m')}
 
     def build(self, kind, name, *, agent=False):
@@ -281,14 +284,14 @@ class ModelDisplays:
                         while block := stream.read(BLOCK_BYTES):
                             blocks.append(sha256(block).hexdigest())
                     files[member] = {'bytes': path.stat().st_size, 'sha256': digest(path), 'blocks': blocks}
-                info = {'profile': PROFILE, 'id': key, 'provider': 'potree/1.8.2',
+                info = {'profile': PROFILE, 'id': key, 'provider': PROVIDER,
                         'source_manifest_sha256': sha256(raw).hexdigest(),
                         'source_model_sha256': manifest['members']['spatial.npz']['sha256'],
                         'converter': CONVERTER, 'origin_m': origin.tolist(), 'model_to_display': basis.tolist(), 'point_count': len(points),
                         'encoding_error_m': error_bound, 'las_roundtrip_error_m': error,
                         'error_estimation': 'conservative_local_float32_bound', 'block_bytes': BLOCK_BYTES, 'files': files}
                 if agent:
-                    info.update(view='agent', source_agent_sha256=manifest['members']['agent.npz']['sha256'],
+                    info.update(view='agent', source_agent_sha256=manifest['members'][AGENT_SOURCE]['sha256'],
                                 resolution_m=manifest['agent_view']['resolution_m'], sample_m=points[0].tolist())
                 if (model_root / 'model.json').read_bytes() != raw:
                     raise ValueError('display_source_changed')

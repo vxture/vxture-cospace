@@ -14,8 +14,16 @@ globalThis.cospaceDisplayRegression = async page => {
   const objects = '**/candidates/build-display-probe/api/objects';
   const agentOctree = '**/display/' + agent.id + '/octree.bin';
   const usedAgentRanges = new Map();
-  let release, fail = 0, failed = 0, sourceReads = 0, changeToEmpty = false;
+  let release, markAgentRequested, markFailure, fail = 0, sourceReads = 0, changeToEmpty = false;
   const hold = new Promise(resolve => { release = resolve; });
+  const agentRequested = new Promise(resolve => { markAgentRequested = resolve; });
+  const faultServed = new Promise(resolve => { markFailure = resolve; });
+  async function withTimeout(promise, message) {
+    let timer;
+    try {
+      return await Promise.race([promise, new Promise((_, reject) => { timer = setTimeout(() => reject(new Error(message)), 8000); })]);
+    } finally { clearTimeout(timer); }
+  }
   const evidence = [];
   await page.addInitScript(() => {
     window.__dualFrames = [];
@@ -41,8 +49,9 @@ globalThis.cospaceDisplayRegression = async page => {
   await page.route(agentOctree, async route => {
     const range = route.request().headers().range;
     usedAgentRanges.set(range, (usedAgentRanges.get(range) || 0) + 1);
+    markAgentRequested();
     await hold;
-    if (fail) { failed++; await route.fulfill({status: fail, body: 'synthetic local fault'}); }
+    if (fail) { await route.fulfill({status: fail, body: 'synthetic local fault'}); markFailure(); }
     else await route.continue();
   });
   const canvas = '[data-provider="potree/1.8.2"]';
@@ -62,8 +71,7 @@ globalThis.cospaceDisplayRegression = async page => {
     const initial = await get();
     check(initial.pointSizeCss === '2.2' && initial.pointSizeMode === 'fixed', 'Fixed visual points regressed');
     check(model.construction.model_points === fixture.display.point_count, 'Source visual count changed');
-    const waitStart = Date.now();
-    while (!usedAgentRanges.size && Date.now() - waitStart < 8000) await page.waitForTimeout(50);
+    await withTimeout(agentRequested, 'Computation range did not start in the background');
     check(usedAgentRanges.size === 1 && !usedAgentRanges.has(undefined), 'Computation root was not requested in the background as a bounded range');
     check(!await page.getByText(/正在准备计算表达|正在读取计算表达/).count(), 'Background loading leaked into the UI');
     await toAgent();
@@ -123,9 +131,8 @@ globalThis.cospaceDisplayRegression = async page => {
     fail = 502;
     await page.reload();
     await rendered('human');
-    const faultStart = Date.now();
-    while (!failed && Date.now() - faultStart < 8000) await page.waitForTimeout(50);
-    check(failed > 0 && (await get()).renderedView === 'human', 'No background transport fault was exercised');
+    await withTimeout(faultServed, 'No background transport fault was exercised');
+    check((await get()).renderedView === 'human', 'Background transport failure displaced the active view');
     check(!await page.getByText('部分模型数据暂不可读，请重试。', {exact: true}).count(), 'Inactive retry leaked into the UI');
     fail = 0;
     await toAgent();
