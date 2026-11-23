@@ -1,8 +1,8 @@
 // Run through playwright-cli run-code --filename against the loopback lab.
 // One cold condition; an external runner randomizes/repeats conditions and saves results.
-async page => {
+globalThis.cospaceLoadingProbe = async page => {
   const url = new URL(page.url());
-  if (url.origin !== 'http://127.0.0.1:8794' || url.pathname !== '/loading-lab') throw Error('Synthetic loopback lab required');
+  if (url.origin !== 'http://127.0.0.1:8794' || url.pathname !== '/loading-lab') throw new Error('Synthetic loopback lab required');
   await page.setViewportSize({width: 1920, height: 1080});
   const cdp = await page.context().newCDPSession(page);
   const read = () => page.locator('#diagnostics').textContent().then(JSON.parse);
@@ -18,7 +18,7 @@ async page => {
       return v.viewReadyMs > 0 && v.exactMs > 0;
     }, {}, {timeout: 45000});
     const initial = await read();
-    if (!initial.exactValid || !initial.accounting_complete || initial.strategyFallback) throw Error('Initial correctness gate failed');
+    if (!initial.exactValid || !initial.accounting_complete || initial.strategyFallback) throw new Error('Initial correctness gate failed');
     await page.getByRole('button', {name: '快速切换作业区域', exact: true}).click();
     await page.waitForFunction(() => {
       const v = JSON.parse(document.getElementById('diagnostics').textContent || '{}');

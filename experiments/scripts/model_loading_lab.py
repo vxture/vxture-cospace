@@ -11,7 +11,7 @@ from types import SimpleNamespace
 
 import numpy as np
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import HTMLResponse
+from fastapi.responses import FileResponse, JSONResponse
 
 from experiments.scripts.check_model_display import park
 from packages.construction.model_display import ModelDisplays, STRATEGIES, encoded
@@ -19,6 +19,7 @@ from packages.service.model_display_http import install
 from packages.service.static_assets import WorkbenchAssets
 
 SAMPLES = ('build-display-probe', 'build-linear-probe')
+MODEL_MANIFEST = 'model.json'
 
 
 def prepare(root, converter, points):
@@ -30,8 +31,8 @@ def prepare(root, converter, points):
     for layout in ('grid', 'linear'):
         name = park(jobs.root, points, layout)
         folder = jobs.root / name / 'output'
-        model = json.loads((folder / 'model.json').read_bytes())
-        (folder / 'model.json').write_bytes(encoded(model))
+        model = json.loads((folder / MODEL_MANIFEST).read_bytes())
+        (folder / MODEL_MANIFEST).write_bytes(encoded(model))
         displays.build('candidate', name)
         entry = displays.describe('candidate', name)
         with np.load(folder / 'spatial.npz', allow_pickle=False) as source:
@@ -39,7 +40,7 @@ def prepare(root, converter, points):
             anchors = source['points'][indices].tolist()
         displays.exact.build('candidate', name, (entry['display']['source_manifest_sha256'], model['members']['spatial.npz']['sha256']))
         fixtures[name] = {'display': entry['display'], 'anchors': anchors, 'indices': indices,
-                          'fixture_manifest_sha256': sha256((folder / 'model.json').read_bytes()).hexdigest()}
+                          'fixture_manifest_sha256': sha256((folder / MODEL_MANIFEST).read_bytes()).hexdigest()}
     (root / 'fixtures.json').write_bytes(encoded(fixtures))
 
 
@@ -49,13 +50,21 @@ def create_app(root, assets):
     install(app, displays)
     fixtures = json.loads((root / 'fixtures.json').read_bytes())
 
-    @app.get('/loading-lab')
-    def page(sample: str = SAMPLES[0], strategy: str = 'baseline', task: bool = False):
+    def fixture_values(sample, strategy, task):
         if sample not in SAMPLES or strategy not in STRATEGIES:
             raise HTTPException(422, 'Invalid synthetic comparison')
-        fixture = fixtures[sample] | {'strategy': strategy, 'task': task, 'sample': sample}
-        html = Path(__file__).with_suffix('.html').read_text(encoding='utf-8')
-        return HTMLResponse(html.replace('__FIXTURE__', json.dumps(fixture)))
+        return fixtures[sample] | {'strategy': strategy, 'task': task, 'sample': sample}
+
+    @app.get('/loading-lab', responses={422: {'description': 'Invalid synthetic sample or strategy'}})
+    def page(sample: str = SAMPLES[0], strategy: str = 'baseline', task: bool = False):
+        fixture_values(sample, strategy, task)
+        return FileResponse(Path(__file__).with_suffix('.html'), media_type='text/html',
+                            headers={'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff'})
+
+    @app.get('/loading-lab/fixture', responses={422: {'description': 'Invalid synthetic sample or strategy'}})
+    def fixture(sample: str = SAMPLES[0], strategy: str = 'baseline', task: bool = False):
+        return JSONResponse(fixture_values(sample, strategy, task),
+                            headers={'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff'})
 
     app.mount('/assets', WorkbenchAssets(directory=str(assets)), name='assets')
     return app

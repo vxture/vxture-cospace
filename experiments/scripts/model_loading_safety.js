@@ -1,9 +1,9 @@
 // playwright-cli run-code --filename; only the local synthetic lab is allowed.
-async page => {
-  if (new URL(page.url()).origin !== 'http://127.0.0.1:8794') throw Error('Loopback lab required');
+globalThis.cospaceLoadingSafety = async page => {
+  if (new URL(page.url()).origin !== 'http://127.0.0.1:8794') throw new Error('Loopback lab required');
   const url = 'http://127.0.0.1:8794/loading-lab?task=true&strategy=combined';
   const ready = () => page.waitForFunction(() => JSON.parse(document.getElementById('diagnostics').textContent || '{}').viewReadyMs > 0);
-  const check = (ok, message) => { if (!ok) throw Error(message); };
+  const check = (ok, message) => { if (!ok) throw new Error(message); };
   const results = [];
   await page.goto(url);
   await ready();
@@ -41,18 +41,18 @@ async page => {
   results.push({case: 'hidden/agent/geometry/retry', passed: true, simulatedVisibility: true});
 
   await frame.evaluate(async () => {
-    const {LoadingPolicy} = await import('/assets/pointcloud-runtime/loading-policy.js');
+    const {LoadingPolicy} = await import(new URL('/assets/pointcloud-runtime/loading-policy.js', location.origin).href);
     window.__originalBudget = LoadingPolicy.prototype.budget;
-    LoadingPolicy.prototype.budget = () => { throw Error('Synthetic optional-policy fault'); };
+    LoadingPolicy.prototype.budget = () => { throw new Error('Synthetic optional-policy fault'); };
   });
   await page.waitForFunction(() => JSON.parse(document.getElementById('diagnostics').textContent || '{}').strategyFallback === true);
   const fallback = JSON.parse(await page.locator('#diagnostics').textContent());
   check(fallback.pointBudget === 500000 && fallback.nodePixels === 30 && fallback.nativeLoadSlots === 4, 'Fallback changed mature quality');
   await frame.evaluate(async () => {
-    const {LoadingPolicy} = await import('/assets/pointcloud-runtime/loading-policy.js');
+    const {LoadingPolicy} = await import(new URL('/assets/pointcloud-runtime/loading-policy.js', location.origin).href);
     LoadingPolicy.prototype.budget = window.__originalBudget;
     const until = performance.now() + 1100;
-    while (performance.now() < until) {} // A real foreground stall must remain visible in telemetry.
+    while (performance.now() < until) { continue; } // A real foreground stall must remain visible in telemetry.
   });
   await page.waitForFunction(() => JSON.parse(document.getElementById('diagnostics').textContent || '{}').peakFrameMs >= 1000);
   results.push({case: 'optional strategy exception and long-frame telemetry', passed: true});
