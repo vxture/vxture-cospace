@@ -9,6 +9,7 @@ from hashlib import sha256
 import re
 
 from .catalog import Catalog, CatalogError, ID, VERSION, MAX_BYTES, canonical_bytes
+from .exchange import parse_closure
 from typing import ContextManager, Protocol
 
 
@@ -128,6 +129,9 @@ class DefinitionAuthoring:
         Draft identity/version and transport shape must still be well formed.
         Dependencies are explicit bytes in the bundle, never resolved from latest.
         """
+        return self._save(scope, actor, request_id, module_id, expected_revision, bundle, base_reference)
+
+    def _save(self, scope, actor, request_id, module_id, expected_revision, bundle, base_reference, *, exchange=None):
         self._access(scope, actor, 'edit')
         _require(type(module_id) is str and ID.fullmatch(module_id), 'invalid_module_id')
         _require(type(expected_revision) is int and expected_revision >= 0, 'invalid_revision')
@@ -147,26 +151,108 @@ class DefinitionAuthoring:
                  target.get('status') == 'draft', 'invalid_draft')
         payload = {'module_id': module_id, 'expected_revision': expected_revision,
                    'bundle': bundle, 'base_reference': base_reference}
+        if exchange is not None:
+            payload['exchange'] = exchange['reference']
 
         def operation(state):
             previous = state['drafts'].get(module_id)
             _require((previous['revision'] if previous else 0) == expected_revision, 'revision_changed')
+            effective_base = base_reference
+            if exchange is not None:
+                plan = self._exchange_plan(state, exchange)
+                if not plan['can_import']:
+                    problem = plan['diagnostics'][0]
+                    raise AuthoringError(problem['code'], problem['path'])
+                effective_base = plan['base_reference']
             if previous:
                 self._draft(state, module_id, expected_revision)
-                if base_reference != previous['base_reference']:
-                    base = self._release(state, base_reference)
+                if effective_base != previous['base_reference']:
+                    base = self._release(state, effective_base)
                     _require(base['bundle_sha256'] == previous['sha256'], 'base_reference_changed')
-            if base_reference is not None:
-                self._release(state, base_reference)
-                _require(base_reference['module_id'] == module_id, 'base_reference_mismatch')
-                _require(_version(target['version']) > _version(base_reference['version']), 'version_not_advanced')
+            if effective_base is not None:
+                self._release(state, effective_base)
+                _require(effective_base['module_id'] == module_id, 'base_reference_mismatch')
+                _require(_version(target['version']) > _version(effective_base['version']), 'version_not_advanced')
             draft = {'module_id': module_id, 'revision': expected_revision + 1,
-                     'bundle': deepcopy(bundle), 'sha256': _sha(bundle), 'base_reference': deepcopy(base_reference),
+                     'bundle': deepcopy(bundle), 'sha256': _sha(bundle), 'base_reference': deepcopy(effective_base),
                      'updated_at': self.clock(), 'updated_by': actor}
             state['drafts'][module_id] = draft
             return draft
 
         return self._mutate(scope, actor, 'edit', request_id, payload, operation)
+
+    @classmethod
+    def _exchange_plan(cls, state, exchange):
+        target = exchange['reference']
+        identity = target['module_id']
+        previous = cls._draft(state, identity) if identity in state.get('drafts', {}) else None
+        versions = {}
+        for release in state.get('releases', {}).values():
+            ref = release['reference']
+            versions.setdefault(ref['module_id'], {})[_version(ref['version'])] = ref
+        target_versions = versions.get(identity, {})
+        latest = target_versions[max(target_versions)] if target_versions else None
+        target_order = _version(target['version'])
+        base = previous['base_reference'] if previous else latest
+        if previous and latest and cls._release(state, latest)['bundle_sha256'] == previous['sha256']:
+            base = latest
+
+        diagnostics, dependencies = [], []
+
+        def block(code, path):
+            diagnostics.append({'code': code, 'path': path})
+
+        for index, module in enumerate(exchange['bundle']['modules']):
+            key = module['module_id']
+            path = f'/bundle/modules/{index}'
+            ref = {'module_id': key, 'version': module['version'], 'sha256': _sha(module)}
+            known = versions.get(key, {}).get(_version(ref['version']))
+            if known:
+                cls._release(state, known)
+            if known and known != ref:
+                block('exchange_version_conflict', path)
+            elif key != identity:
+                dependency_draft = cls._draft(state, key) if not known and key in state.get('drafts', {}) else None
+                if dependency_draft:
+                    current = _module(dependency_draft['bundle'], key)
+                    if _version(current['version']) == _version(ref['version']) and _sha(current) != ref['sha256']:
+                        block('exchange_version_conflict', path)
+                dependencies.append({'reference': ref, 'state': 'published' if known else 'unpublished'})
+            elif known:
+                block('exchange_already_published', path)
+            elif latest and target_order < _version(latest['version']):
+                block('version_not_advanced', path + '/version')
+            elif previous:
+                current = _module(previous['bundle'], identity)
+                current_order = _version(current['version'])
+                if target_order == current_order:
+                    code = ('exchange_already_draft' if _sha(current) == ref['sha256']
+                            else 'exchange_version_conflict')
+                    block(code, path)
+                elif target_order < current_order:
+                    block('version_not_advanced', path + '/version')
+        return {'profile': 'vxture.ontology-exchange-preflight/0.1', 'can_import': not diagnostics,
+                'reference': target, 'bundle_sha256': exchange['bundle_sha256'],
+                'expected_revision': previous['revision'] if previous else 0,
+                'base_reference': deepcopy(base), 'dependencies': dependencies, 'diagnostics': diagnostics}
+
+    def _check_exchange_access(self, scope, actor):
+        for action in ('read', 'read_private', 'edit'):
+            self._access(scope, actor, action)
+
+    def preflight_import(self, scope, actor, raw):
+        """Check exact versions against this scope without staging a draft."""
+        self._check_exchange_access(scope, actor)
+        exchange = parse_closure(raw)
+        with self.port.transaction(scope) as state:
+            return self._exchange_plan(state, exchange)
+
+    def import_draft(self, scope, actor, raw, *, request_id, expected_revision):
+        """Stage an exchange as a draft after rechecking conflicts in the write transaction."""
+        self._check_exchange_access(scope, actor)
+        exchange = parse_closure(raw)
+        return self._save(scope, actor, request_id, exchange['reference']['module_id'], expected_revision,
+                          exchange['bundle'], None, exchange=exchange)
 
     def read_draft(self, scope, actor, module_id):
         self._access(scope, actor, 'read')

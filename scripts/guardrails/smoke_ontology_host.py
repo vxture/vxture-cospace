@@ -18,6 +18,7 @@ from urllib.request import ProxyHandler, Request, build_opener
 DEFINITIONS = '/api/ontology-definitions'
 GROUPS = '/api/ontology-configuration/groups'
 DIRECTORY = '/api/ontology-directory'
+EXCHANGE = '/api/ontology-exchange/definitions'
 MODULE = 'import runpy,sys; sys.path.insert(0,sys.argv.pop(1)); runpy.run_module("vxture_ontology.local_host",run_name="__main__")'
 
 
@@ -70,6 +71,7 @@ def acceptance(command, root):
         'publisher': ('yard', ['read', 'publish']),
         'reader': ('yard', ['read']),
         'other': ('other-yard', ['read']),
+        'other-writer': ('other-yard', ['read', 'read_private', 'edit']),
         'operator': ('yard', ['configure_groups']),
     }
     tokens = {actor: secrets.token_urlsafe(32) for actor in roles}
@@ -121,6 +123,7 @@ def acceptance(command, root):
         call(DEFINITIONS, reviewer, decision)
         release = call(DEFINITIONS, publisher, publish)
         exact_path = DEFINITIONS + '?' + urlencode(release['reference'])
+        exchange_path = EXCHANGE + '?' + urlencode(release['reference'])
         assert call(exact_path, reader)['modules'][0]['reference'] == release['reference']
         assert call(module_read, other)['releases'] == []
         bundle['modules'][0]['version'] = '0.2.0'
@@ -134,6 +137,19 @@ def acceptance(command, root):
         shown = next(e for e in call(DIRECTORY, reader)['modules'] if e['reference']['module_id'] == 'core')
         assert shown['reference'] == latest['reference'] and shown['published_at'] == latest['published_at']
         assert call(exact_path, reader)['modules'][0]['reference'] == release['reference']
+        exported = call(exchange_path, reader)
+        assert exported['bundle_sha256'] == release['bundle_sha256']
+        call(exchange_path, other, status=404)
+        preflight = dict(action='preflight', package=exported)
+        call(EXCHANGE, other, preflight, status=403)
+        other_writer = tokens['other-writer']
+        assert call(EXCHANGE, other_writer, preflight)['expected_revision'] == 0
+        assert not call(module_read, other_writer)['draft']
+        call(EXCHANGE, other_writer, {**preflight, 'package': {**exported, 'bundle_sha256': '0' * 64}}, status=422)
+        staged = call(EXCHANGE, other_writer, dict(action='import', package=exported, request_id='5' * 32,
+                                                   expected_revision=0))
+        assert staged['sha256'] == release['bundle_sha256'] and not call(module_read, other)['releases']
+        assert call(EXCHANGE, other_writer, preflight)['diagnostics'][0]['code'] == 'exchange_already_draft'
         published_backup = root / 'published-backup'
         run(command, root, 'backup', '--data-dir', data, '--output-dir', published_backup)
 

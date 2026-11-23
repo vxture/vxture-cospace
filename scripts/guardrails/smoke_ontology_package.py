@@ -29,6 +29,14 @@ assert validate_instances(b'{}',builtin_catalog())['valid'] is False
 assert validate_instances(b'{"a":1,"a":2}',builtin_catalog())['diagnostics'][0]['code']=='duplicate_key'
 instance=json.loads(sys.stdin.buffer.read())
 assert validate_instances(canonical_bytes(instance),builtin_catalog(),rule_set='park-baseline')['valid']
+from vxture_ontology.exchange import catalog_from_exchanges,export_closure,parse_closure,project_owl_classes
+catalog=builtin_catalog()
+references={m['reference']['module_id']:m['reference'] for m in catalog.describe()['modules']}
+closures=[canonical_bytes(export_closure(catalog.export(key),references[key]))
+          for key in ('built_environment','electrical','monitoring','operations')]
+assert canonical_bytes(parse_closure(closures[1]))==closures[1]
+assert project_owl_classes(closures[1])['omissions']
+assert validate_instances(canonical_bytes(instance),catalog_from_exchanges(closures),rule_set='park-baseline')['valid']
 instance['assertions'][5]['object_id']='cabinet'
 report=validate_instances(canonical_bytes(instance),builtin_catalog(),rule_set='park-baseline')
 assert report['valid'] is False
