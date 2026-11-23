@@ -1,12 +1,12 @@
 # 独立本体编制与版本服务 v0.1
 
-日期：2026-11-20。B04a 服务内核与参考存储端口。实现为 `packages/ontology/kernel/authoring.py`，独立包导入 `vxture_ontology.authoring`；SQLite 参考适配器位于 `packages/ontology/authoring_sqlite.py`。本批未接入 CoSpace HTTP 或业务页面，不能据此认定界面编辑/发布按钮可用。
+日期：2026-11-20。B04a 服务内核与参考存储端口。实现为 `packages/ontology/kernel/authoring.py`，独立包导入 `vxture_ontology.authoring`。B09b 已将 SQLite 参考适配器迁至可选的 `vxture_ontology.local_host`，保留 CoSpace 的兼容导入。
 
 同日 B04b 增量：已通过宿主适配器接入 `/api/ontology-definitions` 与详情页 DS 业务表单、版本/发布抽屉；以下 B04a 纯服务与存储协议保持不变，HTTP 细则见本文末尾。目录日期改为真实发布记录，不影响定义内容成熟度。
 
 ## 边界与装配
 
-`DefinitionAuthoring(port, authorize=..., clock=...)` 通过显式注入的存储事务端口和授权函数提供编制用例。内核不导入 SQLite、HTTP、平台身份、场景、地图或商业权益；存储端口可替换，SQLite 适配器不导入宿主服务。独立 wheel 只包含编制内核，不包含该 SQLite 适配器；独立宿主须提供符合端口的持久存储实现。
+`DefinitionAuthoring(port, authorize=..., clock=...)` 通过显式注入的存储事务端口和授权函数提供编制用例。内核不导入 SQLite、HTTP、平台身份、场景、地图或商业权益；存储端口可替换。独立 wheel 提供可选的 SQLite 适配器，既可复用也可替换为符合端口的实现。
 
 授权函数 `authorize(scope, actor, action)` 仅返回严格 True 才允许；action 为 read/edit/submit/review/publish，由宿主把真实可信身份与权限映射到该接口。scope/actor 必须由认证宿主提供，绝不信任浏览器提交的用户名称或自由构造的作用域。每次操作和幂等重放均重新检查权限。示例和测试中的角色名称只是测试数据，不是生产权限策略。
 

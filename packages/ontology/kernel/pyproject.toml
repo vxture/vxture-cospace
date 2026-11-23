@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "vxture-ontology"
-version = "0.1.0.dev1"
+version = "0.1.0.dev2"
 description = "Portable ontology definition validation and dependency resolution"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -12,9 +12,10 @@ dependencies = []
 
 [project.scripts]
 vxture-ontology = "vxture_ontology.__main__:main"
+vxture-ontology-host = "vxture_ontology.local_host.__main__:main"
 
 [tool.setuptools]
-packages = ["vxture_ontology"]
+packages = ["vxture_ontology", "vxture_ontology.local_host"]
 package-dir = {vxture_ontology = "."}
 
 [tool.setuptools.package-data]
