@@ -22,18 +22,20 @@ SAMPLES = ('build-display-probe', 'build-linear-probe')
 MODEL_MANIFEST = 'model.json'
 
 
-def prepare(root, converter, points):
+def prepare(root, converter, points, *, dual=False):
     if root.exists():
         raise ValueError('Use a new lab directory; existing fixtures are preserved')
     jobs = SimpleNamespace(root=root / 'preview-builds', directory=None)
     displays = ModelDisplays(jobs, converter)
     fixtures = {}
     for layout in ('grid', 'linear'):
-        name = park(jobs.root, points, layout)
+        name = park(jobs.root, points, layout, dual=dual)
         folder = jobs.root / name / 'output'
         model = json.loads((folder / MODEL_MANIFEST).read_bytes())
         (folder / MODEL_MANIFEST).write_bytes(encoded(model))
         displays.build('candidate', name)
+        if dual:
+            displays.build('candidate', name, agent=True)
         entry = displays.describe('candidate', name)
         with np.load(folder / 'spatial.npz', allow_pickle=False) as source:
             indices = [min(points - 1, i) for i in (4001, 200022, 400033, 700066)]
@@ -82,6 +84,7 @@ def main():
     parser.add_argument('--root', type=Path, default=Path('var/progressive-l03'))
     parser.add_argument('--assets', type=Path, default=Path('var/progressive-l03-build/assets'))
     parser.add_argument('--prepare', action='store_true')
+    parser.add_argument('--dual', action='store_true', help='Generate independent visual and computation octrees')
     parser.add_argument('--converter')
     parser.add_argument('--points', type=int, default=1_000_000)
     parser.add_argument('--port', type=int, default=8794)
@@ -89,7 +92,7 @@ def main():
     if args.prepare:
         if not args.converter or not 1000 <= args.points <= 10_000_000:
             parser.error('Explicit converter and 1,000–10,000,000 synthetic points required')
-        prepare(args.root, args.converter, args.points)
+        prepare(args.root, args.converter, args.points, dual=args.dual)
     else:
         import uvicorn
         uvicorn.run(create_app(args.root, args.assets), host='127.0.0.1', port=args.port)

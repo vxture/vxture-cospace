@@ -8,7 +8,7 @@ from fastapi.testclient import TestClient
 import numpy as np
 import pytest
 
-from packages.construction.model_display import ModelDisplays, byte_range, encoded, identity, BLOCK_BYTES, MAX_RANGE, PROFILE
+from packages.construction.model_display import ModelDisplays, agent_identity, byte_range, encoded, identity, surface_centers, BLOCK_BYTES, MAX_RANGE, PROFILE
 from packages.construction.preview_model import digest
 from packages.service.model_display_http import install
 from test_real_model_preview import make_preview
@@ -78,6 +78,59 @@ def test_range_crosses_integrity_blocks_without_loading_full_source(display, mon
     assert len(response.content) == 19
     summary = client.get('/candidates/build-one/api/display').json()
     assert summary['display']['state'] == 'ready' and 'files' not in summary['display']
+
+
+def test_computation_uses_original_grid_and_independent_versioned_ranges(display, monkeypatch):
+    service, _, visual_dir, model_root, payload, client = display
+    path = model_root / 'model.json'
+    model = json.loads(path.read_bytes())
+    cells = np.array([[-3, 5, 20], [12, 0, -21]], dtype=np.int64)
+    source = model_root / 'agent.npz'
+    np.savez_compressed(source, cells=cells)
+    model['members']['agent.npz'] = {'sha256': digest(source), 'bytes': source.stat().st_size}
+    model['agent_view'].update(surface_cells=2, resolution_m=.1)
+    raw = encoded(model)
+    path.write_bytes(raw)
+    centers = surface_centers(model_root, model)
+    np.testing.assert_allclose(centers, [[-.25, .55, 2.05], [1.25, .05, -2.05]], atol=1e-12)
+    visual = json.loads((visual_dir / 'display.json').read_bytes())
+    visual.update(id=identity(raw), source_manifest_sha256=sha256(raw).hexdigest())
+    folder = service.root / agent_identity(raw)
+    folder.mkdir()
+    for member in visual['files']:
+        (folder / member).write_bytes((visual_dir / member).read_bytes())
+    agent = visual | {'id': folder.name, 'view': 'agent', 'source_agent_sha256': digest(source),
+                      'resolution_m': .1, 'point_count': 2, 'sample_m': centers[0].tolist()}
+    (folder / 'display.json').write_bytes(encoded(agent))
+    new_visual = service.root / visual['id']
+    visual_dir.rename(new_visual)
+    (new_visual / 'display.json').write_bytes(encoded(visual))
+    monkeypatch.setattr(np, 'load', lambda *a, **k: pytest.fail('range path decoded the original archive'))
+    response = client.get('/candidates/build-one/api/display')
+    assert response.status_code == 200
+    summary = response.json()['agent_display']
+    assert 'files' not in summary
+    assert summary['source_agent_sha256'] == digest(source)
+    assert summary['id'] != response.json()['display']['id']
+    url = summary['entry'].replace('metadata.json', 'octree.bin')
+    assert client.get(url).status_code == 416
+    assert client.get(url, headers={'Range': 'bytes=5-10'}).content == payload[5:11]
+    publication = 'preview-' + 'b' * 16
+    fixed = service.jobs.root / 'publications' / publication
+    fixed.mkdir(parents=True)
+    (fixed / 'model.json').write_bytes(raw)
+    (fixed / 'publication.json').write_bytes(encoded({'id': publication, 'candidate_id': model['id'],
+        'model_manifest_sha256': sha256(raw).hexdigest(), 'source_model_sha256': model['members']['spatial.npz']['sha256']}))
+    published = client.get(f'/publications/{publication}/api/display').json()['agent_display']
+    assert published['id'] == summary['id']
+    assert published['source_manifest_sha256'] == summary['source_manifest_sha256']
+    assert published['entry'].startswith(f'/publications/{publication}/')
+    assert client.get(published['entry'].replace('metadata.json', 'octree.bin'), headers={'Range': 'bytes=5-10'}).content == payload[5:11]
+    (folder / 'display.json').write_bytes(encoded(agent | {'source_agent_sha256': '0' * 64}))
+    assert client.get(url, headers={'Range': 'bytes=5-10'}).status_code == 409
+    response = client.get('/candidates/build-one/api/display').json()
+    assert response['display']['state'] == 'ready'
+    assert response['agent_display']['state'] == 'failed'
 
 
 @pytest.mark.parametrize('strategy', ['baseline', 'task', 'adaptive', 'governance', 'combined', 'invalid'])

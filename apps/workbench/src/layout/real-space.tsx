@@ -9,10 +9,18 @@ import React,{useEffect,useRef,useState} from 'react';
 import {Button,Icon,Input,NativeSelect,Popover,PopoverTrigger,ShellPanelContent,ShellPanelSection,ShellPanelRow,ShellUserMenu,Switch,Tooltip,TooltipTrigger,TooltipContent,StatusBadge} from '@vxture/design-system';
 import type {SceneControls} from './real-space-canvas';
 import {ModelDisplayCanvas} from './model-display-canvas';
-import {loadDisplayScene,loadSceneObjects,loadAgentPoints,type ModelRef} from './model-display-data';
+import {DisplayAccessError,loadDisplayScene,loadSceneObjects,type ModelRef} from './model-display-data';
 import {getJSON,previewEndpoint,realScreenHref,type DirectorySpace,type FixedPublication,type SceneData,type ModelObject} from './real-space-data';
 
 function target(){const p=new URLSearchParams(location.search);return {space:p.get('space')||'',publication:p.get('publication')||'',job:p.get('job')||''};}
+function modelRef(current:ReturnType<typeof target>,space:DirectorySpace):ModelRef{
+ if(current.job&&current.publication)throw new Error('候选与发布引用不能同时指定，请从来源页面重新打开。');
+ if(current.job)return {space:space.id,identity:current.job,kind:'candidate'};
+ const publication=space.publications.find(p=>p.id===current.publication);
+ if(!publication)throw new Error(current.publication?'所选发布不属于当前空间或已不可读。':'此入口未指定固定发布，请从我的场景打开。');
+ if(!publicationAvailable(publication))throw new Error('此固定发布不可用、已暂停或退役，请前往服务发布查看状态及替代版本。');
+ return {space:space.id,identity:publication.id,kind:'publication'};
+}
 function Handle({side,open,toggle}:{side:'left'|'right';open:boolean;toggle:()=>void}){return <Button variant="ghost" className={`rail-handle rail-handle-${side}`} data-open={open} aria-label={side==='left'?'展开或收起对象列表':'展开或收起空间概览'} aria-expanded={open} onClick={toggle}><img src="/assets/fold-bracket.png" className="rail-handle-art" alt=""/></Button>;}
 export function RealSpace({full,workspace}:{full:()=>void;workspace:string}){
  const platform=usePlatformSession();
@@ -20,47 +28,41 @@ export function RealSpace({full,workspace}:{full:()=>void;workspace:string}){
  const [view,setView]=useState<'human'|'agent'>('human'),[objectsOpen,setObjectsOpen]=useState(false),[overview,setOverview]=useState(false),[search,setSearch]=useState(''),[selected,setSelected]=useState(''),[geometry,setGeometry]=useState(true),[markers,setMarkers]=useState(true),[switcher,setSwitcher]=useState(false),[isFull,setIsFull]=useState(Boolean(document.fullscreenElement));
  const candidate=!!current.job&&!current.publication;
  const api=useRef<SceneControls|null>(null);
+ const sceneRequest=useRef<AbortController|null>(null);
  const [auxiliaryError,setAuxiliaryError]=useState('');
- const [warmModel,setWarmModel]=useState('');
  const [renderedView,setRenderedView]=useState<'human'|'agent'>('human');
- const [agentRetry,setAgentRetry]=useState(0),agentFailed=useRef(false);
+ function accessLost(){sceneRequest.current?.abort();setData(null);setAuxiliaryError('');setError('当前模型的访问或版本状态已变化，请重新打开。');}
  useEffect(()=>{const sync=()=>setCurrent(target());const unsubscribe=subscribeAppLocation(sync);const fullscreen=()=>setIsFull(Boolean(document.fullscreenElement));document.addEventListener('fullscreenchange',fullscreen);return()=>{unsubscribe();document.removeEventListener('fullscreenchange',fullscreen);};},[]);
- useEffect(()=>{const controller=new AbortController();setSpaces([]);setData(null);setError('');setAuxiliaryError('');setSelected('');setSearch('');setView('human');setGeometry(true);setMarkers(true);setWarmModel('');setRenderedView('human');agentFailed.current=false;
+ useEffect(()=>{const controller=new AbortController();sceneRequest.current=controller;setSpaces([]);setData(null);setError('');setAuxiliaryError('');setSelected('');setSearch('');setView('human');setGeometry(true);setMarkers(true);setRenderedView('human');
   async function read(ref:ModelRef){
    let result=await loadDisplayScene(ref,controller.signal);if(controller.signal.aborted)return;setData(result);
    void loadSceneObjects(ref,result.model,controller.signal).then(objects=>{if(!controller.signal.aborted)setData(value=>value?{...value,...objects}:value);}).catch(e=>{if(!controller.signal.aborted)setAuxiliaryError(e instanceof Error?e.message:'对象读取失败。');});
-   while(result.display?.state==='preparing'&&!controller.signal.aborted){
+   while((result.display?.state==='preparing'||result.agentDisplay?.state==='preparing')&&!controller.signal.aborted){
     await new Promise<void>((resolve,reject)=>{const abort=()=>{clearTimeout(timer);reject(new DOMException('Aborted','AbortError'));};const timer=setTimeout(()=>{controller.signal.removeEventListener('abort',abort);resolve();},2000);controller.signal.addEventListener('abort',abort,{once:true});});
-    result=await loadDisplayScene(ref,controller.signal);if(!controller.signal.aborted)setData(value=>value?{...value,model:result.model,display:result.display}:result);
+    let next;
+    try{next=await loadDisplayScene(ref,controller.signal);}catch(e){
+     if(e instanceof DisplayAccessError||result.display?.state!=='ready')throw e;
+     continue;
+    }
+    if(controller.signal.aborted)return;
+    if(next.display?.id!==result.display?.id)throw new DisplayAccessError('当前模型版本已变化。');
+    result=next;setData(value=>value?{...value,model:next.model,display:next.display,agentDisplay:next.agentDisplay}:value);
    }
   }
   (async()=>{try{
    const directory=await getJSON<{spaces:DirectorySpace[]}>('/api/spaces',controller.signal);if(controller.signal.aborted)return;setSpaces(directory.spaces);
-   const space=directory.spaces.find(s=>s.id===current.space);if(!space)throw Error('空间不存在，请返回我的场景重新选择。');
-   if(current.job&&current.publication)throw Error('候选与发布引用不能同时指定，请从来源页面重新打开。');
-   if(candidate){await read({space:space.id,identity:current.job,kind:'candidate'});return;}
-   const publication=space.publications.find(p=>p.id===current.publication);if(!publication)throw Error(current.publication?'所选发布不属于当前空间或已不可读。':'此入口未指定固定发布，请从我的场景打开。');
-   if(!publicationAvailable(publication))throw Error('此固定发布不可用、已暂停或退役，请前往服务发布查看状态及替代版本。');
-   await read({space:space.id,identity:publication.id,kind:'publication'});
-  }catch(e){if(!controller.signal.aborted)setError(e instanceof Error?e.message:'空间读取失败。');}})();
+   const space=directory.spaces.find(s=>s.id===current.space);if(!space)throw new Error('空间不存在，请返回我的场景重新选择。');
+   await read(modelRef(current,space));
+  }catch(e){if(!controller.signal.aborted){if(e instanceof DisplayAccessError)accessLost();else setError(e instanceof Error?e.message:'空间读取失败。');}}})();
   return()=>controller.abort();
  },[current.space,current.publication,current.job,retry]);
- useEffect(()=>{
-  // Start after the first real frame, so computation never gates initial
-  // geometry. Keep the same request alive across rapid view toggles.
-  if(!data||warmModel!==data.model.id||data.agent_points.length||data.model.agent_view.surface_cells===0)return;
-  const controller=new AbortController(),model=data.model;
-  const ref:ModelRef={space:current.space,identity:candidate?current.job:current.publication,kind:candidate?'candidate':'publication'};
-  void loadAgentPoints(ref,model,controller.signal).then(points=>{if(!controller.signal.aborted){agentFailed.current=false;setData(value=>value?.model.id===model.id?{...value,agent_points:points}:value);}}).catch(e=>{if(!controller.signal.aborted){agentFailed.current=true;setAuxiliaryError(e instanceof Error?e.message:'计算表达读取失败。');setView('human');}});
-  return()=>controller.abort();
- },[warmModel,data?.model.id,current.space,current.job,current.publication,retry,agentRetry]);
- function switchView(){if(view==='human'&&agentFailed.current){agentFailed.current=false;setAuxiliaryError('');setAgentRetry(n=>n+1);}setView(view==='human'?'agent':'human');}
+ function switchView(){setView(view==='human'?'agent':'human');}
  function choose(space:string,publication:string){setData(null);setSelected('');setOverview(false);setSwitcher(false);appNavigate(realScreenHref(space,publication));}
  const space=spaces.find(s=>s.id===current.space),object=data?.objects.find(o=>o.object_id===selected);
  const title=space?.name||'空间态势',pointcloud=data?.model.data_kind==='existing_pointcloud_candidate',neutral=data?.model.human_view.appearance==='neutral_not_rgb',lidar=['real_lidar_sensor_local_candidate','real_lidar_multiframe_candidate'].includes(data?.model.data_kind||'');
  function select(item:ModelObject){setSelected(item.object_id);setObjectsOpen(true);api.current?.focus(item.anchor_m);}
  return <section id="spatial" className="dark real-space relative isolate min-h-0 flex-1 overflow-hidden bg-background text-foreground" aria-label="真实空间态势大屏" data-publication={data?.model.publication?.id||''} data-candidate={candidate?current.job:''}>
-  <ModelDisplayCanvas key={current.publication||current.job} data={data} view={view} geometry={geometry} markers={markers} selected={selected} select={id=>{const item=data?.objects.find(o=>o.object_id===id);if(item)select(item);}} api={api} onFirstFrame={()=>setWarmModel(data?.model.id||'')} onView={setRenderedView}/>
+  <ModelDisplayCanvas key={`${current.space}:${current.publication||current.job}:${retry}`} data={data} view={view} geometry={geometry} markers={markers} selected={selected} select={id=>{const item=data?.objects.find(o=>o.object_id===id);if(item)select(item);}} api={api} dual onView={setRenderedView} onAccessLost={accessLost}/>
   {auxiliaryError&&<div role="alert" className="absolute left-lg bottom-xl z-30 text-label-small">{auxiliaryError}<Button variant="ghost" size="sm" onClick={()=>setAuxiliaryError('')}>关闭</Button></div>}
   <div className="space-picker absolute left-lg top-lg z-30 flex flex-col gap-xs">
    <Popover open={switcher} onOpenChange={setSwitcher}><PopoverTrigger asChild><Button variant="secondary" size="sm" className="space-title-control max-w-full gap-sm font-normal" aria-label="切换真实空间"><Icon name="cube" size="sm"/><span className="truncate">{title}{candidate?' · 未发布候选':''}</span><Icon name="chevron-down" size="xs"/></Button></PopoverTrigger><ShellPanelContent align="start" className="dark"><ShellPanelSection title="我的场景">{spaces.map(s=><ShellPanelRow key={s.id} icon="cube" label={s.name} description={s.publications.length?`${s.publications.length} 个固定发布版本`:'尚无发布'} active={s.id===current.space} disabled={!currentRelease(s)} onClick={()=>{const release=currentRelease(s);if(release)choose(s.id,release.id);}}/>)}</ShellPanelSection></ShellPanelContent></Popover>

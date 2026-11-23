@@ -10,7 +10,8 @@ def test_model_display_and_every_range_use_scene_preview_authorization(secured, 
     monkeypatch.setattr(jobs.displays, 'resource', lambda *args: calls.append(args) or (b'abc', 0, 2, 10, 'a' * 64))
     candidate = '/candidates/build-one'
     paths = [candidate + '/api/display', candidate + '/display/' + 'a' * 64 + '/octree.bin',
-             '/publications/' + publication['id'] + '/api/display']
+             '/publications/' + publication['id'] + '/api/display',
+             candidate + '/display/' + 'b' * 64 + '/hierarchy.bin']
     for path in paths:
         assert client.get(path, headers={'Range': 'bytes=0-2'}).status_code == 401
     assert calls == []
@@ -18,6 +19,7 @@ def test_model_display_and_every_range_use_scene_preview_authorization(secured, 
     assert client.get(paths[0]).status_code == 200
     assert client.get(paths[1], headers={'Range': 'bytes=0-2'}).status_code == 206
     assert client.get(paths[2]).status_code == 200
+    assert client.get(paths[3], headers={'Range': 'bytes=0-2'}).status_code == 206
     calls.clear()
     for path in ['/candidates/build-two/api/display', '/candidates/build-two/display/' + 'a' * 64 + '/octree.bin',
                  candidate + '/display/' + 'a' * 64 + '/spatial.npz', candidate + '/display/' + 'a' * 64 + '/octreeXbin']:
