@@ -168,7 +168,9 @@ class SceneRegistrations:
         self.adapters = set(os.environ.get('COSPACE_REGISTRATION_ADAPTERS', '').split(',')) if adapters is None else set(adapters)
 
     def source(self, space_id, candidate_id):
-        if self.jobs is not None and hasattr(self.jobs, 'displays'):
+        if self.jobs is None:
+            raise RegistrationError('registration_source_changed')
+        if hasattr(self.jobs, 'displays'):
             displays = self.jobs.displays
             _, _, model, raw = displays.source('candidate', candidate_id)
             require(model.get('space_id') == space_id, 'registration_source_changed')

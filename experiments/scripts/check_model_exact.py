@@ -70,7 +70,11 @@ def main():
     if not 1000<=args.points<=20_000_000:
         parser.error('explicit capacity budget is 1000..20000000 points')
     if args.root:
-        probe(args.root,args.points)
+        allowed = (Path(__file__).resolve().parents[2] / 'var').resolve()
+        destination = args.root.resolve()
+        if destination == allowed or not destination.is_relative_to(allowed):
+            parser.error('--root must be a new task directory inside the repository var directory')
+        probe(destination,args.points)
     else:
         with tempfile.TemporaryDirectory() as folder:
             probe(Path(folder)/'jobs',args.points)
