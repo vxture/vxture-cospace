@@ -34,7 +34,7 @@ vxture-ontology --library definitions.json
 
 ## 独立性要求
 
-B04a 的 `vxture_ontology.authoring.DefinitionAuthoring` 提供草稿、校验、差异、送审、审批、不可变版本发布和历史读取，要求显式注入事务存储端口与授权函数。不会自动导入数据库或宿主服务，运行时仍仅标准库。SQLite 参考适配器位于纯内核之外的 `packages/ontology/authoring_sqlite.py`，不随独立 wheel 分发。B04b 已通过宿主适配器接入 CoSpace HTTP 与现有模块的业务表单，纯内核依赖方向保持不变。操作与状态详见仓库 `contracts/schemas/ontology-authoring-v0.1.md`。
+B04a 的 `vxture_ontology.authoring.DefinitionAuthoring` 提供草稿、校验、差异、送审、审批、不可变版本发布和历史读取，要求显式注入事务存储端口与授权函数。不会自动导入数据库或宿主服务，运行时仍仅标准库。B04b 已通过宿主适配器接入 CoSpace HTTP 与现有模块的业务表单，纯内核依赖方向保持不变。操作与状态详见仓库 `contracts/schemas/ontology-authoring-v0.1.md`。
 
 B09a 新增 `vxture_ontology.workbench.DefinitionWorkbench`。宿主将经过认证的作用域和操作者绑定到工作台：
 
@@ -47,6 +47,8 @@ summary = workbench.read('core')
 ```
 
 `store` 实现相同事务端口；`policy(scope, actor, action)` 必须返回严格布尔 True。可以省略 `templates` 使用内置候选定义。现有 `read/edit/submit/review/publish` 策略继续适用；工作台额外检查 `read_private` 才显示草稿、校验细节及送审快照。工作台命令沿用 v0.1 字段，不接收浏览器传来的 actor/scope。授权、部署及持久化仍由宿主负责。
+
+B09b 把可选的本地宿主和 SQLite 参考适配器随 wheel 一起分发，位于 `vxture_ontology.local_host`。内核本身不导入这些适配器。运行 `vxture-ontology-host --help` 可了解本机服务启动、备份和恢复命令；CoSpace 的现有 SQLite 适配器入口和数据库文件名保持兼容。宿主的安装与权限配置详见仓库 `docs/architecture/本体引擎独立宿主-B09b.md`。
 
 B02 新增 `instance_schema()` 与 `park_baseline_rules()`，返回随独立包分发的 JSON Schema 和显式选用的园区候选完整性规则副本。B03 的 `validate_instances(raw_bytes, catalog, rule_set=None)` 为纯校验入口：未选规则时仍校验引用、属性、端点、有效区间和几何绑定；显式 `rule_set='park-baseline'` 增加职责完整性与时态层级检查。返回带 code、JSON Pointer path、severity、state 的确定性报告，含输入/Schema/定义库/规则摘要。无第三方运行依赖，无现场实例存储或网络访问。
 

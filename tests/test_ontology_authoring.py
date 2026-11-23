@@ -210,7 +210,7 @@ def test_dependency_upgrade_is_explicit_and_old_bundle_remains_readable(tmp_path
 
 
 def test_storage_budget_rejection_rolls_back_save(monkeypatch, tmp_path):
-    import packages.ontology.authoring_sqlite as adapter
+    import packages.ontology.kernel.local_host.authoring_sqlite as adapter
     monkeypatch.setattr(adapter, 'MAX_STATE_BYTES', 20)
     svc, ids = service(tmp_path), request_ids()
     with pytest.raises(AuthoringError, match='state_budget'):

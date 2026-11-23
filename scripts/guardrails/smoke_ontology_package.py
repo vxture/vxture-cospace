@@ -71,6 +71,8 @@ print(json.dumps({'modules':len(catalog.describe()['modules']),'isolated_wheel':
         result = subprocess.run([sys.executable, '-I', '-S', '-c', script, str(wheel)],
                                 cwd=temporary, input=fixture, encoding='utf-8', capture_output=True, check=True)
         print(result.stdout.strip())
+    subprocess.run([sys.executable, '-I', '-S', str(Path(__file__).with_name('smoke_ontology_host.py').resolve()),
+                    str(wheel)], check=True)
 
 
 if __name__ == '__main__':
