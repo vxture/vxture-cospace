@@ -630,9 +630,9 @@
     {
       "profile": "vxture.ontology-module/0.1",
       "module_id": "fire_safety",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "title": "安全消防",
-      "description": "消防设施与专业空间候选定义；不提供全局消防合规结论。",
+      "description": "消防设施、防火分区、报警分区与告警来源的候选定义。区分安装位置、配置归属和告警报告，不据此确认事故或消防合规。",
       "layer": "domain",
       "status": "draft",
       "requires": [
@@ -678,9 +678,40 @@
           ],
           "properties": {},
           "parent": "core:information_record"
+        },
+        "fire_alarm_device": {
+          "title": "火灾探测与报警触发设备",
+          "definition": "用于探测火灾征兆或人工触发火灾报警的物理设备；其安装点不代表报警分区范围。",
+          "examples": ["感烟探测器", "手动火灾报警按钮"],
+          "counterexamples": ["报警日志条目", "仅播放警报的广播扬声器"],
+          "properties": {},
+          "parent": "core:physical_object"
+        },
+        "fire_alarm_zone": {
+          "title": "报警分区",
+          "definition": "消防报警配置资料划定的报警区域；身份及边界来自该资料，不与建筑防火分区自动等同。",
+          "examples": ["报警分区图上的一层东侧报警区"],
+          "counterexamples": ["仅有设备点位的聚类", "只有防火分区编号而无报警配置"],
+          "properties": {},
+          "parent": "core:spatial_region"
         }
       },
-      "relations": {}
+      "relations": {
+        "assigned_alarm_zone": {
+          "title": "配置报警分区",
+          "definition": "从探测或触发设备指向专业配置资料明确指定的报警分区。声明须带依据和有效期；不从设备安装位置推断，不证明实际探测覆盖。",
+          "source_types": ["fire_safety:fire_alarm_device"],
+          "target_types": ["fire_safety:fire_alarm_zone"],
+          "symmetric": false
+        },
+        "reported_source_device": {
+          "title": "告警所指来源设备",
+          "definition": "从告警报告指向其来源记录明确标识的触发设备。不能据此确定实际起火、起火位置或设备当前状态。",
+          "source_types": ["fire_safety:alarm_report"],
+          "target_types": ["fire_safety:fire_alarm_device"],
+          "symmetric": false
+        }
+      }
     },
     {
       "profile": "vxture.ontology-module/0.1",

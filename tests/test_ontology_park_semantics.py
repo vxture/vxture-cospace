@@ -22,7 +22,7 @@ def test_competency_plan_references_resolve_without_scene_owned_definitions():
     for question in plan['questions']:
         assert set(question['park_types']) == set(plan['park_types'])
         assert question['required_inputs'] and question['forbidden_inferences']
-        assert question['acceptance_batch'] in {'B03', 'B05', 'extension'}
+        assert question['acceptance_batch'] in {'B03', 'B05', 'B08b', 'extension'}
         for field in ('concepts', 'relations'):
             for reference in question[field]:
                 module_id, term_id = reference.split(':')
@@ -72,7 +72,7 @@ def test_domain_revision_does_not_rewrite_shared_core_or_export_unrelated_module
     catalog = builtin_catalog()
     modules = definitions()
     assert sha256(canonical_bytes(modules['core'])).hexdigest() == 'd12aec3d679d5c06779e91faf44b4064dfee2a7cbdee2330b20e253b511f169f'
-    upgraded = {'built_environment', 'operations', 'electrical'}
+    upgraded = {'built_environment', 'operations', 'electrical', 'fire_safety'}
     for identity in sorted(upgraded):
         assert modules[identity]['version'] == '0.2.0'
         exported = catalog.export(identity)

@@ -8,6 +8,8 @@
 
 [制造园区供配电 B08a](manufacturing-electrical-b08a.json) 是宿主空间关联及固定交付的独立合成验收样例，包含有依据的馈供声明、端口归属和接线，以及只表示邻近的一条未映射关系。其数据形状供验收工具读取，不是可直接上传的实例包。验收入口：`python -m pytest tests/test_b08a_electrical_delivery.py -q`。
 
+[物流园区安全消防 B08b](logistics-fire-safety-b08b.json) 是同类验收样例，区分设备安装位置、配置报警区及告警报告所指设备。验收入口：`python -m pytest tests/test_b08_domain_delivery.py -q`。
+
 契约见 [ontology-instances-v0.1.md](../../../contracts/schemas/ontology-instances-v0.1.md)。反例补丁矩阵单独保存在 `tests/fixtures/ontology-instances/negative-matrix.json`，不作为正常消费实例传播。
 
 从仓库根目录运行：

@@ -1,0 +1,19 @@
+{
+  "title": "物流园区 · 安全消防样例（合成）",
+  "synthetic": true,
+  "scope": "部分设施、配置资料及告警记录；无现场核验",
+  "frame_id": "local",
+  "valid_time": {"start": "2026-11-24T00:00:00Z", "end": null},
+  "objects": [
+    {"id": "detector", "name": "库区感烟探测器", "type": "fire_safety:fire_alarm_device", "anchor_m": [17, 5, 6]},
+    {"id": "alarm-zone", "name": "配置报警区 AZ-02", "type": "fire_safety:fire_alarm_zone"},
+    {"id": "compartment", "name": "防火分区 FC-01", "type": "fire_safety:fire_compartment"},
+    {"id": "reported-alarm", "name": "控制器报告 AL-0021", "type": "fire_safety:alarm_report", "evidence_note": "合成控制器导出 FIRE-LOG-R01 / AL-0021"}
+  ],
+  "relations": [
+    {"id": "installation", "source": "detector", "target": "compartment", "type": "core:located_in", "evidence_note": "合成竣工点位表 FIRE-PLAN-R03 / 17"},
+    {"id": "configuration", "source": "detector", "target": "alarm-zone", "type": "fire_safety:assigned_alarm_zone", "evidence_note": "合成报警配置 FIRE-CONFIG-R02 / AZ-02"},
+    {"id": "source-report", "source": "reported-alarm", "target": "detector", "type": "fire_safety:reported_source_device", "evidence_note": "合成控制器导出 FIRE-LOG-R01 / AL-0021"},
+    {"id": "nearby", "source": "detector", "target": "compartment"}
+  ]
+}
