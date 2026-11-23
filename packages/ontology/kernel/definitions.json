@@ -565,9 +565,9 @@
     {
       "profile": "vxture.ontology-module/0.1",
       "module_id": "water",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "title": "给排水",
-      "description": "水务设备和系统候选定义，物理连接与实际流向分别确认。",
+      "description": "园区给排水设备、管段、连接端口与系统的候选定义。登记物理连接，与设计输送方向及实际流向分开。",
       "layer": "domain",
       "status": "draft",
       "requires": [
@@ -623,9 +623,50 @@
           ],
           "properties": {},
           "parent": "core:system"
+        },
+        "water_pipe_segment": {
+          "title": "给排水管段",
+          "definition": "承担给水或排水输送的物理管段；管段的空间形状本身不证明与其他设施连通。",
+          "examples": ["竣工资料中的室内给水管段"],
+          "counterexamples": ["无管线资料的一条地图辅助线"],
+          "properties": {
+            "design_inner_diameter": {
+              "title": "设计内径",
+              "definition": "设计或产品规格明确给出的管段内径，以毫米记录；不能用 DN 公称尺寸直接填充，也不表示现场实测。",
+              "data_type": "number",
+              "required": false,
+              "unit": "mm",
+              "quantity": "length",
+              "minimum": 1
+            }
+          },
+          "parent": "core:physical_object"
+        },
+        "water_port": {
+          "title": "给排水连接端口",
+          "definition": "给排水设备或管段可独立标识的物理接驳端口；端口位置与连接资料分开记录。",
+          "examples": ["泵的资料出水法兰口", "管段端口 P-01"],
+          "counterexamples": ["缺少接驳依据的管段投影交点"],
+          "properties": {},
+          "parent": "core:physical_object"
         }
       },
-      "relations": {}
+      "relations": {
+        "has_water_port": {
+          "title": "端口归属",
+          "definition": "从给排水设备或管段指向归属该对象的接驳端口。依据来自设备、管线或端口表；归属自身不产生端口连接。",
+          "source_types": ["water:pump", "water:valve", "water:water_pipe_segment"],
+          "target_types": ["water:water_port"],
+          "symmetric": false
+        },
+        "water_connected_to": {
+          "title": "端口物理连接",
+          "definition": "两只端口按资料直接相接。关系是对称的，不表示实时通水、阀门状态或流向，不由端口邻近或同属一个系统推导。",
+          "source_types": ["water:water_port"],
+          "target_types": ["water:water_port"],
+          "symmetric": true
+        }
+      }
     },
     {
       "profile": "vxture.ontology-module/0.1",

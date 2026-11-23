@@ -10,6 +10,8 @@
 
 [物流园区安全消防 B08b](logistics-fire-safety-b08b.json) 是同类验收样例，区分设备安装位置、配置报警区及告警报告所指设备。验收入口：`python -m pytest tests/test_b08_domain_delivery.py -q`。
 
+[研发办公园区给排水 B08c](research-office-water-b08c.json) 区分设备、端口、直接物理连接和系统成员，并验证管段内径的单位。使用同一领域交付验收入口。
+
 契约见 [ontology-instances-v0.1.md](../../../contracts/schemas/ontology-instances-v0.1.md)。反例补丁矩阵单独保存在 `tests/fixtures/ontology-instances/negative-matrix.json`，不作为正常消费实例传播。
 
 从仓库根目录运行：

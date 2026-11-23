@@ -17,12 +17,12 @@ def definitions():
 def test_competency_plan_references_resolve_without_scene_owned_definitions():
     plan = json.loads(Path('examples/ontology/park-competency-questions.json').read_text(encoding='utf-8'))
     modules = definitions()
-    assert len(plan['questions']) == 12
-    assert len({q['id'] for q in plan['questions']}) == 12
+    assert {q['id'] for q in plan['questions']} == {f'PCQ{i:02}' for i in range(1, 14)}
+    assert len(plan['questions']) == len({q['id'] for q in plan['questions']})
     for question in plan['questions']:
         assert set(question['park_types']) == set(plan['park_types'])
         assert question['required_inputs'] and question['forbidden_inferences']
-        assert question['acceptance_batch'] in {'B03', 'B05', 'B08b', 'extension'}
+        assert question['acceptance_batch'] in {'B03', 'B05', 'B08b', 'B08c', 'extension'}
         for field in ('concepts', 'relations'):
             for reference in question[field]:
                 module_id, term_id = reference.split(':')
@@ -72,7 +72,7 @@ def test_domain_revision_does_not_rewrite_shared_core_or_export_unrelated_module
     catalog = builtin_catalog()
     modules = definitions()
     assert sha256(canonical_bytes(modules['core'])).hexdigest() == 'd12aec3d679d5c06779e91faf44b4064dfee2a7cbdee2330b20e253b511f169f'
-    upgraded = {'built_environment', 'operations', 'electrical', 'fire_safety'}
+    upgraded = {'built_environment', 'operations', 'electrical', 'fire_safety', 'water'}
     for identity in sorted(upgraded):
         assert modules[identity]['version'] == '0.2.0'
         exported = catalog.export(identity)

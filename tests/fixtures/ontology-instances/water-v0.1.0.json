@@ -1,0 +1,65 @@
+{
+  "profile": "vxture.ontology-module/0.1",
+  "module_id": "water",
+  "version": "0.1.0",
+  "title": "给排水",
+  "description": "水务设备和系统候选定义，物理连接与实际流向分别确认。",
+  "layer": "domain",
+  "status": "draft",
+  "requires": [
+    {
+      "module_id": "core",
+      "version": "0.1.0",
+      "sha256": "d12aec3d679d5c06779e91faf44b4064dfee2a7cbdee2330b20e253b511f169f"
+    }
+  ],
+  "concepts": {
+    "pump": {
+      "title": "水泵",
+      "definition": "用于输送水介质的泵设备，不自动覆盖所有工业介质泵。",
+      "examples": [
+        "给水泵"
+      ],
+      "counterexamples": [
+        "仅输送气体的压缩机"
+      ],
+      "properties": {
+        "rated_power": {
+          "title": "额定功率",
+          "definition": "按铭牌或规格依据声明的额定功率，不表示实时耗电。",
+          "data_type": "number",
+          "required": false,
+          "unit": "kW",
+          "quantity": "power",
+          "minimum": 0
+        }
+      },
+      "parent": "core:physical_object"
+    },
+    "valve": {
+      "title": "水务阀门",
+      "definition": "用于调节或截断水介质通路的物理设备。",
+      "examples": [
+        "给水阀门"
+      ],
+      "counterexamples": [
+        "阀门当前开度报告"
+      ],
+      "properties": {},
+      "parent": "core:physical_object"
+    },
+    "water_system": {
+      "title": "给排水系统",
+      "definition": "为水的供给、排放等功能组织的系统。",
+      "examples": [
+        "给水系统"
+      ],
+      "counterexamples": [
+        "只按距离聚类的设备集合"
+      ],
+      "properties": {},
+      "parent": "core:system"
+    }
+  },
+  "relations": {}
+}
