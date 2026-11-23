@@ -1,0 +1,77 @@
+{
+  "profile": "vxture.ontology-module/0.1",
+  "module_id": "electrical",
+  "version": "0.1.0",
+  "title": "供配电",
+  "description": "电气设备、系统成员与供给关系的候选定义。网络影响分析需要端口、配置及运行状态的后续契约。",
+  "layer": "domain",
+  "status": "draft",
+  "requires": [
+    {
+      "module_id": "core",
+      "version": "0.1.0",
+      "sha256": "d12aec3d679d5c06779e91faf44b4064dfee2a7cbdee2330b20e253b511f169f"
+    }
+  ],
+  "concepts": {
+    "distribution_cabinet": {
+      "title": "配电柜",
+      "definition": "承担电能分配功能的柜式电气设备，参数需来源依据。",
+      "examples": [
+        "低压配电柜"
+      ],
+      "counterexamples": [
+        "普通文件柜"
+      ],
+      "properties": {
+        "rated_voltage": {
+          "title": "额定电压",
+          "definition": "按规格依据声明的额定电压，不是实时量测电压。",
+          "data_type": "number",
+          "required": false,
+          "unit": "V",
+          "quantity": "electric_potential",
+          "minimum": 0
+        }
+      },
+      "parent": "core:physical_object"
+    },
+    "electrical_system": {
+      "title": "供配电系统",
+      "definition": "为电能供给与分配组织的功能系统。",
+      "examples": [
+        "园区供配电系统"
+      ],
+      "counterexamples": [
+        "同一房间内所有设备的空间集合"
+      ],
+      "properties": {},
+      "parent": "core:system"
+    },
+    "electrical_port": {
+      "title": "电气端口",
+      "definition": "用于描述电气连接接口的对象；接口身份与连接状态分开。",
+      "examples": [
+        "设备的供电接入端"
+      ],
+      "counterexamples": [
+        "设备名称"
+      ],
+      "properties": {},
+      "parent": "core:entity"
+    }
+  },
+  "relations": {
+    "supplies": {
+      "title": "供电",
+      "definition": "声明源对象向目标对象供电；必须有专业来源，位置邻近不能产生该关系。",
+      "source_types": [
+        "core:physical_object"
+      ],
+      "target_types": [
+        "core:physical_object"
+      ],
+      "symmetric": false
+    }
+  }
+}

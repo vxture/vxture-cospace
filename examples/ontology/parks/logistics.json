@@ -18,8 +18,8 @@
     },
     {
       "module_id": "electrical",
-      "version": "0.1.0",
-      "sha256": "b466e3e92b62c2c925311fffbc23902dc4f577b47da85973eef1406746e2804e"
+      "version": "0.2.0",
+      "sha256": "aef65bc2f0ea6b71665f8140f8eedb7f980af4e6cfd6eecd0a2e97b601bffca0"
     },
     {
       "module_id": "monitoring",

@@ -72,13 +72,14 @@ def test_domain_revision_does_not_rewrite_shared_core_or_export_unrelated_module
     catalog = builtin_catalog()
     modules = definitions()
     assert sha256(canonical_bytes(modules['core'])).hexdigest() == 'd12aec3d679d5c06779e91faf44b4064dfee2a7cbdee2330b20e253b511f169f'
-    for identity in ('built_environment', 'operations'):
+    upgraded = {'built_environment', 'operations', 'electrical'}
+    for identity in sorted(upgraded):
         assert modules[identity]['version'] == '0.2.0'
         exported = catalog.export(identity)
         assert {m['module_id'] for m in exported['modules']} == {'core', identity}
         assert Catalog.from_bytes(canonical_bytes(exported)).export() == exported
     assert all(m['version'] == '0.1.0' for key, m in modules.items()
-               if key not in {'built_environment', 'operations'})
+               if key not in upgraded)
 
 
 def test_definition_upgrade_invalidates_snapshot_but_preserves_explicit_membership(tmp_path):

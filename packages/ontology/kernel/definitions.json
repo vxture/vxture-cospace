@@ -415,9 +415,9 @@
     {
       "profile": "vxture.ontology-module/0.1",
       "module_id": "electrical",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "title": "供配电",
-      "description": "电气设备、系统成员与供给关系的候选定义。网络影响分析需要端口、配置及运行状态的后续契约。",
+      "description": "园区供配电候选定义。区分设备、端口、物理接线和有资料依据的供电方向；不表示实时带电、负荷状态或停电影响。",
       "layer": "domain",
       "status": "draft",
       "requires": [
@@ -428,6 +428,14 @@
         }
       ],
       "concepts": {
+        "electrical_equipment": {
+          "title": "电气设备",
+          "definition": "承担电能变换、分配、控制或使用功能的实体设备；与空间、台账记录及逻辑端口分别标识。",
+          "examples": ["一台配电变压器"],
+          "counterexamples": ["供配电系统图", "配电房空间"],
+          "properties": {},
+          "parent": "core:physical_object"
+        },
         "distribution_cabinet": {
           "title": "配电柜",
           "definition": "承担电能分配功能的柜式电气设备，参数需来源依据。",
@@ -446,9 +454,53 @@
               "unit": "V",
               "quantity": "electric_potential",
               "minimum": 0
+            },
+            "rated_current": {
+              "title": "额定电流",
+              "definition": "按设备铭牌或规格声明的额定电流，以安培记录；缺少资料时不填写。",
+              "data_type": "number",
+              "required": false,
+              "unit": "A",
+              "quantity": "electric_current",
+              "minimum": 0
             }
           },
-          "parent": "core:physical_object"
+          "parent": "electrical:electrical_equipment"
+        },
+        "distribution_transformer": {
+          "title": "配电变压器",
+          "definition": "用于配电的电压变换设备；按铭牌分别声明高压、低压侧额定值，不推断运行时功率方向。",
+          "examples": ["园区配电室的配电变压器"],
+          "counterexamples": ["供电台账中的一行记录"],
+          "properties": {
+            "rated_high_side_voltage": {
+              "title": "高压侧额定电压",
+              "definition": "铭牌或规格记载的高压侧额定电压，以伏特记录。",
+              "data_type": "number",
+              "required": false,
+              "unit": "V",
+              "quantity": "electric_potential",
+              "minimum": 0
+            },
+            "rated_low_side_voltage": {
+              "title": "低压侧额定电压",
+              "definition": "铭牌或规格记载的低压侧额定电压，以伏特记录。",
+              "data_type": "number",
+              "required": false,
+              "unit": "V",
+              "quantity": "electric_potential",
+              "minimum": 0
+            }
+          },
+          "parent": "electrical:electrical_equipment"
+        },
+        "electrical_load": {
+          "title": "用电设备",
+          "definition": "在供配电资料中作为用电端标识的实体设备；其接入不代表当下耗电或可运行。",
+          "examples": ["作为配电出线供电对象记录的机组"],
+          "counterexamples": ["配电回路总用电量统计记录"],
+          "properties": {},
+          "parent": "electrical:electrical_equipment"
         },
         "electrical_system": {
           "title": "供配电系统",
@@ -476,6 +528,27 @@
         }
       },
       "relations": {
+        "has_electrical_port": {
+          "title": "具有电气端口",
+          "definition": "声明某电气设备的连接接口；端口归属不表示已接线。",
+          "source_types": ["electrical:electrical_equipment"],
+          "target_types": ["electrical:electrical_port"],
+          "symmetric": false
+        },
+        "wired_to": {
+          "title": "端口接线",
+          "definition": "在资料有效期内明确记录的两个端口之间的直接接线；方向对称，不表示开关状态、供电方向或带电。",
+          "source_types": ["electrical:electrical_port"],
+          "target_types": ["electrical:electrical_port"],
+          "symmetric": true
+        },
+        "documented_feed": {
+          "title": "资料声明的供电方向",
+          "definition": "按固定版本单线图、回路表或经核对的资料，声明配电设备到另一配电设备或用电设备的直接馈供方向。不从接线、设备邻近或系统成员自动推断，也不推断当前供电路径。",
+          "source_types": ["electrical:distribution_transformer", "electrical:distribution_cabinet"],
+          "target_types": ["electrical:distribution_cabinet", "electrical:electrical_load"],
+          "symmetric": false
+        },
         "supplies": {
           "title": "供电",
           "definition": "声明源对象向目标对象供电；必须有专业来源，位置邻近不能产生该关系。",

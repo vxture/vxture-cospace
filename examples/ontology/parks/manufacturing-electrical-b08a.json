@@ -1,0 +1,23 @@
+{
+  "title": "制造园区 · 供配电样例（合成）",
+  "synthetic": true,
+  "scope": "部分设备与资料中明确的关系；无现场核验",
+  "frame_id": "local",
+  "valid_time": {"start": "2026-11-24T00:00:00Z", "end": null},
+  "objects": [
+    {"id": "transformer", "name": "配电变压器", "type": "distribution_transformer", "anchor_m": [2, 3, 0], "properties": {"rated_high_side_voltage": {"value": 10000, "unit": "V", "quantity": "electric_potential"}, "rated_low_side_voltage": {"value": 400, "unit": "V", "quantity": "electric_potential"}}},
+    {"id": "cabinet", "name": "低压配电柜", "type": "distribution_cabinet", "anchor_m": [6, 3, 0], "properties": {"rated_voltage": {"value": 400, "unit": "V", "quantity": "electric_potential"}, "rated_current": {"value": 250, "unit": "A", "quantity": "electric_current"}}},
+    {"id": "load", "name": "用电机组", "type": "electrical_load", "anchor_m": [18, 4, 0], "properties": {}},
+    {"id": "cabinet-port", "name": "配电柜资料出线端", "type": "electrical_port", "properties": {}},
+    {"id": "load-port", "name": "机组资料接入端", "type": "electrical_port", "properties": {}},
+    {"id": "room", "name": "配电间空间", "anchor_m": [4, 4, 0], "properties": {}}
+  ],
+  "relations": [
+    {"id": "diagram-feed-01", "source": "transformer", "target": "cabinet", "type": "documented_feed", "evidence_note": "合成单线图 DEMO-SLD-R01 / 01"},
+    {"id": "diagram-feed-02", "source": "cabinet", "target": "load", "type": "documented_feed", "evidence_note": "合成单线图 DEMO-SLD-R01 / 02"},
+    {"id": "terminal-row-01", "source": "cabinet", "target": "cabinet-port", "type": "has_electrical_port", "evidence_note": "合成端口表 DEMO-TERM-R01 / 01"},
+    {"id": "terminal-row-02", "source": "load", "target": "load-port", "type": "has_electrical_port", "evidence_note": "合成端口表 DEMO-TERM-R01 / 02"},
+    {"id": "terminal-row-03", "source": "cabinet-port", "target": "load-port", "type": "wired_to", "evidence_note": "合成接线表 DEMO-WIRE-R01 / 03"},
+    {"id": "legacy-nearby-01", "source": "cabinet", "target": "room"}
+  ]
+}
