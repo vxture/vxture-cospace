@@ -6,6 +6,8 @@
 
 全部坐标为合成米制右手局部坐标。没有地理配准，不可直接作为真实经纬度显示。未提供几何的组织、指派、系统等通过语义关系查询；缺少几何并非对象不存在。覆盖声明为 partial，不能推导未记录设施不存在。
 
+[制造园区供配电 B08a](manufacturing-electrical-b08a.json) 是宿主空间关联及固定交付的独立合成验收样例，包含有依据的馈供声明、端口归属和接线，以及只表示邻近的一条未映射关系。其数据形状供验收工具读取，不是可直接上传的实例包。验收入口：`python -m pytest tests/test_b08a_electrical_delivery.py -q`。
+
 契约见 [ontology-instances-v0.1.md](../../../contracts/schemas/ontology-instances-v0.1.md)。反例补丁矩阵单独保存在 `tests/fixtures/ontology-instances/negative-matrix.json`，不作为正常消费实例传播。
 
 从仓库根目录运行：

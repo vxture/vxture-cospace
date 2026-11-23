@@ -198,7 +198,7 @@ def test_dependency_upgrade_is_explicit_and_old_bundle_remains_readable(tmp_path
     new_core = publish(svc, ids, 'core', revision=2)
     new_electrical = deepcopy(original_electrical)
     new_electrical['modules'][0] = deepcopy(upgraded_core['modules'][0])
-    new_electrical['modules'][1]['version'] = '0.2.0'
+    new_electrical['modules'][1]['version'] = '0.3.0'
     # An un-rebound old dependency digest must fail; the service never updates it for the caller.
     save(svc, ids, new_electrical, revision=1, base=old_release['reference'])
     assert not svc.validate('park-library', 'editor', 'electrical', 2)['valid']
