@@ -47,7 +47,9 @@ class ModelExact:
         return root, model, raw
 
     def path(self, key):
-        return self.root / (sha256((':'.join(key) + ':sqlite-rtree/1').encode()).hexdigest() + '.sqlite3')
+        # Annotation-only candidates share immutable geometry. Admission still
+        # validates each request's own manifest and scene before using this index.
+        return self.root / (sha256((key[1] + ':sqlite-rtree/2').encode()).hexdigest() + '.sqlite3')
 
     def state(self, kind, name, key):
         if self.path(key).is_file():
@@ -67,7 +69,7 @@ class ModelExact:
         db.set_progress_handler(lambda: int(time.monotonic() > deadline), 1000)
         try:
             info = json.loads(db.execute('SELECT value FROM metadata').fetchone()[0])
-            if (info.get('source_manifest_sha256'), info.get('source_model_sha256')) != key:
+            if info.get('source_model_sha256') != key[1]:
                 raise ValueError('exact_source_changed')
         except BaseException:
             db.close()
@@ -75,14 +77,16 @@ class ModelExact:
         return db, info
 
     def describe(self, kind, name, manifest_sha256, source_sha256):
-        self.source(kind, name, manifest_sha256, source_sha256)
+        _, model, _ = self.source(kind, name, manifest_sha256, source_sha256)
         key = (manifest_sha256, source_sha256)
         state = self.state(kind, name, key)
         if state != 'ready':
             return {'state': state}
         db, info = self.connect(key)
         db.close()
-        return info | {'state': 'ready'}
+        if info.get('point_count') != model['construction']['model_points']:
+            raise ValueError('exact_source_changed')
+        return info | {'state': 'ready', 'source_manifest_sha256': manifest_sha256}
 
     def read(self, kind, name, manifest_sha256, source_sha256, *, point=None, radius_m=None, point_index=None):
         _, model, _ = self.source(kind, name, manifest_sha256, source_sha256)
@@ -104,8 +108,10 @@ class ModelExact:
         if not self.read_slots.acquire(blocking=False):
             return result | {'state': 'busy'}
         try:
-            db, _ = self.connect(key)
+            db, info = self.connect(key)
             with closing(db):
+                if info.get('point_count') != model['construction']['model_points']:
+                    raise ValueError('exact_source_changed')
                 if point_index is not None:
                     rows = db.execute('SELECT id,x,y,z,checksum FROM points WHERE id=?', (point_index,)).fetchall()
                 else:
@@ -233,7 +239,7 @@ class ModelExact:
                     if source.read(1):
                         raise ValueError('exact_geometry_invalid')
                 info = {'profile': PROFILE, 'source_manifest_sha256': key[0], 'source_model_sha256': key[1],
-                        'point_count': count, 'bounds_m': [low.tolist(), high.tolist()], 'index': 'sqlite-rtree/1'}
+                        'point_count': count, 'bounds_m': [low.tolist(), high.tolist()], 'index': 'sqlite-rtree/2'}
                 db.execute('INSERT INTO metadata VALUES(?)', (json.dumps(info, allow_nan=False),))
             if (root / 'model.json').read_bytes() != raw:
                 raise ValueError('exact_source_changed')

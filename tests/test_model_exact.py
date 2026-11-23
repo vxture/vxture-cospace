@@ -68,6 +68,29 @@ def test_dense_coincident_and_rounded_rtree_candidates_are_not_silent_nearest(di
     assert exact.read('candidate', 'build-one', *key, point_index=33)['points'][0]['point_index'] == 33
 
 
+def test_annotation_only_manifests_reuse_geometry_index_without_weakening_binding(display, monkeypatch):
+    exact, key, _, root = cloud(display,np.array([[500000.123456789,4000000.1,18.]]))
+    ready(exact,key)
+    path = exact.path(key)
+    manifest = json.loads((root/'model.json').read_bytes())
+    manifest['label'] = 'annotation-only metadata change'
+    raw = encoded(manifest)
+    (root/'model.json').write_bytes(raw)
+    changed = (sha256(raw).hexdigest(),key[1])
+    monkeypatch.setattr(exact,'build',lambda *a:pytest.fail('identical geometry rebuilt'))
+    assert exact.describe('candidate','build-one',*changed)['source_manifest_sha256'] == changed[0]
+    result = exact.read('candidate','build-one',*changed,point_index=0)
+    assert result['state'] == 'ready' and result['source_manifest_sha256'] == changed[0]
+    assert result['points'][0]['point_id'] == key[1]+':0' and exact.path(changed) == path
+    with pytest.raises(ValueError,match='exact_source_changed'):
+        exact.read('candidate','build-one',*key,point_index=0)
+    manifest['construction']['model_points'] = 2
+    raw = encoded(manifest)
+    (root/'model.json').write_bytes(raw)
+    with pytest.raises(ValueError,match='exact_source_changed'):
+        exact.describe('candidate','build-one',sha256(raw).hexdigest(),key[1])
+
+
 def test_stale_binding_integrity_and_capacity_fail_closed(display, monkeypatch):
     exact, key, _, root = cloud(display, np.array([[1., 2., 3.]]))
     ready(exact, key)
@@ -189,8 +212,6 @@ def test_existing_objects_use_bounded_original_rows_without_whole_model_decode(t
     raw = encoded(manifest)
     (model.root/'model.json').write_bytes(raw)
     key = (sha256(raw).hexdigest(),key[1])
-    assert exact.objects('candidate',record['id'],*key)['state'] == 'preparing'
-    exact.scan()
     with pytest.raises(ValueError,match='object_anchor_mismatch'):
         exact.objects('candidate',record['id'],*key)
 
