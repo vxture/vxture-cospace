@@ -11,6 +11,13 @@ test('metadata readiness does not require downloading geometry or computation',(
  assert.equal(scene.display.state,'ready');
  assert.equal(scene.positions.length,0);assert.equal(scene.agent_points.length,0);
 });
+
+test('only explicitly recognized operational strategies survive the display contract',()=>{
+ for(const strategy of ['baseline','task','adaptive','governance','combined','future-policy',undefined]){
+  const v=value();v.display.strategy=strategy;
+  assert.equal(validateDisplay(v,ref).display.strategy,['task','adaptive','governance','combined'].includes(strategy)?strategy:'baseline');
+ }
+});
 test('cross-scene, source, URL, count and numeric precision mismatches fail closed',()=>{
  const mutations=[v=>v.model.space_id='space-other',v=>v.model.agent_view.source_model_sha256='e'.repeat(64),v=>v.display.entry='https://other.example/model.json',v=>v.display.point_count=10,v=>v.display.encoding_error_m=.01,v=>v.display.origin_m[0]=Infinity,v=>v.display.model_to_display[0]=[2,0,0],v=>v.display.state='published'];
  for(const mutate of mutations){const v=value();mutate(v);assert.throws(()=>validateDisplay(v,ref));}

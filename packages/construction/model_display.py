@@ -21,6 +21,7 @@ CONVERTER = 'potree-converter/2.1.5'
 BLOCK_BYTES = 256 * 1024
 MAX_RANGE = 16 * 1024 * 1024
 FILES = {'metadata.json', 'hierarchy.bin', 'octree.bin'}
+STRATEGIES = {'baseline', 'task', 'adaptive', 'governance', 'combined'}
 LOG = logging.getLogger(__name__)
 
 
@@ -67,10 +68,14 @@ def byte_range(header, size):
 
 
 class ModelDisplays:
-    def __init__(self, jobs, converter=None):
+    def __init__(self, jobs, converter=None, strategy=None):
         self.jobs = jobs
         self.root = jobs.root.parent / 'model-displays'
         self.converter = converter or os.environ.get('COSPACE_POTREE_CONVERTER')
+        configured = strategy if strategy is not None else os.environ.get('COSPACE_DISPLAY_STRATEGY', 'baseline')
+        self.strategy = configured if configured in STRATEGIES else 'baseline'
+        if configured not in STRATEGIES:
+            LOG.warning('Unknown display strategy; using mature baseline')
         self.lock = threading.Lock()
         self.read_slots = threading.BoundedSemaphore(8)
         self.stopping = threading.Event()
@@ -150,7 +155,8 @@ class ModelDisplays:
             result['state'] = 'failed' if failure.exists() else 'preparing' if self.converter else 'unavailable'
         if kind == 'publication':
             model = model | {'publication': record}
-        return {'model': model, 'display': result}
+        # Operational policy is not part of the immutable derived geometry ID.
+        return {'model': model, 'display': result | {'strategy': self.strategy}}
 
     def build(self, kind, name):
         if not self.converter:

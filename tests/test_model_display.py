@@ -80,6 +80,23 @@ def test_range_crosses_integrity_blocks_without_loading_full_source(display, mon
     assert summary['display']['state'] == 'ready' and 'files' not in summary['display']
 
 
+@pytest.mark.parametrize('strategy', ['baseline', 'task', 'adaptive', 'governance', 'combined', 'invalid'])
+def test_optional_policy_preserves_fixed_identity_integrity_and_default(display, strategy):
+    service, key, folder, _, _, _ = display
+    before = (folder / 'display.json').read_bytes()
+    configured = ModelDisplays(service.jobs, strategy=strategy)
+    result = configured.describe('candidate', 'build-one')['display']
+    assert result['strategy'] == ('baseline' if strategy == 'invalid' else strategy)
+    assert result['id'] == key
+    assert (folder / 'display.json').read_bytes() == before
+
+
+def test_unknown_operational_policy_falls_back_without_enabling_experiments(display, monkeypatch):
+    service, *_ = display
+    monkeypatch.setenv('COSPACE_DISPLAY_STRATEGY', 'unreviewed-policy')
+    assert ModelDisplays(service.jobs).strategy == 'baseline'
+
+
 def test_full_octree_and_multi_range_are_not_silent_full_downloads(display):
     _, key, _, _, payload, client = display
     url = f'/candidates/build-one/display/{key}/octree.bin'

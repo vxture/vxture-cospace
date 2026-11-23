@@ -18,5 +18,7 @@ export function validateDisplay(value:{model:PublishedModel;display:ModelDisplay
    basis.some((row,i)=>basis.some((other,j)=>Math.abs(row.reduce((s,n,k)=>s+n*other[k],0)-(i===j?1:0))>1e-12))||
    display.point_count!==model.construction.model_points||typeof display.encoding_error_m!=='number'||!Number.isFinite(display.encoding_error_m)||display.encoding_error_m<0||display.encoding_error_m>.001)throw Error('显示坐标契约或精度预算无效。');
  }
+ // Unknown future strategies cannot change the mature display path.
+ if(!['baseline','task','adaptive','governance','combined'].includes(display.strategy||''))display.strategy='baseline';
  return {model,display,positions:new Float32Array(),colors:new Float32Array(),agent_points:[],objects:[],relations:[]};
 }
