@@ -1,3 +1,4 @@
+import {engineeringScene,exactObjects} from './model-exact-data';
 import {WorkspaceContent} from './workspace-content';
 import {SceneOntologyRelationsPanel} from './scene-ontology-relations';
 import {RegistrationSummary} from './registration-summary';
@@ -58,8 +59,8 @@ function AssociationWorkspace(){
  // Pin the server-selected source in the URL before enabling an editor.
  useEffect(()=>{if(view!=='ifc'&&loaded&&current&&!target.job)appNavigate(recordLink('association',{space:target.space,job:current.id,tab:view}),true);},[loaded,current?.id,target.job,target.space,view]);
  useEffect(()=>{const abort=new AbortController();setModel(null);setObjects(null);setSnapshotError('');setReading(false);if(!current)return()=>abort.abort();setReading(true);
-  (async()=>{const response=await fetch(`${endpoint}/candidates/${current.id}/api/preview`,{signal:abort.signal,cache:'no-store'});if(!response.ok)throw Error('模型快照无法读取，请核查权限及来源。');const manifest:Model=await response.json();if(manifest.id!==current.id||manifest.space_id!==target.space)throw Error('模型快照与当前来源不一致。');
-   let contents:Objects|null=null;if(manifest.semantic_annotation){const r=await fetch(`${endpoint}/candidates/${current.id}/api/objects`,{signal:abort.signal,cache:'no-store'});if(!r.ok)throw Error('已保存的对象快照无法读取。');contents=await r.json();if(!contents||contents.model_id!==current.id||contents.space_id!==target.space||!Array.isArray(contents.objects))throw Error('对象快照与当前来源不一致。');}
+  (async()=>{const scene=await engineeringScene({space:target.space,identity:current.id,kind:'candidate'},abort.signal);const manifest:Model=scene.model;if(manifest.id!==current.id||manifest.space_id!==target.space)throw Error('模型快照与当前来源不一致。');
+   let contents:Objects|null=null;if(manifest.semantic_annotation){contents=await exactObjects({space:target.space,candidate:current.id,manifest:scene.display!.source_manifest_sha256,source:scene.display!.source_model_sha256,frame:manifest.frame_id},abort.signal);if(!contents||contents.model_id!==current.id||contents.space_id!==target.space||!Array.isArray(contents.objects))throw Error('对象快照与当前来源不一致。');}
    if(!abort.signal.aborted){setModel(manifest);setObjects(contents);}
   })().catch(e=>{if(!abort.signal.aborted)setSnapshotError(e.message);}).finally(()=>{if(!abort.signal.aborted)setReading(false);});return()=>abort.abort();
  },[current?.id,target.space,refresh]);

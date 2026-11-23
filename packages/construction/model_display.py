@@ -75,6 +75,8 @@ class ModelDisplays:
         self.read_slots = threading.BoundedSemaphore(8)
         self.stopping = threading.Event()
         self.process = None
+        from packages.construction.model_exact import ModelExact
+        self.exact = ModelExact(self)
 
     def source(self, kind, name):
         """Resolve only small saved records; the HTTP gate authorizes their scene first."""
@@ -291,17 +293,22 @@ class ModelDisplays:
             while not self.stopping.is_set():
                 await asyncio.to_thread(self.scan)
                 await asyncio.sleep(5)
-        task = asyncio.create_task(run())
+        async def exact_run():
+            while not self.stopping.is_set():
+                await asyncio.to_thread(self.exact.scan)
+                await asyncio.sleep(1)
+        tasks = [asyncio.create_task(run()), asyncio.create_task(exact_run())]
         try:
             yield
         finally:
             self.stopping.set()
+            self.exact.clear()
             if self.process is not None:
                 try:
                     self.process.kill()
                 except OSError:
                     pass
             try:
-                await asyncio.wait_for(task, timeout=15)
+                await asyncio.wait_for(asyncio.gather(*tasks), timeout=15)
             except (asyncio.CancelledError, TimeoutError):
                 pass

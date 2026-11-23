@@ -1,0 +1,33 @@
+.engineering-model-canvas{position:relative;width:100%;height:100%;min-height:0;overflow:hidden;border-radius:var(--radius-md);background:var(--muted)}
+.engineering-model-canvas .real-render-status{color:var(--foreground);background:var(--card);font-size:var(--label-small-font-size);max-width:calc(100% - var(--space-control-xl) - var(--space-lg) * 2)}
+.engineering-model-canvas .real-object-marker{font-size:var(--label-small-font-size);color:var(--foreground);border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--card);padding:var(--space-2xs) var(--space-xs);min-height:var(--space-control-xl)}
+.engineering-model-canvas .real-object-marker[data-selected=true]{color:var(--primary);border-color:var(--primary);background:var(--accent)}
+.engineering-model-canvas .real-object-dot{background:var(--muted-foreground);border-radius:0}
+.engineering-model-canvas .real-object-marker[data-purpose=check] .real-object-dot{background:var(--primary);border-radius:50%}
+.engineering-model-fit{position:absolute;right:var(--space-sm);bottom:var(--space-sm);width:var(--space-control-xl);height:var(--space-control-xl);padding:var(--space-2xs);background:var(--card)}
+.engineering-model-message{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:var(--space-sm);margin:0;padding:var(--space-md);font-size:var(--label-small-font-size);color:var(--muted-foreground)}
+.engineering-point-content{display:flex;flex-direction:column;gap:var(--space-md);font-size:var(--label-small-font-size)}
+.engineering-point-content p{margin:0;color:var(--muted-foreground)}
+.engineering-point-tools,.engineering-point-actions{display:flex;align-items:center;gap:var(--space-sm)}
+.engineering-point-actions{justify-content:flex-end;width:100%}
+.engineering-point-tools select,.engineering-point-tools button,.engineering-point-actions button{height:var(--space-control-xl);min-height:var(--space-control-xl)}
+.engineering-point-tools select,.engineering-point-tools button{font-size:var(--label-small-font-size)}
+.engineering-point-actions button{font-size:var(--body-font-size)}
+.engineering-point-list{display:flex;flex-direction:column;gap:var(--space-xs)}
+.engineering-point-list label{display:flex;align-items:center;gap:var(--space-sm);padding:var(--space-sm);border:1px solid var(--border);border-radius:var(--radius-md);cursor:pointer}
+.engineering-point-list label:hover{background:var(--muted)}
+.engineering-point-list label[data-selected=true]{background:var(--accent);border-color:var(--primary)}
+.engineering-point-list label>span{display:flex;flex-direction:column;gap:var(--space-2xs);min-width:0;overflow-wrap:anywhere}
+.engineering-point-list label strong{font-weight:500}.engineering-point-list label>span>span{color:var(--muted-foreground);font-variant-numeric:tabular-nums}
+.registration-views .engineering-model-canvas{height:min(75cqi,calc(100dvh - var(--spacing-header-md) - var(--space-control-xl) - var(--space-6xl) - var(--space-md) * 2));flex:none}
+.registration-editor-model>.engineering-model-canvas{flex:1;border-radius:0}
+.association-object-model .engineering-model-canvas{min-height:var(--space-6xl);height:clamp(20rem,60vh,40rem)}
+
+.engineering-model-canvas .real-object-marker{gap:var(--space-xs);min-height:var(--space-control-xl);padding:var(--space-2xs) var(--space-xs)}
+.engineering-model-canvas .real-object-name{padding:0;border:0;border-radius:0;background:transparent;color:inherit}
+.engineering-model-canvas .real-object-dot{border:1px solid var(--muted-foreground);box-shadow:none;background:var(--muted-foreground)}
+.engineering-model-canvas .real-object-marker[data-purpose=check] .real-object-dot{border-color:var(--primary);background:var(--primary)}
+.engineering-model-canvas .real-object-marker[data-selected=true] .real-object-dot{border-color:var(--primary);background:var(--primary)}
+.engineering-model-canvas .real-render-status{bottom:var(--space-sm);left:var(--space-sm);right:auto;padding:var(--space-2xs) var(--space-xs);border-radius:var(--radius-sm)}
+
+.engineering-model-canvas[data-picking=true] .real-object-marker{pointer-events:none}

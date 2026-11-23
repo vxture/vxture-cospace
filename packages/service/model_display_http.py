@@ -1,9 +1,61 @@
 """Authorized by the existing candidate/publication gate before these handlers."""
 from fastapi import HTTPException, Request, Response
 from fastapi.responses import JSONResponse
+from pydantic import BaseModel, ConfigDict, Field
+import sqlite3
+
+
+class SourceQuery(BaseModel):
+    model_config = ConfigDict(extra='forbid', strict=True, allow_inf_nan=False)
+    manifest_sha256: str = Field(pattern='^[a-f0-9]{64}$')
+    source_sha256: str = Field(pattern='^[a-f0-9]{64}$')
+
+
+class ExactQuery(SourceQuery):
+    x: float | None = None
+    y: float | None = None
+    z: float | None = None
+    radius_m: float | None = Field(default=None, ge=.001, le=1)
+    point_index: int | None = Field(default=None, ge=0)
 
 
 def install(app, displays):
+    @app.get('/candidates/{identity}/api/exact-objects')
+    def exact_objects(identity: str, request: Request):
+        try:
+            values = dict(request.query_params)
+            if len(values) != len(request.query_params.multi_items()):
+                raise ValueError('exact_query_invalid')
+            query = SourceQuery.model_validate_strings(values, strict=True)
+            result = displays.exact.objects('candidate', identity, query.manifest_sha256, query.source_sha256)
+            return JSONResponse(result, headers={'Cache-Control': 'no-store'})
+        except ValueError as exc:
+            invalid = str(exc) == 'exact_query_invalid' or hasattr(exc, 'errors')
+            raise HTTPException(422 if invalid else 404 if str(exc) == 'semantic_objects_not_available' else 409,
+                                'exact_query_invalid' if invalid else 'exact_objects_unavailable') from None
+        except (OSError, LookupError, TypeError, AttributeError, sqlite3.Error):
+            raise HTTPException(409, 'exact_objects_unavailable') from None
+
+    @app.get('/candidates/{identity}/api/exact')
+    def exact(identity: str, request: Request):
+        try:
+            values = dict(request.query_params)
+            if len(values) != len(request.query_params.multi_items()):
+                raise ValueError('exact_query_invalid')
+            query = ExactQuery.model_validate_strings(values, strict=True)
+            point = [query.x, query.y, query.z]
+            if query.point_index is not None and any(v is not None for v in [*point, query.radius_m]):
+                raise ValueError('exact_query_invalid')
+            result = displays.exact.read('candidate', identity, query.manifest_sha256, query.source_sha256,
+                                        point=point, radius_m=query.radius_m, point_index=query.point_index)
+            return JSONResponse(result, headers={'Cache-Control': 'no-store'})
+        except ValueError as exc:
+            raise HTTPException(422 if str(exc) == 'exact_query_invalid' or hasattr(exc, 'errors') else 409,
+                                'exact_query_invalid' if str(exc) == 'exact_query_invalid' or hasattr(exc, 'errors')
+                                else 'exact_source_unavailable') from None
+        except (OSError, LookupError, TypeError, AttributeError, sqlite3.Error):
+            raise HTTPException(409, 'exact_source_unavailable') from None
+
     def describe(kind, identity):
         try:
             result = displays.describe(kind, identity)

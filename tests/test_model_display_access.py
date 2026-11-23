@@ -36,3 +36,37 @@ def test_range_does_not_outlive_revoked_session(secured, monkeypatch):
     assert notify_logout(client, accounts).status_code == 200
     assert client.get(path, headers={'Range': 'bytes=0-1'}).status_code == 401
     assert len(calls) == 1
+
+
+def test_exact_queries_require_scene_access_and_recheck_revocation(secured, monkeypatch):
+    from test_platform_login import notify_logout
+    _, client, accounts, _, jobs, *_ = secured
+    calls = []
+    monkeypatch.setattr(jobs.displays.exact, 'read', lambda *a, **k: calls.append((a, k)) or
+                        {'state': 'ready', 'points': []})
+    params = {'manifest_sha256': 'a'*64, 'source_sha256': 'b'*64, 'point_index': '0'}
+    path = '/candidates/build-one/api/exact'
+    assert client.get(path, params=params).status_code == 401
+    assert not calls
+    sign_in(secured)
+    assert client.get('/candidates/build-two/api/exact', params=params).status_code == 403
+    assert not calls
+    assert client.get(path, params=params).status_code == 200
+    assert notify_logout(client, accounts).status_code == 200
+    assert client.get(path, params=params).status_code == 401
+    assert len(calls) == 1
+
+
+def test_exact_objects_use_the_same_scene_gate(secured, monkeypatch):
+    _, client, _, _, jobs, *_ = secured
+    calls = []
+    monkeypatch.setattr(jobs.displays.exact, 'objects', lambda *a: calls.append(a) or {'state':'preparing'})
+    params = {'manifest_sha256':'a'*64, 'source_sha256':'b'*64}
+    path = '/candidates/build-one/api/exact-objects'
+    assert client.get(path, params=params).status_code == 401
+    sign_in(secured)
+    assert client.get('/candidates/build-two/api/exact-objects', params=params).status_code == 403
+    assert not calls
+    response = client.get(path, params=params)
+    assert response.status_code == 200 and response.headers['cache-control'] == 'no-store'
+    assert len(calls) == 1

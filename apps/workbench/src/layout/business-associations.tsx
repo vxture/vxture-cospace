@@ -1,3 +1,4 @@
+import {engineeringObjects} from './model-exact-data';
 import {collectionImpact} from './operation-impact';
 import {useOperationConfirmation} from './operation-confirmation';
 import {useUnsavedNavigation,runGuarded} from './unsaved-navigation';
@@ -27,11 +28,9 @@ export function BusinessAssociations({embedded=false}:{embedded?:boolean}={}){
  useEffect(()=>{
   const request=new AbortController();setHash('');setObjects([]);setBindings({});setAck(false);setCreated('');
   if(!base){setReading(false);return()=>request.abort();}setReading(true);setError('');
-  Promise.all([fetch(`${endpoint}/candidates/${base}/api/anchor?point_index=0`,{signal:request.signal}),fetch(`${endpoint}/candidates/${base}/api/objects`,{signal:request.signal})]).then(async ([a,o])=>{
-   if(!a.ok||!o.ok)throw Error('该候选尚无对象标注或快照不可用，请先完成对象标注。');
-   const [anchor,body]=await Promise.all([a.json(),o.json()]);if(request.signal.aborted)return;
-   if(anchor.candidate_id!==base||body.model_id!==base||body.space_id!==target.space)throw Error('候选对象空间绑定不一致。');
-   setHash(anchor.model_manifest_sha256);setObjects(body.objects);setBindings(Object.fromEntries(body.objects.filter((obj:ObjectInfo)=>obj.business_links?.length).map((obj:ObjectInfo)=>[obj.object_id,obj.business_links![0].ref])));
+  engineeringObjects(target.space,base,request.signal).then(({manifest,objects:body})=>{
+   if(request.signal.aborted)return;
+   setHash(manifest);setObjects(body.objects);setBindings(Object.fromEntries(body.objects.filter((obj:ObjectInfo)=>obj.business_links?.length).map((obj:ObjectInfo)=>[obj.object_id,obj.business_links![0].ref])));
   }).catch(e=>{if(!request.signal.aborted)setError(e.message);}).finally(()=>{if(!request.signal.aborted)setReading(false);});return()=>request.abort();
  },[base]);
  async function register(e:React.FormEvent){

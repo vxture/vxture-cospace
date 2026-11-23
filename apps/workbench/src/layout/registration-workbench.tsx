@@ -1,6 +1,7 @@
 import React,{useMemo,useState} from 'react';
 import {Button,Table,TableHeader,TableBody,TableHead,TableRow,TableCell} from '@vxture/design-system';
 import {ArrowsLeftRight,Compass,Cube,FileText,PencilSimple,Target} from '@phosphor-icons/react';
+import type {EngineeringSource} from './engineering-model-canvas';
 import type {PreviewGeometry} from './geometry-preview-data';
 import {displayCentimetres as centimetres,registrationPreview,type RegistrationInput} from './registration-preview-data';
 import './geometry-preview.css';
@@ -8,10 +9,10 @@ import './registration-workbench.css';
 
 import {RegistrationComparison,RegistrationEvidenceDrawer,RegistrationMetrics,RegistrationModel,RegistrationPlan,RegistrationResidualChart,RegistrationStatus,type PlanBuilding} from './registration-views';
 export type {PlanBuilding} from './registration-views';
-type Props={input:RegistrationInput;geometry?:PreviewGeometry;buildings:PlanBuilding[];editorHref?:string;reviewStatus?:string;embedded?:boolean;summaryPrefix?:React.ReactNode;selected?:string;onSelect?:(id:string)=>void};
+type Props={input:RegistrationInput;geometry?:PreviewGeometry;source?:EngineeringSource;buildings:PlanBuilding[];editorHref?:string;reviewStatus?:string;embedded?:boolean;summaryPrefix?:React.ReactNode;selected?:string;onSelect?:(id:string)=>void};
 const axisNames:Record<string,string>={right:'右',left:'左',forward:'前',backward:'后',up:'上',down:'下',east:'东',north:'北'};
 
-export function RegistrationWorkbench({input,geometry,buildings,editorHref,reviewStatus,embedded=false,summaryPrefix,selected,onSelect}:Props){
+export function RegistrationWorkbench({input,geometry,source,buildings,editorHref,reviewStatus,embedded=false,summaryPrefix,selected,onSelect}:Props){
  const report=useMemo(()=>registrationPreview(input),[input]);
  const [localSelected,setLocalSelected]=useState(input.controls.find(p=>p.purpose==='check')?.id||input.controls[0]?.id||'');
  const setSelected=onSelect||setLocalSelected;
@@ -24,7 +25,7 @@ export function RegistrationWorkbench({input,geometry,buildings,editorHref,revie
   <div className="registration-check-summary" aria-label="参数核对状态">{summaryPrefix}<RegistrationStatus report={report} reviewStatus={reviewStatus}/><RegistrationMetrics report={report}/><span className="registration-coordinate-context" title={`${input.source.frame_id} → ${input.target.frame_id} · 米制工程平面`}><span>{input.source.frame_id}</span><ArrowsLeftRight size={14}/><span>{input.target.frame_id}</span></span></div>
   <div className="registration-views">
    <section className="registration-model" aria-label="源模型视图"><header className="registration-view-heading"><div><Cube size={18}/><h2>模型局部坐标</h2></div><span>X · Y · Z（m）</span></header>
-    <RegistrationModel input={input} geometry={geometry} selected={point.id} onSelect={setSelected}/>
+    <RegistrationModel input={input} geometry={geometry} source={source} selected={point.id} onSelect={setSelected}/>
    </section>
    <section className="registration-target" aria-label="目标控制网视图"><header className="registration-view-heading"><div><Target size={18}/><h2>园区控制网</h2></div><RegistrationComparison aligned={aligned} onChange={setAligned}/></header>
     <RegistrationPlan input={input} report={report} buildings={buildings} aligned={aligned} selected={point?.id} onSelect={setSelected}/>

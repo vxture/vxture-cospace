@@ -147,10 +147,14 @@ def source_from_model(model, space_id, candidate_id):
                 'registration_source_geometry_invalid')
         bounds = [points.min(axis=0).astype(float).tolist(), points.max(axis=0).astype(float).tolist()]
     digest = sha256((model.root / 'model.json').read_bytes()).hexdigest()
+    return source_frame(manifest, digest, bounds, space_id, candidate_id)
+
+
+def source_frame(manifest, digest, bounds, space_id, candidate_id):
     try:
         frame = ModelFrame.model_validate(dict(space_id=space_id, candidate_id=candidate_id,
             manifest_sha256=digest, model_sha256=manifest['members']['spatial.npz']['sha256'],
-            frame_id=manifest['frame_id'], unit=manifest['unit'], axes=axes, handedness='right', bounds_m=bounds))
+            frame_id=manifest['frame_id'], unit=manifest['unit'], axes=manifest['axes'], handedness='right', bounds_m=bounds))
     except ValidationError as exc:
         raise RegistrationError('registration_source_geometry_invalid') from exc
     return {'source_sha256': digest, 'model_source': frame.model_dump()}
@@ -164,7 +168,39 @@ class SceneRegistrations:
         self.adapters = set(os.environ.get('COSPACE_REGISTRATION_ADAPTERS', '').split(',')) if adapters is None else set(adapters)
 
     def source(self, space_id, candidate_id):
+        if self.jobs is not None and hasattr(self.jobs, 'displays'):
+            displays = self.jobs.displays
+            _, _, model, raw = displays.source('candidate', candidate_id)
+            require(model.get('space_id') == space_id, 'registration_source_changed')
+            require(registration_readiness(model.get('axes', []))['status'] == 'ready',
+                    'registration_source_axes_unsupported')
+            require(model.get('unit') == 'm', 'registration_source_unit_unsupported')
+            digest = sha256(raw).hexdigest()
+            info = displays.exact.describe('candidate', candidate_id, digest, model['members']['spatial.npz']['sha256'])
+            # Frozen build manifests already carry the source's numeric extent.
+            # Showing that extent must not wait for an engineering query index.
+            # Legacy manifests without it wait for the offline verified extent.
+            if model.get('bounds_m') is not None:
+                return source_frame(model, digest, model['bounds_m'], space_id, candidate_id)
+            require(info['state'] == 'ready', 'registration_source_preparing' if info['state'] in ('preparing', 'busy')
+                    else 'registration_exact_unavailable')
+            return source_frame(model, digest, info['bounds_m'], space_id, candidate_id)
         return source_from_model(self.jobs.model(candidate_id), space_id, candidate_id)
+
+    def verify_points(self, document):
+        """A reserved point reference is never accepted as self-attested coordinates."""
+        frame = document['source']
+        for control in document['controls']:
+            reference = control['evidence_ref']
+            if not reference.startswith('model-point:'):
+                continue
+            parsed = re.fullmatch(r'model-point:([a-f0-9]{64}):(0|[1-9][0-9]{0,9})', reference)
+            require(parsed is not None and parsed[1] == frame['model_sha256'] and self.jobs is not None,
+                    'registration_exact_point_invalid')
+            result = self.jobs.displays.exact.read('candidate', frame['candidate_id'], frame['manifest_sha256'],
+                                                  frame['model_sha256'], point_index=int(parsed[2]))
+            require(result['state'] == 'ready' and len(result['points']) == 1
+                    and result['points'][0]['anchor_m'] == control['source_m'], 'registration_exact_point_invalid')
 
     def source_diagnostics(self, space_id, candidate_id):
         """Inspect a blocked source without creating revisions or mutating its manifest."""
@@ -198,6 +234,7 @@ class SceneRegistrations:
                 (frame['space_id'], frame['candidate_id'], source['source_sha256']), 'registration_source_changed')
         document = request.document.model_dump()
         require(document['source'] == frame, 'registration_source_changed')
+        self.verify_points(document)
         try:
             report = evaluate_registration(document, expected_source=frame)
         except ValueError as exc:
@@ -359,6 +396,7 @@ class SceneRegistrations:
             if command.action == 'save':
                 document = command.document.model_dump()
                 require(document['source'] == source['model_source'], 'registration_source_changed')
+                self.verify_points(document)
                 try:
                     report = evaluate_registration(document, expected_source=source['model_source'])
                 except ValueError as exc:
