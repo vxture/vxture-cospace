@@ -7,6 +7,7 @@ from wsgiref.simple_server import WSGIRequestHandler, make_server
 
 from ..authoring import AuthoringError
 from ..catalog import CatalogError, MAX_BYTES, canonical_bytes
+from ..exchange import MAX_EXCHANGE_BYTES
 from ..workbench import DefinitionWorkbench
 from .authoring_sqlite import SQLiteAuthoringPort
 from .group_configuration import GroupConfigurationError, GroupConfigurationStore
@@ -16,6 +17,8 @@ from .storage import FILENAME
 DEFINITIONS = '/api/ontology-definitions'
 DIRECTORY = '/api/ontology-directory'
 GROUPS = '/api/ontology-configuration/groups'
+EXCHANGE = '/api/ontology-exchange/definitions'
+_REFERENCE_FIELDS = {'module_id', 'version', 'sha256'}
 _MAX_BODY = MAX_BYTES + 8192
 
 
@@ -37,7 +40,7 @@ def query_params(raw):
         raise RequestError(422, 'invalid_request') from None
 
 
-def read_body(environ):
+def read_body(environ, *, maximum=_MAX_BODY):
     if environ.get('HTTP_TRANSFER_ENCODING'):
         raise RequestError(400, 'transfer_encoding_unsupported')
     if environ.get('CONTENT_TYPE', '').split(';', 1)[0].strip().lower() != 'application/json':
@@ -46,7 +49,7 @@ def read_body(environ):
     if not re.fullmatch(r'[0-9]{1,10}', length):
         raise RequestError(411, 'length_required')
     size = int(length)
-    if size > _MAX_BODY:
+    if size > maximum:
         raise RequestError(413, 'size_budget')
     try:
         raw = environ['wsgi.input'].read(size)
@@ -60,6 +63,29 @@ def read_body(environ):
         raise RequestError(422, 'invalid_request') from None
 
 
+def exchange_response(workbench, method, query, environ):
+    if method != 'POST':
+        if set(query) != _REFERENCE_FIELDS:
+            raise RequestError(422, 'invalid_request')
+        return workbench.export_release(query)
+    body = read_body(environ, maximum=MAX_EXCHANGE_BYTES + 4096)
+    if type(body) is not dict:
+        raise RequestError(422, 'invalid_request')
+    action = body.get('action')
+    fields = {'action', 'package'}
+    if action == 'import':
+        fields |= {'request_id', 'expected_revision'}
+    if action not in ('preflight', 'import') or set(body) != fields:
+        raise RequestError(422, 'invalid_request')
+    try:
+        raw = canonical_bytes(body['package'])
+    except (ValueError, TypeError, RecursionError, OverflowError):
+        raise CatalogError('invalid_json', '/') from None
+    if action == 'preflight':
+        return workbench.preflight_import(raw)
+    return workbench.import_draft(raw, request_id=body['request_id'], expected_revision=body['expected_revision'])
+
+
 class Application:
     def __init__(self, root, authority, authenticate):
         self.authority = authority
@@ -71,7 +97,7 @@ class Application:
         if environ.get('HTTP_HOST') != self.authority or environ.get('HTTP_ORIGIN'):
             raise RequestError(403, 'local_request_required')
         method, path = environ['REQUEST_METHOD'], environ['PATH_INFO']
-        if path not in (DEFINITIONS, DIRECTORY, GROUPS):
+        if path not in (DEFINITIONS, DIRECTORY, GROUPS, EXCHANGE):
             raise RequestError(404, 'not_found')
         # An injected adapter maps authentication to a trusted Principal.
         # Query, body, cookies and user-supplied identity headers are never used.
@@ -81,7 +107,7 @@ class Application:
         if method not in ('GET', 'HEAD', 'POST') or (path == DIRECTORY and method == 'POST'):
             raise RequestError(405, 'method_not_allowed')
         query = query_params(environ.get('QUERY_STRING', ''))
-        if (method == 'POST' or path != DEFINITIONS) and query:
+        if (method == 'POST' or path not in (DEFINITIONS, EXCHANGE)) and query:
             raise RequestError(422, 'invalid_request')
         scope, actor = principal.scope, principal.actor
         if path == GROUPS:
@@ -92,6 +118,11 @@ class Application:
             return {**settings, 'can_manage': True}
 
         workbench = DefinitionWorkbench(self.port, scope, actor, authorize=principal.authorize)
+        if path == EXCHANGE:
+            if method == 'POST' and not all(principal.authorize(scope, actor, permission) is True
+                                            for permission in ('read', 'read_private', 'edit')):
+                raise RequestError(403, 'forbidden')
+            return exchange_response(workbench, method, query, environ)
         if path == DIRECTORY:
             return workbench.released_library()
         if method == 'POST':
@@ -100,12 +131,12 @@ class Application:
             return workbench.read(query['module_id'])
         if set(query) == {'review_id'}:
             return workbench.review_definition(query['review_id'])
-        if set(query) == {'module_id', 'version', 'sha256'}:
+        if set(query) == _REFERENCE_FIELDS:
             return workbench.definition(query)
         raise RequestError(422, 'invalid_request')
 
     def __call__(self, environ, start_response):
-        status, problem = 200, None
+        status, problem, path = 200, None, None
         try:
             payload = canonical_bytes(self.dispatch(environ))
         except RequestError as exc:
@@ -115,14 +146,21 @@ class Application:
                       else 404 if exc.code.endswith('_not_found') else 503 if
                       exc.code.startswith('store_') or exc.code.endswith('_integrity') else 409)
             problem = exc.code
+            if environ['PATH_INFO'] == EXCHANGE:
+                path = exc.path
         except GroupConfigurationError as exc:
             problem = str(exc)
             status = (422 if problem == 'ontology_group_invalid_request' else
                       503 if problem == 'ontology_group_configuration_invalid' else 409)
-        except (CatalogError, OSError, sqlite3.Error, KeyError, TypeError, ValueError, RecursionError):
+        except CatalogError as exc:
+            if environ['PATH_INFO'] == EXCHANGE:
+                status, problem, path = (413 if exc.code == 'size_budget' else 422), exc.code, exc.path
+            else:
+                status, problem = 503, 'ontology_host_unavailable'
+        except (OSError, sqlite3.Error, KeyError, TypeError, ValueError, RecursionError):
             status, problem = 503, 'ontology_host_unavailable'
         if problem:
-            payload = canonical_bytes({'detail': problem})
+            payload = canonical_bytes({'detail': problem, **({'path': path} if path is not None else {})})
         headers = [('Content-Type', 'application/json'), ('Cache-Control', 'no-store'),
                    ('X-Content-Type-Options', 'nosniff'), ('Content-Length', str(len(payload)))]
         if status == 401:

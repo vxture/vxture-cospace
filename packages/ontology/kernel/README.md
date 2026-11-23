@@ -50,6 +50,17 @@ summary = workbench.read('core')
 
 B09b 把可选的本地宿主和 SQLite 参考适配器随 wheel 一起分发，位于 `vxture_ontology.local_host`。内核本身不导入这些适配器。运行 `vxture-ontology-host --help` 可了解本机服务启动、备份和恢复命令；CoSpace 的现有 SQLite 适配器入口和数据库文件名保持兼容。宿主的安装与权限配置详见仓库 `docs/architecture/本体引擎独立宿主-B09b.md`。
 
+B09c 的 `/api/ontology-exchange/definitions` 导出当前作用域的精确发布闭包，支持导入预检和另行确认后写入草稿。`vxture_ontology.exchange` 可独立验证原生包、组合多个闭包以及生成有限的 OWL 类层级投影。命令把 JSON 写到标准输出；重定向时请确保使用 UTF-8。完整接口见 `contracts/schemas/ontology-exchange-v0.1.md`。
+
+```text
+vxture-ontology --module electrical --pack-closure
+vxture-ontology --exchange electrical.exchange.json
+vxture-ontology --exchange electrical.exchange.json --owl-classes
+vxture-ontology --exchange electrical.exchange.json --exchange water.exchange.json --instances consumer.json
+```
+
+第一条命令默认打包内置候选，也可用 `--library` 指定本地定义。正式发布包请使用宿主的精确版本导出接口。实例仍留在消费方，OWL 投影包含省略项清单；`document` 字段才是投影出的 JSON-LD。
+
 B02 新增 `instance_schema()` 与 `park_baseline_rules()`，返回随独立包分发的 JSON Schema 和显式选用的园区候选完整性规则副本。B03 的 `validate_instances(raw_bytes, catalog, rule_set=None)` 为纯校验入口：未选规则时仍校验引用、属性、端点、有效区间和几何绑定；显式 `rule_set='park-baseline'` 增加职责完整性与时态层级检查。返回带 code、JSON Pointer path、severity、state 的确定性报告，含输入/Schema/定义库/规则摘要。无第三方运行依赖，无现场实例存储或网络访问。
 
 ```python

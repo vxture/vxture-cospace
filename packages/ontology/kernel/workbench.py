@@ -5,6 +5,7 @@ from hashlib import sha256
 
 from .authoring import AuthoringError, DefinitionAuthoring, _module, _require, _version
 from .catalog import Catalog, CatalogError, ID, builtin_catalog, canonical_bytes
+from .exchange import export_closure
 
 
 class DefinitionWorkbench:
@@ -117,3 +118,15 @@ class DefinitionWorkbench:
         self.service._access(self._scope, self._actor, 'read_private')
         review = self.service.read_review(self._scope, self._actor, review_id)
         return Catalog.from_bytes(canonical_bytes(review['submitted_bundle'])).describe()
+
+    def export_release(self, reference):
+        """Export the exact published closure, without candidate fallback or review metadata."""
+        release = self.service.read_release(self._scope, self._actor, reference)
+        return export_closure(release['bundle'], release['reference'])
+
+    def preflight_import(self, raw):
+        return self.service.preflight_import(self._scope, self._actor, raw)
+
+    def import_draft(self, raw, *, request_id, expected_revision):
+        return self.service.import_draft(self._scope, self._actor, raw,
+                                         request_id=request_id, expected_revision=expected_revision)
