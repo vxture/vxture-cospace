@@ -280,17 +280,23 @@ class DefinitionAuthoring:
         self._access(scope, actor, 'read')
         _require(type(module_id) is str and ID.fullmatch(module_id), 'invalid_module_id')
         with self.port.transaction(scope) as state:
-            return [{'reference': deepcopy(r['reference']), 'published_at': r['published_at']}
-                    for r in sorted(state.get('releases', {}).values(),
-                                    key=lambda r: _version(r['reference']['version']), reverse=True)
-                    if r['reference']['module_id'] == module_id]
+            return self._list_releases(state, module_id)
+
+    @staticmethod
+    def _list_releases(state, module_id):
+        matches = (r for r in state.get('releases', {}).values() if r['reference']['module_id'] == module_id)
+        return [{'reference': deepcopy(r['reference']), 'published_at': r['published_at']}
+                for r in sorted(matches, key=lambda r: _version(r['reference']['version']), reverse=True)]
 
     def compare(self, scope, actor, module_id, revision):
         self._access(scope, actor, 'read')
         _require(type(revision) is int and revision >= 1, 'invalid_revision')
         with self.port.transaction(scope) as state:
-            draft = self._draft(state, module_id, revision)
-            base = self._release(state, draft['base_reference']) if draft['base_reference'] else None
-            return {'revision': revision, 'base_reference': deepcopy(draft['base_reference']),
-                    'changes': compare_definitions(_module(base['bundle'], module_id) if base else {},
-                                                   _module(draft['bundle'], module_id))}
+            return self._comparison(state, self._draft(state, module_id, revision))
+
+    def _comparison(self, state, draft):
+        module_id = draft['module_id']
+        base = self._release(state, draft['base_reference']) if draft['base_reference'] else None
+        return {'revision': draft['revision'], 'base_reference': deepcopy(draft['base_reference']),
+                'changes': compare_definitions(_module(base['bundle'], module_id) if base else {},
+                                               _module(draft['bundle'], module_id))}
