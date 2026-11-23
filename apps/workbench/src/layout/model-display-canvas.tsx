@@ -4,15 +4,15 @@ import type {SceneData,XYZ} from './real-space-data';
 import type {SceneControls} from './real-space-canvas';
 
 const channel='cospace.pointcloud/1';
-type Props={data:SceneData|null;view:'human'|'agent';geometry:boolean;markers:boolean;selected:string;select:(id:string)=>void;api:React.RefObject<SceneControls|null>;onPick?:(point:XYZ)=>void;onAccessLost?:()=>void;engineering?:boolean;onReady?:()=>void;focus?:XYZ};
-export function ModelDisplayCanvas({data,view,geometry,markers,selected,select,api,onPick,onAccessLost,engineering=false,onReady,focus}:Props){
+type Props={data:SceneData|null;view:'human'|'agent';geometry:boolean;markers:boolean;selected:string;select:(id:string)=>void;api:React.RefObject<SceneControls|null>;onPick?:(point:XYZ)=>void;onAccessLost?:()=>void;engineering?:boolean;onReady?:()=>void;onFirstFrame?:()=>void;onView?:(view:'human'|'agent')=>void;focus?:XYZ};
+export function ModelDisplayCanvas({data,view,geometry,markers,selected,select,api,onPick,onAccessLost,engineering=false,onReady,onFirstFrame,onView,focus}:Props){
  const frame=useRef<HTMLIFrameElement>(null),host=useRef<HTMLDivElement>(null),session=useRef(crypto.randomUUID()),initialized=useRef(false),runtimeReady=useRef(false),activeDisplay=useRef('');
- const labels=useRef(new Map<string,HTMLButtonElement>()),latest=useRef({data,view,geometry,markers,select,onPick,onAccessLost,engineering,onReady,focus});latest.current={data,view,geometry,markers,select,onPick,onAccessLost,engineering,onReady,focus};
+ const labels=useRef(new Map<string,HTMLButtonElement>()),latest=useRef({data,view,geometry,markers,select,onPick,onAccessLost,engineering,onReady,onFirstFrame,onView,focus});latest.current={data,view,geometry,markers,select,onPick,onAccessLost,engineering,onReady,onFirstFrame,onView,focus};
  const [status,setStatus]=useState('正在打开空间…'),[error,setError]=useState(''),[attempt,setAttempt]=useState(0);
  const display=data?.display;
  function post(type:string,values:Record<string,unknown>={},transfer:Transferable[]=[]){frame.current?.contentWindow?.postMessage({channel,session:session.current,type,...values},location.origin,transfer);}
  function settings(){if(initialized.current){const current=latest.current;post('settings',{view:current.view,geometry:current.geometry,objects:current.data?.objects||[],picking:!!current.onPick,engineering:current.engineering});}}
- function agentPoints(){const points=latest.current.data?.agent_points;if(initialized.current&&points?.length){const positions=new Float64Array(points.length*3);points.forEach((point,i)=>positions.set(point,i*3));post('agent',{positions:positions.buffer},[positions.buffer]);}}
+ function agentPoints(){const current=latest.current.data,points=current?.agent_points;if(initialized.current&&points&&(points.length||current.model.agent_view.surface_cells===0)){const positions=new Float64Array(points.length*3);points.forEach((point,i)=>positions.set(point,i*3));post('agent',{positions:positions.buffer},[positions.buffer]);}}
  useEffect(()=>{settings();},[data?.objects,view,geometry,!!onPick,engineering]);
  useEffect(()=>{
   agentPoints();
@@ -29,10 +29,11 @@ export function ModelDisplayCanvas({data,view,geometry,markers,selected,select,a
    if(message.type==='ready'){runtimeReady.current=true;const config=latest.current.data?.display;if(config?.state==='ready'){activeDisplay.current=config.id;post('init',{config,focus:latest.current.focus});}return;}
    if(message.session!==session.current)return;
    if(message.type==='initialized'){initialized.current=true;settings();agentPoints();api.current={reset:()=>post('reset'),focus:(point:XYZ)=>post('focus',{point})};latest.current.onReady?.();}
-   if(message.type==='first-frame'){setStatus('概览已显示 · 正在细化当前视野');if(host.current){host.current.dataset.firstModelMs=String(performance.now());host.current.dataset.firstModelBytes=String(message.transferred);}}
+   if(message.type==='first-frame'){setStatus('概览已显示 · 正在细化当前视野');latest.current.onFirstFrame?.();if(host.current){host.current.dataset.firstModelMs=String(performance.now());host.current.dataset.firstModelBytes=String(message.transferred);}}
    if(message.type==='frame'){
-    const current=latest.current,refining=current.view==='human'?!message.diagnostics?.viewReadyMs:message.loading>0;setStatus(!current.geometry?'几何已隐藏':message.points>0?(refining?'可浏览 · 正在细化当前视野':'当前视野已就绪'):current.view==='agent'?(current.data?.model.agent_view.surface_cells===0?'计算表达暂无表面单元':'正在读取计算表达…'):'正在加载当前视野…');
-    if(host.current){host.current.dataset.displayPoints=String(message.points);host.current.dataset.displayLoading=String(message.loading);host.current.dataset.rangeRequests=String(message.requests);host.current.dataset.transferredBytes=String(message.transferred);host.current.dataset.cachedPoints=String(message.cached_points);}
+    if(message.view==='human'||message.view==='agent')latest.current.onView?.(message.view);
+    const current=latest.current,refining=message.view==='human'?!message.diagnostics?.viewReadyMs:message.loading>0;setStatus(!current.geometry?'几何已隐藏':message.pending?'正在准备计算表达 · 保留视觉画面':message.points>0?(refining?'可浏览 · 正在细化当前视野':'当前视野已就绪'):current.view==='agent'?(current.data?.model.agent_view.surface_cells===0?'计算表达暂无表面单元':'正在读取计算表达…'):'正在加载当前视野…');
+    if(host.current){host.current.dataset.displayPoints=String(message.points);host.current.dataset.renderedView=message.view;host.current.dataset.viewPending=String(message.pending);host.current.dataset.displayLoading=String(message.loading);host.current.dataset.rangeRequests=String(message.requests);host.current.dataset.transferredBytes=String(message.transferred);host.current.dataset.cachedPoints=String(message.cached_points);}
     if(host.current&&message.diagnostics){for(const [key,value] of Object.entries(message.diagnostics))host.current.dataset[key]=String(value);}
     for(const position of message.labels||[]){const label=labels.current.get(position.id);if(!label)continue;label.hidden=!current.markers||!position.visible;label.style.left=`${position.x*100}%`;label.style.top=`${position.y*100}%`;}
    }

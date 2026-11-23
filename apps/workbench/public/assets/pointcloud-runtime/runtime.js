@@ -80,10 +80,13 @@ import {LoadingPolicy, TransferLedger, BASELINE, percentile} from './loading-pol
     return config.model_to_display.map(row => row.reduce((n, v, i) => n + v * result[i], 0));
   }
   function apply() {
-    if (cloud) cloud.visible = geometry && human;
+    // A requested view is not a ready view. Keep the existing visual geometry
+    // until the verified computation buffer has arrived in this same realm.
+    if (cloud) cloud.visible = geometry && showingHuman();
     if (agent) agent.visible = geometry && !human;
     updatePolicy(performance.now());
   }
+  function showingHuman() { return human || !agent; }
   function updatePolicy(now) {
     if (!viewer || fatal || disposed) return;
     const camera = viewer.scene.getActiveCamera();
@@ -91,7 +94,7 @@ import {LoadingPolicy, TransferLedger, BASELINE, percentile} from './loading-pol
     if (next !== cameraKey) { cameraKey = next; cameraChangedAt = now; settledSince = 0; viewReadyAt = 0; }
     try {
       const budget = policy.budget({moving: now - cameraChangedAt < 350, hidden: document.hidden,
-        browsing: human && geometry, frameMs: frameP95, decoding: Math.max(0, Potree.numNodesLoading - controllers.size)});
+        browsing: showingHuman() && geometry, frameMs: frameP95, decoding: Math.max(0, Potree.numNodesLoading - controllers.size)});
       const key = JSON.stringify(budget);
       if (key !== appliedBudget) {
         appliedBudget = key;
@@ -133,9 +136,10 @@ import {LoadingPolicy, TransferLedger, BASELINE, percentile} from './loading-pol
     updatePolicy(now);
     // numVisiblePoints includes queued, undecoded nodes in upstream Potree.
     // Only loaded tree nodes submitted in this completed render pass count as geometry.
-    const points = !geometry ? 0 : human ? (cloud.visibleNodes || []).reduce((sum, node) =>
+    const visibleHuman = showingHuman();
+    const points = !geometry ? 0 : visibleHuman ? (cloud.visibleNodes || []).reduce((sum, node) =>
       sum + (node.sceneNode?.geometry?.attributes.position.count || 0), 0) : agent?.geometry.attributes.position.count || 0;
-    if (geometry && human) for (const node of cloud.visibleNodes || []) {
+    if (geometry && visibleHuman) for (const node of cloud.visibleNodes || []) {
       const original = node.geometryNode;
       if (node.sceneNode?.geometry && original?.byteSize > 0n) ledger.rendered(`bytes=${original.byteOffset}-${original.byteOffset + original.byteSize - 1n}`);
     }
@@ -150,7 +154,7 @@ import {LoadingPolicy, TransferLedger, BASELINE, percentile} from './loading-pol
     // Identical stable quality for baseline and strategies. Reduced motion
     // quality, an agent view or an empty frame can never be reported as ready.
     const budget = JSON.parse(appliedBudget || JSON.stringify(BASELINE));
-    if (now - cameraChangedAt >= 350 && points > 0 && human && geometry && !document.hidden && !paused &&
+    if (now - cameraChangedAt >= 350 && points > 0 && visibleHuman && geometry && !document.hidden && !paused &&
       Potree.numNodesLoading === 0 && budget.points === BASELINE.points && budget.nodePixels === BASELINE.nodePixels) {
       if (signature !== visibleKey) { visibleKey = signature; settledSince = now; viewReadyAt = 0; }
       if (!settledSince) settledSince = now;
@@ -161,14 +165,15 @@ import {LoadingPolicy, TransferLedger, BASELINE, percentile} from './loading-pol
       const p = new THREE.Vector3(...local(object.anchor_m)).project(camera);
       return {id: object.object_id, x: (p.x + 1) / 2, y: (1 - p.y) / 2, visible: p.z >= -1 && p.z <= 1 && Math.abs(p.x) <= 1 && Math.abs(p.y) <= 1};
     });
-    send('frame', {points, loading: human ? Potree.numNodesLoading : 0, requests, transferred, labels,
+    send('frame', {points, view: visibleHuman ? 'human' : 'agent', pending: !human && visibleHuman,
+      loading: visibleHuman ? Potree.numNodesLoading : 0, requests, transferred, labels,
       cached_points: Potree.lru.numPoints,
       geometries: viewer.renderer.info.memory.geometries,
       diagnostics: {strategy: policy.strategy, strategyFallback: policyFallback, viewReadyMs: viewReadyAt, runtimeNowMs: now,
         viewSignature: signature, cameraSignature: cameraKey,
         frameP95Ms: frameP95, frameMaxMs: Math.max(0, ...frameTimes),
         pointBudget: budget.points, nodePixels: budget.nodePixels,
-        nativeLoadSlots: Potree.maxNodesLoading, ...ledger.snapshot()}});
+        nativeLoadSlots: Potree.maxNodesLoading, pointSizeCss: 2.2, pointSizeMode: 'fixed', ...ledger.snapshot()}});
   }
   async function start(value, initialFocus) {
     if (viewer || disposed) return;
@@ -215,8 +220,12 @@ import {LoadingPolicy, TransferLedger, BASELINE, percentile} from './loading-pol
         loaded.geometry.tightBoundingBox = cloud.boundingBox.clone();
       }
       cloud.material.activeAttributeName = 'rgba';
-      cloud.material.pointSizeType = Potree.PointSizeType.ADAPTIVE;
-      cloud.material.size = 1;
+      // Match the previous viewer's fine, screen-space points. Adaptive splats
+      // can grow to 50px and visually conceal a coarse LOD behind large dots.
+      cloud.material.pointSizeType = Potree.PointSizeType.FIXED;
+      cloud.material.size = 2.2 * viewer.renderer.getPixelRatio();
+      cloud.material.minSize = cloud.material.size;
+      cloud.material.uniforms.maxSize.value = cloud.material.size;
       cloud.material.shape = Potree.PointShape.CIRCLE;
       viewer.scene.addPointCloud(cloud);
       cloud.updateMatrixWorld(true);
@@ -256,7 +265,7 @@ import {LoadingPolicy, TransferLedger, BASELINE, percentile} from './loading-pol
       const positions = new Float64Array(value.positions);
       for (let i = 0; i < positions.length; i += 3) positions.set(local(Array.from(positions.subarray(i, i + 3))), i);
       g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(positions), 3));
-      agent = new THREE.Points(g, new THREE.PointsMaterial({size: .05, color: '#60d5ed'}));
+      agent = new THREE.Points(g, new THREE.PointsMaterial({size: 3, sizeAttenuation: false, color: '#60d5ed'}));
       viewer.scene.scene.add(agent);
       apply();
     }

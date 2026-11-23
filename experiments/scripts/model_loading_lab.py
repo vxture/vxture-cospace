@@ -66,6 +66,13 @@ def create_app(root, assets):
         return JSONResponse(fixture_values(sample, strategy, task),
                             headers={'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff'})
 
+    @app.get('/space')
+    def workbench():
+        # Local browser regressions mock only synthetic API data and exercise
+        # the real production React bundle, not a duplicate view switcher.
+        return FileResponse(assets.parent / 'index.html', media_type='text/html',
+                            headers={'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff'})
+
     app.mount('/assets', WorkbenchAssets(directory=str(assets)), name='assets')
     return app
 
