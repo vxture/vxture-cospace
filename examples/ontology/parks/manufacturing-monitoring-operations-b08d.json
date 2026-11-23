@@ -1,0 +1,25 @@
+{
+  "title": "制造园区 · 观测与巡检样例（合成）",
+  "synthetic": true,
+  "scope": "一次有来源的空气温度观测、一次巡检报告与相关对象；无现场核验",
+  "frame_id": "local",
+  "valid_time": {"start": "2026-11-24T00:00:00Z", "end": null},
+  "objects": [
+    {"id": "sensor", "name": "走廊温度采集装置", "type": "monitoring:sensor", "anchor_m": [15, 8, 1.6]},
+    {"id": "corridor", "name": "设备外走廊", "type": "core:spatial_region"},
+    {"id": "room", "name": "被采样的工艺房间", "type": "core:spatial_region"},
+    {"id": "air-sample", "name": "工艺间空气温度采样 T-71", "type": "monitoring:air_temperature_observation", "properties": {"air_temperature": {"value": 22.4, "unit": "°C", "quantity": "temperature"}, "measurement_method": {"value": "外接温度探头单次读数"}}, "evidence_note": "合成监测表 ENV-LOG-R01 / T-71 / 2026-11-24T00:15:00Z"},
+    {"id": "fan", "name": "区域通风设备 F-24", "type": "core:physical_object", "anchor_m": [18, 7, 2]},
+    {"id": "inspection-point", "name": "F-24 面板巡检点", "type": "operations:inspection_point", "anchor_m": [17, 7, 1.5]},
+    {"id": "inspection-report", "name": "面板巡检报告 I-03", "type": "operations:inspection_report", "properties": {"reported_outcome": {"value": "记录时外观未见明显破损"}}, "evidence_note": "合成巡检表 OPS-LOG-R02 / I-03 / 2026-11-24T00:20:00Z"},
+    {"id": "work-order", "name": "待确认的工单 WO-21", "type": "operations:work_order"}
+  ],
+  "relations": [
+    {"id": "installed", "source": "sensor", "target": "corridor", "type": "core:located_in", "evidence_note": "合成设备安装表 ENV-ASSET-R01 / 12"},
+    {"id": "observation-subject", "source": "air-sample", "target": "room", "type": "monitoring:air_observation_subject", "evidence_note": "合成监测表 ENV-LOG-R01 / T-71 / 被测空间"},
+    {"id": "observation-source", "source": "air-sample", "target": "sensor", "type": "monitoring:observation_reported_by_sensor", "evidence_note": "合成监测表 ENV-LOG-R01 / T-71 / 设备"},
+    {"id": "inspection-target", "source": "inspection-point", "target": "fan", "type": "operations:inspection_point_target", "evidence_note": "合成巡检点台账 OPS-POINT-R01 / F-24"},
+    {"id": "reported-inspection", "source": "inspection-report", "target": "inspection-point", "type": "operations:inspection_at_point", "evidence_note": "合成巡检表 OPS-LOG-R02 / I-03 / 巡检点"},
+    {"id": "related-work-order", "source": "work-order", "target": "inspection-point"}
+  ]
+}

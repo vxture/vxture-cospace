@@ -1,0 +1,22 @@
+{
+  "title": "研发办公园区 · 给排水样例（合成）",
+  "synthetic": true,
+  "scope": "部分给水设备与连接资料；无现场核验",
+  "frame_id": "local",
+  "valid_time": {"start": "2026-11-24T00:00:00Z", "end": null},
+  "objects": [
+    {"id": "pump", "name": "给水泵 P-01", "type": "water:pump", "anchor_m": [2, 3, 0], "properties": {"rated_power": {"value": 5.5, "unit": "kW", "quantity": "power"}}},
+    {"id": "pipe", "name": "给水管段 WP-07", "type": "water:water_pipe_segment", "anchor_m": [3, 3, 0.8], "properties": {"design_inner_diameter": {"value": 52, "unit": "mm", "quantity": "length"}}, "evidence_note": "合成管段规格 WATER-SPEC-R02 / WP-07"},
+    {"id": "pump-port", "name": "泵出水法兰口", "type": "water:water_port"},
+    {"id": "pipe-port", "name": "管段接驳端 R1", "type": "water:water_port"},
+    {"id": "valve", "name": "邻近隔断阀 V-16", "type": "water:valve", "anchor_m": [5, 3, 1]},
+    {"id": "system", "name": "楼栋给水系统", "type": "water:water_system"}
+  ],
+  "relations": [
+    {"id": "pump-connection-point", "source": "pump", "target": "pump-port", "type": "water:has_water_port", "evidence_note": "合成泵端口表 WATER-PORT-R01 / 01"},
+    {"id": "pipe-connection-point", "source": "pipe", "target": "pipe-port", "type": "water:has_water_port", "evidence_note": "合成管段端口表 WATER-PORT-R01 / 02"},
+    {"id": "physical-connection", "source": "pump-port", "target": "pipe-port", "type": "water:water_connected_to", "evidence_note": "合成接驳表 WATER-LINK-R02 / 01"},
+    {"id": "system-membership", "source": "valve", "target": "system", "type": "core:member_of", "evidence_note": "合成系统台账 WATER-SYS-R01 / 16"},
+    {"id": "nearby", "source": "pipe", "target": "valve"}
+  ]
+}

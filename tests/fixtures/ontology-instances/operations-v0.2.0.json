@@ -1,0 +1,238 @@
+{
+  "profile": "vxture.ontology-module/0.1",
+  "module_id": "operations",
+  "version": "0.2.0",
+  "title": "组织与运营",
+  "description": "跨园区的空间用途、入驻指派、管理范围、设施职责与资产记录候选定义；实例和时效证据由消费方承载，不定义平台租户、商业权益或权限。",
+  "layer": "domain",
+  "status": "draft",
+  "requires": [
+    {
+      "module_id": "core",
+      "version": "0.1.0",
+      "sha256": "d12aec3d679d5c06779e91faf44b4064dfee2a7cbdee2330b20e253b511f169f"
+    }
+  ],
+  "concepts": {
+    "space_use": {
+      "title": "空间用途指派",
+      "definition": "某空间在指定范围和时间内承担用途的记录，如办公、设备、实验或仓储。",
+      "examples": [
+        "房间的设备用途指派"
+      ],
+      "counterexamples": [
+        "房间墙体构件"
+      ],
+      "properties": {
+        "use_label": {
+          "title": "用途名称",
+          "definition": "空间在本次指派中承担的用途，如研发、生产、仓储或办公；用途可以随有效期变化，不改变空间实体身份。",
+          "data_type": "string",
+          "required": true
+        }
+      },
+      "parent": "core:role_assignment"
+    },
+    "inspection_point": {
+      "title": "巡检点",
+      "definition": "业务指定的巡检目标或位置记录，不保证可到达或已生成任务。",
+      "examples": [
+        "某设备面板的人工巡检点"
+      ],
+      "counterexamples": [
+        "检测柜物理设备"
+      ],
+      "properties": {},
+      "parent": "core:information_record"
+    },
+    "work_order": {
+      "title": "工单记录",
+      "definition": "来自业务系统的作业记录引用，不等同实际执行成功。",
+      "examples": [
+        "维修工单"
+      ],
+      "counterexamples": [
+        "设备维修已完成的现场事实"
+      ],
+      "properties": {},
+      "parent": "core:information_record"
+    },
+    "loading_region": {
+      "title": "装卸区域",
+      "definition": "用于装卸活动的指定空间区域，管制与实际作业状态独立记录。",
+      "examples": [
+        "仓库装卸区"
+      ],
+      "counterexamples": [
+        "叉车规划轨迹"
+      ],
+      "properties": {},
+      "parent": "core:spatial_region"
+    },
+    "management_region": {
+      "title": "管理范围",
+      "definition": "根据明确管理依据界定的空间区域；可以覆盖多个园区范围或其部分，不等同行政区、法定宗地或平台工作空间。",
+      "examples": [
+        "运营单位负责的跨楼栋公共设施管理范围"
+      ],
+      "counterexamples": [
+        "平台租户、未经确认的行政区边界"
+      ],
+      "properties": {},
+      "parent": "core:spatial_region"
+    },
+    "occupancy_assignment": {
+      "title": "入驻指派",
+      "definition": "记录某组织在约定范围和有效期内入驻或使用空间的安排；不直接证明所有权、租赁合同有效性、现场实时占用或平台访问权。",
+      "examples": [
+        "企业在约定期间使用某厂房空间的安排"
+      ],
+      "counterexamples": [
+        "企业注册在园区但无空间使用依据"
+      ],
+      "properties": {},
+      "parent": "core:role_assignment"
+    },
+    "responsibility_assignment": {
+      "title": "设施职责指派",
+      "definition": "记录某组织对空间、设施或系统在指定范围和有效期内承担的职责；职责类别、责任主体和对象需要显式声明，不从入驻关系推导。",
+      "examples": [
+        "受托单位在合同期间负责某供配电系统维护的安排"
+      ],
+      "counterexamples": [
+        "设备附近的企业被自动认定负责维护"
+      ],
+      "properties": {
+        "responsibility_kind": {
+          "title": "职责类别",
+          "definition": "该指派承担的业务职责名称，如运营、维护或巡检；名称不构成访问授权或专业资质认定。",
+          "data_type": "string",
+          "required": true
+        }
+      },
+      "parent": "core:role_assignment"
+    },
+    "asset_record": {
+      "title": "资产记录",
+      "definition": "描述物理对象的资产管理信息记录；资产编号属于来源系统的记录标识，不自动作为物理对象身份，也不自动证明权属。",
+      "examples": [
+        "资产台账中描述某台水泵的条目"
+      ],
+      "counterexamples": [
+        "现场水泵实体或未经核验的所有权结论"
+      ],
+      "properties": {
+        "record_key": {
+          "title": "来源记录标识",
+          "definition": "资产记录在来源系统及其作用域内的标识；来源和作用域由实例来源绑定声明。",
+          "data_type": "string",
+          "required": true
+        }
+      },
+      "parent": "core:information_record"
+    }
+  },
+  "relations": {
+    "maintains": {
+      "title": "维护职责",
+      "definition": "组织在指定范围和有效期承担对象维护职责；具体合同和时间由实例契约记录。",
+      "source_types": [
+        "core:organization"
+      ],
+      "target_types": [
+        "core:physical_object"
+      ],
+      "symmetric": false
+    },
+    "occupancy_organization": {
+      "title": "入驻组织",
+      "definition": "指派所记录的入驻或使用组织；组织与平台租户分别标识。",
+      "source_types": [
+        "operations:occupancy_assignment"
+      ],
+      "target_types": [
+        "core:organization"
+      ],
+      "symmetric": false
+    },
+    "occupancy_space": {
+      "title": "入驻空间",
+      "definition": "指派所涉及的空间区域；有效期、依据和完整性在实例契约中约束，不将区域内所有设施视为归该组织所有。",
+      "source_types": [
+        "operations:occupancy_assignment"
+      ],
+      "target_types": [
+        "core:spatial_region"
+      ],
+      "symmetric": false
+    },
+    "use_space": {
+      "title": "用途空间",
+      "definition": "用途指派所描述的空间；生产、研发、仓储等用途不替代房间或空间范围的实体类型。",
+      "source_types": [
+        "operations:space_use"
+      ],
+      "target_types": [
+        "core:spatial_region"
+      ],
+      "symmetric": false
+    },
+    "responsible_organization": {
+      "title": "责任组织",
+      "definition": "设施职责指派的责任组织；不从组织名称、入驻或邻近位置推断。",
+      "source_types": [
+        "operations:responsibility_assignment"
+      ],
+      "target_types": [
+        "core:organization"
+      ],
+      "symmetric": false
+    },
+    "responsibility_target": {
+      "title": "职责对象",
+      "definition": "设施职责指派涉及的物理对象、空间或系统；不等同所有权、故障因果或访问权限。",
+      "source_types": [
+        "operations:responsibility_assignment"
+      ],
+      "target_types": [
+        "core:physical_object",
+        "core:spatial_region",
+        "core:system"
+      ],
+      "symmetric": false
+    },
+    "management_scope": {
+      "title": "职责管理范围",
+      "definition": "设施职责指派适用的空间管理范围；该范围不由设备的几何包围盒自动生成。",
+      "source_types": [
+        "operations:responsibility_assignment"
+      ],
+      "target_types": [
+        "operations:management_region"
+      ],
+      "symmetric": false
+    },
+    "asset_object": {
+      "title": "记录描述对象",
+      "definition": "资产记录所描述的物理对象；同一对象可有不同来源的多条记录，不按资产编号跨来源自动合并。",
+      "source_types": [
+        "operations:asset_record"
+      ],
+      "target_types": [
+        "core:physical_object"
+      ],
+      "symmetric": false
+    },
+    "asset_custodian": {
+      "title": "记录管理组织",
+      "definition": "负责维护资产记录的组织；不据此推导物理对象所有者、设施运维责任或授权。",
+      "source_types": [
+        "operations:asset_record"
+      ],
+      "target_types": [
+        "core:organization"
+      ],
+      "symmetric": false
+    }
+  }
+}

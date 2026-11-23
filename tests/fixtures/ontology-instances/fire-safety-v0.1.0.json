@@ -1,0 +1,55 @@
+{
+  "profile": "vxture.ontology-module/0.1",
+  "module_id": "fire_safety",
+  "version": "0.1.0",
+  "title": "安全消防",
+  "description": "消防设施与专业空间候选定义；不提供全局消防合规结论。",
+  "layer": "domain",
+  "status": "draft",
+  "requires": [
+    {
+      "module_id": "core",
+      "version": "0.1.0",
+      "sha256": "d12aec3d679d5c06779e91faf44b4064dfee2a7cbdee2330b20e253b511f169f"
+    }
+  ],
+  "concepts": {
+    "fire_extinguisher": {
+      "title": "灭火器",
+      "definition": "用于灭火的便携消防器材，适用介质及有效性需独立依据。",
+      "examples": [
+        "现场灭火器"
+      ],
+      "counterexamples": [
+        "灭火器检查合格结论"
+      ],
+      "properties": {},
+      "parent": "core:physical_object"
+    },
+    "fire_compartment": {
+      "title": "防火分区",
+      "definition": "依据专业资料划定的防火空间区域，不等同普通房间或管理区。",
+      "examples": [
+        "经审核资料中的防火分区"
+      ],
+      "counterexamples": [
+        "任意相邻房间的组合"
+      ],
+      "properties": {},
+      "parent": "core:spatial_region"
+    },
+    "alarm_report": {
+      "title": "告警报告",
+      "definition": "来源对异常条件的报告记录，不自动确认事故已经发生。",
+      "examples": [
+        "消防系统告警记录"
+      ],
+      "counterexamples": [
+        "已确认的火灾事件"
+      ],
+      "properties": {},
+      "parent": "core:information_record"
+    }
+  },
+  "relations": {}
+}
