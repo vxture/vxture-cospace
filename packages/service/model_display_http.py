@@ -60,7 +60,9 @@ def install(app, displays):
         try:
             result = displays.describe(kind, identity)
             # Integrity block tables are internal, not a second spatial directory.
-            result['display'] = {k: v for k, v in result['display'].items() if k != 'files'}
+            for view in ('display', 'agent_display'):
+                if view in result:
+                    result[view] = {k: v for k, v in result[view].items() if k != 'files'}
             return JSONResponse(result, headers={'Cache-Control': 'no-store'})
         except (ValueError, OSError, LookupError, TypeError, AttributeError):
             raise HTTPException(409, 'model_display_unavailable') from None
@@ -74,7 +76,7 @@ def install(app, displays):
             if str(exc) in ('display_range_invalid', 'display_range_required'):
                 # Resolve the size only after the same ownership/version checks.
                 try:
-                    info = displays.describe(kind, identity)['display']
+                    info = displays.resource_display(kind, identity, key)
                     size = info.get('files', {}).get(name, {}).get('bytes')
                 except (ValueError, OSError, LookupError, TypeError, AttributeError):
                     size = None

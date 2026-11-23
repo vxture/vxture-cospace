@@ -31,3 +31,25 @@ test('fixed publication binds model, source and manifest; candidate cannot imper
  v.model.publication.model_manifest_sha256='f'.repeat(64);
  assert.throws(()=>validateDisplay(v,fixed));
 });
+
+test('computation LOD must match the same model, surface source and shared camera frame',()=>{
+ const agentId='d'.repeat(64),agentSource='e'.repeat(64);
+ const dual=()=>{
+  const v=value();
+  v.model.members['agent.npz']={sha256:agentSource};
+  Object.assign(v.model.agent_view,{surface_cells:77,resolution_m:.1});
+  v.agent_display={...structuredClone(v.display),id:agentId,view:'agent',point_count:77,resolution_m:.1,
+   source_agent_sha256:agentSource,sample_m:[500000.05,600000.05,100.05],entry:`/candidates/build-one/display/${agentId}/metadata.json`};
+  return v;
+ };
+ assert.equal(validateDisplay(dual(),ref).agentDisplay.id,agentId);
+ for(const invalid of [a=>a.source_agent_sha256=source,a=>a.source_manifest_sha256=source,a=>a.origin_m[0]++,
+  a=>a.model_to_display=[[1,0,0],[0,1,0],[0,0,1]],a=>a.point_count=76,a=>a.entry=a.entry.replace('build-one','build-two')]){
+  const v=dual();invalid(v.agent_display);
+  const scene=validateDisplay(v,ref);
+  assert.equal(scene.agentDisplay,undefined);
+  assert.equal(scene.display.state,'ready');
+ }
+ const v=dual();v.model.agent_view.surface_cells=0;v.agent_display.state='empty';v.agent_display.point_count=0;
+ assert.equal(validateDisplay(v,ref).agentDisplay.state,'empty');
+});

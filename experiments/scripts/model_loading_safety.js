@@ -29,20 +29,14 @@ globalThis.cospaceLoadingSafety = async page => {
     return {hidden, resumed: !v.getFreeze()};
   });
   check(states.hidden && states.resumed, 'Hidden native selection did not pause/resume');
-  await page.evaluate(() => {
-    const positions = new Float64Array(fixture.anchors.flat());
-    post('agent', {positions: positions.buffer});
-    post('settings', {view: 'agent', geometry: true});
-  });
-  await frame.waitForFunction(() => window.__labViewer.getFreeze());
-  await page.evaluate(() => post('retry'));
-  check(await frame.evaluate(() => window.__labViewer.getFreeze()), 'Retry bypassed nonhuman pause');
   await page.evaluate(() => post('settings', {view: 'human', geometry: false}));
-  await frame.waitForFunction(() => !window.__labViewer.scene.pointclouds[0].visible);
+  await frame.waitForFunction(() => window.__labViewer.getFreeze() && !window.__labViewer.scene.pointclouds[0].visible);
+  await page.evaluate(() => post('retry'));
+  check(await frame.evaluate(() => window.__labViewer.getFreeze()), 'Retry bypassed hidden geometry pause');
   await page.evaluate(() => post('settings', {view: 'human', geometry: true}));
   await frame.waitForFunction(() => !window.__labViewer.getFreeze() && window.__labViewer.scene.pointclouds[0].visible);
   await ready();
-  results.push({case: 'hidden/agent/geometry/retry', passed: true, simulatedVisibility: true});
+  results.push({case: 'hidden/geometry/retry', passed: true, simulatedVisibility: true});
 
   await frame.evaluate(async () => {
     const {LoadingPolicy} = await import(new URL('/assets/pointcloud-runtime/loading-policy.js', location.origin).href);
