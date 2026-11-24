@@ -4,11 +4,11 @@ import {Button,Input,Table,TableHeader,TableBody,TableRow,TableHead,TableCell} f
 import {ArrowClockwise,ArrowDown,FileText,Paperclip,UploadSimple} from '@phosphor-icons/react';
 
 export type Attachment={id:string;space_id:string;name:string;bytes:number;sha256:string;actor:string;created_at:string;processing:'stored_original'};
-type Props=Readonly<{endpoint:string;space:string;revision:number;onChanged:()=>void;onSelect:(item:Attachment|null)=>void}>;
+type Props=Readonly<{endpoint:string;space:string;revision:number;selectedId?:string;onChanged:()=>void;onSelect:(item:Attachment|null)=>void}>;
 const maxBytes=32*1024*1024;
 const formatDate=(value:string)=>new Date(value).toLocaleString('zh-CN');
 
-export function SceneAttachments({endpoint,space,revision,onChanged,onSelect}:Props){
+export function SceneAttachments({endpoint,space,revision,selectedId,onChanged,onSelect}:Props){
  const [items,setItems]=useState<Attachment[]>([]),[error,setError]=useState(''),[notice,setNotice]=useState('');
  const [busy,setBusy]=useState(false),[loading,setLoading]=useState(true),[tick,setTick]=useState(0);
  const [file,setFile]=useState<File|null>(null),[search,setSearch]=useState('');
@@ -21,10 +21,10 @@ export function SceneAttachments({endpoint,space,revision,onChanged,onSelect}:Pr
    if(!r.ok)throw new Error('配套资料暂时无法读取，请重新读取或检查场景权限。');
    const body=await r.json();
    if(body.profile!=='cospace.scene-attachments/0.1'||body.space_id!==space||!Array.isArray(body.attachments)||body.attachments.some((item:Attachment)=>item.space_id!==space||item.processing!=='stored_original'||!/^attachment-[a-f0-9]{16}$/.test(item.id)))throw new Error('配套资料与当前场景不一致。');
-   if(!controller.signal.aborted)setItems(body.attachments);
+   if(!controller.signal.aborted){setItems(body.attachments);if(selectedId)onSelect(body.attachments.find((item:Attachment)=>item.id===selectedId)||null);}
   }).catch(e=>{if(!controller.signal.aborted)setError(e.message);}).finally(()=>{if(!controller.signal.aborted)setLoading(false);});
   return()=>controller.abort();
- },[endpoint,space,revision,tick,onSelect]);
+ },[endpoint,space,revision,tick,onSelect,selectedId]);
  async function upload(event:React.FormEvent){
   event.preventDefault();if(!file||busy)return;
   if(!file.size||file.size>maxBytes){setError('请选择大于 0 字节且不超过 32 MiB 的文件。');return;}

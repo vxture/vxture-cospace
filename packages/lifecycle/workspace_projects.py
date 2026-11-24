@@ -133,6 +133,14 @@ class WorkspaceProjects:
             revision, projects, links = self.state(db, scope)
             visible_ids = set(projects) if manager else {
                 link['project_id'] for identity, link in links.items() if identity in scenes and link['project_id']}
+            # A scene can move projects without transferring its resources. Keep
+            # owners of that user's readable resources available in the picker.
+            if not manager and db is not None and db.execute(
+                    "SELECT 1 FROM sqlite_master WHERE name='data_resources'").fetchone():
+                for row in db.execute('SELECT record FROM data_resources WHERE scope=?', (scope,)):
+                    resource = json.loads(row[0])
+                    if resource['space_id'] in scenes:
+                        visible_ids.add(resource['owner_project_id'])
             if query.project_id and query.project_id not in visible_ids:
                 raise PermissionError('business_project_access_denied')
             if query.view == 'history':
@@ -232,6 +240,10 @@ class WorkspaceProjects:
                 status = change.status if change.action == 'update' else 'active'
                 if status == 'archived' and any(link['project_id'] == identity for link in links.values()):
                     raise ProjectError('project_has_scene_associations')
+                if status == 'archived' and db.execute("SELECT 1 FROM sqlite_master WHERE name='data_resources'").fetchone():
+                    owned = db.execute('SELECT record FROM data_resources WHERE scope=?', (scope,))
+                    if any(json.loads(row[0])['owner_project_id'] == identity for row in owned):
+                        raise ProjectError('project_has_managed_resources')
                 record = {'id': identity, 'name': change.name, 'description': change.description, 'status': status,
                           'created_at': before['created_at'] if before else at,
                           'created_by': before['created_by'] if before else principal.subject,

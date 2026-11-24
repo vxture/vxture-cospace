@@ -1,54 +1,44 @@
+import React,{useEffect,useState} from 'react';
+import {Button,Input,NativeSelect,Table,TableHeader,TableHead,TableBody,TableRow,TableCell,DropdownMenu,DropdownMenuTrigger,DropdownMenuContent,DropdownMenuItem,DropdownMenuSeparator,StatusBadge} from '@vxture/design-system';
+import {Database,ArrowClockwise,MagnifyingGlass,DotsThreeVertical,Info,PencilSimple,ArrowSquareOut,FolderSimple} from '@phosphor-icons/react';
 import {WorkspaceContent} from './workspace-content';
-import {useAssistantReport} from './workspace-assistant';
 import {WorkspaceHeading} from './workspace-frame';
 import {DataNavigation} from './data-navigation';
-import {Database,Files,ArrowClockwise,MagnifyingGlass} from '@phosphor-icons/react';
 import {appNavigate,appLocation} from './app-router';
-import React,{useEffect,useState} from 'react';
-import {Button,Input,NativeSelect} from '@vxture/design-system';
-import {businessEndpoint} from './business-endpoint';
 import {usePlatformSession} from './platform-auth';
-import {recordLink,useRecordNavigation} from './record-navigation';
+import {dataRequest} from './data-project-client';
+import {ProjectPicker} from './data-project-picker';
+import {DataProjectPanel} from './data-project-panel';
+import {DataResourcePanel} from './data-resource-panel';
+import {dataCatalogHref,dataCategoryLabels,parseResourceReport,type ResourceReport,type ResourceItem} from './data-catalog-contract';
 import './shared-data-catalog.css';
-import {PublicationProvenance} from './publication-provenance';
 
-type Item={key:string;record_id:string;space_id:string;space_name:string;category:string;kind:string;label:string;state:string;href:string};
-type Report={profile:string;workspace_id:string;space_id:string|null;status:string;issues:{source:string;space_id:string|null}[];spaces:{id:string;name:string}[];items:Item[];counts:Record<string,number>;total:number;offset:number;next_offset:number|null;observed_at:string};
-const labels:Record<string,string>={all:'全部数据',original:'原始与输入',process:'过程数据',result:'成果数据'};
-const kinds:Record<string,string>={input:'登记输入',attachment:'配套原文件',batch:'采集批次',preflight:'最近预检记录',job:'构建任务',candidate:'模型候选',human_view:'视觉表达',agent_view:'计算表达',publication:'固定发布',offline_package:'离线交付入口'};
-const states:Record<string,string>={registered:'已登记',stored_original:'已保存原文件',draft:'整理中',sealed:'已封存',disabled:'已停用',passed:'检查通过',failed:'失败',registration_changed:'登记已变化',queued:'已排队',running:'运行中',interrupted:'已中断',views_failed:'视图待恢复',succeeded:'执行成功',candidate_recorded:'已有候选记录',view_declared:'已声明视图',publication_recorded:'已有发布记录',export_on_request:'按需导出，未生成',unknown:'状态待核查'};
+const kinds:Record<string,string>={input:'采集资料',attachment:'参考资料',candidate:'模型成果',human_view:'可视表达',agent_view:'计算表达',batch:'采集批次',preflight:'预检记录',job:'构建任务'};
+const states:Record<string,string>={draft:'整理中',sealed:'已封存',disabled:'已停用',passed:'检查通过',failed:'失败',registration_changed:'登记已变化',queued:'已排队',running:'运行中',interrupted:'已中断',views_failed:'视图待恢复',succeeded:'执行成功',unknown:'状态待核查'};
+const date=(value:string|null|undefined)=>value?new Date(value).toLocaleString('zh-CN',{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}):'未记录';
 export function SharedDataCatalog(){
- const target=useRecordNavigation(),platform=usePlatformSession();
- const hash=appLocation(),params=new URLSearchParams(hash.split('?')[1]||'');
- const category=Object.hasOwn(labels,params.get('category')||'')?params.get('category')!:'all';
- const filter=params.has('filter_space')?params.get('filter_space')||'':params.get('scope')==='all'?'':target.space,search=params.get('search')||'';
+ const platform=usePlatformSession(),workspace=platform?.user?.workspace_id||'';
+ return <DataCatalog key={workspace} workspace={workspace}/>;
+}
+function DataCatalog({workspace}:{workspace:string}){
+ const params=new URLSearchParams(appLocation().split('?')[1]||'');
+ const category=Object.hasOwn(dataCategoryLabels,params.get('category')||'')?params.get('category')!:'all',project=params.get('project')||'',space=params.get('filter_space')||'',search=params.get('search')||'';
  const offset=/^\d+$/.test(params.get('offset')||'')?Number(params.get('offset')):0;
- const [draft,setDraft]=useState(search),[saved,setSaved]=useState<{key:string;report:Report}|null>(null),[busy,setBusy]=useState(true),[error,setError]=useState(''),[revision,setRevision]=useState(0);
- const workspace=platform?.user?.workspace_id||'',key=JSON.stringify([workspace,filter,category,search,offset,revision]);
- const report=saved?.key===key?saved.report:null;
- function navigate(change:Record<string,string>){appNavigate(recordLink('data',{space:target.space,scope:'all',category,filter_space:filter,search,offset:'0',...change}));}
+ const [draft,setDraft]=useState(search),[saved,setSaved]=useState<{key:string;report:ResourceReport}|null>(null),[loading,setLoading]=useState(true),[error,setError]=useState(''),[generation,setGeneration]=useState(0),[projectsOpen,setProjectsOpen]=useState(false),[selection,setSelection]=useState<{item:ResourceItem;edit:boolean}|null>(null);
+ const key=JSON.stringify([workspace,category,project,space,search,offset,generation]),report=saved?.key===key?saved.report:null;
+ function navigate(change:Record<string,string>){appNavigate(dataCatalogHref({category,project,filter_space:space,search,offset:'0',...change}));}
  useEffect(()=>setDraft(search),[search]);
- useEffect(()=>{
-  const controller=new AbortController();setSaved(null);setBusy(true);setError('');
-  const query=new URLSearchParams({category,search,offset:String(offset),limit:'50',...(filter?{space_id:filter}:{})});
-  fetch(`${businessEndpoint}/api/data-catalog?${query}`,{cache:'no-store',signal:controller.signal}).then(async response=>{
-   if(!response.ok)throw Error(response.status===403?'当前筛选范围无数据管理权限，请调整范围。':response.status===404?'当前服务尚未提供共用数据目录。':'共用数据目录暂不可用，请重试。');
-   const value:Report=await response.json();
-   if(value.profile!=='cospace.workspace-data-catalog/0.1'||(workspace&&value.workspace_id!==workspace)||(value.space_id||'')!==filter||!Array.isArray(value.items)||!Array.isArray(value.spaces)||value.items.some(i=>!value.spaces.some(s=>s.id===i.space_id)||!/^#(data|build|delivery)\?/.test(i.href)||new URLSearchParams(i.href.split('?')[1]).get('space')!==i.space_id))throw Error('目录响应与当前范围不一致，请重新读取。');
-   if(!controller.signal.aborted)setSaved({key,report:value});
-  }).catch(e=>{if(!controller.signal.aborted)setError(e.message);}).finally(()=>{if(!controller.signal.aborted)setBusy(false);});
-  return()=>controller.abort();
+ useEffect(()=>{const c=new AbortController();setLoading(true);setError('');const query=new URLSearchParams({category,search,offset:String(offset),limit:'20',...(project?{project_id:project}:{}),...(space?{space_id:space}:{})});
+  void dataRequest('/api/data-resources?'+query,c.signal).then(v=>parseResourceReport(v,{workspace,project,space,category})).then(value=>{if(!c.signal.aborted)setSaved({key,report:value});}).catch(e=>{if(!c.signal.aborted)setError(e.message);}).finally(()=>{if(!c.signal.aborted)setLoading(false);});return()=>c.abort();
  },[key]);
- useAssistantReport({title:'资料检查',status:busy?'loading':error?'error':'ready',note:error||(report?.status==='partial'?'部分目录未读取，不能据此判断全部数据状态。':report&&!report.items.length?'当前筛选范围暂无资料记录。':undefined),tasks:busy||error?[]:(report?.items||[]).filter(item=>['failed','interrupted','views_failed','registration_changed'].includes(item.state)).slice(0,5).map(item=>({id:item.key,title:`核查${kinds[item.kind]||'资料记录'}`,evidence:`${item.space_name} · ${item.label} · ${states[item.state]}`,label:'进入处理',tone:'warning',run:()=>appNavigate(item.href.replace(/^#/,'/'))}))});
- return <div className="shared-support-layout" data-layout="management"><DataNavigation category={category}/><section className="shared-data-catalog workspace-content-viewport" aria-label="共用数据管理"><WorkspaceContent>
-  <WorkspaceHeading icon={Database} title="数据管理" description="统一管理原始资料、过程记录与成果，按场景与生命周期查阅。" actions={<>{filter&&<Button asChild variant="secondary" size="sm"><a href={recordLink('data',{space:filter,tab:'inputs'})}><Files size={16}/>场景资料</a></Button>}<Button variant="secondary" size="sm" onClick={()=>setRevision(v=>v+1)} disabled={busy}><ArrowClockwise size={16}/>刷新目录</Button></>}/>
-  <div className="shared-data-toolbar">
-   <div className="shared-data-scope"><NativeSelect aria-label="筛选数据所属场景" value={filter} onChange={e=>navigate({filter_space:e.target.value})}><option value="">全部授权场景</option>{filter&&!report?.spaces.some(s=>s.id===filter)&&<option value={filter}>当前筛选场景</option>}{report?.spaces.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</NativeSelect></div>
-   <form onSubmit={e=>{e.preventDefault();navigate({search:draft});}}><Input aria-label="搜索共用数据" placeholder="搜索名称、标识或场景" value={draft} onChange={e=>setDraft(e.target.value)} maxLength={100}/><Button size="sm" variant="secondary" type="submit"><MagnifyingGlass size={16}/>搜索</Button></form></div>
-  <p className="shared-data-note">本目录读取保存的元数据，不校验源文件或快照内容。离线导出不计作已生成或已启用；导入、编辑和构建请进入具体场景工作面。</p>
-  {busy&&<p role="status">正在读取共用数据目录…</p>}{error&&<div role="alert"><p>{error}</p><Button variant="outline" size="sm" onClick={()=>setRevision(v=>v+1)}>重试</Button><Button variant="ghost" size="sm" onClick={()=>navigate({filter_space:''})}>查看全部授权范围</Button></div>}
-  {report?.status==='partial'&&<p role="alert">部分记录暂不可读取，当前列表不完整。请刷新或进入场景核查。</p>}
-  {report&&<><div className="shared-data-list-head" aria-hidden="true"><span>数据名称</span><span>数据类型</span><span>所属场景</span><span>记录状态</span><span>操作</span></div><div className="shared-data-list" role="list" aria-label="共用数据列表">{report.items.map(item=><article role="listitem" key={item.key}><div><strong>{item.label}</strong><small>{item.record_id}</small></div><span>{kinds[item.kind]||item.kind}</span><span>{item.space_name}</span><span>{states[item.state]||'状态待核查'} · 元数据记录</span><div><Button asChild variant="ghost" size="sm"><a href={item.href.replace(/^#/,'/')}>查看记录</a></Button>{item.kind==='publication'&&<a className="ml-md" href={recordLink('data',{space:item.space_id,scope:'all',publication:item.record_id})}>追溯来源</a>}</div></article>)}</div>{!report.items.length&&<p role="status">{report.status==='partial'?'当前未返回可读取记录，目录仍有读取问题。':report.spaces.length?'此筛选范围暂无数据。':'当前工作区暂无可管理的数据场景。'}</p>}<footer><span>{report.total} 项 · {new Date(report.observed_at).toLocaleString('zh-CN',{hour12:false})} 读取</span><Button size="sm" variant="outline" disabled={!offset} onClick={()=>navigate({offset:String(Math.max(0,offset-50))})}>上一页</Button><Button size="sm" variant="outline" disabled={report.next_offset===null} onClick={()=>navigate({offset:String(report.next_offset)})}>下一页</Button></footer></>}
- {target.publication&&target.space&&<PublicationProvenance key={target.space+target.publication} space={target.space} publication={target.publication}/>}
+ const refresh=()=>setGeneration(v=>v+1);
+ return <div className="shared-support-layout" data-layout="management"><DataNavigation category={category}/><section className="data-resource-catalog workspace-content-viewport" aria-label="平台数据目录"><WorkspaceContent>
+  <WorkspaceHeading icon={Database} title={dataCategoryLabels[category]} description="统一管理平台资料与空间成果，按业务项目查看关联数据。" actions={<>{space&&<Button asChild size="sm" variant="outline"><a href={'/data?'+new URLSearchParams({space,tab:'inputs'})}>场景资料</a></Button>}{report?.can_manage&&<Button size="sm" variant="outline" onClick={()=>setProjectsOpen(true)}><FolderSimple size={16}/>项目管理</Button>}<Button size="icon-sm" className="data-catalog-icon-button" variant="ghost" aria-label="刷新数据目录" disabled={loading} onClick={refresh}><ArrowClockwise size={16}/></Button></>}/>
+  <div className="data-catalog-toolbar"><span className="data-resource-count">{report?`共 ${report.total} 项`:'— 项'}</span><ProjectPicker workspace={workspace} value={project} allowAll onChange={v=>navigate({project:v,filter_space:''})}/><NativeSelect aria-label="筛选关联场景" value={space} onChange={e=>navigate({filter_space:e.target.value})}><option value="">全部授权场景</option>{space&&!report?.spaces.some(s=>s.id===space)&&<option value={space}>所选场景</option>}{report?.spaces.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</NativeSelect><form onSubmit={e=>{e.preventDefault();navigate({search:draft});}}><Input aria-label="搜索数据" placeholder="搜索名称、标识或场景" maxLength={100} value={draft} onChange={e=>setDraft(e.target.value)}/><Button size="icon-sm" className="data-catalog-icon-button" type="submit" variant="outline" aria-label="搜索数据"><MagnifyingGlass size={16}/></Button></form></div>
+  {loading&&<p role="status">正在读取数据目录…</p>}{error&&<div role="alert"><p>{error}</p><Button size="sm" variant="outline" onClick={refresh}>重新读取</Button><Button size="sm" variant="ghost" onClick={()=>navigate({project:'',filter_space:''})}>清除范围筛选</Button></div>}
+  {report?.status==='partial'&&<p role="alert">部分来源记录暂不可读取，目录尚不完整。请刷新或进入来源场景核查。</p>}
+  {report&&<><Table className="data-resource-table"><TableHeader><TableRow><TableHead className="data-resource-index">序号</TableHead><TableHead>数据名称 / 标识</TableHead><TableHead>类型</TableHead><TableHead>管理归属 / 关联场景</TableHead><TableHead>{category==='process'?'记录状态':'版本 / 形成时间'}</TableHead><TableHead className="data-resource-actions">操作</TableHead></TableRow></TableHeader><TableBody>{report.items.map((item,index)=><TableRow key={item.key}><TableCell className="data-resource-index">{offset+index+1}</TableCell><TableCell><div className="data-resource-name"><button onClick={()=>setSelection({item,edit:false})}>{item.label}</button>{item.is_base&&<StatusBadge tone="neutral">基础数据</StatusBadge>}{item.resource_id&&!item.registered&&<StatusBadge tone="neutral">待登记</StatusBadge>}</div><small className="data-resource-secondary">{item.record_id}</small></TableCell><TableCell>{item.kind==='input'&&item.source_version?.format==='ply_pointcloud'?'已有点云':kinds[item.kind]||item.kind}</TableCell><TableCell><span>{item.owner_project_name|| (item.resource_id?'待登记管理项目':'处理记录')}</span><small className="data-resource-secondary">{item.space_name}</small></TableCell><TableCell>{item.resource_id?<><span>{item.version_count?`${item.version_count} 个已登记版本`:'版本待登记'}</span>{item.registered&&!item.version_registered&&<small className="data-resource-secondary">来源已更新，待登记</small>}<small className="data-resource-secondary">{date(item.source_version?.created_at)}</small></>:<span>{states[item.state]||'状态待核查'}</span>}</TableCell><TableCell className="data-resource-actions"><DropdownMenu><DropdownMenuTrigger asChild><Button size="icon-sm" className="data-catalog-icon-button" variant="ghost" aria-label={item.label+'更多操作'}><DotsThreeVertical size={24}/></Button></DropdownMenuTrigger><DropdownMenuContent align="end"><DropdownMenuItem onSelect={()=>setSelection({item,edit:false})}><Info size={16}/>查看详情</DropdownMenuItem>{item.can_manage&&<DropdownMenuItem onSelect={()=>setSelection({item,edit:true})}><PencilSimple size={16}/>{item.registered?'维护登记':'登记资源'}</DropdownMenuItem>}<DropdownMenuSeparator/><DropdownMenuItem asChild><a href={item.href.replace(/^#/,'/')}><ArrowSquareOut size={16}/>查看来源</a></DropdownMenuItem></DropdownMenuContent></DropdownMenu></TableCell></TableRow>)}</TableBody></Table>
+  {!report.items.length&&<p role="status">{report.status==='partial'?'暂未返回可读取记录，请先核查来源。':'当前范围没有匹配数据。'}</p>}<div className="data-resource-pagination"><span>共 {report.total} 项</span><Button size="sm" variant="outline" disabled={!offset} onClick={()=>navigate({offset:String(Math.max(0,offset-20))})}>上一页</Button><Button size="sm" variant="outline" disabled={report.next_offset===null} onClick={()=>navigate({offset:String(report.next_offset)})}>下一页</Button></div></>}
+  {projectsOpen&&<DataProjectPanel workspace={workspace} onClose={()=>setProjectsOpen(false)} onChanged={refresh}/>}{selection&&<DataResourcePanel key={selection.item.key} workspace={workspace} {...selection} onClose={()=>setSelection(null)} onChanged={()=>{setSelection(null);refresh();}}/>}
  </WorkspaceContent></section></div>;
 }
