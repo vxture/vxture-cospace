@@ -7,6 +7,8 @@ import {runGuarded,useUnsavedNavigation} from './unsaved-navigation';
 import {businessEndpoint} from './business-endpoint';
 import {DataReferenceDetails} from './data-reference-details';
 import {DataLineagePanel} from './data-lineage-panel';
+import {DataProcessingPanel,DataGovernancePanel} from './data-processing-panel';
+import {ArtifactControl} from './artifact-control';
 
 function ResourceTrace({workspace,item}:Readonly<{workspace:string;item:ResourceItem}>){
  const projects=[...new Map(item.uses?.map(u=>[u.project_id,u.project_name])).entries()];
@@ -18,6 +20,8 @@ function ResourceTrace({workspace,item}:Readonly<{workspace:string;item:Resource
 export function DataResourcePanel({item,edit,workspace,onClose,onChanged}:{item:ResourceItem;edit:boolean;workspace:string;onClose:()=>void;onChanged:()=>void}){
  const [owner,setOwner]=useState(item.owner_project_id||''),[base,setBase]=useState(item.is_base),[reason,setReason]=useState(''),[busy,setBusy]=useState(false),[error,setError]=useState('');
  const gate=useRef(false),pending=useRef<{key:string;body:Record<string,unknown>}|null>(null),request=useRef<AbortController|null>(null);
+ const [control,setControl]=useState(false);
+ const artifact=item.kind==='input'?'input:'+item.record_id:'candidate:'+item.record_id;
  const referenceNote=item.kind==='resource_file'?'原件按固定版本保存，下载时核验完整性。管理归属与共享授权分别设置。':'版本引用依据来源元数据。目录读取不重新校验原文件完整性；管理项目登记不授予跨项目使用权限。';
  const dirty=owner!==(item.owner_project_id||'')||base!==item.is_base||!!reason;
  useUnsavedNavigation(dirty||busy,'资源登记');useEffect(()=>()=>request.current?.abort(),[]);
@@ -30,5 +34,6 @@ export function DataResourcePanel({item,edit,workspace,onClose,onChanged}:{item:
  {edit&&<><label>管理归属{item.registered?<p>{resourceOwnerLabel(item)}</p>:<ProjectPicker workspace={workspace} value={owner} onChange={setOwner} disabled={busy}/>}</label><label className="data-resource-checkbox"><input type="checkbox" checked={base} disabled={busy} onChange={e=>setBase(e.target.checked)}/>标记为基础数据</label><label>登记原因<Textarea value={reason} maxLength={500} disabled={busy} onChange={e=>setReason(e.target.value)}/></label></>}
  {item.kind==='resource_file'&&!item.external&&<Button asChild variant="outline" size="sm"><a href={businessEndpoint+resourceFileDownload(item)}>下载原件</a></Button>}{item.external&&item.uses?<DataReferenceDetails workspace={workspace} uses={item.uses} onChanged={onChanged}/>:<p className="data-resource-secondary">{referenceNote}</p>}{item.href&&<Button asChild variant="outline" size="sm"><a href={item.href.replace(/^#/,'/')}>查看来源记录</a></Button>}
  {!edit&&item.registered&&item.resource_id&&(item.can_manage||item.external)&&<ResourceTrace key={item.resource_id} workspace={workspace} item={item}/>}
+ {!edit&&item.registered&&item.resource_id&&item.can_manage&&!item.external&&<><DataProcessingPanel workspace={workspace} resource={item.resource_id}/>{item.kind==='resource_file'?<DataGovernancePanel workspace={workspace} resource={item.resource_id} label={item.label} onChanged={onChanged}/>:item.space_id&&['input','candidate','human_view','agent_view'].includes(item.kind)&&<section className="data-lineage-panel"><div className="data-lineage-heading"><h3>成果使用状态</h3><Button size="sm" variant="outline" onClick={()=>setControl(v=>!v)}>{control?'收起':'管理使用状态'}</Button></div>{control&&<ArtifactControl space={item.space_id} artifact={artifact} onClose={()=>setControl(false)} onCommitted={onChanged}/>}</section>}</>}
  </div></Drawer>;
 }

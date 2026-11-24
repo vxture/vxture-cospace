@@ -11,6 +11,7 @@ from packages.data.scene_attachments import reference_name
 from packages.data.resource_storage_usage import record_scope
 from packages.lifecycle.workspace_projects import Change, ProjectError, ProjectUnavailable
 from packages.data.resource_lineage import ResourceLineage
+from packages.data.resource_governance import require_active
 from packages.lifecycle.scene_initialization import checksum
 
 
@@ -63,6 +64,7 @@ class ResourceFileVersions:
                 if previous[0] != spec:
                     raise ProjectError('resource_request_id_reused')
                 return json.loads(previous[1]) | {'replayed': True}
+            require_active(db, scope, command.resource_id)
             if saved['revision'] != command.expected_revision:
                 raise ProjectError('resource_revision_changed')
             if current['version_id'] != command.expected_version:

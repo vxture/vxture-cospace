@@ -184,7 +184,9 @@ class BusinessAccess:
         if path=='/api/data-catalog' and method in ('GET','HEAD'):
             if q.get('space_id'):access.space(principal,q['space_id'],DATA_MANAGE)
             return {'principal':principal}
-        if path in ('/api/data-lineage', '/api/data-reference-upgrade') and method in ('GET','HEAD'):
+        if path in ('/api/data-lineage', '/api/data-reference-upgrade', '/api/data-processing') and method in ('GET','HEAD'):
+            return {'principal':principal}
+        if path=='/api/data-governance' and method in ('GET','HEAD','POST'):
             return {'principal':principal}
         if path=='/api/data-projects':
             if method not in ('GET','HEAD','POST') or method=='POST' and not policy.workspace_manager(principal):
@@ -858,6 +860,22 @@ class BusinessAccess:
                 except ValidationError:return deny(422,'resource_lineage_invalid')
                 except ProjectError as exc:return deny(exc.status,exc.code)
                 except (ProjectUnavailable,CatalogUnavailable,KeyError,TypeError,ValueError):return deny(503,'resource_lineage_unavailable')
+                return JSONResponse(result,headers={'Cache-Control':'no-store'})
+            if path in ('/api/data-processing', '/api/data-governance'):
+                from packages.data.resource_governance import GovernanceQuery, GovernanceChange, ResourceGovernance
+                from packages.data.resource_processing import ResourceProcessing
+                try:
+                    handler = ResourceProcessing(self.workspace_resources) if path.endswith('/data-processing') else ResourceGovernance(self.workspace_resources)
+                    if request.method=='POST':
+                        command = GovernanceChange.model_validate(body)
+                        result = await run_in_threadpool(handler.change, context['principal'], policy, command)
+                    else:
+                        query = GovernanceQuery.model_validate(dict(request.query_params))
+                        result = await run_in_threadpool(handler.read, context['principal'], policy, query)
+                except ValidationError:return deny(422,'resource_governance_invalid_request')
+                except ProjectError as exc:return deny(exc.status,exc.code)
+                except PermissionError:raise
+                except (ProjectUnavailable,CatalogUnavailable,KeyError,TypeError,ValueError,OSError):return deny(503,'resource_processing_or_governance_unavailable')
                 return JSONResponse(result,headers={'Cache-Control':'no-store'})
             if path=='/api/data-resources':
                 try:

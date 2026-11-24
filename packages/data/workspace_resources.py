@@ -1,6 +1,7 @@
 """Authorized resource directory with explicit, stable management ownership."""
 from datetime import datetime, timezone
 import json
+import sqlite3
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
@@ -9,9 +10,10 @@ from packages.data.workspace_catalog import catalog, CatalogQuery, metadata
 from packages.data.scene_attachments import SceneAttachments
 from packages.data.workspace_resource_sharing import ResourceSharing
 from packages.data.resource_files import ResourceFiles
+from packages.data.resource_governance import states, require_active
 from packages.lifecycle.preview_scope import match
 from packages.lifecycle.scene_initialization import checksum
-from packages.lifecycle.workspace_projects import WorkspaceProjects, ProjectError
+from packages.lifecycle.workspace_projects import WorkspaceProjects, ProjectError, ProjectUnavailable
 
 
 class ResourceQuery(BaseModel):
@@ -24,6 +26,7 @@ class ResourceQuery(BaseModel):
     limit: int = Field(default=20, ge=1, le=100)
     placement: Literal['all', 'project', 'scene'] = 'all'
     ownership: Literal['all', 'owned', 'external', 'workspace'] = 'all'
+    lifecycle: Literal['all', 'active', 'archived', 'disabled'] = 'all'
 
 
 class ResourceChange(BaseModel):
@@ -178,6 +181,26 @@ class WorkspaceResources:
                     if external['resource_id'] not in unique or query.project_id:
                         unique[external['resource_id']] = external
                 rows = list(unique.values())
+                saved_states = states(db, scope)
+                scene_states = {}
+                for row in rows:
+                    if row.get('external'):
+                        row['lifecycle_state'] = None
+                    elif row['kind'] == 'resource_file':
+                        row['lifecycle_state'] = saved_states.get(row['resource_id'], {}).get('state', 'active')
+                    elif row['kind'] in ('input', 'candidate', 'human_view', 'agent_view'):
+                        scene = row['space_id']
+                        if scene not in scene_states:
+                            try:
+                                scene_states[scene] = {s['artifact']: s['lifecycle_state'] for s in self.jobs.controls.saved(scene)}
+                            except (ValueError, OSError, KeyError, TypeError, sqlite3.Error) as exc:
+                                raise ProjectUnavailable('resource_scene_lifecycle_unavailable') from exc
+                        artifact = ('input:' if row['kind'] == 'input' else 'candidate:') + row['record_id']
+                        row['lifecycle_state'] = scene_states[scene].get(artifact, 'active')
+                    else:
+                        row['lifecycle_state'] = None
+            if query.lifecycle != 'all':
+                rows = [r for r in rows if r.get('lifecycle_state') == query.lifecycle]
             q = query.search.strip().casefold()
             rows = [r for r in rows if
                     (query.category in ('all', 'process') or query.category == 'base' and r['is_base']
@@ -189,7 +212,7 @@ class WorkspaceResources:
                 spaces = [s for s in spaces if s['project_id'] == query.project_id or s['id'] in relevant]
             return {'profile': 'cospace.data-resources/0.1', 'workspace_id': principal.workspace_id,
                     'category': query.category, 'project_id': query.project_id, 'space_id': query.space_id,
-                    'placement': query.placement, 'ownership': query.ownership,
+                    'placement': query.placement, 'ownership': query.ownership, 'lifecycle': query.lifecycle,
                     'items': rows[query.offset:query.offset + query.limit], 'total': len(rows),
                     'spaces': spaces, 'can_manage': manager, 'status': 'partial' if issues else 'ready',
                     'issues': issues, 'offset': query.offset, 'limit': query.limit,
@@ -235,6 +258,7 @@ class WorkspaceResources:
                     raise ProjectError('resource_request_id_reused')
                 return json.loads(previous[1]) | {'replayed': True}
             _, projects, _ = self.projects.state(db, scope)
+            require_active(db, scope, change.resource_id)
             project = projects.get(change.owner_project_id)
             if change.owner_kind == 'project' and (not project or project['status'] != 'active'):
                 raise ProjectError('active_project_required')

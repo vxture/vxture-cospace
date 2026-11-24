@@ -16,11 +16,11 @@ export function dataCatalogHref(values:Record<string,string>={}){
  return '/data?'+params;
 }
 export type DataVersion={version_id:string;reference_kind:'source_metadata';created_at:string|null;format?:string|null;bytes?:number|null};
-export type ResourceItem={key:string;record_id:string;space_id:string|null;space_name:string|null;kind:string;label:string;state:string;href:string|null;resource_id:string|null;resource_type:string;source_version:DataVersion|null;project_id:string|null;owner_kind?:'project'|'workspace'|'unassigned';owner_project_id:string|null;owner_project_name:string|null;registered:boolean;is_base:boolean;revision:number;version_count:number;version_registered?:boolean;can_manage:boolean;external?:boolean;uses?:ResourceUse[];is_shared?:boolean};
+export type ResourceItem={key:string;record_id:string;space_id:string|null;space_name:string|null;kind:string;label:string;state:string;href:string|null;resource_id:string|null;resource_type:string;source_version:DataVersion|null;project_id:string|null;owner_kind?:'project'|'workspace'|'unassigned';owner_project_id:string|null;owner_project_name:string|null;registered:boolean;is_base:boolean;revision:number;version_count:number;version_registered?:boolean;can_manage:boolean;external?:boolean;uses?:ResourceUse[];is_shared?:boolean;lifecycle_state?:'active'|'archived'|'disabled'|null};
 export function resourceOwnerLabel(item:Pick<ResourceItem,'owner_kind'|'owner_project_name'>){return item.owner_kind==='workspace'?'工作区共用':item.owner_project_name||'待登记管理项目';}
 export function resourceFileDownload(item:ResourceItem){return '/api/data-files/download?'+new URLSearchParams({resource_id:item.resource_id!,version_id:item.source_version!.version_id});}
-export type ResourceReport={profile:'cospace.data-resources/0.1';workspace_id:string;category:string;project_id:string|null;space_id:string|null;placement?:string;ownership?:string;items:ResourceItem[];total:number;spaces:{id:string;name:string;project_id:string|null}[];can_manage:boolean;status:'ready'|'partial';offset:number;limit:number;next_offset:number|null;observed_at:string;source_files_rechecked:false};
-type ResourceScope={workspace:string;project:string;space:string;category:string;placement?:string;ownership?:string};
+export type ResourceReport={profile:'cospace.data-resources/0.1';workspace_id:string;category:string;project_id:string|null;space_id:string|null;placement?:string;ownership?:string;lifecycle?:string;items:ResourceItem[];total:number;spaces:{id:string;name:string;project_id:string|null}[];can_manage:boolean;status:'ready'|'partial';offset:number;limit:number;next_offset:number|null;observed_at:string;source_files_rechecked:false};
+type ResourceScope={workspace:string;project:string;space:string;category:string;placement?:string;ownership?:string;lifecycle?:string};
 function validateFileOwner(item:ResourceItem){
  if(item.owner_kind==='project')return /^project-[a-f0-9]{16}$/.test(item.owner_project_id||'');
  return item.owner_kind==='workspace'&&item.owner_project_id===null;
@@ -44,8 +44,9 @@ function validateSceneResource(item:ResourceItem,report:ResourceReport){
 export function parseResourceReport(value:unknown,scope:ResourceScope):ResourceReport{
  const v=value as ResourceReport;
  if(v?.profile!=='cospace.data-resources/0.1'||scope.workspace&&v.workspace_id!==scope.workspace||(v.project_id||'')!==scope.project||(v.space_id||'')!==scope.space||v.category!==scope.category||!Array.isArray(v.items)||!Array.isArray(v.spaces)||!Number.isInteger(v.total)||v.total<0||!['ready','partial'].includes(v.status)||v.source_files_rechecked!==false)throw new Error('数据目录响应与当前范围不一致。');
- if((v.placement||'all')!==(scope.placement||'all')||(v.ownership||'all')!==(scope.ownership||'all'))throw new Error('数据筛选响应与当前范围不一致。');
+ if((v.placement||'all')!==(scope.placement||'all')||(v.ownership||'all')!==(scope.ownership||'all')||(v.lifecycle||'all')!==(scope.lifecycle||'all'))throw new Error('数据筛选响应与当前范围不一致。');
  for(const item of v.items){
+  if(item.lifecycle_state!=null&&!['active','archived','disabled'].includes(item.lifecycle_state)||item.external&&item.lifecycle_state!=null||scope.lifecycle&&scope.lifecycle!=='all'&&item.lifecycle_state!==scope.lifecycle)throw new Error('数据使用状态无效。');
   if(item.external)validateExternalResource(item,scope);
   else if(item.kind==='resource_file')validateFileResource(item,scope);
   else validateSceneResource(item,v);

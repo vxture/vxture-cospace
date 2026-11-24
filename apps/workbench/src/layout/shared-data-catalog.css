@@ -80,3 +80,8 @@
 .data-upgrade-table{font-size:var(--body-small-font-size)}
 .data-upgrade-table :is(th,td){white-space:normal;overflow-wrap:anywhere;min-width:0}
 .data-upgrade-panel .data-drawer-footer [data-slot=button]{font-size:var(--body-font-size)}
+.data-processing-nodes{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;min-width:0;gap:var(--space-sm)}
+.data-processing-nodes>li{padding-inline:var(--space-md);border-left:var(--space-2xs) solid var(--border)}
+.data-processing-nodes>li[aria-current=true]{border-left-color:var(--primary);background:var(--accent)}
+.data-processing-nodes code{overflow-wrap:anywhere;font-size:var(--label-small-font-size)}
+.data-lineage-panel label input{height:var(--space-control-xl);min-height:var(--space-control-xl);font-size:var(--label-small-font-size)}

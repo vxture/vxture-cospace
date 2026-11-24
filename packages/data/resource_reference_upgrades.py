@@ -65,6 +65,8 @@ class ReferenceUpgrades:
                 if previous[0] != spec:
                     raise ProjectError('resource_request_id_reused')
                 return json.loads(previous[1]) | {'replayed': True}
+            from packages.data.resource_governance import require_active
+            require_active(db, scope, use['resource_id'])
             if use['status'] != 'active':
                 raise ProjectError('resource_use_inactive')
             if use['revision'] != command.expected_revision or use['version_id'] != command.expected_version:
