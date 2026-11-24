@@ -9,7 +9,7 @@ const report={profile:'cospace.data-resources/0.1',workspace_id:'ws-a',project_i
 
 test('resource navigation is fixed and does not expose workflow actions or projects',()=>{
  assert.deepEqual(dataResourceNavigation.map(s=>s.title),['数据资源','业务记录']);
- assert.deepEqual(dataResourceNavigation.flatMap(s=>s.items.map(i=>i.category)),['all','base','acquisition','reference','result','process']);
+ assert.deepEqual(dataResourceNavigation.flatMap(s=>s.items.map(i=>i.category)),['all','base','acquisition','reference','result','uses','process']);
  assert.equal(dataCatalogHref(),'/data?scope=all&category=all');
  assert.equal(dataCatalogHref({category:'base',project:'p-one',filter_space:''}),'/data?scope=all&category=base&project=p-one');
  assert.equal(dataCatalogHref({project:'',filter_space:'',search:''}),'/data?scope=all&category=all');

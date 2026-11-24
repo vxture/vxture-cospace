@@ -43,3 +43,18 @@
 .data-drawer-footer{display:flex;justify-content:flex-end;gap:var(--space-sm);width:100%}
 .data-drawer-footer [data-slot=button]{height:var(--space-control-xl);min-height:var(--space-control-xl);font-size:var(--body-font-size)}
 .data-management-drawer [data-table-actions]{width:var(--space-5xl);text-align:center;padding-inline:var(--space-md)}
+.data-sharing-list,.data-reference-details{display:flex;flex-direction:column;gap:var(--space-md);min-width:0}
+.data-sharing-record,.data-sharing-pagination,.data-sharing-search{display:flex;align-items:center;gap:var(--space-sm);min-width:0;flex-wrap:wrap}
+.data-sharing-record>div:first-child,.data-sharing-record>strong,.data-sharing-pagination>span{flex:1;min-width:0}
+.data-sharing-record strong{font-size:var(--body-small-font-size);font-weight:var(--label-font-weight)}
+.data-sharing-reference{display:flex;flex-direction:column;gap:var(--space-md);padding-block:var(--space-lg);border-bottom:1px solid var(--border)}
+.data-sharing-option{display:flex;align-items:center;justify-content:space-between;gap:var(--space-md);padding:var(--space-md);text-align:left;border:1px solid var(--border);border-radius:var(--radius-md);background:var(--card);color:var(--foreground)}
+.data-sharing-option:hover,.data-sharing-option[aria-pressed=true]{border-color:var(--primary);background:var(--accent)}
+.data-sharing-option>span{min-width:0;overflow-wrap:anywhere}.data-sharing-option small{display:block;color:var(--muted-foreground);margin-top:var(--space-xs)}
+.data-sharing-search input{min-width:0;flex:1}
+.data-sharing-search{width:100%;max-width:var(--container-overlay-lg)}
+.data-management-drawer :is(.data-sharing-pagination,.data-sharing-search,.data-sharing-record) [data-slot=button],.data-sharing-search input{height:var(--space-control-xl);min-height:var(--space-control-xl);font-size:var(--label-small-font-size)}
+.data-management-drawer .data-catalog-icon-button{flex:0 0 var(--space-control-xl);width:var(--space-control-xl);height:var(--space-control-xl);padding:0;aspect-ratio:1}
+.data-sharing-pagination{font-size:var(--label-small-font-size)}
+.data-sharing-form :is(select,input:not([type=checkbox])){height:var(--space-control-xl);min-height:var(--space-control-xl);font-size:var(--label-small-font-size)}
+.data-sharing-form .data-project-picker{justify-content:space-between}

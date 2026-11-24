@@ -1,4 +1,5 @@
 import './data-catalog.test.mjs';
+import './data-sharing.test.mjs';
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {canonicalModuleHref,moduleLinkFromUrl,recordLinkFromUrl,sceneLinkFromUrl,headerSceneLinkFromUrl} from '../../apps/workbench/src/layout/navigation-contract.ts';
