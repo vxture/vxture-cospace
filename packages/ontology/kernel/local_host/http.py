@@ -152,7 +152,7 @@ class Application:
         try:
             origin = environ.get('HTTP_ORIGIN')
             if (environ.get('HTTP_HOST') != self.authority
-                    or origin and (not self.assets or origin != f'http://{self.authority}')
+                    or origin and (not self.assets or origin != f'http://{self.authority}')  # NOSONAR: origin equality for the IPv4-loopback-only reference server.
                     or environ.get('HTTP_SEC_FETCH_SITE') in ('cross-site', 'same-site') and
                     environ['PATH_INFO'].startswith('/api/')):
                 raise RequestError(403, 'local_request_required')
