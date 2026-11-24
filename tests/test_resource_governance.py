@@ -39,7 +39,7 @@ def test_recoverable_archive_keeps_original_history_and_blocks_all_new_mutations
     before = {p: p.read_bytes() for p in jobs.root.rglob('*') if p.is_file()}
     r = report(client, identity)
     assert r.status_code == 200, r.text
-    assert r.json()['impact'] == {'scope': 'workspace', 'linked_references': 0, 'active_grants': 0}
+    assert r.json()['impact'] == {'scope': 'workspace', 'has_linked_references': False, 'has_active_grants': False}
     assert r.headers['cache-control'] == 'no-store'
     body, response = command(client, headers, identity)
     assert response.status_code == 200, response.text
@@ -70,14 +70,17 @@ def test_active_grants_and_invisible_or_revoked_references_block_archive(shared)
     s['item'] = file_item(s['client'], identity)
     granted = grant(s)
     r = report(s['client'], identity).json()
-    assert r['impact']['active_grants'] == 1
+    assert r['impact']['has_active_grants'] is True
     assert command(s['client'], s['headers'], identity)[1].json()['detail'] == 'resource_has_active_grants'
     headers, _ = sign_in(s['secured'], 'usr_other')
     used = use(s, headers, granted, space_id=s['scenes'][1]['id']).json()['after']
     s['headers'], _ = sign_in(s['secured'], 'usr_manager')
     # Source manager cannot inspect the receiving scene, but the global guard must see it.
     assert s['client'].get('/api/data-lineage', params={'resource_id': identity}).json()['total'] == 0
-    assert report(s['client'], identity).json()['impact']['linked_references'] == 1
+    impact = report(s['client'], identity).json()['impact']
+    assert impact['has_linked_references'] is True
+    assert 'linked_references' not in impact
+    assert s['scenes'][1]['id'] not in report(s['client'], identity).text
     assert change(s['client'], s['headers'], 'revoke', grant_id=granted['id'], expected_revision=1).status_code == 200
     assert command(s['client'], s['headers'], identity)[1].json()['detail'] == 'resource_has_references'
     headers, _ = sign_in(s['secured'], 'usr_other')
@@ -149,7 +152,7 @@ def test_archive_racing_new_use_never_commits_both(secured, mutation):
     assert sum(r.status_code in (200, 201) for r in responses) == 1
     assert sum(r.status_code == 409 for r in responses) == 1
     final = report(client, identity).json()
-    assert not (final['state'] == 'archived' and final['impact']['active_grants'])
+    assert not (final['state'] == 'archived' and final['impact']['has_active_grants'])
 
 
 def test_expired_unreferenced_grant_does_not_block_archive_but_cannot_be_reused(secured):
@@ -163,4 +166,4 @@ def test_expired_unreferenced_grant_does_not_block_archive_but_cannot_be_reused(
         raw['expires_at'] = (datetime.now(timezone.utc)-timedelta(days=1)).isoformat()
         db.execute('UPDATE data_resource_grants SET record=? WHERE id=?', (json.dumps(raw), granted['id']))
     assert command(client, headers, identity)[1].status_code == 200
-    assert report(client, identity).json()['impact']['active_grants'] == 0
+    assert report(client, identity).json()['impact']['has_active_grants'] is False

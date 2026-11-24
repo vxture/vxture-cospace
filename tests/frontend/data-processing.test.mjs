@@ -6,7 +6,7 @@ import {parseResourceReport} from '../../apps/workbench/src/layout/data-catalog-
 const resource='resource-'+'a'.repeat(32),digest='b'.repeat(64),input='input-'+'c'.repeat(16);
 const nodes=[{key:'input:'+input,kind:'input',record_id:input,state:'registered',metadata_sha256:null},{key:'job:build-one',kind:'job',record_id:'build-one',state:'succeeded',metadata_sha256:null},{key:'candidate:build-one',kind:'candidate',record_id:'build-one',state:'metadata_matched',metadata_sha256:digest}];
 const processing={profile:'cospace.resource-processing/0.1',workspace_id:'ws',resource_id:resource,focus:nodes[0].key,status:'ready',nodes,edges:[{from:nodes[1].key,to:nodes[0].key,relation:'consumes',status:'matched'},{from:nodes[2].key,to:nodes[1].key,relation:'produced_by',status:'matched'}],issues:[],source_files_rechecked:false,jobs_polled:false};
-const governance={profile:'cospace.resource-governance/0.1',workspace_id:'ws',resource_id:resource,state:'active',revision:0,snapshot:digest,impact:{scope:'workspace',linked_references:0,active_grants:0},actions:[{action:'archive',allowed:true,blockers:[]},{action:'restore',allowed:false,blockers:[]}],physical_delete_supported:false,last_change:null};
+const governance={profile:'cospace.resource-governance/0.1',workspace_id:'ws',resource_id:resource,state:'active',revision:0,snapshot:digest,impact:{scope:'workspace',has_linked_references:false,has_active_grants:false},actions:[{action:'archive',allowed:true,blockers:[]},{action:'restore',allowed:false,blockers:[]}],physical_delete_supported:false,last_change:null};
 
 test('processing permits only bounded saved nodes and explicit evidence status',()=>{
  assert.equal(parseProcessing(processing,'ws',resource).nodes.length,3);
@@ -15,8 +15,8 @@ test('processing permits only bounded saved nodes and explicit evidence status',
 });
 test('archive permission must agree with workspace-wide impact and lifecycle state',()=>{
  assert.equal(parseGovernance(governance,'ws',resource).state,'active');
- for(const change of [{workspace_id:'foreign'},{snapshot:'short'},{physical_delete_supported:true},{impact:{...governance.impact,scope:'visible_only'}},{impact:{...governance.impact,linked_references:1}},{state:'archived'},{actions:[governance.actions[0],governance.actions[0]]},{last_change:{reason:'x',updated_at:'invalid'}}])assert.throws(()=>parseGovernance({...governance,...change},'ws',resource));
- const blocked={...governance,impact:{scope:'workspace',linked_references:1,active_grants:0},actions:[{action:'archive',allowed:false,blockers:['resource_has_references']},governance.actions[1]]};
+ for(const change of [{workspace_id:'foreign'},{snapshot:'short'},{physical_delete_supported:true},{impact:{...governance.impact,scope:'visible_only'}},{impact:{...governance.impact,has_linked_references:true}},{state:'archived'},{actions:[governance.actions[0],governance.actions[0]]},{last_change:{reason:'x',updated_at:'invalid'}}])assert.throws(()=>parseGovernance({...governance,...change},'ws',resource));
+ const blocked={...governance,impact:{scope:'workspace',has_linked_references:true,has_active_grants:false},actions:[{action:'archive',allowed:false,blockers:['resource_has_references']},governance.actions[1]]};
  assert.equal(parseGovernance(blocked,'ws',resource).actions[0].allowed,false);
 });
 test('lifecycle filter is request-scoped and never accepts a silent different response',()=>{

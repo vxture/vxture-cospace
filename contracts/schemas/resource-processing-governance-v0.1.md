@@ -14,7 +14,7 @@ D04c 在数据详情内读取实际保存的处理绑定；独立参考原件的
 
 ## 可恢复归档
 
-`GET /api/data-governance?resource_id=...` 返回 `cospace.resource-governance/0.1`：active / archived、独立治理 revision、snapshot 摘要、全工作区关联引用与有效共享数量、archive / restore 许可、最近操作。与资源登记修订号分别维护。
+`GET /api/data-governance?resource_id=...` 返回 `cospace.resource-governance/0.1`：active / archived、独立治理 revision、snapshot 摘要、全工作区关联引用与有效共享是否存在（布尔值，不披露全局数量或不可见项目）、archive / restore 许可、最近操作。与资源登记修订号分别维护。
 
 `POST /api/data-governance`：resource_id、action=archive|restore、32hex request_id、expected_revision、64hex expected_snapshot、非空 reason（最多 500 字符）。登录、CSRF、可信工作区及来源管理权限均重新核验；不接受删除、归属转移或级联操作。
 

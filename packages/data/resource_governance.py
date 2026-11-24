@@ -89,7 +89,7 @@ class ResourceGovernance:
             blockers.append('resource_has_active_grants')
         return {'profile': 'cospace.resource-governance/0.1', 'workspace_id': principal.workspace_id,
                 'resource_id': identity, 'state': state, 'revision': revision, 'snapshot': snapshot,
-                'impact': {'scope': 'workspace', 'linked_references': len(uses), 'active_grants': len(grants)},
+                'impact': {'scope': 'workspace', 'has_linked_references': bool(uses), 'has_active_grants': bool(grants)},
                 'actions': [{'action': 'archive', 'allowed': state == 'active' and not blockers, 'blockers': blockers},
                             {'action': 'restore', 'allowed': state == 'archived', 'blockers': []}],
                 'last_change': current, 'physical_delete_supported': False}
