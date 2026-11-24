@@ -112,6 +112,10 @@ class ResourceFiles:
         if command.owner_kind == 'project' and projects.get(command.owner_project_id, {}).get('status') != 'active':
             raise ProjectError('active_project_required')
 
+    def check_upload(self, principal, policy, command):
+        with self.projects.database() as db:
+            self.require_upload(principal, policy, command, db)
+
     def upload(self, principal, policy, command, payload):
         self.require_manager(principal, policy)
         if not 0 < len(payload) <= MAX_BYTES:

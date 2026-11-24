@@ -6,14 +6,18 @@ import {dataResponse} from './data-project-client';
 import {fileUploadQuery,referenceFileAccept,referenceFileError} from './data-file-contract';
 import {useUnsavedNavigation} from './unsaved-navigation';
 
-export function DataFilePanel({workspace,project,onClose,onChanged}:{workspace:string;project:string;onClose:()=>void;onChanged:()=>void}){
+export function DataFilePanel({workspace,project,onClose,onChanged}:Readonly<{workspace:string;project:string;onClose:()=>void;onChanged:()=>void}>){
  const [ownerKind,setOwnerKind]=useState('project'),[owner,setOwner]=useState(project),[file,setFile]=useState<File|null>(null),[base,setBase]=useState(false),[reason,setReason]=useState(''),[busy,setBusy]=useState(false),[error,setError]=useState('');
  const pending=useRef<{file:File;key:string;id:string}|null>(null),gate=useRef(false),request=useRef<AbortController|null>(null);
  const dirty=!!file||!!reason||base||ownerKind!=='project'||owner!==project;
  useUnsavedNavigation(dirty||busy,'上传资料');useEffect(()=>()=>request.current?.abort(),[]);
- async function upload(){if(gate.current||!file)return;const invalid=referenceFileError(file);if(invalid){setError(invalid);return;}gate.current=true;setBusy(true);setError('');
+ async function upload(){
+  if(gate.current||!file){return;}
+  const invalid=referenceFileError(file);if(invalid){setError(invalid);return;}gate.current=true;setBusy(true);setError('');
   const fields={ownerKind,project:owner,name:file.name,base,reason},key=JSON.stringify(fields);
-  if(pending.current?.file!==file||pending.current.key!==key)pending.current={file,key,id:crypto.randomUUID().replaceAll('-','')};
+  if(pending.current?.file!==file||pending.current.key!==key){
+   pending.current={file,key,id:crypto.randomUUID().replaceAll('-','')};
+  }
   const c=new AbortController();request.current=c;
   try{const response=await fetch(businessEndpoint+'/api/data-files?'+fileUploadQuery({...fields,requestId:pending.current.id}),{method:'POST',headers:{'Content-Type':'application/octet-stream'},body:file,signal:c.signal,cache:'no-store'});await dataResponse(response);if(!c.signal.aborted)onChanged();}
   catch(e){if(!c.signal.aborted)setError(e instanceof Error?e.message:'上传失败，请重试。');}finally{gate.current=false;if(!c.signal.aborted)setBusy(false);}

@@ -42,16 +42,24 @@ def test_project_upload_needs_no_scene_and_is_fixed_repeat_safe_and_downloadable
     assert upload(client, headers, project, request_id=request).json()['replayed'] is True
     assert upload(client, headers, project, request_id=request, payload=b'changed').status_code==409
     item = file_item(client, response.json()['resource_id'])
-    assert item['kind']=='resource_file' and item['space_id'] is None and item['href'] is None
-    assert item['owner_kind']=='project' and item['owner_project_id']==project and item['version_registered']
+    assert item['kind'] == 'resource_file'
+    assert item['space_id'] is None
+    assert item['href'] is None
+    assert item['owner_kind'] == 'project'
+    assert item['owner_project_id'] == project
+    assert item['version_registered']
     assert client.get('/api/data-projects',params={'view':'scenes','project_id':project}).json()['total']==0
     assert before=={p:p.read_bytes() for p in jobs.inputs.root.rglob('*') if p.is_file()}
     raw = download(client,item)
-    assert raw.status_code==200 and raw.content==b'SYNTHETIC PARK CONTROL NETWORK'
-    assert raw.headers['cache-control']=='no-store' and raw.headers['x-content-type-options']=='nosniff'
+    assert raw.status_code == 200
+    assert raw.content == b'SYNTHETIC PARK CONTROL NETWORK'
+    assert raw.headers['cache-control'] == 'no-store'
+    assert raw.headers['x-content-type-options'] == 'nosniff'
     assert raw.headers['content-security-policy'].startswith('sandbox')
     head=download(client,item,'HEAD')
-    assert head.status_code==200 and not head.content and int(head.headers['content-length'])==len(raw.content)
+    assert head.status_code == 200
+    assert not head.content
+    assert int(head.headers['content-length']) == len(raw.content)
     assert register(client,headers,item,project,request_id=uuid4().hex,is_base=False).status_code==200
     assert not file_item(client,item['resource_id'])['is_base']
     # Originals, registrations and audit records share one backup transaction.
@@ -69,13 +77,17 @@ def test_project_member_read_follows_current_project_access_and_cannot_manage(se
     assert associate(client,headers,scenes[0]['id'],a,2,'c').status_code==200
     member_headers,_=sign_in(secured,'usr_engineer')
     files=[i for i in client.get('/api/data-resources').json()['items'] if i['kind']=='resource_file']
-    assert len(files)==1 and files[0]['resource_id']==a_item['resource_id'] and not files[0]['can_manage']
-    assert download(client,a_item).status_code==200 and download(client,b_item).status_code==403
+    assert len(files) == 1
+    assert files[0]['resource_id'] == a_item['resource_id']
+    assert not files[0]['can_manage']
+    assert download(client, a_item).status_code == 200
+    assert download(client, b_item).status_code == 403
     assert upload(client,member_headers,a).status_code==403
     headers,_=sign_in(secured,'usr_manager')
     assert associate(client,headers,scenes[0]['id'],b,3,'d').status_code==200
     sign_in(secured,'usr_engineer')
-    assert download(client,a_item).status_code==403 and download(client,b_item).status_code==200
+    assert download(client, a_item).status_code == 403
+    assert download(client, b_item).status_code == 200
 
 
 def test_common_file_requires_grant_and_actual_project_reference(secured):
@@ -86,7 +98,8 @@ def test_common_file_requires_grant_and_actual_project_reference(secured):
     response=upload(client,headers)
     assert response.status_code==201,response.text
     item=file_item(client,response.json()['resource_id'])
-    assert item['owner_kind']=='workspace' and item['owner_project_id'] is None
+    assert item['owner_kind'] == 'workspace'
+    assert item['owner_project_id'] is None
     assert not any(i['resource_id']==item['resource_id'] for i in client.get('/api/data-resources',params={'project_id':a}).json()['items'])
     assert client.get('/api/data-resources',params={'ownership':'workspace'}).json()['total']==1
     grant=change(client,headers,'grant',resource_id=item['resource_id'],version_id=item['source_version']['version_id'],
@@ -101,7 +114,9 @@ def test_common_file_requires_grant_and_actual_project_reference(secured):
     assert available.json()['items'][0]['owner_kind']=='workspace'
     assert change(client,user_headers,'use',grant_id=granted['id'],expected_grant_revision=1,project_id=a,purpose='Reference control network').status_code==200
     row=next(i for i in client.get('/api/data-resources',params={'project_id':a,'ownership':'workspace','placement':'project'}).json()['items'] if i['resource_id']==item['resource_id'])
-    assert row['external'] and row['owner_kind']=='workspace' and not row['can_manage']
+    assert row['external']
+    assert row['owner_kind'] == 'workspace'
+    assert not row['can_manage']
     url={'grant_id':granted['id'],'project_id':a,'grant_revision':1}
     assert client.get('/api/data-sharing/download',params=url).content==b'SYNTHETIC PARK CONTROL NETWORK'
     headers,_=sign_in(secured,'usr_manager')
@@ -165,7 +180,8 @@ def test_ownership_cannot_be_switched_by_maintenance_and_project_archive_is_guar
     response=upload(client,headers,a);item=file_item(client,response.json()['resource_id'])
     assert register(client,headers,item,None,owner_kind='workspace',request_id=uuid4().hex).status_code==409
     archived=client.post('/api/data-projects',headers=headers,json={'action':'update','project_id':a,'name':'Archive','status':'archived','request_id':uuid4().hex,'expected_revision':1,'reason':'Archive synthetic project'})
-    assert archived.status_code==409 and archived.json()['detail']=='project_has_managed_resources'
+    assert archived.status_code == 409
+    assert archived.json()['detail'] == 'project_has_managed_resources'
     common=upload(client,headers).json();common_item=file_item(client,common['resource_id'])
     assert register(client,headers,common_item,None,owner_kind='workspace',request_id=uuid4().hex,is_base=False).status_code==200
 
@@ -224,7 +240,8 @@ def test_original_storage_reports_trusted_workspace_even_without_scene_bindings(
     # authenticated upload in the same transaction as its original.
     first=stored_bytes(directory,[])
     owner=next(iter(first))
-    assert owner[1:]==('org_mock','ws_mock') and first[owner]==len(b'SYNTHETIC PARK CONTROL NETWORK')
+    assert owner[1:] == ('org_mock', 'ws_mock')
+    assert first[owner] == len(b'SYNTHETIC PARK CONTROL NETWORK')
     assert change(client,headers,'grant',resource_id=item['resource_id'],version_id=item['source_version']['version_id'],
                   expected_resource_revision=1,target_kind='workspace',allow_download=True).status_code==200
     # A separately retained frozen snapshot consumes storage too, once.
@@ -246,9 +263,11 @@ def test_reference_scope_and_owner_filters_apply_before_directory_deduplication(
                   space_id=scenes[1]['id'],purpose='Scene reference').status_code==200
     assert client.get('/api/data-resources',params={'project_id':b,'placement':'project','search':'control-network'}).json()['total']==0
     result=client.get('/api/data-resources',params={'project_id':b,'space_id':scenes[1]['id'],'placement':'scene','search':'control-network'}).json()
-    assert result['total']==1 and result['items'][0]['external']
+    assert result['total'] == 1
+    assert result['items'][0]['external']
     # The owner can read the original as well. An external-only filter must
     # not lose the use when the unfiltered directory deduplicates its source.
     result=client.get('/api/data-resources',params={'ownership':'external','search':'control-network'}).json()
-    assert result['total']==1 and result['items'][0]['external']
+    assert result['total'] == 1
+    assert result['items'][0]['external']
     assert client.get('/api/data-resources',params={'ownership':'owned','search':'control-network'}).json()['items'][0]['owner_project_id']==a

@@ -196,17 +196,21 @@ class WorkspaceResources:
                     'next_offset': query.offset + query.limit if query.offset + query.limit < len(rows) else None,
                     'observed_at': report['observed_at'], 'source_files_rechecked': False}
 
-    def change(self, principal, policy, change):
-        if not policy.workspace_manager(principal):
-            raise PermissionError('resource_management_denied')
+    def managed_item(self, principal, policy, identity):
         _, items, _ = self.projection(principal, policy)
-        item = next((v for v in items if v['resource_id'] == change.resource_id), None)
+        item = next((v for v in items if v['resource_id'] == identity), None)
         if item is None:
             with self.projects.database() as db:
                 scope = self.projects.scope(principal)
                 _, projects, links = self.projects.state(db, scope)
                 item = next((v for v in self.files.rows(principal, policy, db, scope, projects, links, self.records(db, scope))
-                             if v['resource_id'] == change.resource_id), None)
+                             if v['resource_id'] == identity), None)
+        return item
+
+    def change(self, principal, policy, change):
+        if not policy.workspace_manager(principal):
+            raise PermissionError('resource_management_denied')
+        item = self.managed_item(principal, policy, change.resource_id)
         if item is None:
             raise PermissionError('resource_access_denied')
         if item['space_id']:
