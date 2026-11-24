@@ -43,7 +43,7 @@ function validateSceneResource(item:ResourceItem,report:ResourceReport){
 }
 export function parseResourceReport(value:unknown,scope:ResourceScope):ResourceReport{
  const v=value as ResourceReport;
- if(!v||v.profile!=='cospace.data-resources/0.1'||scope.workspace&&v.workspace_id!==scope.workspace||(v.project_id||'')!==scope.project||(v.space_id||'')!==scope.space||v.category!==scope.category||!Array.isArray(v.items)||!Array.isArray(v.spaces)||!Number.isInteger(v.total)||v.total<0||!['ready','partial'].includes(v.status)||v.source_files_rechecked!==false)throw new Error('数据目录响应与当前范围不一致。');
+ if(v?.profile!=='cospace.data-resources/0.1'||scope.workspace&&v.workspace_id!==scope.workspace||(v.project_id||'')!==scope.project||(v.space_id||'')!==scope.space||v.category!==scope.category||!Array.isArray(v.items)||!Array.isArray(v.spaces)||!Number.isInteger(v.total)||v.total<0||!['ready','partial'].includes(v.status)||v.source_files_rechecked!==false)throw new Error('数据目录响应与当前范围不一致。');
  if((v.placement||'all')!==(scope.placement||'all')||(v.ownership||'all')!==(scope.ownership||'all'))throw new Error('数据筛选响应与当前范围不一致。');
  for(const item of v.items){
   if(item.external)validateExternalResource(item,scope);

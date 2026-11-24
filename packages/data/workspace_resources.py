@@ -207,6 +207,15 @@ class WorkspaceResources:
                              if v['resource_id'] == identity), None)
         return item
 
+    @staticmethod
+    def require_owner(saved, change):
+        if saved:
+            previous = (saved.get('owner_kind', 'project'), saved['owner_project_id'])
+            if previous != (change.owner_kind, change.owner_project_id):
+                raise ProjectError('resource_owner_transfer_not_supported')
+        elif change.owner_kind != 'project':
+            raise ProjectError('resource_owner_transfer_not_supported')
+
     def change(self, principal, policy, change):
         if not policy.workspace_manager(principal):
             raise PermissionError('resource_management_denied')
@@ -234,10 +243,7 @@ class WorkspaceResources:
                 raise ProjectError('resource_revision_changed')
             if item['source_version']['version_id'] != change.expected_version:
                 raise ProjectError('resource_source_changed')
-            if saved and (saved.get('owner_kind', 'project'), saved['owner_project_id']) != (change.owner_kind, change.owner_project_id):
-                raise ProjectError('resource_owner_transfer_not_supported')
-            if not saved and change.owner_kind != 'project':
-                raise ProjectError('resource_owner_transfer_not_supported')
+            self.require_owner(saved, change)
             at = datetime.now(timezone.utc).isoformat()
             version = item['source_version'] | {'recorded_at': at}
             versions = dict(saved['versions']) if saved else {}
