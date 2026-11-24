@@ -9,7 +9,8 @@ import tempfile
 
 
 DATABASES = ('ontology-group-configuration.sqlite3', 'ontology-authoring.sqlite3',
-             'scene-ontology-links.sqlite3', 'scene-registrations.sqlite3')
+             'scene-ontology-links.sqlite3', 'scene-registrations.sqlite3',
+             'business-projects.sqlite3')
 CONTROL_DATABASE = 'preview-lifecycle.sqlite3'
 COORDINATE_DATABASE = 'input-coordinates.sqlite3'
 
