@@ -183,6 +183,8 @@ class BusinessAccess:
         if path=='/api/data-catalog' and method in ('GET','HEAD'):
             if q.get('space_id'):access.space(principal,q['space_id'],DATA_MANAGE)
             return {'principal':principal}
+        if path=='/api/data-lineage' and method in ('GET','HEAD'):
+            return {'principal':principal}
         if path=='/api/data-projects':
             if method not in ('GET','HEAD','POST') or method=='POST' and not policy.workspace_manager(principal):
                 raise PermissionError()
@@ -835,6 +837,15 @@ class BusinessAccess:
                 except ValidationError:return deny(422,'resource_sharing_invalid_request')
                 except ProjectError as exc:return deny(exc.status,exc.code)
                 except (ProjectUnavailable,CatalogUnavailable,AttachmentRejected,KeyError,TypeError):return deny(503,'resource_sharing_unavailable')
+                return JSONResponse(result,headers={'Cache-Control':'no-store'})
+            if path=='/api/data-lineage':
+                from packages.data.resource_lineage import LineageQuery, ResourceLineage
+                try:
+                    query = LineageQuery.model_validate(dict(request.query_params))
+                    result = await run_in_threadpool(ResourceLineage(self.workspace_resources).read, context['principal'], policy, query)
+                except ValidationError:return deny(422,'resource_lineage_invalid')
+                except ProjectError as exc:return deny(exc.status,exc.code)
+                except (ProjectUnavailable,CatalogUnavailable,KeyError,TypeError,ValueError):return deny(503,'resource_lineage_unavailable')
                 return JSONResponse(result,headers={'Cache-Control':'no-store'})
             if path=='/api/data-resources':
                 try:
