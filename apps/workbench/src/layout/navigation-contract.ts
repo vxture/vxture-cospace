@@ -34,6 +34,9 @@ export function headerSceneLinkFromUrl(space:string,url:string){
  const [path,search='']=url.split('?');
  // Public ontology definitions have no active-scene dependency.
  if(path==='/ontology')return url;
+ // The platform resource directory uses explicit content filters, independent of
+ // the header's remembered scene. Legacy scene tools still switch their scene.
+ if(path==='/data'&&!['tab','input','artifact','batch','publication'].some(key=>new URLSearchParams(search).has(key)))return url;
  if(path==='/space'&&!new URLSearchParams(search).has('space')&&new URLSearchParams(search).get('screen')!=='space')return url;
  const route=path.slice(1) as ModuleRoute;
  if(['space','data','build','registration','delivery','association','ontology'].includes(route))return sceneLinkFromUrl(route,space,url);

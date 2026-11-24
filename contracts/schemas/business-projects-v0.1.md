@@ -1,6 +1,6 @@
 # 业务项目与场景关联 v0.1
 
-状态：D01 后端实现。页面项目视角在 D02 接入，跨项目共享及数据版本引用在 D03 接入；本接口不声明这些能力已经提供。
+状态：D01 后端与 D02 项目页面已实现。跨项目共享及实际使用的固定版本引用在 D03 接入。
 
 ## 归属与兼容
 
@@ -16,7 +16,7 @@
 
 沿用中央会话及平台访问检查。POST 必须通过同源 Origin 与 CSRF 校验。作用域、actor 不接受客户端参数；未知字段拒绝。
 
-项目管理沿用 `workspace_manager`（工作区所有者或现有产品管理角色）。场景关联还需当前场景的 `data.manage` 和 `space.manage` 权限；项目管理资格不扩大场景数据权限。普通数据管理人员只能读取与自己有 `data.manage` 权限的场景存在关联的项目；没有关联的项目仅管理者可读。
+项目管理沿用 `workspace_manager`（工作区所有者或现有产品管理角色）。场景关联还需当前场景的 `data.manage` 和 `space.manage` 权限；项目管理资格不扩大场景数据权限。普通数据管理人员只能读取与自己有 `data.manage` 权限的场景存在关联、或管理这些可读场景资源的项目；没有关联的项目仅管理者可读。
 
 项目列表中的 `scene_count` 始终只统计当前身份有数据管理权限的场景，标明 `scene_count_scope=authorized_scenes`。场景列表只返回同一可见集合；操作历史仅管理者可查，涉及不可见场景的事件不返回。项目成员、共享授权及跨工作区交换尚未实现，不能将项目关联视作新增数据访问授权。
 
@@ -41,7 +41,7 @@
 | --- | --- | --- |
 | create | name、可选 description | 创建业务项目；创建身份来自当前主体。 |
 | adopt | legacy_project_id、name、可选 description | 显式接纳当前授权场景所关联的旧项目，保留原 ID，不自动迁移成员。 |
-| update | project_id、name、可选 description、status | 更新项目元数据；status 默认 active，可设 archived。仍有关联场景时拒绝归档。 |
+| update | project_id、name、可选 description、status | 更新项目元数据；status 默认 active，可设 archived。仍有关联场景或管理资源时拒绝归档。 |
 | associate | space_id、project_id | 设定场景业务主项目；project_id=null 表示解除关联。目标须为同作用域的 active 项目。 |
 
 名称 1–100 字符，说明最多 500 字符；文本去首尾空白。一次事务原子保存业务变更、工作区修订和审计。对同一 scope + actor + request_id，完全相同命令重试返回原事件，`replayed=true`；参数变化返回 409。重试仍须通过当前权限检查。

@@ -42,7 +42,7 @@ def metadata(root, path, *, with_digest=False):
     return (record, hashlib.sha256(raw).hexdigest()) if with_digest else record
 
 
-def catalog(jobs, directory, policy, principal, query):
+def catalog(jobs, directory, policy, principal, query, *, all_metadata=False):
     # Derive scope from this request's verified principal/policy, never from a
     # browser-supplied workspace, a last-scene setting or preview visibility.
     if query.space_id:
@@ -171,7 +171,7 @@ def catalog(jobs, directory, policy, principal, query):
             try:
                 for record in SceneAttachments(jobs.inputs).list(space):
                     add(record, 'attachment', 'original', record['name'], 'stored_original',
-                        'data', tab='references')
+                        'data', tab='references', attachment=record['id'])
             except (OSError, ValueError, TypeError, KeyError):
                 issue('attachments', space)
 
@@ -185,7 +185,7 @@ def catalog(jobs, directory, policy, principal, query):
             'space_id': query.space_id, 'observed_at': datetime.now(timezone.utc).isoformat(),
             'status': 'partial' if issues else 'ready', 'issues': issues,
             'spaces': [{'id': s['id'], 'name': s['name']} for s in sorted(spaces.values(), key=lambda s: s['id'])],
-            'items': filtered[query.offset:query.offset + query.limit], 'counts': counts, 'total': total,
+            'items': filtered if all_metadata else filtered[query.offset:query.offset + query.limit], 'counts': counts, 'total': total,
             'offset': query.offset, 'limit': query.limit,
             'next_offset': query.offset + query.limit if query.offset + query.limit < total else None,
             'consistency': 'request_time_metadata_reads_not_transactional',

@@ -51,6 +51,7 @@ from packages.service.amap_gateway import AmapGateway
 from packages.service.globe_runtime import GlobeRuntime
 from packages.data.workspace_catalog import catalog as workspace_catalog, CatalogQuery, CatalogUnavailable
 from packages.lifecycle.workspace_projects import WorkspaceProjects, ProjectChange, ProjectQuery, ProjectError, ProjectUnavailable
+from packages.data.workspace_resources import WorkspaceResources, ResourceQuery, ResourceChange
 from packages.infrastructure.spatial_observation_store import ObservationStorageUnavailable
 from packages.views.agent.ifc_structure_exchange import export_structure_snapshot
 from packages.views.agent.ifc_geometry_exchange import export_geometry_component
@@ -112,6 +113,7 @@ class BusinessAccess:
         self.workspace_scenes=WorkspaceScenes(directory,policies,self.sources,workspace_config,
             platform_access=subscriptions is not None or workspace_scene_visibility)
         self.workspace_projects=WorkspaceProjects(directory)
+        self.workspace_resources=WorkspaceResources(jobs,directory)
         self.registration=PreviewRegistration(jobs.inputs,{}) if jobs.inputs else None
         self.consumer=None
         from packages.service.service_monitor import ServiceMonitor
@@ -156,6 +158,10 @@ class BusinessAccess:
             if q.get('space_id'):access.space(principal,q['space_id'],DATA_MANAGE)
             return {'principal':principal}
         if path=='/api/data-projects':
+            if method not in ('GET','HEAD','POST') or method=='POST' and not policy.workspace_manager(principal):
+                raise PermissionError()
+            return {'principal':principal}
+        if path=='/api/data-resources':
             if method not in ('GET','HEAD','POST') or method=='POST' and not policy.workspace_manager(principal):
                 raise PermissionError()
             return {'principal':principal}
@@ -740,6 +746,18 @@ class BusinessAccess:
                 from packages.service.service_assurance import assurance
                 diagnosis=await run_in_threadpool(assurance,self.jobs,request.query_params['space_id'],result,configuration)
                 return JSONResponse(result|{'configuration':configuration,'assurance':diagnosis},headers={'Cache-Control':'no-store'})
+            if path=='/api/data-resources':
+                try:
+                    if request.method=='POST':
+                        change=ResourceChange.model_validate(body)
+                        result=await run_in_threadpool(self.workspace_resources.change,context['principal'],policy,change)
+                    else:
+                        query=ResourceQuery.model_validate(dict(request.query_params))
+                        result=await run_in_threadpool(self.workspace_resources.read,context['principal'],policy,query)
+                except ValidationError:return deny(422,'resource_invalid_request')
+                except ProjectError as exc:return deny(exc.status,exc.code)
+                except (ProjectUnavailable,CatalogUnavailable):return deny(503,'resource_directory_unavailable')
+                return JSONResponse(result,headers={'Cache-Control':'no-store'})
             if path=='/api/data-projects':
                 try:
                     if request.method=='POST':
