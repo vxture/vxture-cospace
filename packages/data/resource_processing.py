@@ -73,10 +73,10 @@ class ProcessingGraph:
     @staticmethod
     def source_keys(binding):
         if binding and binding.get('format') == 'ply_pointcloud':
-            return ('snapshot_sha256', 'cloud_sha256')
+            return ['snapshot_sha256', 'cloud_sha256']
         if binding and binding.get('format') in ('ros1_lidar_single_frame', 'ros1_lidar_multiframe_icp'):
-            return ('snapshot_sha256', 'bag_sha256', 'selected_frame')
-        return ('snapshot_sha256', 'tracking_sha256')
+            return ['snapshot_sha256', 'bag_sha256', 'selected_frame']
+        return ['snapshot_sha256', 'tracking_sha256']
 
     def candidate_model(self, identity, record, binding, matches):
         model, digest = metadata(self.jobs.root, self.jobs.root / identity / 'output/model.json', with_digest=True)

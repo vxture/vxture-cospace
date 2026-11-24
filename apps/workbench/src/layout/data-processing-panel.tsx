@@ -32,7 +32,7 @@ export function DataGovernancePanel({workspace,resource,label,onChanged}:Readonl
  async function commit(){
   if(!report||!action||!reason.trim()||gate.current){return;}
   gate.current=true;setBusy(true);setError('');const fields={resource_id:resource,action,reason:reason.trim(),expected_revision:report.revision,expected_snapshot:report.snapshot},key=JSON.stringify(fields),body=pending.current?.key===key?pending.current.body:{...fields,request_id:crypto.randomUUID().replaceAll('-','')};pending.current={key,body};const c=new AbortController();request.current=c;
-  try{const value=await dataRequest('/api/data-governance',c.signal,body);validateGovernanceResult(value,resource,action,report.revision);if(!c.signal.aborted){setReason('');setAction(null);onChanged();}}catch(e){if(!c.signal.aborted)setError(e instanceof Error?e.message:'归档操作失败。');throw e;}finally{gate.current=false;if(!c.signal.aborted)setBusy(false);}
+  try{const value=await dataRequest('/api/data-governance',c.signal,body);validateGovernanceResult(value,resource,action,report.revision);if(!c.signal.aborted){setReason('');setAction(null);onChanged();}}catch(e){if(!c.signal.aborted){setError(e instanceof Error?e.message:'归档操作失败。');}throw e;}finally{gate.current=false;if(!c.signal.aborted)setBusy(false);}
  }
  function submit(){if(!report||!action){return;}return confirm({verb:action==='archive'?'归档资料':'恢复资料',target:label,consequence:action==='archive'?'停止新共享、引用、版本追加和登记维护，原件与历史保留。':'重新允许新用途，不自动共享或关联。',preconditions:[{label:'全工作区引用与共享已核对',met:!!report.actions.find(a=>a.action===action)?.allowed},{label:'已填写原因',met:!!reason.trim()}]},commit);}
  const actionLabel=action==='archive'?'归档':'恢复';
