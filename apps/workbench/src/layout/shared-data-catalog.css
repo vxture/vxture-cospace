@@ -75,3 +75,8 @@
 .data-lineage-counts dd{margin:0;font-size:var(--heading-2-font-size);font-variant-numeric:tabular-nums}
 .data-management-drawer .data-project-form>[data-slot=button]{align-self:flex-start;height:var(--space-control-xl);min-height:var(--space-control-xl);font-size:var(--label-small-font-size)}
 .data-management-drawer .data-project-form>label select{height:var(--space-control-xl);min-height:var(--space-control-xl);font-size:var(--label-small-font-size)}
+
+.data-upgrade-panel{display:flex;flex-direction:column;gap:var(--space-md);min-width:0;padding-block:var(--space-lg);border-top:1px solid var(--border)}
+.data-upgrade-table{font-size:var(--body-small-font-size)}
+.data-upgrade-table :is(th,td){white-space:normal;overflow-wrap:anywhere;min-width:0}
+.data-upgrade-panel .data-drawer-footer [data-slot=button]{font-size:var(--body-font-size)}

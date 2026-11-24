@@ -1,5 +1,6 @@
 import React,{useEffect,useState} from 'react';
 import {Button,StatusBadge} from '@vxture/design-system';
+import {businessEndpoint} from './business-endpoint';
 import {dataRequest} from './data-project-client';
 import {parseResourceTrace,type ResourceTrace} from './data-lineage-contract';
 import {sharingStatus} from './data-sharing-contract';
@@ -14,7 +15,7 @@ function TraceVersions({report}:Readonly<{report:ResourceTrace}>){
  const unregistered=report.source.state==='current'&&!report.versions.some(v=>v.current);
  return <section className="data-lineage-section" aria-label="版本记录"><div className="data-lineage-heading"><h3>版本记录</h3><span className="data-resource-secondary">共 {report.versions.length} 个</span></div>
  {unregistered&&<p className="data-resource-secondary">当前来源版本尚未登记，已有引用保持原固定版本。</p>}
- {report.versions.map(v=><article key={v.version_id} className="data-lineage-version"><div className="data-sharing-record"><code title={v.version_id}>{v.version_id.slice(0,12)}</code><StatusBadge tone="neutral">{currentLabel(v.current,report.view)}</StatusBadge>{v.snapshot_saved&&<StatusBadge tone="neutral">已保存共享快照</StatusBadge>}</div><p className="data-resource-secondary">{v.format||'格式未记录'} · {v.bytes==null?'大小未记录':`${v.bytes.toLocaleString()} B`} · {date(v.created_at)}</p></article>)}</section>;
+ {report.versions.map(v=><article key={v.version_id} className="data-lineage-version"><div className="data-sharing-record"><code title={v.version_id}>{v.version_id.slice(0,12)}</code><StatusBadge tone="neutral">{currentLabel(v.current,report.view)}</StatusBadge>{v.snapshot_saved&&<StatusBadge tone="neutral">已保存共享快照</StatusBadge>}{report.view==='source'&&report.resource.kind==='resource_file'&&<Button asChild variant="outline" size="sm"><a href={businessEndpoint+'/api/data-files/download?'+new URLSearchParams({resource_id:report.resource_id,version_id:v.version_id})}>下载原件</a></Button>}</div><p className="data-resource-secondary">{v.format||'格式未记录'} · {v.bytes==null?'大小未记录':`${v.bytes.toLocaleString()} B`} · {date(v.created_at)}</p></article>)}</section>;
 }
 function TraceImpact({report,offset,onOffset}:Readonly<{report:ResourceTrace;offset:number;onOffset:(value:number)=>void}>){
  return <section className="data-lineage-section" aria-label="引用影响"><div className="data-lineage-heading"><h3>引用影响</h3><span className="data-resource-secondary">仅当前可见范围</span></div><dl className="data-lineage-counts"><div><dt>关联引用</dt><dd>{report.summary.linked_references}</dd></div><div><dt>授权有效</dt><dd>{report.summary.effective_references}</dd></div><div><dt>历史引用</dt><dd>{report.summary.historical_references}</dd></div></dl>
