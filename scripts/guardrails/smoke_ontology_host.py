@@ -23,9 +23,9 @@ MODULE = 'import runpy,sys; sys.path.insert(0,sys.argv.pop(1)); runpy.run_module
 
 
 @contextmanager
-def start(command, data, config, cwd):
+def start(command, data, config, cwd, *options):
     with subprocess.Popen([*command, 'serve', '--data-dir', str(data), '--identity-config', str(config),
-                           '--port', '0'], cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                           '--port', '0', *map(str, options)], cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                           text=True, encoding='utf-8') as process:
         line = Queue()
         Thread(target=lambda: line.put(process.stdout.readline()), daemon=True).start()

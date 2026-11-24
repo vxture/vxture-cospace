@@ -16,6 +16,7 @@ def main(argv=None):
     start.add_argument('--data-dir', type=Path, required=True)
     start.add_argument('--identity-config', type=Path, required=True)
     start.add_argument('--port', type=int, default=8791)
+    start.add_argument('--ui-dir', type=Path, help='Serve the standalone workbench build on the same local origin')
     backup = modes.add_parser('backup', help='Copy a consistent snapshot to a new directory')
     backup.add_argument('--data-dir', type=Path, required=True)
     backup.add_argument('--output-dir', type=Path, required=True)
@@ -30,9 +31,12 @@ def main(argv=None):
             root, config = args.data_dir.resolve(), args.identity_config.resolve()
             if config.is_relative_to(root):
                 parser.error('--identity-config must be outside --data-dir')
+            ui = args.ui_dir.resolve(strict=True) if args.ui_dir else None
+            if ui and (ui.is_relative_to(root) or root.is_relative_to(ui) or config.is_relative_to(ui)):
+                parser.error('--ui-dir must be separate from state and identity configuration')
             authenticate = TokenIdentity.load(config)
             initialize(root)
-            with server(root, args.port, authenticate) as service:
+            with server(root, args.port, authenticate, ui_dir=ui) as service:
                 print(f'Listening at http://127.0.0.1:{service.server_port}', flush=True)
                 service.serve_forever()
         elif args.command == 'backup':

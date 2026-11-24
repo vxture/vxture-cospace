@@ -11,13 +11,17 @@ from ..exchange import MAX_EXCHANGE_BYTES
 from ..workbench import DefinitionWorkbench
 from .authoring_sqlite import SQLiteAuthoringPort
 from .group_configuration import GroupConfigurationError, GroupConfigurationStore
-from .identity import strict_json
+from .identity import PERMISSIONS, strict_json
+from .static import POLICY, WorkbenchAssets
 from .storage import FILENAME
 
 DEFINITIONS = '/api/ontology-definitions'
 DIRECTORY = '/api/ontology-directory'
 GROUPS = '/api/ontology-configuration/groups'
 EXCHANGE = '/api/ontology-exchange/definitions'
+SESSION = '/api/ontology-session'
+DRAFTS = '/api/ontology-drafts'
+_READ_ONLY = (DIRECTORY, SESSION, DRAFTS)
 _REFERENCE_FIELDS = {'module_id', 'version', 'sha256'}
 _MAX_BODY = MAX_BYTES + 8192
 
@@ -68,17 +72,20 @@ def exchange_response(workbench, method, query, environ):
         if set(query) != _REFERENCE_FIELDS:
             raise RequestError(422, 'invalid_request')
         return workbench.export_release(query)
-    body = read_body(environ, maximum=MAX_EXCHANGE_BYTES + 4096)
+    body = read_body(environ, maximum=2 * MAX_EXCHANGE_BYTES + 4096)
     if type(body) is not dict:
         raise RequestError(422, 'invalid_request')
     action = body.get('action')
-    fields = {'action', 'package'}
+    native = 'package_json' in body
+    fields = {'action', 'package_json' if native else 'package'}
     if action == 'import':
         fields |= {'request_id', 'expected_revision'}
     if action not in ('preflight', 'import') or set(body) != fields:
         raise RequestError(422, 'invalid_request')
     try:
-        raw = canonical_bytes(body['package'])
+        if native and type(body['package_json']) is not str:
+            raise ValueError()
+        raw = body['package_json'].encode('utf-8') if native else canonical_bytes(body['package'])
     except (ValueError, TypeError, RecursionError, OverflowError):
         raise CatalogError('invalid_json', '/') from None
     if action == 'preflight':
@@ -87,29 +94,31 @@ def exchange_response(workbench, method, query, environ):
 
 
 class Application:
-    def __init__(self, root, authority, authenticate):
+    def __init__(self, root, authority, authenticate, *, assets=None):
         self.authority = authority
         self.authenticate = authenticate
+        self.assets = assets
         self.port = SQLiteAuthoringPort(root, filename=FILENAME)
         self.groups = GroupConfigurationStore(root, filename=FILENAME)
 
     def dispatch(self, environ):
-        if environ.get('HTTP_HOST') != self.authority or environ.get('HTTP_ORIGIN'):
-            raise RequestError(403, 'local_request_required')
         method, path = environ['REQUEST_METHOD'], environ['PATH_INFO']
-        if path not in (DEFINITIONS, DIRECTORY, GROUPS, EXCHANGE):
+        if path not in (DEFINITIONS, DIRECTORY, GROUPS, EXCHANGE, SESSION, DRAFTS):
             raise RequestError(404, 'not_found')
         # An injected adapter maps authentication to a trusted Principal.
         # Query, body, cookies and user-supplied identity headers are never used.
         principal = self.authenticate(environ.get('HTTP_AUTHORIZATION', ''))
         if principal is None:
             raise RequestError(401, 'authentication_required')
-        if method not in ('GET', 'HEAD', 'POST') or (path == DIRECTORY and method == 'POST'):
+        if method not in ('GET', 'HEAD', 'POST') or (path in _READ_ONLY and method == 'POST'):
             raise RequestError(405, 'method_not_allowed')
         query = query_params(environ.get('QUERY_STRING', ''))
         if (method == 'POST' or path not in (DEFINITIONS, EXCHANGE)) and query:
             raise RequestError(422, 'invalid_request')
         scope, actor = principal.scope, principal.actor
+        if path == SESSION:
+            return {'profile': 'vxture.ontology-session/0.1', 'scope': scope, 'actor': actor,
+                    'permissions': sorted(p for p in PERMISSIONS if principal.authorize(scope, actor, p) is True)}
         if path == GROUPS:
             if principal.authorize(scope, actor, 'configure_groups') is not True:
                 raise RequestError(403, 'forbidden')
@@ -118,6 +127,8 @@ class Application:
             return {**settings, 'can_manage': True}
 
         workbench = DefinitionWorkbench(self.port, scope, actor, authorize=principal.authorize)
+        if path == DRAFTS:
+            return workbench.draft_directory()
         if path == EXCHANGE:
             if method == 'POST' and not all(principal.authorize(scope, actor, permission) is True
                                             for permission in ('read', 'read_private', 'edit')):
@@ -137,8 +148,23 @@ class Application:
 
     def __call__(self, environ, start_response):
         status, problem, path = 200, None, None
+        content_type, cache = 'application/json', 'no-store'
         try:
-            payload = canonical_bytes(self.dispatch(environ))
+            origin = environ.get('HTTP_ORIGIN')
+            if (environ.get('HTTP_HOST') != self.authority
+                    or origin and (not self.assets or origin != f'http://{self.authority}')  # NOSONAR: origin equality for the IPv4-loopback-only reference server.
+                    or environ.get('HTTP_SEC_FETCH_SITE') in ('cross-site', 'same-site') and
+                    environ['PATH_INFO'].startswith('/api/')):
+                raise RequestError(403, 'local_request_required')
+            if self.assets and (environ['PATH_INFO'] == '/' or environ['PATH_INFO'].startswith('/assets/')):
+                if environ['REQUEST_METHOD'] not in ('GET', 'HEAD'):
+                    raise RequestError(405, 'method_not_allowed')
+                resource = self.assets.read(environ['PATH_INFO'])
+                if resource is None:
+                    raise RequestError(404, 'not_found')
+                payload, content_type, cache = resource
+            else:
+                payload = canonical_bytes(self.dispatch(environ))
         except RequestError as exc:
             status, problem = exc.status, exc.code
         except AuthoringError as exc:
@@ -161,12 +187,15 @@ class Application:
             status, problem = 503, 'ontology_host_unavailable'
         if problem:
             payload = canonical_bytes({'detail': problem, **({'path': path} if path is not None else {})})
-        headers = [('Content-Type', 'application/json'), ('Cache-Control', 'no-store'),
+        headers = [('Content-Type', content_type), ('Cache-Control', cache), ('Content-Security-Policy', POLICY),
+                   ('Referrer-Policy', 'no-referrer'), ('Cross-Origin-Resource-Policy', 'same-origin'),
                    ('X-Content-Type-Options', 'nosniff'), ('Content-Length', str(len(payload)))]
         if status == 401:
             headers.append(('WWW-Authenticate', 'Bearer'))
         if status == 405:
-            headers.append(('Allow', 'GET, HEAD' if environ['PATH_INFO'] == DIRECTORY else 'GET, HEAD, POST'))
+            endpoint = environ['PATH_INFO']
+            readonly = endpoint in _READ_ONLY or endpoint == '/' or endpoint.startswith('/assets/')
+            headers.append(('Allow', 'GET, HEAD' if readonly else 'GET, HEAD, POST'))
         start_response(f'{status} {HTTPStatus(status).phrase}', headers)
         return [b'' if environ['REQUEST_METHOD'] == 'HEAD' else payload]
 
@@ -181,8 +210,9 @@ class LocalHandler(WSGIRequestHandler):
         pass
 
 
-def server(root, port, authenticate):
+def server(root, port, authenticate, *, ui_dir=None):
     """Return a local server; leave production TLS/identity to the future host."""
+    assets = WorkbenchAssets(ui_dir) if ui_dir else None
     service = make_server('127.0.0.1', port, None, handler_class=LocalHandler)
-    service.set_app(Application(root, f'127.0.0.1:{service.server_port}', authenticate))
+    service.set_app(Application(root, f'127.0.0.1:{service.server_port}', authenticate, assets=assets))
     return service
