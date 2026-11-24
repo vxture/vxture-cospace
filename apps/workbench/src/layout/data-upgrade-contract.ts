@@ -16,9 +16,9 @@ function authorizedCandidate(row:AvailableResource,v:UpgradeReport){
 }
 export function parseUpgradeReport(value:unknown,use:ResourceUse,workspace:string,offset:number):UpgradeReport{
  const v=value as UpgradeReport;
- if(!v||v.profile!=='cospace.reference-upgrade/0.1'||workspace&&v.workspace_id!==workspace||!matchingUse(v,use)||!validPage(v,offset))throw Error('版本比较响应与当前引用不一致。');
+ if(v?.profile!=='cospace.reference-upgrade/0.1'||workspace&&v.workspace_id!==workspace||!matchingUse(v,use)||!validPage(v,offset))throw new Error('版本比较响应与当前引用不一致。');
  for(const row of v.candidates){
-  if(!authorizedCandidate(row,v))throw Error('候选版本授权无效。');
+  if(!authorizedCandidate(row,v))throw new Error('候选版本授权无效。');
  }
  return v;
 }

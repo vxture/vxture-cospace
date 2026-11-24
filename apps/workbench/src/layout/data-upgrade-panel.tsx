@@ -16,7 +16,7 @@ export function DataUpgradePanel({use,workspace,onChanged,onClose}:Readonly<{use
  },[use.id,use.revision,workspace,offset,generation]);
  const selected=report?.candidates.find(v=>v.grant.id===selection);
  async function upgrade(){
-  if(gate.current||!report||!selected)return;gate.current=true;setBusy(true);setError('');const c=new AbortController();request.current=c;
+  if(gate.current||!report||!selected){return;}gate.current=true;setBusy(true);setError('');const c=new AbortController();request.current=c;
   const fields={action:'upgrade',use_id:use.id,grant_id:selected.grant.id,expected_grant_revision:selected.grant.revision,expected_revision:report.use.revision,expected_version:report.use.version_id,reason},key=JSON.stringify(fields),body=pending.current?.key===key?pending.current.body:{...fields,request_id:crypto.randomUUID().replaceAll('-','')};pending.current={key,body};
   try{await dataRequest('/api/data-sharing',c.signal,body);if(!c.signal.aborted){setReason('');onChanged();onClose();}}catch(e){if(!c.signal.aborted)setError(e instanceof Error?e.message:'升级失败，原引用保持不变。');}finally{gate.current=false;if(!c.signal.aborted)setBusy(false);}
  }

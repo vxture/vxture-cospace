@@ -7,7 +7,7 @@ import {sharingStatus,type ResourceUse} from './data-sharing-contract';
 import {useOperationConfirmation} from './operation-confirmation';
 import {useUnsavedNavigation} from './unsaved-navigation';
 
-export function DataReferenceDetails({uses,workspace,onChanged}:{uses:ResourceUse[];workspace:string;onChanged:()=>void}){
+export function DataReferenceDetails({uses,workspace,onChanged}:Readonly<{uses:ResourceUse[];workspace:string;onChanged:()=>void}>){
  const [upgrading,setUpgrading]=useState(''),[reason,setReason]=useState(''),[busy,setBusy]=useState(false),[error,setError]=useState('');
  const gate=useRef(false),request=useRef<AbortController|null>(null),pending=useRef<{id:string;body:Record<string,unknown>}|null>(null);
  const confirm=useOperationConfirmation('data-reference:'+uses.map(u=>u.id+':'+u.revision).join(','));

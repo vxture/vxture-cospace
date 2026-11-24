@@ -112,7 +112,8 @@ def test_append_idempotence_conflicts_and_history_budget(secured, monkeypatch):
     old = file_item(client, identity); request = uuid4().hex
     assert append(client, headers, old, payload=b'45', request_id=request).status_code == 201
     replay = append(client, headers, old, payload=b'45', request_id=request)
-    assert replay.status_code == 200 and replay.json()['replayed']
+    assert replay.status_code == 200
+    assert replay.json()['replayed'] is True
     assert append(client, headers, old, payload=b'changed', request_id=request).status_code == 409
     assert append(client, headers, old).status_code == 409
     current = file_item(client, identity)
