@@ -52,6 +52,7 @@ from packages.service.globe_runtime import GlobeRuntime
 from packages.data.workspace_catalog import catalog as workspace_catalog, CatalogQuery, CatalogUnavailable
 from packages.lifecycle.workspace_projects import WorkspaceProjects, ProjectChange, ProjectQuery, ProjectError, ProjectUnavailable
 from packages.data.workspace_resources import WorkspaceResources, ResourceQuery, ResourceChange
+from packages.data.resource_sharing_contract import SharingChange, SharingQuery, SharedDownload
 from packages.infrastructure.spatial_observation_store import ObservationStorageUnavailable
 from packages.views.agent.ifc_structure_exchange import export_structure_snapshot
 from packages.views.agent.ifc_geometry_exchange import export_geometry_component
@@ -163,6 +164,10 @@ class BusinessAccess:
             return {'principal':principal}
         if path=='/api/data-resources':
             if method not in ('GET','HEAD','POST') or method=='POST' and not policy.workspace_manager(principal):
+                raise PermissionError()
+            return {'principal':principal}
+        if path in ('/api/data-sharing', '/api/data-sharing/download'):
+            if method not in ('GET', 'HEAD', 'POST') or path.endswith('/download') and method=='POST':
                 raise PermissionError()
             return {'principal':principal}
         if path=='/api/workspace-scenes' and method in ('GET','HEAD','POST'):
@@ -746,6 +751,27 @@ class BusinessAccess:
                 from packages.service.service_assurance import assurance
                 diagnosis=await run_in_threadpool(assurance,self.jobs,request.query_params['space_id'],result,configuration)
                 return JSONResponse(result|{'configuration':configuration,'assurance':diagnosis},headers={'Cache-Control':'no-store'})
+            if path in ('/api/data-sharing', '/api/data-sharing/download'):
+                try:
+                    sharing = self.workspace_resources.sharing
+                    if path.endswith('/download'):
+                        command = SharedDownload.model_validate(dict(request.query_params))
+                        snap, payload = await run_in_threadpool(sharing.download, context['principal'], policy, command)
+                        return ByteResponse(payload if request.method=='GET' else b'', media_type=BINARY_MEDIA_TYPE,
+                            headers={'Cache-Control':'no-store', 'Content-Length':str(len(payload)),
+                                     'Content-Disposition':"attachment; filename*=UTF-8''"+quote(snap['filename'],safe=''),
+                                     'X-Content-Type-Options':'nosniff', "Content-Security-Policy":"sandbox; default-src 'none'"})
+                    if request.method=='POST':
+                        if request.query_params:return deny(422,'resource_sharing_invalid_request')
+                        change = SharingChange.validate_json(json.dumps(body))
+                        result = await run_in_threadpool(sharing.change,context['principal'],policy,change)
+                    else:
+                        query = SharingQuery.model_validate(dict(request.query_params))
+                        result = await run_in_threadpool(sharing.read,context['principal'],policy,query)
+                except ValidationError:return deny(422,'resource_sharing_invalid_request')
+                except ProjectError as exc:return deny(exc.status,exc.code)
+                except (ProjectUnavailable,CatalogUnavailable,AttachmentRejected,KeyError,TypeError):return deny(503,'resource_sharing_unavailable')
+                return JSONResponse(result,headers={'Cache-Control':'no-store'})
             if path=='/api/data-resources':
                 try:
                     if request.method=='POST':

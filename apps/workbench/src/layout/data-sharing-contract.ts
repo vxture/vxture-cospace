@@ -1,0 +1,21 @@
+import type {DataVersion} from './data-catalog-contract';
+export type SharedSnapshot={label:string;kind:string;resource_type:string;source_version:DataVersion;is_base:boolean;payload_available:boolean;filename?:string;bytes?:number;sha256?:string};
+export type DataGrant={id:string;resource_id:string;version_id:string;revision:number;target_kind:'project'|'workspace';target_project_id:string|null;allow_download:boolean;expires_at:string|null;status:'active'|'revoked';access_status?:string;target_project_name?:string|null};
+export type ResourceUse={id:string;resource_id:string;version_id:string;grant_id:string;grant_revision:number;project_id:string;project_name:string;space_id:string|null;space_name:string|null;purpose:string;revision:number;status:'active'|'unlinked';access_status:string;allow_download:boolean;snapshot:SharedSnapshot;use_mode:'reference';coordinate_status:'not_applied';updated_at:string};
+export type AvailableResource={grant:DataGrant;snapshot:SharedSnapshot;owner_project_name:string;reference_revision:number;reference_status:string|null};
+export type SharingReport={profile:'cospace.resource-sharing/0.1';workspace_id:string;view:'grants'|'available'|'uses';project_id:string|null;resource_id:string|null;items:(DataGrant|AvailableResource|ResourceUse)[];total:number;next_offset:number|null};
+const resource=(v:string)=>/^resource-[a-f0-9]{32}$/.test(v),digest=(v:string)=>/^[a-f0-9]{64}$/.test(v),revision=(v:number)=>Number.isInteger(v)&&v>=1;
+export function validSnapshot(s:SharedSnapshot){return !!s&&typeof s.label==='string'&&['input','attachment','candidate','human_view','agent_view'].includes(s.kind)&&['reference','result','acquisition'].includes(s.resource_type)&&!!s.source_version&&digest(s.source_version.version_id)&&s.source_version.reference_kind==='source_metadata'&&typeof s.payload_available==='boolean'&&typeof s.is_base==='boolean'&&!('space_id' in s)&&!('href' in s)&&!('record_id' in s);}
+function validGrant(g:DataGrant){return !!g&&/^grant-[a-f0-9]{32}$/.test(g.id)&&resource(g.resource_id)&&digest(g.version_id)&&revision(g.revision)&&['project','workspace'].includes(g.target_kind)&&(g.target_kind==='project'?/^project-[a-f0-9]{16}$/.test(g.target_project_id||''):g.target_project_id===null)&&typeof g.allow_download==='boolean'&&['active','revoked'].includes(g.status);}
+export function validUse(u:ResourceUse){return !!u&&/^use-[a-f0-9]{32}$/.test(u.id)&&resource(u.resource_id)&&digest(u.version_id)&&/^grant-[a-f0-9]{32}$/.test(u.grant_id)&&revision(u.grant_revision)&&revision(u.revision)&&/^project-[a-f0-9]{16}$/.test(u.project_id)&&(u.space_id===null||/^space-[a-f0-9]{16}$/.test(u.space_id))&&typeof u.purpose==='string'&&validSnapshot(u.snapshot)&&u.snapshot.source_version.version_id===u.version_id&&['active','unlinked'].includes(u.status)&&['active','unlinked','revoked','expired','project_archived','grant_changed'].includes(u.access_status)&&typeof u.allow_download==='boolean'&&u.use_mode==='reference'&&u.coordinate_status==='not_applied';}
+export function parseSharingReport(value:unknown,scope:{workspace:string;view:string;project?:string;resource?:string}):SharingReport{
+ const v=value as SharingReport;
+ if(!v||v.profile!=='cospace.resource-sharing/0.1'||scope.workspace&&v.workspace_id!==scope.workspace||v.view!==scope.view||(v.project_id||'')!==(scope.project||'')||(v.resource_id||'')!==(scope.resource||'')||!Array.isArray(v.items)||!Number.isInteger(v.total)||v.total<0||v.next_offset!==null&&(!Number.isInteger(v.next_offset)||v.next_offset<0))throw Error('共享目录响应与当前范围不一致。');
+ for(const row of v.items){
+  if(v.view==='grants'){if(!validGrant(row as DataGrant))throw Error('共享授权无效。');}
+  else if(v.view==='uses'){if(!validUse(row as ResourceUse)||(row as ResourceUse).project_id!==scope.project)throw Error('引用记录无效。');}
+  else{const r=row as AvailableResource;if(!validGrant(r.grant)||!validSnapshot(r.snapshot)||r.snapshot.source_version.version_id!==r.grant.version_id||r.grant.target_kind==='project'&&r.grant.target_project_id!==scope.project||!Number.isInteger(r.reference_revision)||r.reference_revision<0)throw Error('可用共享资源无效。');}
+ }
+ return v;
+}
+export const sharingStatus:Record<string,string>={active:'授权有效',revoked:'已撤销',expired:'已到期',project_archived:'项目已归档',grant_changed:'授权已变化，需重新关联',unlinked:'已解除'};

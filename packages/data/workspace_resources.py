@@ -7,6 +7,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from packages.data.workspace_catalog import catalog, CatalogQuery, metadata
 from packages.data.scene_attachments import SceneAttachments
+from packages.data.workspace_resource_sharing import ResourceSharing
 from packages.lifecycle.preview_scope import match
 from packages.lifecycle.scene_initialization import checksum
 from packages.lifecycle.workspace_projects import WorkspaceProjects, ProjectError
@@ -44,6 +45,7 @@ class WorkspaceResources:
     def __init__(self, jobs, directory):
         self.jobs, self.directory = jobs, directory
         self.projects = WorkspaceProjects(directory)
+        self.sharing = ResourceSharing(self)
 
     def source_version(self, item):
         kind, identity, space = item['kind'], item['record_id'], item['space_id']
@@ -129,6 +131,8 @@ class WorkspaceResources:
                         for i in report['items'] if i['kind'] in ('job', 'preflight', 'batch')]
             else:
                 rows = []
+                grants = self.sharing.rows(db, scope, 'data_resource_grants')
+                shared_ids = {g['resource_id'] for g in grants.values() if self.sharing.grant_status(g, projects) == 'active'}
                 for item in items:
                     saved = registered.get(item['resource_id'])
                     owner = saved['owner_project_id'] if saved else None
@@ -139,11 +143,18 @@ class WorkspaceResources:
                                         'revision': saved['revision'] if saved else 0,
                                         'version_count': len(saved['versions']) if saved else 0,
                                         'version_registered': bool(saved and item['source_version']['version_id'] in saved['versions']),
+                                        'is_shared': item['resource_id'] in shared_ids,
                                         'can_manage': manager and 'space.manage' in policy.capabilities(principal, item['space_id'])})
+            rows = [r for r in rows if (not query.space_id or r['space_id'] == query.space_id) and
+                    (not query.project_id or query.project_id in (r['project_id'], r['owner_project_id']))]
+            if query.category != 'process':
+                unique = {r['resource_id']: r for r in rows}
+                for external in self.sharing.external_rows(principal, policy, db, scope, projects, links, query):
+                    if external['resource_id'] not in unique or query.project_id:
+                        unique[external['resource_id']] = external
+                rows = list(unique.values())
             q = query.search.strip().casefold()
             rows = [r for r in rows if
-                    (not query.space_id or r['space_id'] == query.space_id) and
-                    (not query.project_id or query.project_id in (r['project_id'], r['owner_project_id'])) and
                     (query.category in ('all', 'process') or query.category == 'base' and r['is_base']
                      or r['resource_type'] == query.category) and
                     q in ' '.join(str(r.get(k) or '') for k in ('label', 'record_id', 'space_name', 'owner_project_name')).casefold()]

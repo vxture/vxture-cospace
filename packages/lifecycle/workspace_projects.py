@@ -244,6 +244,10 @@ class WorkspaceProjects:
                     owned = db.execute('SELECT record FROM data_resources WHERE scope=?', (scope,))
                     if any(json.loads(row[0])['owner_project_id'] == identity for row in owned):
                         raise ProjectError('project_has_managed_resources')
+                if status == 'archived' and db.execute("SELECT 1 FROM sqlite_master WHERE name='data_resource_uses'").fetchone():
+                    uses = db.execute('SELECT record FROM data_resource_uses WHERE scope=?', (scope,))
+                    if any((use := json.loads(row[0]))['project_id'] == identity and use['status'] == 'active' for row in uses):
+                        raise ProjectError('project_has_resource_references')
                 record = {'id': identity, 'name': change.name, 'description': change.description, 'status': status,
                           'created_at': before['created_at'] if before else at,
                           'created_by': before['created_by'] if before else principal.subject,
