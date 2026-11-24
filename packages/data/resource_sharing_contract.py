@@ -137,7 +137,7 @@ class SharedSourceVersion(BaseModel):
 class StoredSnapshot(BaseModel):
     model_config = ConfigDict(extra='forbid', strict=True)
     label: str = Field(min_length=1)
-    kind: Literal['input', 'attachment', 'candidate', 'human_view', 'agent_view']
+    kind: Literal['input', 'attachment', 'candidate', 'human_view', 'agent_view', 'resource_file']
     resource_type: Literal['acquisition', 'reference', 'result']
     source_version: SharedSourceVersion
     is_base: bool
@@ -148,7 +148,7 @@ class StoredSnapshot(BaseModel):
 
     @model_validator(mode='after')
     def payload_metadata(self):
-        if self.payload_available and (self.kind!='attachment' or not self.filename or self.bytes is None or self.sha256 is None):
+        if self.payload_available and (self.kind not in ('attachment', 'resource_file') or not self.filename or self.bytes is None or self.sha256 is None):
             raise ValueError('snapshot_payload_invalid')
         if self.filename and (any(ord(c)<32 or ord(c)==127 for c in self.filename) or any(c in self.filename for c in '/\\:<>"|?*')):
             raise ValueError('snapshot_filename_invalid')

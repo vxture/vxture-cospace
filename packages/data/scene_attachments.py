@@ -40,6 +40,10 @@ class Attachment(BaseModel):
 def metadata(space_id, name):
     if not isinstance(space_id, str) or not re.fullmatch(r'space-[a-f0-9]{16}', space_id):
         raise AttachmentRejected('attachment_scene_required')
+    reference_name(name)
+
+
+def reference_name(name):
     if (not isinstance(name, str) or not 1 <= len(name) <= 160 or name != name.strip()
             or any(c in name for c in '/\\:<>"|?*') or any(ord(c) < 32 or ord(c) == 127 for c in name)
             or name.endswith(('.', ' '))):
