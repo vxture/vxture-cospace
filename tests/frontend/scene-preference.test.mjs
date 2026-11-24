@@ -1,3 +1,4 @@
+import {hasHeaderContext} from '../../apps/workbench/src/layout/product-navigation.ts';
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {preferredScene,sceneContextHref,scenePreferenceKey} from '../../apps/workbench/src/layout/scene-preference.ts';
@@ -23,4 +24,9 @@ test('global context retains module queries and explicit scene, while catalog re
 
 test('ontology configuration never inherits a remembered scene',()=>{
  assert.equal(sceneContextHref('/settings?section=ontology-groups','remembered'),'/settings?section=ontology-groups');
+});
+
+test('public resources remove header context and remembered-scene URL injection',()=>{
+ for(const route of ['data','ontology']){assert.equal(hasHeaderContext(route),false);assert.equal(sceneContextHref('/'+route+'?category=all','remembered'),'/'+route+'?category=all');}
+ for(const route of ['build','registration','association','delivery'])assert.equal(hasHeaderContext(route),true);
 });

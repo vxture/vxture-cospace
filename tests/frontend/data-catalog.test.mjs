@@ -14,10 +14,10 @@ test('resource navigation is fixed and does not expose workflow actions or proje
  assert.equal(dataCatalogHref({category:'base',project:'p-one',filter_space:''}),'/data?scope=all&category=base&project=p-one');
  assert.equal(dataCatalogHref({project:'',filter_space:'',search:''}),'/data?scope=all&category=all');
 });
-test('header scene changes preserve explicit resource filters; scene tools still change their scene',()=>{
+test('shared resource modules have no global header scene switching',()=>{
  const url=dataCatalogHref({project:'p-one',filter_space:'scene-a',search:'控制网'});
  assert.equal(headerSceneLinkFromUrl('scene-b',url),url);
- assert.equal(headerSceneLinkFromUrl('scene-b','/data?space=scene-a&tab=versions&artifact=old'),'/data?space=scene-b&tab=versions');
+ assert.equal(headerSceneLinkFromUrl('scene-b','/data?space=scene-a&tab=versions&artifact=old'),'/data?space=scene-a&tab=versions&artifact=old');
 });
 test('accepts scoped metadata resources and separate process records',()=>{
  assert.equal(parseResourceReport(report,scope).items[0].resource_id,item.resource_id);
