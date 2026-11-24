@@ -13,6 +13,7 @@
 .data-resource-catalog .workspace-page-actions{padding:0}
 .data-catalog-toolbar{display:flex;align-items:center;gap:var(--space-sm);min-width:0;flex-wrap:wrap;margin:0;padding:0;font-size:var(--label-small-font-size)}
 .data-catalog-toolbar :is(input,select,[data-slot=button]),.data-project-picker{height:var(--space-control-xl);min-height:var(--space-control-xl);font-size:var(--label-small-font-size)}
+.shared-support-layout .data-resource-catalog .data-catalog-toolbar [data-slot=button]{font-size:var(--label-small-font-size)}
 .data-catalog-toolbar form{display:flex;align-items:center;gap:var(--space-xs);flex:0 1 var(--container-overlay-lg);width:var(--container-overlay-lg);max-width:100%;min-width:var(--container-overlay-md);margin:0}
 .data-catalog-toolbar form input{min-width:0;flex:1}
 .data-catalog-toolbar>span:has(select){flex:0 1 var(--container-overlay-sm);width:var(--container-overlay-sm);min-width:0}
