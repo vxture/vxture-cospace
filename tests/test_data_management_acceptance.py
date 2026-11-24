@@ -29,7 +29,8 @@ def test_project_original_to_explicit_upgrade_and_recoverable_archive(shared, tm
     assert uploaded.status_code == 201, uploaded.text
     identity = uploaded.json()['resource_id']
     s['item'] = old = file_item(client, identity)
-    assert old['is_base'] and old['owner_project_id'] == s['a']
+    assert old['is_base']
+    assert old['owner_project_id'] == s['a']
     assert client.get('/api/data-processing', params={'resource_id': identity}).json()['status'] == 'not_applicable'
     s['old_grant'] = grant(s)
 
@@ -63,7 +64,9 @@ def test_project_original_to_explicit_upgrade_and_recoverable_archive(shared, tm
     b_headers, _ = sign_in(identity_context, 'usr_other')
     reference = next(i for i in client.get('/api/data-resources', params={'project_id': s['b']}).json()['items']
                      if i['resource_id'] == identity)
-    assert reference['external'] and not reference['can_manage'] and reference['href'] is None
+    assert reference['external']
+    assert not reference['can_manage']
+    assert reference['href'] is None
     assert reference['uses'][0]['version_id'] == old['source_version']['version_id']
     assert compare(s).json()['total'] == 1
     response = upgrade(s, b_headers)
@@ -81,7 +84,8 @@ def test_project_original_to_explicit_upgrade_and_recoverable_archive(shared, tm
     for granted in (s['old_grant'], s['new_grant']):
         assert change(client, s['headers'], 'revoke', grant_id=granted['id'], expected_revision=1).status_code == 200
     blocked = command(client, s['headers'], identity)[1]
-    assert blocked.status_code == 409 and blocked.json()['detail'] == 'resource_has_references'
+    assert blocked.status_code == 409
+    assert blocked.json()['detail'] == 'resource_has_references'
     b_headers, _ = sign_in(identity_context, 'usr_other')
     assert change(client, b_headers, 'unlink', use_id=upgraded['id'], expected_revision=2).status_code == 200
     s['headers'], _ = sign_in(identity_context, 'usr_manager')
