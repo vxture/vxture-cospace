@@ -8,6 +8,7 @@ from packages.data.scene_attachments import SceneAttachments, MAX_BYTES
 from packages.lifecycle.scene_initialization import checksum
 from packages.lifecycle.workspace_projects import ProjectError, ProjectUnavailable
 from packages.data.resource_sharing_contract import StoredGrant, StoredUse, StoredSnapshot
+from packages.data.resource_storage_usage import record_scope
 
 
 class ResourceSharing:
@@ -62,8 +63,9 @@ class ResourceSharing:
     def require_source(self, principal, policy, resource):
         if not policy.workspace_manager(principal):
             raise PermissionError('resource_sharing_denied')
-        policy.require(principal, resource['space_id'], 'data.manage')
-        policy.require(principal, resource['space_id'], 'space.manage')
+        if resource['space_id']:
+            policy.require(principal, resource['space_id'], 'data.manage')
+            policy.require(principal, resource['space_id'], 'space.manage')
 
     def grant_status(self, grant, projects):
         if grant['status'] != 'active':
@@ -98,7 +100,16 @@ class ResourceSharing:
             raise ProjectUnavailable('resource_snapshot_invalid')
         return (record, row[1]) if payload else record
 
-    def capture(self, principal, policy, command, resource):
+    def capture(self, principal, policy, command, resource, db):
+        if resource['space_id'] is None:
+            scope = self.projects.scope(principal)
+            file = self.resources.files.records(db, scope).get(command.resource_id)
+            if file is None or file['version_id'] != command.version_id:
+                raise ProjectError('resource_version_unavailable')
+            record = {'label': file['name'], 'kind': 'resource_file', 'resource_type': 'reference',
+                      'source_version': self.resources.files.version(file), 'is_base': resource['is_base'],
+                      'payload_available': True, 'filename': file['name'], 'bytes': file['bytes'], 'sha256': file['sha256']}
+            return record, self.resources.files.payload(db, scope, file)
         # Only newly shared versions are materialized. Old D02 hashes without a
         # complete snapshot cannot be reconstructed after their source changes.
         _, items, _ = self.resources.projection(principal, policy)
@@ -163,7 +174,7 @@ class ResourceSharing:
             if command.action == 'grant':
                 if resource['revision'] != command.expected_resource_revision:
                     raise ProjectError('resource_revision_changed')
-                if projects.get(resource['owner_project_id'], {}).get('status') != 'active':
+                if resource.get('owner_kind', 'project') == 'project' and projects.get(resource['owner_project_id'], {}).get('status') != 'active':
                     raise ProjectError('active_project_required')
                 if command.target_project_id:
                     if projects.get(command.target_project_id, {}).get('status') != 'active':
@@ -179,7 +190,7 @@ class ResourceSharing:
                 before = grants.get(identity)
                 snap = self.snapshot(db, scope, command.resource_id, command.version_id)
                 if snap is None:
-                    snap, payload = self.capture(principal, policy, command, resource)
+                    snap, payload = self.capture(principal, policy, command, resource, db)
                     used_bytes = db.execute('SELECT COALESCE(SUM(LENGTH(payload)),0) FROM data_shared_versions WHERE scope=?', (scope,)).fetchone()[0]
                     if used_bytes + len(payload or b'') > 512 * 1024 * 1024:
                         raise ProjectError('resource_shared_storage_budget', 409)
@@ -222,6 +233,7 @@ class ResourceSharing:
             record['revision'] = command.expected_revision + 1
             event = {'action': command.action, 'actor': principal.subject, 'reason': command.reason,
                      'changed_at': at, 'before': before, 'after': record}
+            record_scope(db, principal)
             db.execute(f'INSERT OR REPLACE INTO {table} VALUES(?,?,?)', (scope, identity, json.dumps(record)))
             db.execute('INSERT INTO data_sharing_changes VALUES(?,?,?,?,?)',
                        (scope, principal.subject, command.request_id, spec, json.dumps(event)))
@@ -267,6 +279,8 @@ class ResourceSharing:
         for use in uses:
             if use['status'] != 'active' or query.space_id and use['space_id'] != query.space_id:
                 continue
+            if query.placement == 'project' and use['space_id'] is not None or query.placement == 'scene' and use['space_id'] is None:
+                continue
             grouped.setdefault(use['resource_id'], []).append(use)
         result = []
         for identity, references in grouped.items():
@@ -277,7 +291,8 @@ class ResourceSharing:
                            'resource_id': identity, 'resource_type': snap['resource_type'],
                            'source_version': snap['source_version'], 'project_id': query.project_id,
                            'owner_project_id': resource['owner_project_id'],
-                           'owner_project_name': projects[resource['owner_project_id']]['name'],
+                           'owner_project_name': projects[resource['owner_project_id']]['name'] if resource['owner_project_id'] else None,
+                           'owner_kind': resource.get('owner_kind', 'project'),
                            'registered': True, 'is_base': snap['is_base'], 'revision': resource['revision'],
                            'version_count': len({u['version_id'] for u in references}), 'version_registered': True,
                            'can_manage': False, 'external': True, 'uses': references, 'is_shared': False})
@@ -304,7 +319,9 @@ class ResourceSharing:
                 raise ProjectError('resource_snapshot_unavailable', 503)
             target = 'use-' + checksum({'resource': grant['resource_id'], 'project': query.project_id, 'space': None})[:32]
             use = uses.get(target)
-            result.append({'grant': grant, 'snapshot': snap, 'owner_project_name': projects[resource['owner_project_id']]['name'],
+            result.append({'grant': grant, 'snapshot': snap,
+                           'owner_kind': resource.get('owner_kind', 'project'),
+                           'owner_project_name': projects[resource['owner_project_id']]['name'] if resource['owner_project_id'] else None,
                            'reference_revision': use['revision'] if use else 0,
                            'reference_status': self.use_status(use, grants, projects) if use else None})
         return result
@@ -316,7 +333,7 @@ class ResourceSharing:
             if query.view == 'available':
                 items = self.available(principal, policy, db, scope, query, projects, links)
                 items = [i for i in items if query.search.casefold() in
-                         (i['snapshot']['label'] + ' ' + i['owner_project_name']).casefold()]
+                         (i['snapshot']['label'] + ' ' + (i['owner_project_name'] or '工作区共用')).casefold()]
             elif query.view == 'uses':
                 if not query.project_id:
                     raise ProjectError('resource_target_project_required', 422)

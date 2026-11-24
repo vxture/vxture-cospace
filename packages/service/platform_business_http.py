@@ -53,6 +53,7 @@ from packages.data.workspace_catalog import catalog as workspace_catalog, Catalo
 from packages.lifecycle.workspace_projects import WorkspaceProjects, ProjectChange, ProjectQuery, ProjectError, ProjectUnavailable
 from packages.data.workspace_resources import WorkspaceResources, ResourceQuery, ResourceChange
 from packages.data.resource_sharing_contract import SharingChange, SharingQuery, SharedDownload
+from packages.data.resource_files import FileUpload, FileDownload
 from packages.infrastructure.spatial_observation_store import ObservationStorageUnavailable
 from packages.views.agent.ifc_structure_exchange import export_structure_snapshot
 from packages.views.agent.ifc_geometry_exchange import export_geometry_component
@@ -67,6 +68,8 @@ DATA_MANAGE='data.manage'
 SPACE_PREVIEW='space.preview'
 ASSOCIATION_EDIT='association.edit'
 BINARY_MEDIA_TYPE='application/octet-stream'
+DOWNLOAD_SUFFIX='/download'
+DOWNLOAD_SANDBOX="sandbox; default-src 'none'"
 
 SELECTION_ROUTE='/api/selection'
 PUBLICATIONS_ROUTE='/api/publications'
@@ -87,6 +90,28 @@ IFC_SURFACE_PATH = '/api/scene-ifc/nearest-surface'
 IFC_REFERENCE_PATH = '/api/scene-ifc/references'
 IFC_ACTIVATE_PATH = IFC_REFERENCE_PATH+'/activate'
 IFC_REFERENCE_PREVIEW = IFC_REFERENCE_PATH+'/preview'
+
+
+async def receive_resource_original(request):
+    """Spool larger originals off the event loop, with a hard receive bound."""
+    if request.headers.get('content-type', '').split(';')[0] != BINARY_MEDIA_TYPE:
+        raise ProjectError('resource_file_binary_required', 415)
+    length = request.headers.get('content-length')
+    if length is not None and (not length.isdigit() or not 0<int(length)<=MAX_ATTACHMENT_BYTES):
+        raise ProjectError('resource_file_size_budget', 413)
+    import tempfile
+    stream = await run_in_threadpool(tempfile.SpooledTemporaryFile, max_size=1_048_576)
+    try:
+        received = 0
+        async for chunk in request.stream():
+            received += len(chunk)
+            if received > MAX_ATTACHMENT_BYTES:
+                raise ProjectError('resource_file_size_budget', 413)
+            await run_in_threadpool(stream.write, chunk)
+        await run_in_threadpool(stream.seek, 0)
+        return await run_in_threadpool(stream.read, MAX_ATTACHMENT_BYTES + 1)
+    finally:
+        await run_in_threadpool(stream.close)
 
 
 class BusinessAccess:
@@ -166,8 +191,14 @@ class BusinessAccess:
             if method not in ('GET','HEAD','POST') or method=='POST' and not policy.workspace_manager(principal):
                 raise PermissionError()
             return {'principal':principal}
+        if path in ('/api/data-files', '/api/data-files/download'):
+            if path.endswith(DOWNLOAD_SUFFIX):
+                if method not in ('GET','HEAD'):raise PermissionError()
+            elif method!='POST' or not policy.workspace_manager(principal):
+                raise PermissionError()
+            return {'principal':principal}
         if path in ('/api/data-sharing', '/api/data-sharing/download'):
-            if method not in ('GET', 'HEAD', 'POST') or path.endswith('/download') and method=='POST':
+            if method not in ('GET', 'HEAD', 'POST') or path.endswith(DOWNLOAD_SUFFIX) and method=='POST':
                 raise PermissionError()
             return {'principal':principal}
         if path=='/api/workspace-scenes' and method in ('GET','HEAD','POST'):
@@ -410,6 +441,37 @@ class BusinessAccess:
         # global ontology registration and member writes cannot inherit a space grant.
         raise PermissionError()
 
+    async def data_files(self, request, session, rpsid):
+        """Bounded binary receive before the JSON middleware; reauthorize at commit."""
+        def deny(status, code):
+            return JSONResponse({'detail': code}, status_code=status, headers={'Cache-Control': 'no-store'})
+        try:
+            _, policy = await run_in_threadpool(self.load_policy)
+            context = await run_in_threadpool(self.authorize, request, session, policy, {})
+            principal = context['principal']
+            if request.url.path.endswith(DOWNLOAD_SUFFIX):
+                command = FileDownload.model_validate(dict(request.query_params))
+                record, payload = await run_in_threadpool(self.workspace_resources.files.download, principal, policy, command)
+                return ByteResponse(payload if request.method=='GET' else b'', media_type=BINARY_MEDIA_TYPE, headers={
+                    'Cache-Control':'no-store', 'Content-Length':str(len(payload)),
+                    'Content-Disposition':"attachment; filename*=UTF-8''"+quote(record['name'],safe=''),
+                    'X-Content-Type-Options':'nosniff', 'Content-Security-Policy':DOWNLOAD_SANDBOX})
+            command = FileUpload.model_validate_strings(dict(request.query_params))
+            await run_in_threadpool(self.workspace_resources.files.check_upload, principal, policy, command)
+            payload = await receive_resource_original(request)
+            current, _ = await run_in_threadpool(self.rp.resolve, rpsid, active=False, require_access=True)
+            if current is None:return deny(401, 'authentication_required')
+            await run_in_threadpool(self.require_subscription, current)
+            _, policy = await run_in_threadpool(self.load_policy)
+            refreshed = await run_in_threadpool(self.authorize, request, current, policy, {})
+            if any(getattr(principal,k)!=getattr(refreshed['principal'],k) for k in ('issuer','subject','org_id','workspace_id')):
+                return deny(409, 'session_scope_changed')
+            result = await run_in_threadpool(self.workspace_resources.files.upload, refreshed['principal'], policy, command, payload)
+            return JSONResponse(result, status_code=200 if result['replayed'] else 201, headers={'Cache-Control':'no-store'})
+        except ValidationError:return deny(422, 'resource_file_metadata_invalid')
+        except ProjectError as exc:return deny(exc.status, exc.code)
+        except ProjectUnavailable:return deny(503, 'resource_file_unavailable')
+
     @measure_request
     async def dispatch(self, request, call_next):
         path=request.url.path
@@ -446,6 +508,8 @@ class BusinessAccess:
                 return JSONResponse(self.globe.public(self.rp.config.origin),headers={'Cache-Control':'no-store'})
             if path=='/api/map/config' or path.startswith('/_AMapService/'):
                 return await self.amap.dispatch(request)
+            if path in ('/api/data-files','/api/data-files/download'):
+                return await self.data_files(request, session, rpsid)
             if path=='/api/input-uploads' and request.method in ('GET','POST'):
                 revision,policy=await run_in_threadpool(self.load_policy)
                 context=await run_in_threadpool(self.authorize,request,session,policy,{})
@@ -490,7 +554,7 @@ class BusinessAccess:
                         except (AttachmentRejected,OSError,ValueError,TypeError):return deny(409,'attachment_unavailable')
                         from fastapi.responses import Response
                         return Response(raw if request.method!='HEAD' else b'',media_type=BINARY_MEDIA_TYPE,headers={
-                            'Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Content-Security-Policy':"sandbox; default-src 'none'",
+                            'Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Content-Security-Policy':DOWNLOAD_SANDBOX,
                             'Content-Disposition':"attachment; filename=reference; filename*=UTF-8''"+quote(record['name'],safe=''),
                             'Content-Length':str(len(raw))})
                     if set(request.query_params)!={'space_id'}:return deny(422,'attachment_request_invalid')
@@ -754,13 +818,13 @@ class BusinessAccess:
             if path in ('/api/data-sharing', '/api/data-sharing/download'):
                 try:
                     sharing = self.workspace_resources.sharing
-                    if path.endswith('/download'):
+                    if path.endswith(DOWNLOAD_SUFFIX):
                         command = SharedDownload.model_validate(dict(request.query_params))
                         snap, payload = await run_in_threadpool(sharing.download, context['principal'], policy, command)
                         return ByteResponse(payload if request.method=='GET' else b'', media_type=BINARY_MEDIA_TYPE,
                             headers={'Cache-Control':'no-store', 'Content-Length':str(len(payload)),
                                      'Content-Disposition':"attachment; filename*=UTF-8''"+quote(snap['filename'],safe=''),
-                                     'X-Content-Type-Options':'nosniff', "Content-Security-Policy":"sandbox; default-src 'none'"})
+                                     'X-Content-Type-Options':'nosniff', "Content-Security-Policy":DOWNLOAD_SANDBOX})
                     if request.method=='POST':
                         if request.query_params:return deny(422,'resource_sharing_invalid_request')
                         change = SharingChange.validate_json(json.dumps(body))

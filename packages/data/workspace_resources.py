@@ -3,11 +3,12 @@ from datetime import datetime, timezone
 import json
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from packages.data.workspace_catalog import catalog, CatalogQuery, metadata
 from packages.data.scene_attachments import SceneAttachments
 from packages.data.workspace_resource_sharing import ResourceSharing
+from packages.data.resource_files import ResourceFiles
 from packages.lifecycle.preview_scope import match
 from packages.lifecycle.scene_initialization import checksum
 from packages.lifecycle.workspace_projects import WorkspaceProjects, ProjectError
@@ -21,6 +22,8 @@ class ResourceQuery(BaseModel):
     search: str = Field(default='', max_length=100)
     offset: int = Field(default=0, ge=0, le=10000)
     limit: int = Field(default=20, ge=1, le=100)
+    placement: Literal['all', 'project', 'scene'] = 'all'
+    ownership: Literal['all', 'owned', 'external', 'workspace'] = 'all'
 
 
 class ResourceChange(BaseModel):
@@ -29,9 +32,16 @@ class ResourceChange(BaseModel):
     request_id: str = Field(pattern=r'^[a-f0-9]{32}$')
     expected_revision: int = Field(ge=0)
     expected_version: str = Field(pattern=r'^[a-f0-9]{64}$')
-    owner_project_id: str = Field(pattern=r'^project-[a-f0-9]{16}$')
+    owner_kind: Literal['project', 'workspace'] = 'project'
+    owner_project_id: str | None = Field(default=None, pattern=r'^project-[a-f0-9]{16}$')
     is_base: bool = False
     reason: str = Field(min_length=1, max_length=500)
+
+    @model_validator(mode='after')
+    def valid_owner(self):
+        if (self.owner_kind == 'project') != bool(self.owner_project_id):
+            raise ValueError('resource_owner_invalid')
+        return self
 
     @field_validator('reason')
     @classmethod
@@ -46,6 +56,7 @@ class WorkspaceResources:
         self.jobs, self.directory = jobs, directory
         self.projects = WorkspaceProjects(directory)
         self.sharing = ResourceSharing(self)
+        self.files = ResourceFiles(self)
 
     def source_version(self, item):
         kind, identity, space = item['kind'], item['record_id'], item['space_id']
@@ -145,11 +156,25 @@ class WorkspaceResources:
                                         'version_registered': bool(saved and item['source_version']['version_id'] in saved['versions']),
                                         'is_shared': item['resource_id'] in shared_ids,
                                         'can_manage': manager and 'space.manage' in policy.capabilities(principal, item['space_id'])})
+                rows.extend(self.files.rows(principal, policy, db, scope, projects, links, registered))
+                for row in rows:
+                    row.setdefault('owner_kind', 'project' if row['registered'] else 'unassigned')
+                    row['is_shared'] = row['resource_id'] in shared_ids
             rows = [r for r in rows if (not query.space_id or r['space_id'] == query.space_id) and
                     (not query.project_id or query.project_id in (r['project_id'], r['owner_project_id']))]
+            def matches(row):
+                return (row.get('external') or query.placement == 'all' or
+                        query.placement == 'scene' and row['space_id'] is not None or
+                        query.placement == 'project' and row['space_id'] is None) and (
+                        query.ownership == 'all' or query.ownership == 'external' and row.get('external') or
+                        query.ownership == 'workspace' and row.get('owner_kind') == 'workspace' or
+                        query.ownership == 'owned' and not row.get('external') and row.get('owner_kind') == 'project')
+            rows = [r for r in rows if matches(r)]
             if query.category != 'process':
                 unique = {r['resource_id']: r for r in rows}
                 for external in self.sharing.external_rows(principal, policy, db, scope, projects, links, query):
+                    if not matches(external):
+                        continue
                     if external['resource_id'] not in unique or query.project_id:
                         unique[external['resource_id']] = external
                 rows = list(unique.values())
@@ -164,20 +189,41 @@ class WorkspaceResources:
                 spaces = [s for s in spaces if s['project_id'] == query.project_id or s['id'] in relevant]
             return {'profile': 'cospace.data-resources/0.1', 'workspace_id': principal.workspace_id,
                     'category': query.category, 'project_id': query.project_id, 'space_id': query.space_id,
+                    'placement': query.placement, 'ownership': query.ownership,
                     'items': rows[query.offset:query.offset + query.limit], 'total': len(rows),
                     'spaces': spaces, 'can_manage': manager, 'status': 'partial' if issues else 'ready',
                     'issues': issues, 'offset': query.offset, 'limit': query.limit,
                     'next_offset': query.offset + query.limit if query.offset + query.limit < len(rows) else None,
                     'observed_at': report['observed_at'], 'source_files_rechecked': False}
 
+    def managed_item(self, principal, policy, identity):
+        _, items, _ = self.projection(principal, policy)
+        item = next((v for v in items if v['resource_id'] == identity), None)
+        if item is None:
+            with self.projects.database() as db:
+                scope = self.projects.scope(principal)
+                _, projects, links = self.projects.state(db, scope)
+                item = next((v for v in self.files.rows(principal, policy, db, scope, projects, links, self.records(db, scope))
+                             if v['resource_id'] == identity), None)
+        return item
+
+    @staticmethod
+    def require_owner(saved, change):
+        if saved:
+            previous = (saved.get('owner_kind', 'project'), saved['owner_project_id'])
+            if previous != (change.owner_kind, change.owner_project_id):
+                raise ProjectError('resource_owner_transfer_not_supported')
+        elif change.owner_kind != 'project':
+            raise ProjectError('resource_owner_transfer_not_supported')
+
     def change(self, principal, policy, change):
         if not policy.workspace_manager(principal):
             raise PermissionError('resource_management_denied')
-        _, items, _ = self.projection(principal, policy)
-        item = next((v for v in items if v['resource_id'] == change.resource_id), None)
+        item = self.managed_item(principal, policy, change.resource_id)
         if item is None:
             raise PermissionError('resource_access_denied')
-        policy.require(principal, item['space_id'], 'space.manage')
+        if item['space_id']:
+            policy.require(principal, item['space_id'], 'space.manage')
         scope, spec = self.projects.scope(principal), checksum(change.model_dump())
         with self.projects.database(write=True) as db:
             db.execute('CREATE TABLE IF NOT EXISTS data_resources(scope TEXT,id TEXT,record TEXT NOT NULL,PRIMARY KEY(scope,id))')
@@ -190,21 +236,20 @@ class WorkspaceResources:
                 return json.loads(previous[1]) | {'replayed': True}
             _, projects, _ = self.projects.state(db, scope)
             project = projects.get(change.owner_project_id)
-            if not project or project['status'] != 'active':
+            if change.owner_kind == 'project' and (not project or project['status'] != 'active'):
                 raise ProjectError('active_project_required')
             saved = self.records(db, scope).get(change.resource_id)
             if (saved['revision'] if saved else 0) != change.expected_revision:
                 raise ProjectError('resource_revision_changed')
             if item['source_version']['version_id'] != change.expected_version:
                 raise ProjectError('resource_source_changed')
-            if saved and saved['owner_project_id'] != change.owner_project_id:
-                raise ProjectError('resource_owner_transfer_not_supported')
+            self.require_owner(saved, change)
             at = datetime.now(timezone.utc).isoformat()
             version = item['source_version'] | {'recorded_at': at}
             versions = dict(saved['versions']) if saved else {}
             versions.setdefault(version['version_id'], version)
             record = {'resource_id': change.resource_id, 'source_key': item['key'], 'space_id': item['space_id'],
-                      'owner_project_id': change.owner_project_id, 'is_base': change.is_base,
+                      'owner_kind': change.owner_kind, 'owner_project_id': change.owner_project_id, 'is_base': change.is_base,
                       'revision': change.expected_revision + 1, 'versions': versions}
             event = {'resource_id': change.resource_id, 'revision': record['revision'], 'actor': principal.subject,
                      'space_id': item['space_id'], 'changed_at': at, 'reason': change.reason,

@@ -1,6 +1,6 @@
 # 平台数据资源目录 v0.1
 
-状态：D02 目录、项目视角和显式资源登记已接通；D03a 扩展固定版本共享 / 参考关联，项目级上传与共用管理归属仍待 D03b。
+状态：D02 目录、项目视角和显式资源登记已接通；D03a 扩展固定版本共享 / 参考关联，D03b 增加独立于场景的项目级 / 共用资料上传。
 
 ## 资源与来源
 
@@ -42,3 +42,8 @@ D02 仅展示待登记、基础数据等有实际依据的标记。D03 接通授
 ## D03a 兼容扩展
 
 资源行可增加 is_shared、external 和 uses。external=true 的接收项目行以 resource_id 作为 key / record_id，href、space_id、space_name 为 null，can_manage=false，uses 只包含当前身份可见的实际 active 引用及准确授权状态，不暴露来源场景定位。固定引用版本逐条保存在 uses 中；列表 source_version 为其中一个固定版本摘要，多个版本应从详情逐条核对。接收方解除引用后从资产清单移除，引用记录页仍可查历史。尚未使用的共享授权不计项目资源数量。授权范围、冻结原件及使用契约见 [resource-sharing-v0.1.md](resource-sharing-v0.1.md)。
+
+
+## D03b 独立资料扩展
+
+资源增加 owner_kind=project|workspace|unassigned，旧已登记场景来源按 project 兼容，未登记为 unassigned。新 resource_file 行不具有来源场景 URL，可明确归项目或工作区共用。维护登记增加 owner_kind（旧调用默认 project），共用时 owner_project_id=null；仍不允许归属转移。读取增加 placement 与 ownership 筛选。新上传、原件下载、权限、存储及恢复边界见 [项目级与共用资料](resource-files-v0.1.md)。

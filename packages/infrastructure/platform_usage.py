@@ -6,6 +6,7 @@ import json
 import logging
 from pathlib import Path
 import re
+import sqlite3
 import stat
 import threading
 from types import SimpleNamespace
@@ -75,7 +76,7 @@ class UsageTransport(EntitlementTransport):
 
 
 class StorageInventory:
-    """Logical bytes of scene input payloads, retained builds and publications.
+    """Logical bytes of inputs, builds, publications and workspace originals.
 
     One physical path is counted once within a Workspace. Files shared across
     Workspaces, links and foreign source paths are ambiguous, so skip the whole
@@ -129,13 +130,17 @@ class StorageInventory:
                         record=json.loads(path.read_bytes());owner=scopes.get(record.get('space_id'))
                         if owner is not None:add(path.parent,owner)
                 observed_at=datetime.now(timezone.utc).isoformat()
+                from packages.data.resource_storage_usage import stored_bytes
+                directory=getattr(self.inputs,'directory',None)
+                blobs=stored_bytes(directory,files) if directory is not None else {}
+                for owner in blobs:files.setdefault(owner,{})
                 result=[]
                 for (issuer,org_id,workspace_id),members in files.items():
-                    total=sum(members.values())
+                    total=sum(members.values())+blobs.get((issuer,org_id,workspace_id),0)
                     if total>MAX_SAFE_INTEGER:raise ValueError('storage_integer_budget')
                     result.append((SimpleNamespace(issuer=issuer,org_id=org_id,workspace_id=workspace_id),total,observed_at))
                 return result
-        except (IdentityUnavailable,OSError,ValueError,TypeError,KeyError,RecursionError):
+        except (IdentityUnavailable,OSError,ValueError,TypeError,KeyError,RecursionError,sqlite3.Error):
             raise SubscriptionUnavailable('storage_observation_unavailable') from None
 
 

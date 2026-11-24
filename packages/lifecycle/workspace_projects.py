@@ -115,6 +115,14 @@ class WorkspaceProjects:
     def state(self, db, scope):
         if db is None:
             return 0, {}, {}
+        required = {'project_scopes', 'business_projects', 'project_scene_links', 'project_changes'}
+        present = {row[0] for row in db.execute('SELECT name FROM sqlite_master WHERE type=\'table\'')} & required
+        # A rejected first mutation can leave an empty SQLite file after its
+        # schema transaction rolls back. It is still an uninitialized directory.
+        if not present:
+            return 0, {}, {}
+        if present != required:
+            raise ProjectUnavailable('business_projects_schema_invalid')
         revision = db.execute('SELECT revision FROM project_scopes WHERE scope=?', (scope,)).fetchone()
         projects = {identity: json.loads(raw) for identity, raw in
                     db.execute('SELECT id,record FROM business_projects WHERE scope=?', (scope,))}
