@@ -61,6 +61,8 @@ vxture-ontology --exchange electrical.exchange.json --exchange water.exchange.js
 
 第一条命令默认打包内置候选，也可用 `--library` 指定本地定义。正式发布包请使用宿主的精确版本导出接口。实例仍留在消费方，OWL 投影包含省略项清单；`document` 字段才是投影出的 JSON-LD。
 
+B09d 的独立界面与本机宿主同源运行。将 `--ui-dir` 指向发行包的 `ui/` 目录后，即可用浏览器进入查看、编辑、发布和系统配置。wheel 不内嵌界面，API 模式可以继续独立运行。安装、权限与回退步骤见仓库 `docs/architecture/本体工作台安装与回退-B09d.md`。
+
 B02 新增 `instance_schema()` 与 `park_baseline_rules()`，返回随独立包分发的 JSON Schema 和显式选用的园区候选完整性规则副本。B03 的 `validate_instances(raw_bytes, catalog, rule_set=None)` 为纯校验入口：未选规则时仍校验引用、属性、端点、有效区间和几何绑定；显式 `rule_set='park-baseline'` 增加职责完整性与时态层级检查。返回带 code、JSON Pointer path、severity、state 的确定性报告，含输入/Schema/定义库/规则摘要。无第三方运行依赖，无现场实例存储或网络访问。
 
 ```python

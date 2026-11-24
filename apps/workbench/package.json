@@ -8,7 +8,8 @@
     "node": ">=24 <25"
   },
   "scripts": {
-    "build": "tsc --noEmit && vite build",
+    "build": "tsc --noEmit && vite build && pnpm build:ontology",
+    "build:ontology": "vite build --config vite.ontology.config.ts",
     "build:map-lab": "tsc --noEmit && vite build --mode map-lab --outDir ../../var/m1-map-build",
     "dev": "vite --host 127.0.0.1"
   },

@@ -4,7 +4,7 @@ export type Property={title:string;definition:string;data_type:'string'|'number'
 export type Concept={title:string;definition:string;parent?:string;examples:string[];counterexamples:string[];properties:Record<string,Property>};
 export type Relation={title:string;definition:string;source_types:string[];target_types:string[];symmetric:boolean};
 export type ModuleDefinition={profile:'vxture.ontology-module/0.1';module_id:string;version:string;title:string;description:string;layer:'core'|'domain';status:'draft';requires:Reference[];concepts:Record<string,Concept>;relations:Record<string,Relation>};
-export type Entry={reference:Reference;definition:ModuleDefinition};
+export type Entry={reference:Reference;definition:ModuleDefinition;published_at?:string};
 export type Library={profile:'vxture.ontology-catalog/0.1';status:'draft';library_sha256:string;capabilities:string[];modules:Entry[]};
 export type LibraryClient={load:(signal:AbortSignal)=>Promise<Library>};
 
@@ -14,14 +14,18 @@ function text(value:unknown,max=2000):value is string{return typeof value==='str
 function list(value:unknown,max:number):unknown[]{if(!Array.isArray(value)||value.length>max)throw Error('本体目录列表无效。');return value;}
 function reference(value:unknown):Reference{const v=object(value);if(typeof v.module_id!=='string'||!id.test(v.module_id)||typeof v.version!=='string'||!version.test(v.version)||typeof v.sha256!=='string'||!digest.test(v.sha256))throw Error('本体依赖引用无效。');return v as Reference;}
 function strings(value:unknown,max=256){const items=list(value,max);if(!items.length||items.some(v=>!text(v)))throw Error('本体定义文本无效。');return items as string[];}
-export function parseLibrary(value:unknown):Library{
+export function parseLibrary(value:unknown):Library{return decode(value,false);}
+// Directory entries are independent heads. Open one with an exact reference to validate its own closure.
+export function parseLibraryDirectory(value:unknown):Library{return decode(value,true);}
+function decode(value:unknown,directory:boolean):Library{
  const root=object(value);
  if(root.profile!=='vxture.ontology-catalog/0.1'||root.status!=='draft'||typeof root.library_sha256!=='string'||!digest.test(root.library_sha256))throw Error('本体目录版本或状态无效。');
  const capabilities=list(root.capabilities,8);if(capabilities.some(v=>!['definition-validation','dependency-resolution','definition-export'].includes(v as string)))throw Error('本体目录包含未支持能力。');
- const entries=list(root.modules,32);if(!entries.length)throw Error('本体目录缺少模块。');
+ const entries=list(root.modules,directory?8192:32);if(!entries.length)throw Error('本体目录缺少模块。');
  const identities=new Map<string,Entry>();
  for(const raw of entries){
   const entry=object(raw),ref=reference(entry.reference),d=object(entry.definition);
+  if(entry.published_at!==undefined&&(typeof entry.published_at!=='string'||!Number.isFinite(Date.parse(entry.published_at))))throw Error('本体发布日期无效。');
   if(d.profile!=='vxture.ontology-module/0.1'||d.status!=='draft'||!['core','domain'].includes(d.layer as string)||d.module_id!==ref.module_id||d.version!==ref.version||!text(d.title,160)||!text(d.description))throw Error('本体模块与固定引用不一致。');
   if(identities.has(ref.module_id))throw Error('本体模块身份重复。');
   list(d.requires,32).forEach(reference);
@@ -39,6 +43,7 @@ export function parseLibrary(value:unknown):Library{
   for(const [key,rawRelation] of relations){const r=object(rawRelation);if(!id.test(key)||!text(r.title,160)||!text(r.definition)||typeof r.symmetric!=='boolean')throw Error('本体关系无效。');const source=strings(r.source_types),target=strings(r.target_types);if(new Set(source).size!==source.length||new Set(target).size!==target.length||r.symmetric&&(source.length!==target.length||source.some(v=>!target.includes(v))))throw Error('关系端点无效。');}
   identities.set(ref.module_id,entry as Entry);
  }
+ if(directory)return structuredClone(root) as Library;
  const closures=new Map<string,Set<string>>();
  function closure(identity:string,visiting:Set<string>):Set<string>{
   if(visiting.has(identity))throw Error('本体依赖存在循环。');if(closures.has(identity))return closures.get(identity)!;

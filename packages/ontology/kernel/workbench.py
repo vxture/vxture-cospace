@@ -102,6 +102,20 @@ class DefinitionWorkbench:
         result['library_sha256'] = sha256(canonical_bytes(result['modules'])).hexdigest()
         return result
 
+    def draft_directory(self):
+        """List private draft summaries, including imports absent from the public catalog."""
+        service, scope, actor = self.service, self._scope, self._actor
+        service._access(scope, actor, 'read')
+        service._access(scope, actor, 'read_private')
+        with service.port.transaction(scope) as state:
+            drafts = []
+            for identity in sorted(state.get('drafts', {})):
+                draft = service._draft(state, identity)
+                module = _module(draft['bundle'], identity)
+                drafts.append({'module_id': identity, 'title': module['title'], 'version': module['version'],
+                               'revision': draft['revision'], 'updated_at': draft['updated_at']})
+        return {'profile': 'vxture.ontology-drafts/0.1', 'drafts': drafts}
+
     def definition(self, reference):
         try:
             release = self.service.read_release(self._scope, self._actor, reference)

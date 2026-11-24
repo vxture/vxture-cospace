@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {createHash} from 'node:crypto';
-import {parseLibrary,matchingModules,exportLibrary} from '../../packages/ontology-ui/src/contract.ts';
+import {parseLibrary,parseLibraryDirectory,matchingModules,exportLibrary} from '../../packages/ontology-ui/src/contract.ts';
 import {headerSceneLinkFromUrl} from '../../apps/workbench/src/layout/navigation-contract.ts';
 import {sceneContextHref} from '../../apps/workbench/src/layout/scene-preference.ts';
 
@@ -35,6 +35,17 @@ test('unsupported or inconsistent responses never appear as a usable library',()
   v=>v.modules.find(e=>e.definition.module_id==='electrical').definition.concepts.distribution_cabinet.properties.rated_voltage.data_type='string',
  ]){const value=library();mutate(value);assert.throws(()=>parseLibrary(value));}
  assert.throws(()=>parseLibrary(null));assert.throws(()=>parseLibrary({...library(),modules:[]}));
+});
+
+test('independent directory heads are not mistaken for one exact dependency closure',()=>{
+ const value=library();
+ const core=value.modules.find(e=>e.reference.module_id==='core');
+ core.definition.version='0.2.0';core.reference.version='0.2.0';core.reference.sha256=sha(core.definition);
+ assert.throws(()=>parseLibrary(value));
+ assert.equal(parseLibraryDirectory(value).modules.length,8);
+ assert.throws(()=>exportLibrary(value,'electrical'));
+ value.modules[0].published_at='not a date';
+ assert.throws(()=>parseLibraryDirectory(value));
 });
 
 test('scene picker does not reset public ontology view or add scene scope',()=>{
