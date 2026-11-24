@@ -13,15 +13,15 @@
 
 摘要使用定义内核的 `canonical_bytes`：字典键排序、紧凑 JSON、UTF-8、有限数值；数组顺序保留，因此原本体包的模块顺序也保留。每个模块通过其定义摘要固定，依赖边必须精确匹配目标模块标识、版本和摘要。解析拒绝未知字段、重复键、非有限数值、摘要不符、缺失或多余的模块以及超过内核预算的内容。原生库最多 1 MiB 和 32 个模块，交换包另允许 4 KiB 封装开销。摘要用于核对内容和引用，不是发布方的身份签名；文件不带账户、审批或发布时间。
 
-独立宿主接口 `/api/ontology-exchange/definitions`：
+当前通过受信宿主装配的 `DefinitionWorkbench` 调用交换能力。原独立宿主 HTTP 接口已随 B09e 撤下；CoSpace 尚未为交换能力另行开放 HTTP 路径。
 
 | 操作 | 输入和结果 |
 | --- | --- |
-| `GET` / `HEAD` | 查询 `module_id`、`version`、`sha256`；仅导出本作用域的正式发布。缺失返回 `404`，不回退到最新版或内置候选。权限：`read`。 |
-| `POST` 预检 | JSON `{ "action": "preflight", "package": … }`。返回目标、摘要、当前 `expected_revision`、建议的本地 `base_reference`、依赖发布状态、`can_import` 和带路径的 `diagnostics`。不保存草稿或审批。 |
-| `POST` 导入草稿 | JSON `{ "action": "import", "package": …, "expected_revision": 0, "request_id": … }`。`expected_revision` 使用预检返回的值。沿用编制接口的请求 ID 和幂等规则。写入时在事务内复核修订和版本冲突，成功仅建立目标模块草稿。 |
+| `export_release(reference)` | 引用包含 `module_id`、`version`、`sha256`；仅导出本作用域的正式发布。缺失抛出 `release_not_found`，不回退到最新版或内置候选。权限：`read`。 |
+| `preflight_import(raw_bytes)` | 接收原生交换包字节。返回目标、摘要、当前 `expected_revision`、建议的本地 `base_reference`、依赖发布状态、`can_import` 和带路径的 `diagnostics`。不保存草稿或审批。 |
+| `import_draft(raw_bytes, request_id=…, expected_revision=…)` | `expected_revision` 使用预检返回的值。沿用编制接口的请求 ID 和幂等规则。写入时在事务内复核修订和版本冲突，成功仅建立目标模块草稿。 |
 
-两项 POST 操作都需要 `read`、`read_private` 和 `edit`。格式或摘要不符返回 `422`；超出输入预算返回 `413`。预检中的业务冲突通过 `can_import=false` 报告，执行时同类冲突返回 `409`。作用域由宿主身份提供，包和请求不能指定操作者或作用域。
+预检和导入都需要 `read`、`read_private` 和 `edit`。格式、摘要或预算错误通过带 code/path 的内核异常报告，HTTP 状态映射属于接入宿主。预检中的业务冲突通过 `can_import=false` 报告，执行时同类冲突抛出编制异常。作用域由宿主身份提供，包和请求不能指定操作者或作用域。
 
 同一模块、同一版本但摘要不同的已发布定义会阻止导入，版本数字别名也不能绕过；同版目标草稿冲突、未发布的同版依赖草稿冲突、重复导入已有草稿或已发布定义，以及目标版本倒退也会阻止。找不到依赖的精确发布时，预检标记依赖为 `unpublished`。在没有版本冲突的情况下可以保留目标草稿，但要先在目的端发布所需的精确依赖才能送审。导入包中的依赖只作为草稿的定义闭包，不能一次性替多个模块发布。内置模板仍是候选定义，不算当地已发布版本。目标仍按本地送审、独立审批和发布流程晋级。
 

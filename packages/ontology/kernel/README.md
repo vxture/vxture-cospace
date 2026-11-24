@@ -48,9 +48,9 @@ summary = workbench.read('core')
 
 `store` 实现相同事务端口；`policy(scope, actor, action)` 必须返回严格布尔 True。可以省略 `templates` 使用内置候选定义。现有 `read/edit/submit/review/publish` 策略继续适用；工作台额外检查 `read_private` 才显示草稿、校验细节及送审快照。工作台命令沿用 v0.1 字段，不接收浏览器传来的 actor/scope。授权、部署及持久化仍由宿主负责。
 
-B09b 把可选的本地宿主和 SQLite 参考适配器随 wheel 一起分发，位于 `vxture_ontology.local_host`。内核本身不导入这些适配器。运行 `vxture-ontology-host --help` 可了解本机服务启动、备份和恢复命令；CoSpace 的现有 SQLite 适配器入口和数据库文件名保持兼容。宿主的安装与权限配置详见仓库 `docs/architecture/本体引擎独立宿主-B09b.md`。
+B09e 收敛为宿主内嵌模块。可选 SQLite 适配器位于 `vxture_ontology.adapters`，由 CoSpace 注入；纯内核不导入它们。CoSpace 的兼容导入入口、数据库文件名和数据格式保持不变。wheel 保留模块调用和文件校验 CLI，不包含独立 HTTP 服务、身份配置或浏览器登录。集成边界见仓库 `docs/architecture/本体模块宿主集成-B09e.md`。
 
-B09c 的 `/api/ontology-exchange/definitions` 导出当前作用域的精确发布闭包，支持导入预检和另行确认后写入草稿。`vxture_ontology.exchange` 可独立验证原生包、组合多个闭包以及生成有限的 OWL 类层级投影。命令把 JSON 写到标准输出；重定向时请确保使用 UTF-8。完整接口见 `contracts/schemas/ontology-exchange-v0.1.md`。
+B09c 的 `DefinitionWorkbench.export_release()` 导出当前作用域的精确发布闭包，`preflight_import()` 和 `import_draft()` 支持预检及写入草稿，由宿主按自身业务入口调用。`vxture_ontology.exchange` 可独立验证原生包、组合多个闭包以及生成有限的 OWL 类层级投影。命令把 JSON 写到标准输出；重定向时请确保使用 UTF-8。完整接口见 `contracts/schemas/ontology-exchange-v0.1.md`。
 
 ```text
 vxture-ontology --module electrical --pack-closure
@@ -59,9 +59,9 @@ vxture-ontology --exchange electrical.exchange.json --owl-classes
 vxture-ontology --exchange electrical.exchange.json --exchange water.exchange.json --instances consumer.json
 ```
 
-第一条命令默认打包内置候选，也可用 `--library` 指定本地定义。正式发布包请使用宿主的精确版本导出接口。实例仍留在消费方，OWL 投影包含省略项清单；`document` 字段才是投影出的 JSON-LD。
+第一条命令默认打包内置候选，也可用 `--library` 指定本地定义。正式发布包由受信宿主调用精确版本导出方法取得。实例仍留在消费方，OWL 投影包含省略项清单；`document` 字段才是投影出的 JSON-LD。
 
-B09d 的独立界面与本机宿主同源运行。将 `--ui-dir` 指向发行包的 `ui/` 目录后，即可用浏览器进入查看、编辑、发布和系统配置。wheel 不内嵌界面，API 模式可以继续独立运行。安装、权限与回退步骤见仓库 `docs/architecture/本体工作台安装与回退-B09d.md`。
+正式界面位于 CoSpace「公共资源 → 语义本体」，复用 `@vxture/ontology-ui`。当前只维护这一套业务入口、平台身份和业务数据；B09d 的独立浏览器工作台、令牌服务和专属发行链已撤下。其他宿主未来可以复用相同内核和组件，实际接入时再实现自己的装配。
 
 B02 新增 `instance_schema()` 与 `park_baseline_rules()`，返回随独立包分发的 JSON Schema 和显式选用的园区候选完整性规则副本。B03 的 `validate_instances(raw_bytes, catalog, rule_set=None)` 为纯校验入口：未选规则时仍校验引用、属性、端点、有效区间和几何绑定；显式 `rule_set='park-baseline'` 增加职责完整性与时态层级检查。返回带 code、JSON Pointer path、severity、state 的确定性报告，含输入/Schema/定义库/规则摘要。无第三方运行依赖，无现场实例存储或网络访问。
 
