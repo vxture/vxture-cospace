@@ -173,6 +173,9 @@ class ResourceSharing:
                 if previous[0] != spec:
                     raise ProjectError('resource_request_id_reused')
                 return json.loads(previous[1]) | {'replayed': True}
+            if command.action in ('grant', 'use'):
+                from packages.data.resource_governance import require_active
+                require_active(db, scope, command.resource_id if command.action == 'grant' else grant['resource_id'])
             at = self.now().isoformat()
             if command.action == 'grant':
                 if resource['revision'] != command.expected_resource_revision:

@@ -7,7 +7,7 @@ export async function dataRequest(path:string,signal:AbortSignal,body?:Record<st
  const response=await fetch(businessEndpoint+path,{signal,cache:'no-store',...(body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{})});
  return dataResponse(response);
 }
-const traceErrors:Record<string,string>={resource_lineage_invalid:'追溯查询范围无效，请重新打开详情。',resource_lineage_unavailable:'来源或引用记录暂不可读取，请刷新重试。'};
+const traceErrors:Record<string,string>={resource_archived:'资料已归档，请先恢复后再使用。',resource_governance_changed:'使用状态或引用已变化，请刷新核对。',resource_has_references:'仍有关联引用，请先解除全部引用。',resource_has_active_grants:'仍有有效共享，请先撤销共享。',resource_scene_lifecycle_required:'场景成果请使用成果使用状态管理。',resource_processing_or_governance_unavailable:'处理或治理记录暂不可核对，请刷新或进入来源工作面检查。',resource_governance_invalid_request:'治理请求无效，请重新打开详情。',resource_lineage_invalid:'追溯查询范围无效，请重新打开详情。',resource_lineage_unavailable:'来源或引用记录暂不可读取，请刷新重试。'};
 function responseMessage(status:number){
  if(status===403)return '当前身份无权访问或操作所选数据。';
  if(status===401)return '请登录后继续。';

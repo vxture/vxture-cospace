@@ -7,12 +7,22 @@ import {runGuarded,useUnsavedNavigation} from './unsaved-navigation';
 import {businessEndpoint} from './business-endpoint';
 import {DataReferenceDetails} from './data-reference-details';
 import {DataLineagePanel} from './data-lineage-panel';
+import {DataProcessingPanel,DataGovernancePanel} from './data-processing-panel';
+import {ArtifactControl} from './artifact-control';
 
 function ResourceTrace({workspace,item}:Readonly<{workspace:string;item:ResourceItem}>){
  const projects=[...new Map(item.uses?.map(u=>[u.project_id,u.project_name])).entries()];
  const [selected,setSelected]=useState(projects[0]?.[0]||'');
  if(item.external&&!selected)return null;
  return <>{item.external&&projects.length>1&&<label>追溯项目<NativeSelect value={selected} onChange={e=>setSelected(e.target.value)}>{projects.map(([id,name])=><option key={id} value={id}>{name}</option>)}</NativeSelect></label>}<DataLineagePanel key={selected} workspace={workspace} resource={item.resource_id!} project={item.external?selected:undefined}/></>;
+}
+
+function ResourceGovernance({workspace,item,onChanged}:Readonly<{workspace:string;item:ResourceItem;onChanged:()=>void}>){
+ const [control,setControl]=useState(false);
+ if(!item.registered||!item.resource_id||!item.can_manage||item.external)return null;
+ const artifact=(item.kind==='input'?'input:':'candidate:')+item.record_id;
+ const sceneControl=item.space_id&&['input','candidate','human_view','agent_view'].includes(item.kind);
+ return <><DataProcessingPanel workspace={workspace} resource={item.resource_id}/>{item.kind==='resource_file'&&<DataGovernancePanel workspace={workspace} resource={item.resource_id} label={item.label} onChanged={onChanged}/>} {sceneControl&&<section className="data-lineage-panel"><div className="data-lineage-heading"><h3>成果使用状态</h3><Button size="sm" variant="outline" onClick={()=>setControl(v=>!v)}>{control?'收起':'管理使用状态'}</Button></div>{control&&<ArtifactControl space={item.space_id!} artifact={artifact} onClose={()=>setControl(false)} onCommitted={onChanged}/>}</section>}</>;
 }
 
 export function DataResourcePanel({item,edit,workspace,onClose,onChanged}:{item:ResourceItem;edit:boolean;workspace:string;onClose:()=>void;onChanged:()=>void}){
@@ -30,5 +40,7 @@ export function DataResourcePanel({item,edit,workspace,onClose,onChanged}:{item:
  {edit&&<><label>管理归属{item.registered?<p>{resourceOwnerLabel(item)}</p>:<ProjectPicker workspace={workspace} value={owner} onChange={setOwner} disabled={busy}/>}</label><label className="data-resource-checkbox"><input type="checkbox" checked={base} disabled={busy} onChange={e=>setBase(e.target.checked)}/>标记为基础数据</label><label>登记原因<Textarea value={reason} maxLength={500} disabled={busy} onChange={e=>setReason(e.target.value)}/></label></>}
  {item.kind==='resource_file'&&!item.external&&<Button asChild variant="outline" size="sm"><a href={businessEndpoint+resourceFileDownload(item)}>下载原件</a></Button>}{item.external&&item.uses?<DataReferenceDetails workspace={workspace} uses={item.uses} onChanged={onChanged}/>:<p className="data-resource-secondary">{referenceNote}</p>}{item.href&&<Button asChild variant="outline" size="sm"><a href={item.href.replace(/^#/,'/')}>查看来源记录</a></Button>}
  {!edit&&item.registered&&item.resource_id&&(item.can_manage||item.external)&&<ResourceTrace key={item.resource_id} workspace={workspace} item={item}/>}
+ {!edit&&<ResourceGovernance workspace={workspace} item={item} onChanged={onChanged}/>}
+
  </div></Drawer>;
 }

@@ -47,3 +47,6 @@ D02 仅展示待登记、基础数据等有实际依据的标记。D03 接通授
 ## D03b 独立资料扩展
 
 资源增加 owner_kind=project|workspace|unassigned，旧已登记场景来源按 project 兼容，未登记为 unassigned。新 resource_file 行不具有来源场景 URL，可明确归项目或工作区共用。维护登记增加 owner_kind（旧调用默认 project），共用时 owner_project_id=null；仍不允许归属转移。读取增加 placement 与 ownership 筛选。新上传、原件下载、权限、存储及恢复边界见 [项目级与共用资料](resource-files-v0.1.md)。
+
+
+D04c 补充 `lifecycle=all|active|archived|disabled` 请求 / 响应范围与每项 `lifecycle_state`。独立原件来自事务治理状态，场景 input / candidate / 表达复用既有成果状态；未接入治理的附件和外部参考返回 null。按状态过滤时不将未知状态视为 active。治理与处理链的具体边界见[处理血缘与参考原件归档](resource-processing-governance-v0.1.md)。
