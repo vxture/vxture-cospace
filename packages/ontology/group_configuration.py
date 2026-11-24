@@ -1,5 +1,5 @@
 """Compatibility import for existing CoSpace configuration consumers."""
-from .kernel.local_host.group_configuration import (
+from .kernel.adapters.group_configuration import (
     PRESETS, GroupConfigurationError, GroupConfigurationStore, clean_text,
     initial_groups, normalize, validate_change,
 )

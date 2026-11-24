@@ -1,6 +1,6 @@
 # 独立本体编制与版本服务 v0.1
 
-日期：2026-11-20。B04a 服务内核与参考存储端口。实现为 `packages/ontology/kernel/authoring.py`，独立包导入 `vxture_ontology.authoring`。B09b 已将 SQLite 参考适配器迁至可选的 `vxture_ontology.local_host`，保留 CoSpace 的兼容导入。
+日期：2026-11-20。B04a 服务内核与参考存储端口。实现为 `packages/ontology/kernel/authoring.py`，独立包导入 `vxture_ontology.authoring`。B09e 将可选 SQLite 适配器收敛到 `vxture_ontology.adapters`，保留 CoSpace 的兼容导入、数据库文件名和数据格式；当前由 CoSpace 注入身份与权限，不运行第二套本体服务。
 
 同日 B04b 增量：已通过宿主适配器接入 `/api/ontology-definitions` 与详情页 DS 业务表单、版本/发布抽屉；以下 B04a 纯服务与存储协议保持不变，HTTP 细则见本文末尾。目录日期改为真实发布记录，不影响定义内容成熟度。
 

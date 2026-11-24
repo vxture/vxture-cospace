@@ -15,6 +15,9 @@ def main():
         assert all(name.startswith(('vxture_ontology/', 'vxture_ontology-')) for name in names)
         metadata = next(name for name in names if name.endswith('.dist-info/METADATA'))
         assert not BytesParser().parsebytes(archive.read(metadata)).get_all('Requires-Dist')
+        assert not any('/local_host/' in name for name in names)
+        entries = next(name for name in names if name.endswith('.dist-info/entry_points.txt'))
+        assert 'vxture-ontology-host' not in archive.read(entries).decode('utf-8')
     script = '''
 import json,sys
 from contextlib import contextmanager
@@ -79,7 +82,7 @@ print(json.dumps({'modules':len(catalog.describe()['modules']),'isolated_wheel':
         result = subprocess.run([sys.executable, '-I', '-S', '-c', script, str(wheel)],
                                 cwd=temporary, input=fixture, encoding='utf-8', capture_output=True, check=True)
         print(result.stdout.strip())
-    subprocess.run([sys.executable, '-I', '-S', str(Path(__file__).with_name('smoke_ontology_host.py').resolve()),
+    subprocess.run([sys.executable, '-I', '-S', str(Path(__file__).with_name('smoke_ontology_adapters.py').resolve()),
                     str(wheel)], check=True)
 
 

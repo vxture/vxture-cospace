@@ -1,4 +1,4 @@
-"""Portable group configuration store; no CoSpace, scene or identity dependencies."""
+"""Portable group configuration adapter; no platform or scene dependencies."""
 from contextlib import closing
 from datetime import datetime, timezone
 import hashlib

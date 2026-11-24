@@ -1,4 +1,4 @@
-"""Replaceable SQLite authoring adapter; no platform, scene or identity imports.
+"""Replaceable SQLite authoring adapter for embedding hosts.
 
 The portable authoring use cases depend only on transaction(scope), not SQLite.
 This first bounded adapter stores one atomic state per injected scope. It is not
