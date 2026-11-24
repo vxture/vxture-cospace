@@ -124,3 +124,31 @@ def test_corrupt_input_coordinate_history_blocks_service_replacement(tmp_path):
         module.checkpoint(tmp_path, [])
     manifest = next((tmp_path / 'backups').glob('*/manifest.json'))
     assert not json.loads(manifest.read_text())['complete']
+
+
+def test_business_project_checkpoint_restores_project_and_audit_before_later_changes(tmp_path):
+    from dataclasses import replace
+    from packages.lifecycle.preview_spaces import PreviewSpaces
+    from packages.lifecycle.workspace_projects import WorkspaceProjects, ProjectChange, ProjectQuery
+    from packages.service.space_access import SpaceAccessPolicy
+    from test_space_access import principal
+    runtime = tmp_path / 'data/business/runtime/preview-directory'
+    runtime.mkdir(parents=True)
+    directory = PreviewSpaces(runtime)
+    projects = WorkspaceProjects(directory)
+    user = replace(principal(), governance_roles=('workspace:owner',))
+    policy = SpaceAccessPolicy(bindings=[], grants=[])
+    command = {'action': 'create', 'name': 'Synthetic project', 'request_id': 'a'*32,
+               'expected_revision': 0, 'reason': 'Checkpoint fixture'}
+    first = projects.change(user, policy, ProjectChange.validate_python(command))
+    target = module.checkpoint(tmp_path, [])
+    projects.change(user, policy, ProjectChange.validate_python(command | {
+        'action': 'update', 'project_id': first['project_id'], 'name': 'Later name',
+        'request_id': 'b'*32, 'expected_revision': 1}))
+    restored = WorkspaceProjects(directory)
+    restored.path = target / 'business-projects.sqlite3'
+    assert restored.read(user, policy, ProjectQuery())['items'][0]['name'] == 'Synthetic project'
+    assert restored.read(user, policy, ProjectQuery(view='history'))['total'] == 1
+    assert projects.read(user, policy, ProjectQuery())['items'][0]['name'] == 'Later name'
+    manifest = json.loads((target / 'manifest.json').read_text())
+    assert manifest['complete'] and manifest['databases']['business-projects.sqlite3'] == 'verified'

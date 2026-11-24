@@ -50,6 +50,7 @@ from packages.service.scene_overview import overview as scene_overview
 from packages.service.amap_gateway import AmapGateway
 from packages.service.globe_runtime import GlobeRuntime
 from packages.data.workspace_catalog import catalog as workspace_catalog, CatalogQuery, CatalogUnavailable
+from packages.lifecycle.workspace_projects import WorkspaceProjects, ProjectChange, ProjectQuery, ProjectError, ProjectUnavailable
 from packages.infrastructure.spatial_observation_store import ObservationStorageUnavailable
 from packages.views.agent.ifc_structure_exchange import export_structure_snapshot
 from packages.views.agent.ifc_geometry_exchange import export_geometry_component
@@ -110,6 +111,7 @@ class BusinessAccess:
         self.recipients=ServiceRecipients(directory.root)
         self.workspace_scenes=WorkspaceScenes(directory,policies,self.sources,workspace_config,
             platform_access=subscriptions is not None or workspace_scene_visibility)
+        self.workspace_projects=WorkspaceProjects(directory)
         self.registration=PreviewRegistration(jobs.inputs,{}) if jobs.inputs else None
         self.consumer=None
         from packages.service.service_monitor import ServiceMonitor
@@ -152,6 +154,10 @@ class BusinessAccess:
             return {'principal':principal}
         if path=='/api/data-catalog' and method in ('GET','HEAD'):
             if q.get('space_id'):access.space(principal,q['space_id'],DATA_MANAGE)
+            return {'principal':principal}
+        if path=='/api/data-projects':
+            if method not in ('GET','HEAD','POST') or method=='POST' and not policy.workspace_manager(principal):
+                raise PermissionError()
             return {'principal':principal}
         if path=='/api/workspace-scenes' and method in ('GET','HEAD','POST'):
             context=self.workspace_scenes.context(principal)
@@ -734,6 +740,18 @@ class BusinessAccess:
                 from packages.service.service_assurance import assurance
                 diagnosis=await run_in_threadpool(assurance,self.jobs,request.query_params['space_id'],result,configuration)
                 return JSONResponse(result|{'configuration':configuration,'assurance':diagnosis},headers={'Cache-Control':'no-store'})
+            if path=='/api/data-projects':
+                try:
+                    if request.method=='POST':
+                        change=ProjectChange.validate_python(body)
+                        result=await run_in_threadpool(self.workspace_projects.change,context['principal'],policy,change)
+                    else:
+                        query=ProjectQuery.model_validate_strings(dict(request.query_params))
+                        result=await run_in_threadpool(self.workspace_projects.read,context['principal'],policy,query)
+                except ValidationError:return deny(422,'business_project_invalid_request')
+                except ProjectError as exc:return deny(exc.status,exc.code)
+                except ProjectUnavailable:return deny(503,'business_projects_unavailable')
+                return JSONResponse(result,headers={'Cache-Control':'no-store'})
             if path=='/api/data-catalog':
                 try:query=CatalogQuery.model_validate(dict(request.query_params))
                 except ValidationError:return deny(422,'catalog_query_invalid')
