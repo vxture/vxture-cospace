@@ -1,5 +1,6 @@
 import './data-catalog.test.mjs';
 import './data-sharing.test.mjs';
+import './data-lineage.test.mjs';
 import './data-files.test.mjs';
 import {test} from 'node:test';
 import assert from 'node:assert/strict';

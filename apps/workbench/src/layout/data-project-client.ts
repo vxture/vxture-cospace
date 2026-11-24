@@ -7,9 +7,15 @@ export async function dataRequest(path:string,signal:AbortSignal,body?:Record<st
  const response=await fetch(businessEndpoint+path,{signal,cache:'no-store',...(body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{})});
  return dataResponse(response);
 }
+const traceErrors:Record<string,string>={resource_lineage_invalid:'追溯查询范围无效，请重新打开详情。',resource_lineage_unavailable:'来源或引用记录暂不可读取，请刷新重试。'};
+function responseMessage(status:number){
+ if(status===403)return '当前身份无权访问或操作所选数据。';
+ if(status===401)return '请登录后继续。';
+ return '数据服务暂不可用，请刷新重试。';
+}
 export async function dataResponse(response:Response){
  const value=await response.json().catch(()=>{throw Error('数据服务响应无效，请刷新重试。');});
- if(!response.ok)throw Error(errors[value.detail]||(response.status===403?'当前身份无权访问或操作所选数据。':response.status===401?'请登录后继续。':'数据服务暂不可用，请刷新重试。'));
+ if(!response.ok)throw new Error(errors[value.detail]||traceErrors[value.detail]||responseMessage(response.status));
  return value;
 }
 export async function loadProjects<T=BusinessProject>(query:Record<string,string>,signal:AbortSignal,workspace=''):Promise<ProjectPage<T>>{

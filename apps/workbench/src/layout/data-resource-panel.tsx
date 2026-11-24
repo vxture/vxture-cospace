@@ -1,11 +1,19 @@
 import React,{useEffect,useRef,useState} from 'react';
-import {Button,Drawer,Textarea} from '@vxture/design-system';
+import {Button,Drawer,NativeSelect,Textarea} from '@vxture/design-system';
 import {resourceOwnerLabel,resourceFileDownload,resourceScopeLabel,type ResourceItem} from './data-catalog-contract';
 import {ProjectPicker} from './data-project-picker';
 import {dataRequest} from './data-project-client';
 import {useUnsavedNavigation} from './unsaved-navigation';
 import {businessEndpoint} from './business-endpoint';
 import {DataReferenceDetails} from './data-reference-details';
+import {DataLineagePanel} from './data-lineage-panel';
+
+function ResourceTrace({workspace,item}:Readonly<{workspace:string;item:ResourceItem}>){
+ const projects=[...new Map(item.uses?.map(u=>[u.project_id,u.project_name])).entries()];
+ const [selected,setSelected]=useState(projects[0]?.[0]||'');
+ if(item.external&&!selected)return null;
+ return <>{item.external&&projects.length>1&&<label>追溯项目<NativeSelect value={selected} onChange={e=>setSelected(e.target.value)}>{projects.map(([id,name])=><option key={id} value={id}>{name}</option>)}</NativeSelect></label>}<DataLineagePanel key={selected} workspace={workspace} resource={item.resource_id!} project={item.external?selected:undefined}/></>;
+}
 
 export function DataResourcePanel({item,edit,workspace,onClose,onChanged}:{item:ResourceItem;edit:boolean;workspace:string;onClose:()=>void;onChanged:()=>void}){
  const [owner,setOwner]=useState(item.owner_project_id||''),[base,setBase]=useState(item.is_base),[reason,setReason]=useState(''),[busy,setBusy]=useState(false),[error,setError]=useState('');
@@ -21,5 +29,6 @@ export function DataResourcePanel({item,edit,workspace,onClose,onChanged}:{item:
  <div className="data-project-form"><h2>{item.label}</h2><p className="data-resource-secondary">{item.record_id}</p>{error&&<p role="alert">{error}</p>}<dl className="data-resource-details"><dt>{item.space_name?'来源场景':'资料层级'}</dt><dd>{resourceScopeLabel(item)}</dd><dt>管理归属</dt><dd>{resourceOwnerLabel(item)}</dd><dt>资源标识</dt><dd>{item.resource_id||'处理记录，无资源登记'}</dd><dt>已登记版本</dt><dd>{item.version_count}</dd>{item.source_version&&<><dt>来源格式</dt><dd>{item.source_version.format||'未记录'}</dd><dt>记录大小</dt><dd>{item.source_version.bytes==null?'未记录':`${item.source_version.bytes.toLocaleString()} B`}</dd><dt>形成时间</dt><dd>{item.source_version.created_at?new Date(item.source_version.created_at).toLocaleString('zh-CN'):'未记录'}</dd></>}</dl>
  {edit&&<><label>管理归属{item.registered?<p>{resourceOwnerLabel(item)}</p>:<ProjectPicker workspace={workspace} value={owner} onChange={setOwner} disabled={busy}/>}</label><label className="data-resource-checkbox"><input type="checkbox" checked={base} disabled={busy} onChange={e=>setBase(e.target.checked)}/>标记为基础数据</label><label>登记原因<Textarea value={reason} maxLength={500} disabled={busy} onChange={e=>setReason(e.target.value)}/></label></>}
  {item.kind==='resource_file'&&!item.external&&<Button asChild variant="outline" size="sm"><a href={businessEndpoint+resourceFileDownload(item)}>下载原件</a></Button>}{item.external&&item.uses?<DataReferenceDetails uses={item.uses} onChanged={onChanged}/>:<p className="data-resource-secondary">{referenceNote}</p>}{item.href&&<Button asChild variant="outline" size="sm"><a href={item.href.replace(/^#/,'/')}>查看来源记录</a></Button>}
+ {!edit&&item.registered&&item.resource_id&&(item.can_manage||item.external)&&<ResourceTrace key={item.resource_id} workspace={workspace} item={item}/>}
  </div></Drawer>;
 }
