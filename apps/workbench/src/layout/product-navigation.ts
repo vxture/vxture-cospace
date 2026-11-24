@@ -10,3 +10,5 @@ export const moduleGroups=[
  {title:'公共资源',items:[{route:'data',icon:'database',description:'项目数据与平台资源目录'},{route:'ontology',icon:'tree-structure',description:'共用类型与本体规则'}]},
  {title:'场景作业',items:[{route:'build',icon:'workflow',description:'模型构建与候选核对'},{route:'registration',icon:'map-pin',description:'坐标基准与地图配准'},{route:'association',icon:'link',description:'语义、几何与业务关联'},{route:'delivery',icon:'package',description:'版本发布与交付'},{route:'space',icon:'cube',description:'浏览空间与固定发布'}]},
 ] as const;
+
+export function hasHeaderContext(route:string){return moduleScopes[route as ModuleRoute]!=='support';}

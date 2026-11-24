@@ -48,7 +48,6 @@ test('portable view has no product router, platform, scene or endpoint imports',
  const imports=[...view.matchAll(/from ['"]([^'"]+)['"]/g)].map(v=>v[1]);
  assert.deepEqual(imports.sort(),['./contract','@phosphor-icons/react','@vxture/design-system','react'].sort());
  assert.ok(!view.includes('fetch('));
- assert.match(readFileSync('apps/workbench/src/layout/header-context.tsx','utf8'),/pathname==='\/ontology'/);
  const nav=readFileSync('apps/workbench/src/layout/product-navigation.ts','utf8');
  assert.match(nav,/title:'公共资源'.*route:'ontology'/);
 });

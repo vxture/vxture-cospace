@@ -98,7 +98,7 @@ export function InputDirectory(){
  useEffect(()=>{if(!notice)return;const timer=setTimeout(()=>setNotice(''),5000);return()=>clearTimeout(timer);},[notice]);
 
  function navigate(values:Record<string,string>){void navigateSafely(recordLink('data',{space:target.space,tab:view,...((view==='versions'||view==='inputs')&&target.batch?{batch:target.batch}:{}),...values}));}
- function chooseSpace(id:string){setTools(null);setNotice('');setEntries([]);setCatalog(null);appNavigate(recordLink('data',{space:id,tab:view}));}
+ function chooseSpace(id:string){void runGuarded(()=>{setTools(null);setNotice('');setEntries([]);setCatalog(null);appNavigate(recordLink('data',{space:id,tab:view}));});}
  function switchView(next:View){setSearch('');setFilter('all');appNavigate(recordLink('data',{space:target.space,tab:next}));}
  function select(item:Artifact|Entry){if('key' in item&&item.kind==='input')void navigateSafely(recordLink('data',{space:target.space,tab:'inputs',input:item.record_id}));else navigate('key' in item?{artifact:item.key}:{input:item.id});}
  function refresh(){setRevision(v=>v+1);if(directoryError)setDirectoryRevision(v=>v+1);}
@@ -134,7 +134,7 @@ export function InputDirectory(){
 
    <div className="data-overview" aria-label="当前场景数据概览"><div><FolderOpen size={17}/><span>资料</span><strong>{catalog?entries.length:'—'}</strong></div><div><Stack size={17}/><span>模型版本</span><strong>{catalog?versions.length:'—'}</strong></div><div><Cube size={17}/><span>固定发布</span><strong>{catalog?releases.length:'—'}</strong></div><span className="data-overview-note">{issues>0?<><WarningCircle size={14}/>{issues} 项成果需核查</>:<><Info size={14}/>样本流程 · 质量尚未验收</>}</span></div>
    {scene&&view==='inputs'&&<DataIntake space={scene.id} batchId={target.batch||undefined} {...intake} onSources={()=>setTools('sources')} onImport={()=>setImportOpen(true)} onInspect={()=>{document.querySelector<HTMLElement>('.data-input-preflight')?.focus();document.querySelector('.data-input-preflight')?.scrollIntoView({block:'nearest'});}} onChoose={()=>{setNotice('请从资料列表选择本次要构建的资料。');document.querySelector<HTMLElement>('.data-record-name')?.focus();}}/>}
-   <div className="data-viewbar"><div className="data-secondary-tools">{platform&&<Button variant="ghost" size="sm" disabled={!scene} onClick={()=>setTools('sources')}><SlidersHorizontal size={14}/>来源配置</Button>}</div></div>
+   <div className="data-viewbar"><div className="data-secondary-tools"><NativeSelect className="h-[var(--space-control-xl)] min-h-[var(--space-control-xl)] text-label-small" aria-label="选择资料所属场景" value={target.space} onChange={e=>chooseSpace(e.target.value)}><option value="">选择场景</option>{spaces.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</NativeSelect>{platform&&<Button variant="ghost" size="sm" disabled={!scene} onClick={()=>setTools('sources')}><SlidersHorizontal size={14}/>来源配置</Button>}</div></div>
    {view==='inputs'&&inputBatch&&<div className="data-batch-context"><span>本次批次：{inputBatch.name}</span><Button asChild variant="ghost" size="sm"><a href={recordLink('data',{space:target.space,tab:'batches',batch:inputBatch.id})}>返回批次</a></Button></div>}
    {notice&&<p className="data-notice" role="status">{notice}</p>}
    {!busy&&catalog&&selectionKey&&!selectedEntry&&!selectedArtifact&&<p className="data-notice" role="alert">所选记录不存在于当前场景，请重新选择资料或版本。</p>}

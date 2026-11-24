@@ -52,8 +52,8 @@ test('header selection keeps service section but never previous scene records',(
 });
 
 
-test('data does not retain scene-only basic information as a data view',()=>{
- assert.equal(headerSceneLinkFromUrl('next','/data?space=old&tab=info&input=old&publication=old'),'/data?space=next');
+test('data bookmarks are unchanged by the removed header scene picker',()=>{
+ assert.equal(headerSceneLinkFromUrl('next','/data?space=old&tab=info&input=old&publication=old'),'/data?space=old&tab=info&input=old&publication=old');
 });
 
 test('catalog scene switching preserves the catalog route rather than entering legacy preview',()=>{
