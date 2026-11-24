@@ -103,7 +103,7 @@ class ResourceSharing:
     def capture(self, principal, policy, command, resource, db):
         if resource['space_id'] is None:
             scope = self.projects.scope(principal)
-            file = self.resources.files.records(db, scope).get(command.resource_id)
+            file = self.resources.files.get(db, scope, command.resource_id, command.version_id)
             if file is None or file['version_id'] != command.version_id:
                 raise ProjectError('resource_version_unavailable')
             record = {'label': file['name'], 'kind': 'resource_file', 'resource_type': 'reference',
@@ -129,6 +129,9 @@ class ResourceSharing:
         return record, payload
 
     def change(self, principal, policy, command):
+        if command.action == 'upgrade':
+            from packages.data.resource_reference_upgrades import ReferenceUpgrades
+            return ReferenceUpgrades(self).change(principal, policy, command)
         scope = self.projects.scope(principal)
         spec = checksum(command.model_dump(mode='json'))
         # No grant/use mutation writes original inputs, scene links or models.

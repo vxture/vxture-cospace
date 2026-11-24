@@ -74,6 +74,7 @@ class ResourceFiles:
     @staticmethod
     def initialize(db):
         db.execute('CREATE TABLE IF NOT EXISTS data_resource_files(scope TEXT,id TEXT,record TEXT NOT NULL,payload BLOB NOT NULL,PRIMARY KEY(scope,id))')
+        db.execute('CREATE TABLE IF NOT EXISTS data_resource_file_history(scope TEXT,id TEXT,version_id TEXT,record TEXT NOT NULL,payload BLOB NOT NULL,PRIMARY KEY(scope,id,version_id))')
         db.execute('CREATE TABLE IF NOT EXISTS data_resources(scope TEXT,id TEXT,record TEXT NOT NULL,PRIMARY KEY(scope,id))')
         db.execute('CREATE TABLE IF NOT EXISTS resource_changes(scope TEXT,actor TEXT,request_id TEXT,spec TEXT,record TEXT NOT NULL,PRIMARY KEY(scope,actor,request_id))')
 
@@ -116,6 +117,31 @@ class ResourceFiles:
         with self.projects.database() as db:
             self.require_upload(principal, policy, command, db)
 
+    @staticmethod
+    def check_budget(db, scope, size):
+        totals = [db.execute(f'SELECT COUNT(*),COALESCE(SUM(LENGTH(payload)),0) FROM {table} WHERE scope=?', (scope,)).fetchone()
+                  for table in ('data_resource_files', 'data_resource_file_history')]
+        if sum(v[0] for v in totals) >= MAX_FILES or sum(v[1] for v in totals) + size > MAX_STORED_BYTES:
+            raise ProjectError('resource_file_storage_budget')
+
+    def get(self, db, scope, identity, version=None):
+        current = self.records(db, scope).get(identity)
+        if current is None or version is None or current['version_id'] == version:
+            return current
+        if not db.execute("SELECT 1 FROM sqlite_master WHERE name='data_resource_file_history'").fetchone():
+            raise ProjectError('resource_version_unavailable')
+        row = db.execute('SELECT CASE WHEN LENGTH(record)<=8192 THEN record END FROM data_resource_file_history WHERE scope=? AND id=? AND version_id=?',
+                         (scope, identity, version)).fetchone()
+        if row is None:
+            raise ProjectError('resource_version_unavailable')
+        try:
+            record = StoredFile.model_validate_json(row[0]).model_dump()
+        except (ValueError, TypeError) as exc:
+            raise ProjectUnavailable('resource_file_history_invalid') from exc
+        if (record['resource_id'], record['version_id'], record['owner_kind'], record['owner_project_id']) != (identity, version, current['owner_kind'], current['owner_project_id']):
+            raise ProjectUnavailable('resource_file_history_invalid')
+        return record
+
     def upload(self, principal, policy, command, payload):
         self.require_manager(principal, policy)
         if not 0 < len(payload) <= MAX_BYTES:
@@ -131,9 +157,7 @@ class ResourceFiles:
                 if previous[0] != spec:
                     raise ProjectError('resource_request_id_reused')
                 return json.loads(previous[1]) | {'replayed': True}
-            count, stored = db.execute('SELECT COUNT(*),COALESCE(SUM(LENGTH(payload)),0) FROM data_resource_files WHERE scope=?', (scope,)).fetchone()
-            if count >= MAX_FILES or stored + len(payload) > MAX_STORED_BYTES:
-                raise ProjectError('resource_file_storage_budget')
+            self.check_budget(db, scope, len(payload))
             identity = 'resource-' + checksum({'scope': scope, 'actor': principal.subject, 'request': command.request_id})[:32]
             at = datetime.now(timezone.utc).isoformat()
             file = {'resource_id': identity, 'owner_kind': command.owner_kind, 'owner_project_id': command.owner_project_id,
@@ -153,8 +177,13 @@ class ResourceFiles:
             return event | {'replayed': False}
 
     def payload(self, db, scope, record):
-        row = db.execute('SELECT CASE WHEN LENGTH(payload)<=? THEN payload END FROM data_resource_files WHERE scope=? AND id=?',
-                         (MAX_BYTES, scope, record['resource_id'])).fetchone()
+        current = self.records(db, scope).get(record['resource_id'])
+        if current and current['version_id'] == record['version_id']:
+            row = db.execute('SELECT CASE WHEN LENGTH(payload)<=? THEN payload END FROM data_resource_files WHERE scope=? AND id=?',
+                             (MAX_BYTES, scope, record['resource_id'])).fetchone()
+        else:
+            row = db.execute('SELECT CASE WHEN LENGTH(payload)<=? THEN payload END FROM data_resource_file_history WHERE scope=? AND id=? AND version_id=?',
+                             (MAX_BYTES, scope, record['resource_id'], record['version_id'])).fetchone()
         if row is None or row[0] is None or len(row[0]) != record['bytes'] or hashlib.sha256(row[0]).hexdigest() != record['sha256']:
             raise ProjectUnavailable('resource_file_content_invalid')
         return row[0]
@@ -169,8 +198,7 @@ class ResourceFiles:
             if not policy.workspace_manager(principal):
                 if record['owner_kind'] != 'project' or record['owner_project_id'] not in self.resources.sharing.target_projects(principal, policy, projects, links):
                     raise PermissionError('resource_access_denied')
-            if record['version_id'] != command.version_id:
-                raise ProjectError('resource_source_changed')
+            record = self.get(db, scope, command.resource_id, command.version_id)
             return record, self.payload(db, scope, record)
 
     def rows(self, principal, policy, db, scope, projects, links, registered):

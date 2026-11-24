@@ -55,7 +55,15 @@ class UnlinkVersion(Change):
     use_id: UseId
 
 
-SharingChange = TypeAdapter(Annotated[GrantVersion | RevokeVersion | ReferenceVersion | UnlinkVersion,
+class UpgradeVersion(Change):
+    action: Literal['upgrade']
+    use_id: UseId
+    grant_id: GrantId
+    expected_grant_revision: int = Field(ge=1)
+    expected_version: VersionId
+
+
+SharingChange = TypeAdapter(Annotated[GrantVersion | RevokeVersion | ReferenceVersion | UnlinkVersion | UpgradeVersion,
                                      Field(discriminator='action')])
 
 

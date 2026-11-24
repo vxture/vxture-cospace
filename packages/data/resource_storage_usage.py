@@ -38,7 +38,7 @@ def stored_bytes(directory, known):
         db.execute('BEGIN')
         tables = {r[0] for r in db.execute("SELECT name FROM sqlite_master WHERE type='table'")}
         scopes = scope_contexts(db, tables, known)
-        for table in ('data_resource_files','data_shared_versions'):
+        for table in ('data_resource_files','data_resource_file_history','data_shared_versions'):
             if table not in tables:
                 continue
             for scope, size in db.execute(f'SELECT scope,COALESCE(SUM(LENGTH(payload)),0) FROM {table} GROUP BY scope'):

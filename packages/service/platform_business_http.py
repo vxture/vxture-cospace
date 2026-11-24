@@ -53,6 +53,7 @@ from packages.data.workspace_catalog import catalog as workspace_catalog, Catalo
 from packages.lifecycle.workspace_projects import WorkspaceProjects, ProjectChange, ProjectQuery, ProjectError, ProjectUnavailable
 from packages.data.workspace_resources import WorkspaceResources, ResourceQuery, ResourceChange
 from packages.data.resource_sharing_contract import SharingChange, SharingQuery, SharedDownload
+from packages.data.resource_file_versions import FileAppend, ResourceFileVersions
 from packages.data.resource_files import FileUpload, FileDownload
 from packages.infrastructure.spatial_observation_store import ObservationStorageUnavailable
 from packages.views.agent.ifc_structure_exchange import export_structure_snapshot
@@ -183,7 +184,7 @@ class BusinessAccess:
         if path=='/api/data-catalog' and method in ('GET','HEAD'):
             if q.get('space_id'):access.space(principal,q['space_id'],DATA_MANAGE)
             return {'principal':principal}
-        if path=='/api/data-lineage' and method in ('GET','HEAD'):
+        if path in ('/api/data-lineage', '/api/data-reference-upgrade') and method in ('GET','HEAD'):
             return {'principal':principal}
         if path=='/api/data-projects':
             if method not in ('GET','HEAD','POST') or method=='POST' and not policy.workspace_manager(principal):
@@ -193,7 +194,7 @@ class BusinessAccess:
             if method not in ('GET','HEAD','POST') or method=='POST' and not policy.workspace_manager(principal):
                 raise PermissionError()
             return {'principal':principal}
-        if path in ('/api/data-files', '/api/data-files/download'):
+        if path in ('/api/data-files', '/api/data-files/versions', '/api/data-files/download'):
             if path.endswith(DOWNLOAD_SUFFIX):
                 if method not in ('GET','HEAD'):raise PermissionError()
             elif method!='POST' or not policy.workspace_manager(principal):
@@ -458,8 +459,10 @@ class BusinessAccess:
                     'Cache-Control':'no-store', 'Content-Length':str(len(payload)),
                     'Content-Disposition':"attachment; filename*=UTF-8''"+quote(record['name'],safe=''),
                     'X-Content-Type-Options':'nosniff', 'Content-Security-Policy':DOWNLOAD_SANDBOX})
-            command = FileUpload.model_validate_strings(dict(request.query_params))
-            await run_in_threadpool(self.workspace_resources.files.check_upload, principal, policy, command)
+            handler = ResourceFileVersions(self.workspace_resources.files) if request.url.path.endswith('/versions') else self.workspace_resources.files
+            model = FileAppend if request.url.path.endswith('/versions') else FileUpload
+            command = model.model_validate_strings(dict(request.query_params))
+            await run_in_threadpool(handler.check_upload, principal, policy, command)
             payload = await receive_resource_original(request)
             current, _ = await run_in_threadpool(self.rp.resolve, rpsid, active=False, require_access=True)
             if current is None:return deny(401, 'authentication_required')
@@ -468,7 +471,7 @@ class BusinessAccess:
             refreshed = await run_in_threadpool(self.authorize, request, current, policy, {})
             if any(getattr(principal,k)!=getattr(refreshed['principal'],k) for k in ('issuer','subject','org_id','workspace_id')):
                 return deny(409, 'session_scope_changed')
-            result = await run_in_threadpool(self.workspace_resources.files.upload, refreshed['principal'], policy, command, payload)
+            result = await run_in_threadpool(handler.upload, refreshed['principal'], policy, command, payload)
             return JSONResponse(result, status_code=200 if result['replayed'] else 201, headers={'Cache-Control':'no-store'})
         except ValidationError:return deny(422, 'resource_file_metadata_invalid')
         except ProjectError as exc:return deny(exc.status, exc.code)
@@ -510,7 +513,7 @@ class BusinessAccess:
                 return JSONResponse(self.globe.public(self.rp.config.origin),headers={'Cache-Control':'no-store'})
             if path=='/api/map/config' or path.startswith('/_AMapService/'):
                 return await self.amap.dispatch(request)
-            if path in ('/api/data-files','/api/data-files/download'):
+            if path in ('/api/data-files','/api/data-files/versions','/api/data-files/download'):
                 return await self.data_files(request, session, rpsid)
             if path=='/api/input-uploads' and request.method in ('GET','POST'):
                 revision,policy=await run_in_threadpool(self.load_policy)
@@ -837,6 +840,15 @@ class BusinessAccess:
                 except ValidationError:return deny(422,'resource_sharing_invalid_request')
                 except ProjectError as exc:return deny(exc.status,exc.code)
                 except (ProjectUnavailable,CatalogUnavailable,AttachmentRejected,KeyError,TypeError):return deny(503,'resource_sharing_unavailable')
+                return JSONResponse(result,headers={'Cache-Control':'no-store'})
+            if path=='/api/data-reference-upgrade':
+                from packages.data.resource_reference_upgrades import UpgradeQuery, ReferenceUpgrades
+                try:
+                    query = UpgradeQuery.model_validate(dict(request.query_params))
+                    result = await run_in_threadpool(ReferenceUpgrades(self.workspace_resources.sharing).read, context['principal'], policy, query)
+                except ValidationError:return deny(422,'resource_upgrade_invalid')
+                except ProjectError as exc:return deny(exc.status,exc.code)
+                except (ProjectUnavailable,CatalogUnavailable,KeyError,TypeError):return deny(503,'resource_upgrade_unavailable')
                 return JSONResponse(result,headers={'Cache-Control':'no-store'})
             if path=='/api/data-lineage':
                 from packages.data.resource_lineage import LineageQuery, ResourceLineage

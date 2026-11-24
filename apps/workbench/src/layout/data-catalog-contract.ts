@@ -28,7 +28,7 @@ function validateFileOwner(item:ResourceItem){
 function validateFileResource(item:ResourceItem,scope:ResourceScope){
  const identity=/^resource-[a-f0-9]{32}$/.test(item.resource_id||'')&&item.key===item.resource_id&&item.record_id===item.resource_id;
  const version=!!item.source_version&&/^[a-f0-9]{64}$/.test(item.source_version.version_id)&&item.source_version.reference_kind==='source_metadata';
- const registration=item.registered&&item.version_registered&&item.version_count===1&&Number.isInteger(item.revision)&&item.revision>=1;
+ const registration=item.registered&&item.version_registered&&Number.isInteger(item.version_count)&&item.version_count>=1&&item.version_count<=1000&&Number.isInteger(item.revision)&&item.revision>=1;
  const placement=item.href===null&&item.space_id===null&&item.space_name===null&&!item.external&&item.project_id===item.owner_project_id;
  if(!identity||!version||!registration||!placement||!validateFileOwner(item)||item.resource_type!=='reference'||typeof item.label!=='string'||scope.category==='process'||scope.space||scope.project&&item.owner_project_id!==scope.project)throw new Error('项目级资料引用无效。');
 }
