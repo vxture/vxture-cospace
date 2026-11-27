@@ -15,7 +15,7 @@
   "dependencies": {
     "@vxture/ontology-ui": "file:../../packages/ontology-ui",
     "@phosphor-icons/react": "2.1.10",
-    "@tanstack/react-query": "5.107.1",
+    "@tanstack/react-query": "5.108.4",
     "@vxture/design-system": "file:vendor/vxture-design-system-15.6.1.tgz",
     "@vxture/design-tokens": "file:vendor/vxture-design-tokens-4.1.0.tgz",
     "@vxture/design-ui": "file:vendor/vxture-design-ui-12.5.1.tgz",
